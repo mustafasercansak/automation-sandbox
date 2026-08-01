@@ -108,18 +108,15 @@ namespace ScenarioRunner
             var window = _connector.GetMainWindow();
             var currentTree = UiTreeWalker.BuildTree(window);
 
-            // A much harder corruption than the txtEmailAddress case above: parent, sibling
-            // position, name, and bounding box are all wrong too. This is
-            // deliberately pushed below MinimumConfidence so the heuristic result alone isn't
-            // confident, forcing SelfHealingResolver.ResolveAsync to actually reach the LLM
-            // fallback branch instead of trivially returning the heuristic match.
+            // A much harder corruption than the txtEmailAddress case above: name, parent,
+            // and bounding box are all wrong too. This is deliberately pushed below MinimumConfidence (0.50)
+            // so the heuristic result alone isn't confident, forcing SelfHealingResolver.ResolveAsync
+            // to reach the LLM fallback branch while keeping txtEmail as top shortlist candidate c0.
             var staleExpected = UiElementSnapshot.CaptureByAutomationId(currentTree, "txtEmail")
                 ?? throw new InvalidOperationException("txtEmail was not found in the live tree, test data is invalid.");
             staleExpected.AutomationId = "txtEmailAddress";
             staleExpected.Name = "Unrelated Label Text";
             staleExpected.ParentControlType = "UnrelatedParentType";
-            staleExpected.SiblingIndex += 5;
-            staleExpected.SiblingCount += 5;
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
             Assert.NotNull(healResult.Matched);

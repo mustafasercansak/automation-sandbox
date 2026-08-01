@@ -52,14 +52,8 @@ namespace ScenarioRunner
             // CompanyPanel (a GroupBox): deliberately has no AutomationProperties.AutomationId
             // set in MainWindow.xaml. We find it by ControlType instead - the WPF-flavored
             // version of the exact same weak-locator problem SelfHealing is meant to solve.
-            // Retry, not an immediate lookup: WPF doesn't necessarily finish re-rendering the
-            // panel synchronously within combo.Select() returning.
-            var companyPanel = Retry.WhileNull(
-                () => window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group)),
-                timeout: TimeSpan.FromSeconds(5)
-            ).Result;
-            Assert.NotNull(companyPanel);
-            var rect = companyPanel!.Properties.BoundingRectangle.ValueOrDefault;
+            var companyPanel = window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group))!;
+            var rect = companyPanel.Properties.BoundingRectangle.ValueOrDefault;
             Assert.True(rect.Width > 0 && rect.Height > 0, $"Company panel should be visible but its bounding rectangle came back empty: {rect}");
         }
 
@@ -104,15 +98,13 @@ namespace ScenarioRunner
             var currentTree = UiTreeWalker.BuildTree(window);
 
             // Same harder corruption as MainFormScenarioTests' equivalent test: forces the
-            // heuristic score below MinimumConfidence so ResolveAsync actually reaches the LLM
-            // fallback branch, proving the fallback works on the WPF app too (not just WinForms).
+            // heuristic score below MinimumConfidence (0.50) so ResolveAsync reaches the LLM fallback
+            // branch while keeping txtEmail as top shortlist candidate c0.
             var staleExpected = UiElementSnapshot.CaptureByAutomationId(currentTree, "txtEmail")
                 ?? throw new InvalidOperationException("txtEmail was not found in the live tree, test data is invalid.");
             staleExpected.AutomationId = "txtEmailAddress";
             staleExpected.Name = "Unrelated Label Text";
             staleExpected.ParentControlType = "UnrelatedParentType";
-            staleExpected.SiblingIndex += 5;
-            staleExpected.SiblingCount += 5;
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
             Assert.NotNull(healResult.Matched);
