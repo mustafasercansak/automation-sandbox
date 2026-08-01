@@ -8,7 +8,6 @@ using FlaUI.Core.AutomationElements;
 using LlmHealing;
 using SelfHealing;
 using UiModel;
-
 namespace ScenarioRunner
 {
     // These tests actually launch the compiled WinFormsApp.exe and talk to it via FlaUI.UIA3.
@@ -16,7 +15,6 @@ namespace ScenarioRunner
     public class MainFormScenarioTests : IDisposable
     {
         private const string WinFormsAppRelativePath = @"..\..\..\..\..\WinFormsApp\bin\Debug\net48\WinFormsApp.exe";
-
         private readonly ApplicationConnector _connector;
 
         public MainFormScenarioTests()
@@ -29,13 +27,10 @@ namespace ScenarioRunner
         public void CreatingRecord_WhenRequiredFieldsAreFilled_AddsRowToDataGridView()
         {
             var window = _connector.GetMainWindow();
-
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtFirstName"))!.AsTextBox().Text = "Jane";
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtLastName"))!.AsTextBox().Text = "Doe";
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtEmail"))!.AsTextBox().Text = "jane.doe@example.com";
-
             window.FindFirstDescendant(cf => cf.ByAutomationId("btnSave"))!.AsButton().Invoke();
-
             var grid = window.FindFirstDescendant(cf => cf.ByAutomationId("dgvRecords"))!.AsDataGridView();
             Assert.Single(grid.Rows);
         }
@@ -44,7 +39,6 @@ namespace ScenarioRunner
         public void WhenCorporateIsSelected_CompanyNamePanelBecomesVisible()
         {
             var window = _connector.GetMainWindow();
-
             var combo = window.FindFirstDescendant(cf => cf.ByAutomationId("cmbRecordType"))!.AsComboBox();
             combo.Select("Corporate");
 
@@ -66,7 +60,6 @@ namespace ScenarioRunner
             var window = _connector.GetMainWindow();
             var tree = UiTreeWalker.BuildTree(window);
             var json = UiTreeSerializer.ToJson(tree);
-
             Assert.Contains("txtEmail", json);
             Assert.Contains("btnSave", json);
         }
@@ -96,7 +89,6 @@ namespace ScenarioRunner
             // Self-healing kicks in: finds the correct element on the same live tree using
             // structural similarity alone (never looking at AutomationId).
             var healResult = SelfHealingResolver.Resolve(staleExpected, currentTree);
-
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
             Assert.True(healResult.IsConfident, $"Expected a confident match, but the score was: {healResult.Score}");
@@ -129,9 +121,7 @@ namespace ScenarioRunner
             staleExpected.SiblingIndex += 5;
             staleExpected.SiblingCount += 5;
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
-
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
-
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
             Assert.Equal(HealSource.Llm, healResult.Source);

@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-
-
   <PropertyGroup>
 
     <TargetFramework>net48</TargetFramework>
@@ -12,15 +10,11 @@
 
     <Nullable>enable</Nullable>
 
-
-
     <IsPackable>false</IsPackable>
 
     <IsTestProject>true</IsTestProject>
 
   </PropertyGroup>
-
-
 
   <ItemGroup>
 
@@ -34,15 +28,11 @@
 
   </ItemGroup>
 
-
-
   <ItemGroup>
 
     <Using Include="Xunit" />
 
   </ItemGroup>
-
-
 
   <ItemGroup>
 
@@ -55,7 +45,5 @@
     <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
 
   </ItemGroup>
-
-
 
 </Project>

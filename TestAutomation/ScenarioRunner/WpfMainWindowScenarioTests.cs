@@ -9,7 +9,6 @@ using FlaUI.Core.Tools;
 using LlmHealing;
 using SelfHealing;
 using UiModel;
-
 namespace ScenarioRunner
 {
     // Same Discovery/SelfHealing code as MainFormScenarioTests, pointed at the WPF app
@@ -18,7 +17,6 @@ namespace ScenarioRunner
     public class WpfMainWindowScenarioTests : IDisposable
     {
         private const string WpfAppRelativePath = @"..\..\..\..\..\WpfApp\bin\Debug\net8.0-windows\WpfApp.exe";
-
         private readonly ApplicationConnector _connector;
 
         public WpfMainWindowScenarioTests()
@@ -31,13 +29,10 @@ namespace ScenarioRunner
         public void CreatingRecord_WhenRequiredFieldsAreFilled_AddsRowToDataGrid()
         {
             var window = _connector.GetMainWindow();
-
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtFirstName"))!.AsTextBox().Text = "Jane";
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtLastName"))!.AsTextBox().Text = "Doe";
             window.FindFirstDescendant(cf => cf.ByAutomationId("txtEmail"))!.AsTextBox().Text = "jane.doe@example.com";
-
             window.FindFirstDescendant(cf => cf.ByAutomationId("btnSave"))!.AsButton().Invoke();
-
             var grid = window.FindFirstDescendant(cf => cf.ByAutomationId("dgvRecords"))!.AsDataGridView();
             Assert.Single(grid.Rows);
         }
@@ -46,12 +41,10 @@ namespace ScenarioRunner
         public void WhenCorporateIsSelected_CompanyPanelBecomesVisible()
         {
             var window = _connector.GetMainWindow();
-
             var comboElement = Retry.WhileNull(
                 () => window.FindFirstDescendant(cf => cf.ByAutomationId("cmbRecordType")),
                 timeout: TimeSpan.FromSeconds(5)
             ).Result;
-
             Assert.NotNull(comboElement);
             var combo = comboElement!.AsComboBox();
             combo.Select("Corporate");
@@ -65,7 +58,6 @@ namespace ScenarioRunner
                 () => window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group)),
                 timeout: TimeSpan.FromSeconds(5)
             ).Result;
-
             Assert.NotNull(companyPanel);
             var rect = companyPanel!.Properties.BoundingRectangle.ValueOrDefault;
             Assert.True(rect.Width > 0 && rect.Height > 0, $"Company panel should be visible but its bounding rectangle came back empty: {rect}");
@@ -77,7 +69,6 @@ namespace ScenarioRunner
             var window = _connector.GetMainWindow();
             var tree = UiTreeWalker.BuildTree(window);
             var json = UiTreeSerializer.ToJson(tree);
-
             Assert.Contains("txtEmail", json);
             Assert.Contains("btnSave", json);
         }
@@ -86,18 +77,13 @@ namespace ScenarioRunner
         public void SelfHealing_BrokenAutomationId_FindsCorrectElementInLiveApp()
         {
             var window = _connector.GetMainWindow();
-
             var currentTree = UiTreeWalker.BuildTree(window);
-
             var staleExpected = UiElementSnapshot.CaptureByAutomationId(currentTree, "txtEmail")
                 ?? throw new InvalidOperationException("txtEmail was not found in the live tree, test data is invalid.");
             staleExpected.AutomationId = "txtEmailAddress";
-
             var directHit = window.FindFirstDescendant(cf => cf.ByAutomationId("txtEmailAddress"));
             Assert.Null(directHit);
-
             var healResult = SelfHealingResolver.Resolve(staleExpected, currentTree);
-
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
             Assert.True(healResult.IsConfident, $"Expected a confident match, but the score was: {healResult.Score}");
@@ -128,9 +114,7 @@ namespace ScenarioRunner
             staleExpected.SiblingIndex += 5;
             staleExpected.SiblingCount += 5;
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
-
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
-
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
             Assert.Equal(HealSource.Llm, healResult.Source);

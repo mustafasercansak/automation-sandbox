@@ -1,31 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-
-    <TargetFramework>netstandard2.0</TargetFramework>
-
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <!-- Automatically target .NET 10 when built with .NET 10 SDK (e.g. CI / Visual Studio 2026+) -->
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-
     <ImplicitUsings>enable</ImplicitUsings>
-
     <Nullable>enable</Nullable>
-
     <Description>Structural-similarity heuristic locator resolver with an optional LLM fallback for low-confidence matches.</Description>
-
   </PropertyGroup>
 
-
-
   <ItemGroup>
-
     <ProjectReference Include="..\UiModel\UiModel.csproj" />
-
     <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
-
   </ItemGroup>
-
-
 
 </Project>

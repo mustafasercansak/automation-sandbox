@@ -1,37 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-
-
   <PropertyGroup>
-
-    <TargetFramework>netstandard2.0</TargetFramework>
-
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <!-- Automatically target .NET 10 when built with .NET 10 SDK (e.g. CI / Visual Studio 2026+) -->
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-
     <ImplicitUsings>enable</ImplicitUsings>
-
     <Nullable>enable</Nullable>
-
     <Description>LLM provider implementations (Claude, Gemini) behind a shared ILlmHealingProvider interface for locator resolution.</Description>
-
   </PropertyGroup>
 
-
-
   <ItemGroup>
-
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
-
   </ItemGroup>
-
-
 
   <ItemGroup>
-
     <ProjectReference Include="..\UiModel\UiModel.csproj" />
-
   </ItemGroup>
-
-
 
 </Project>

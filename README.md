@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/mustafasercansak/automation-sandbox/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Target](https://img.shields.io/badge/.NET-Standard%202.0%20%7C%20.NET%208%20%7C%20.NET%204.8-purple.svg)
+![Target](https://img.shields.io/badge/.NET-Standard%202.0%20%7C%20.NET%208%20%7C%20.NET%2010%20%7C%20.NET%204.8-purple.svg)
 ![Status](https://img.shields.io/badge/Status-Hardened%20Desktop%20Core-green.svg)
 
 A transparent, **explainable**, and **self-healing UI test automation engine** built on top of [FlaUI](https://github.com/FlaUI/FlaUI) (.NET, Microsoft UI Automation) for Windows desktop (WinForms & WPF) applications.
@@ -30,7 +30,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 
 ## 🏛️ System Architecture
 
-The core logic (`UiModel`, `SelfHealing`, `LlmHealing`) targets `netstandard2.0` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, and unit tests to execute cross-platform (including Linux CI).
+The core logic (`UiModel`, `SelfHealing`, `LlmHealing`) targets `netstandard2.0`, `.NET 8`, and `.NET 10` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, and unit tests to execute cross-platform (including Linux CI).
 
 ```mermaid
 flowchart TB
@@ -42,7 +42,7 @@ flowchart TB
         BrokenLoc["Broken Locator (Stale AutomationId)"]
         App --> Walker --> Snapshot
     end
-    subgraph STAGE2 ["2. Heuristic Engine (netstandard2.0)"]
+    subgraph STAGE2 ["2. Heuristic Engine (netstandard2.0 / .NET 8 / .NET 10)"]
         direction TB
         Resolver["SelfHealingResolver"]
         Pruner["Candidate Pruner (MinCandidateScore >= 0.05)"]
@@ -213,7 +213,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Candidate Pruner** | Candidate score filtering (`MinCandidateScore`), Top-N shortlist assembly | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini HTTP responses, Hallucination Guard | [LlmHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs) |
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
-| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs) |
+| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs) |
 
 ### Running Code Coverage Locally
 
@@ -232,7 +232,7 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 | Application | Problematic Control | Cause / Framework Behavior | How Self-Healing Solves It |
 | :--- | :--- | :--- | :--- |
 | **WinForms** (`net48`) | `panel1` | WinForms automatically surfaces `Control.Name` as UIA `AutomationId`. Auto-generated names (e.g. `panel1`) are frequently left unrenamed in legacy codebases. | `SelfHealingResolver` ignores `AutomationId` during scoring and matches the panel using parent context, child count, and screen bounding box. |
-| **WPF** (`net8.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF **never** infers `AutomationId` from `x:Name`. Unless `AutomationProperties.AutomationId` is set explicitly in XAML, `AutomationId` comes back empty. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
+| **WPF** (`net8.0-windows` / `net10.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF **never** infers `AutomationId` from `x:Name`. Unless `AutomationProperties.AutomationId` is set explicitly in XAML, `AutomationId` comes back empty. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
 
 ---
 
@@ -241,12 +241,12 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 ```
 AutomationSandbox.sln
 ├── WinFormsApp/            .NET Framework 4.8 WinForms application under test
-├── WpfApp/                 .NET 8 WPF application under test
+├── WpfApp/                 .NET 8 / .NET 10 WPF application under test
 └── TestAutomation/
-    ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0)
+    ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
     ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 (net48)
-    ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0)
-    ├── LlmHealing/         Claude & Gemini HTTP providers behind ILlmHealingProvider (netstandard2.0)
+    ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
+    ├── LlmHealing/         Claude & Gemini HTTP providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
     └── ScenarioRunner/     xUnit test suite: live UIA scenarios, explainability tests & synthetic benchmarks (net48)
 ```
 
@@ -254,7 +254,7 @@ AutomationSandbox.sln
 
 ## 🚀 Synthetic Benchmark Performance
 
-The core logic operates purely on `netstandard2.0` in-memory trees without requiring Windows UIA COM hooks.
+The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-memory trees without requiring Windows UIA COM hooks.
 
 `SyntheticTreeBenchmarkTests` exercises the heuristic engine against a synthetic UI tree containing **3,000+ candidate controls**:
 
@@ -293,7 +293,7 @@ graph LR
 
 ### Requirements
 - **Windows** (for FlaUI.UIA3 / WinForms live scenario execution).
-- **.NET SDK 8.0** and .NET Framework 4.8 Developer Pack.
+- **.NET SDK 8.0 / .NET SDK 10.0** and .NET Framework 4.8 Developer Pack.
 
 ### Execution Commands
 

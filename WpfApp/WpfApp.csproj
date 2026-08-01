@@ -1,29 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-
-
   <PropertyGroup>
-
     <OutputType>WinExe</OutputType>
-
-    <TargetFramework>net8.0-windows</TargetFramework>
-
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">net8.0-windows;net10.0-windows</TargetFrameworks>
     <UseWPF>true</UseWPF>
-
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-
     <ImplicitUsings>enable</ImplicitUsings>
-
     <Nullable>disable</Nullable>
-
     <RootNamespace>WpfApp</RootNamespace>
-
     <AssemblyName>WpfApp</AssemblyName>
-
     <IsPackable>false</IsPackable>
-
   </PropertyGroup>
-
-
-
 </Project>

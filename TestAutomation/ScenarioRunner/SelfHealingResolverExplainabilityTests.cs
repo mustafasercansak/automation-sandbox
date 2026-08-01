@@ -1,6 +1,5 @@
 using UiModel;
 using SelfHealing;
-
 namespace ScenarioRunner
 {
     public class SelfHealingResolverExplainabilityTests
@@ -17,7 +16,6 @@ namespace ScenarioRunner
                 SiblingCount = 2,
                 BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
             };
-
             var root = new UiElementInfo { ControlType = "Window" };
             root.Children.Add(new UiElementInfo
             {
@@ -29,9 +27,7 @@ namespace ScenarioRunner
                 SiblingCount = 2,
                 BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
             });
-
             var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
-
             Assert.NotNull(result.ScoreBreakdown);
             Assert.Equal(1.0, result.ScoreBreakdown!.ControlTypeScore);
             Assert.Equal(1.0, result.ScoreBreakdown.ParentControlTypeScore);
@@ -52,7 +48,6 @@ namespace ScenarioRunner
                 SiblingCount = 1,
                 BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
             };
-
             var root = new UiElementInfo { ControlType = "Window" };
             root.Children.Add(new UiElementInfo
             {
@@ -64,9 +59,7 @@ namespace ScenarioRunner
                 SiblingCount = 1,
                 BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
             });
-
             var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
-
             Assert.NotNull(result.ScoreBreakdown);
             Assert.Null(result.ScoreBreakdown!.PositionScore);
             // Position is excluded from the weighted average entirely (not penalized to 0) -
@@ -115,9 +108,7 @@ namespace ScenarioRunner
                 SiblingCount = 1000,
                 BoundingRectangle = new BoundingRectangle(100000, 100000, 50, 20),
             });
-
             var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
-
             Assert.Equal("goodMatch", result.Matched!.AutomationId);
             Assert.Equal(1, result.CandidateCount);
         }
