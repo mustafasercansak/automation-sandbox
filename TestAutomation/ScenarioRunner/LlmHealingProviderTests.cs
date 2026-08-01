@@ -116,6 +116,32 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ClaudeHealingProvider_SkipsAThinkingBlockAndFindsTheTextBlock()
+        {
+            // Regression test: Claude Opus 5 thinks by default, which would put a
+            // thinking block (no "text" property) before the text block if the
+            // provider blindly read content[0].
+            const string anthropicResponseJson = """
+            {
+              "content": [
+                { "type": "thinking", "thinking": "Comparing structural properties...", "signature": "abc" },
+                { "type": "text", "text": "{\"automationId\": \"txtEmail\", \"confidence\": 0.9, \"reasoning\": \"same position\"}" }
+              ]
+            }
+            """;
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(anthropicResponseJson, Encoding.UTF8, "application/json"),
+            });
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+
+            var result = await provider.ResolveAsync(Expected, BuildCurrentTree());
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.Equal("txtEmail", result.MatchedAutomationId);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_SurfacesHttpErrorStatus_WithoutThrowing()
         {
             var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)

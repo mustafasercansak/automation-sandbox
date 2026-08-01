@@ -48,6 +48,11 @@ namespace LlmHealing
             {
                 model = _model,
                 max_tokens = 1024,
+                // Claude Opus 5 thinks by default even with no "thinking" field set,
+                // which would put a thinking block before the text block in the
+                // response. Disabled here (allowed at effort "low") since this is a
+                // small structured-pick task with no need for extended reasoning.
+                thinking = new { type = "disabled" },
                 output_config = new { effort = "low" },
                 messages = new[] { new { role = "user", content = prompt } },
             };
@@ -75,8 +80,7 @@ namespace LlmHealing
                     };
                 }
 
-                using var doc = JsonDocument.Parse(responseBody);
-                var text = doc.RootElement.GetProperty("content")[0].GetProperty("text").GetString() ?? "";
+                var text = ExtractText(responseBody);
                 var (automationId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(text);
 
                 return new LlmHealingResult
@@ -93,6 +97,24 @@ namespace LlmHealing
             {
                 return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = ex.Message, Elapsed = stopwatch.Elapsed };
             }
+        }
+
+        // Finds the first text block in the response rather than assuming content[0]
+        // is text - a thinking block (when thinking isn't disabled) or a
+        // server-tool-use block would otherwise come first.
+        private static string ExtractText(string responseBody)
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            foreach (var block in doc.RootElement.GetProperty("content").EnumerateArray())
+            {
+                if (block.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "text"
+                    && block.TryGetProperty("text", out var textProp))
+                {
+                    return textProp.GetString() ?? "";
+                }
+            }
+
+            return "";
         }
     }
 }
