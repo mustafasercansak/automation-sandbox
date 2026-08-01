@@ -1,5 +1,6 @@
 using Discovery;
 using FlaUI.Core.AutomationElements;
+using SelfHealing;
 
 namespace ScenarioRunner
 {
@@ -61,6 +62,66 @@ namespace ScenarioRunner
 
             Assert.Contains("txtEmail", json);
             Assert.Contains("btnKaydet", json);
+        }
+
+        [Fact]
+        public void SelfHealing_KirikAutomationId_CanliUygulamadaDogruElemaniBulur()
+        {
+            var window = _connector.GetMainWindow();
+
+            // Discovery ile canlı, gerçek UI ağacını çekiyoruz - self-healing tam olarak
+            // bunun üzerinde çalışır.
+            var currentTree = UiTreeWalker.BuildTree(window);
+            var realEmailNode = FindByAutomationId(currentTree, "txtEmail")
+                ?? throw new InvalidOperationException("txtEmail canlı ağaçta bulunamadı, test verisi geçersiz.");
+
+            // "Bir önceki sprint'te kaydedilmiş" eski bir locator'ı simüle ediyoruz: o zaman
+            // AutomationId "txtEposta" imiş, sonradan bir refactor'de "txtEmail" olmuş.
+            // Diğer tüm yapısal bilgiler gerçek ağaçtan alınıyor - sadece AutomationId
+            // kasıtlı olarak eski/yanlış.
+            var staleExpected = new UiElementInfo
+            {
+                ControlType = realEmailNode.ControlType,
+                Name = realEmailNode.Name,
+                AutomationId = "txtEposta",
+                ParentControlType = realEmailNode.ParentControlType,
+                ParentAutomationId = realEmailNode.ParentAutomationId,
+                SiblingIndex = realEmailNode.SiblingIndex,
+                SiblingCount = realEmailNode.SiblingCount,
+                BoundingRectangle = realEmailNode.BoundingRectangle,
+            };
+
+            // Eski id ile doğrudan arama gerçekten başarısız olur - canlı bir locator
+            // kırılmasının birebir simülasyonu.
+            var directHit = window.FindFirstDescendant(cf => cf.ByAutomationId("txtEposta"));
+            Assert.Null(directHit);
+
+            // Self-healing devreye girer: aynı canlı ağaç üzerinde yapısal benzerlikle
+            // (AutomationId'ye hiç bakmadan) doğru elemanı buluyor.
+            var healResult = SelfHealingResolver.Resolve(staleExpected, currentTree);
+
+            Assert.NotNull(healResult.Matched);
+            Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
+            Assert.True(healResult.IsConfident, $"Beklenen güvenli eşleşme sağlanamadı, skor: {healResult.Score}");
+        }
+
+        private static UiElementInfo? FindByAutomationId(UiElementInfo node, string automationId)
+        {
+            if (node.AutomationId == automationId)
+            {
+                return node;
+            }
+
+            foreach (var child in node.Children)
+            {
+                var found = FindByAutomationId(child, automationId);
+                if (found is not null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
 
         public void Dispose()
