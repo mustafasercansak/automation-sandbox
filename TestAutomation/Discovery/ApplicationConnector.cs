@@ -1,11 +1,12 @@
+using System;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Tools;
 using FlaUI.UIA3;
 namespace Discovery
 {
     // Framework-agnostic connection point: whether the target is WinForms, WPF, or any
     // other Windows desktop app doesn't matter - UIA3 talks to it the same way from outside.
-
     public sealed class ApplicationConnector : IDisposable
     {
         public Application App { get; }
@@ -31,7 +32,12 @@ namespace Discovery
 
         public Window GetMainWindow(TimeSpan? timeout = null)
         {
-            return App.GetMainWindow(Automation, timeout ?? TimeSpan.FromSeconds(10))!;
+            var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            var window = Retry.WhileNull(
+                () => App.GetMainWindow(Automation, TimeSpan.FromSeconds(2)),
+                timeout: effectiveTimeout
+            ).Result;
+            return window ?? throw new InvalidOperationException($"Main window for process {App.Name} ({App.Id}) was not found within {effectiveTimeout.TotalSeconds}s.");
         }
 
         public void Dispose()

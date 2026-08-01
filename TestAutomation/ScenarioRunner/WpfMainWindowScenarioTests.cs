@@ -44,15 +44,17 @@ namespace ScenarioRunner
             var comboElement = Retry.WhileNull(
                 () => window.FindFirstDescendant(cf => cf.ByAutomationId("cmbRecordType")),
                 timeout: TimeSpan.FromSeconds(5)
-            ).Result;
-            Assert.NotNull(comboElement);
-            var combo = comboElement!.AsComboBox();
+            ).Result ?? throw new InvalidOperationException("cmbRecordType combo box was not found in WPF main window.");
+            var combo = comboElement.AsComboBox();
             combo.Select("Corporate");
 
             // CompanyPanel (a GroupBox): deliberately has no AutomationProperties.AutomationId
             // set in MainWindow.xaml. We find it by ControlType instead - the WPF-flavored
             // version of the exact same weak-locator problem SelfHealing is meant to solve.
-            var companyPanel = window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group))!;
+            var companyPanel = Retry.WhileNull(
+                () => window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group)),
+                timeout: TimeSpan.FromSeconds(5)
+            ).Result ?? throw new InvalidOperationException("CompanyPanel GroupBox was not found in WPF main window.");
             var rect = companyPanel.Properties.BoundingRectangle.ValueOrDefault;
             Assert.True(rect.Width > 0 && rect.Height > 0, $"Company panel should be visible but its bounding rectangle came back empty: {rect}");
         }
