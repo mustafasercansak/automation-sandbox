@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Discovery;
 using FlaUI.Core.AutomationElements;
@@ -21,6 +23,105 @@ namespace ScenarioRunner
         {
             var exePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, WinFormsAppRelativePath));
             _connector = ApplicationConnector.Launch(exePath);
+        }
+
+        [Fact]
+        public void Discover_MaxElements_StopsAndSetsHitMaxElements()
+        {
+            var window = _connector.GetMainWindow();
+            var options = new DiscoveryOptions
+            {
+                MaxElements = 5,
+                IncludeOffscreen = true
+            };
+            var result = UiTreeWalker.Discover(window, options);
+            Assert.True(result.HitMaxElements, "Expected HitMaxElements to be true when MaxElements limit is hit.");
+            Assert.True(result.CapturedCount <= 5, $"Expected CapturedCount <= 5, got {result.CapturedCount}");
+        }
+
+        [Fact]
+        public void Discover_MaxDepth_SetsHitMaxDepth()
+        {
+            var window = _connector.GetMainWindow();
+            var options = new DiscoveryOptions
+            {
+                MaxDepth = 1,
+                IncludeOffscreen = true
+            };
+            var result = UiTreeWalker.Discover(window, options);
+            Assert.True(result.HitMaxDepth, "Expected HitMaxDepth to be true when MaxDepth limit is 1.");
+            Assert.NotNull(result.Root);
+        }
+
+        [Fact]
+        public void Discover_IgnoredControlTypes_ExcludesNodes()
+        {
+            var window = _connector.GetMainWindow();
+            var options = new DiscoveryOptions
+            {
+                IncludeOffscreen = true,
+                IgnoredControlTypes = new HashSet<string> { "Button" }
+            };
+            var result = UiTreeWalker.Discover(window, options);
+            Assert.True(result.SkippedCount > 0, "Expected SkippedCount > 0 when ignoring Button control types.");
+            var allControls = Flatten(result.Root);
+            Assert.DoesNotContain(allControls, c => c.ControlType.Equals("Button", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void Discover_Default_ReturnsTelemetryCounts()
+        {
+            var window = _connector.GetMainWindow();
+            var options = new DiscoveryOptions
+            {
+                IncludeOffscreen = true
+            };
+            var result = UiTreeWalker.Discover(window, options);
+            Assert.True(result.VisitedCount > 0);
+            Assert.True(result.CapturedCount > 0);
+            Assert.True(result.Elapsed > TimeSpan.Zero);
+        }
+
+        [Fact]
+        public void Discover_PreCancelled_ReturnsCancelledResultWithoutReadingRoot()
+        {
+            var window = _connector.GetMainWindow();
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            var result = UiTreeWalker.Discover(window, cancellationToken: cancellation.Token);
+            Assert.True(result.WasCancelled);
+            Assert.NotNull(result.Root);
+            Assert.Equal(0, result.VisitedCount);
+            Assert.Equal(0, result.CapturedCount);
+        }
+
+        [Fact]
+        public void Discover_RootRemainsTraversalAnchorWhenItsTypeIsIgnored()
+        {
+            var window = _connector.GetMainWindow();
+            var options = new DiscoveryOptions
+            {
+                IncludeOffscreen = true,
+                IgnoredControlTypes = new HashSet<string> { "Window" }
+            };
+            var result = UiTreeWalker.Discover(window, options);
+            Assert.Equal("Window", result.Root.ControlType);
+            Assert.True(result.CapturedCount > 0);
+        }
+
+        [Fact]
+        public void Discover_InvalidLimits_AreRejected()
+        {
+            var window = _connector.GetMainWindow();
+            Assert.Throws<ArgumentOutOfRangeException>(() => UiTreeWalker.Discover(
+                window,
+                new DiscoveryOptions { MaxDepth = -1 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UiTreeWalker.Discover(
+                window,
+                new DiscoveryOptions { MaxElements = 0 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => UiTreeWalker.Discover(
+                window,
+                new DiscoveryOptions { Timeout = TimeSpan.Zero }));
         }
 
         [Fact]
@@ -123,6 +224,16 @@ namespace ScenarioRunner
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
             Assert.Equal(HealSource.Llm, healResult.Source);
             Assert.True(healResult.IsConfident, $"Expected a confident LLM-sourced match, but got: {healResult.LlmProviderName}, confidence={healResult.LlmConfidence}");
+        }
+
+        private static List<UiElementInfo> Flatten(UiElementInfo root)
+        {
+            var list = new List<UiElementInfo> { root };
+            foreach (var child in root.Children)
+            {
+                list.AddRange(Flatten(child));
+            }
+            return list;
         }
 
         public void Dispose()

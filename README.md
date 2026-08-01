@@ -22,7 +22,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **LLM Fallback & Guard** | ✅ Implemented | Parallel Claude/Gemini provider integration with shortlist `candidateId` **Hallucination Guard**. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
-| **Discovery Options & Telemetry** | ⏳ In Progress | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken). |
+| **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | 📋 Planned | Persistent `.locator.json` repository schema with auto-learning history. |
 | **Playwright Web Automation** | 📋 Planned | Web DOM tree walker and Playwright `GetByRole`/`GetByTestId` locator emitter. |
 
@@ -161,7 +161,44 @@ if (result.IsConfident)
 }
 ```
 
-### 2. Tuning Weights & Thresholds
+### 2. Controlled Tree Discovery with Options & Telemetry
+Configure traversal bounds, timeouts, cancellation tokens, and control filters:
+
+```csharp
+using Discovery;
+using System.Threading;
+
+var options = new DiscoveryOptions
+{
+    MaxDepth = 15,
+    MaxElements = 3000,
+    Timeout = TimeSpan.FromSeconds(5),
+    IncludeOffscreen = false,
+    IgnoredControlTypes = new HashSet<string> { "Custom", "ScrollBar" }
+};
+
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+// Run robust discovery
+DiscoveryResult result = UiTreeWalker.Discover(window, options, cts.Token);
+
+Console.WriteLine($"Captured {result.CapturedCount} controls in {result.Elapsed.TotalMilliseconds:F0}ms");
+Console.WriteLine($"Visited: {result.VisitedCount}, Skipped: {result.SkippedCount}, Errors: {result.ErrorCount}");
+if (result.HitMaxElements) Console.WriteLine("Max element limit reached!");
+if (result.TimedOut) Console.WriteLine("Discovery timed out gracefully with partial tree.");
+if (result.WasCancelled) Console.WriteLine("Discovery was cancelled gracefully with partial tree.");
+```
+
+> [!NOTE]
+> **Discovery Timeout & Filtering Semantics:**
+> - `Timeout`: Operates as a best-effort traversal budget between nodes, returning a usable partial tree (`TimedOut = true`) rather than throwing an exception.
+> - `CancellationToken`: Stops traversal gracefully at the next checkpoint and returns partial result with `WasCancelled = true`.
+> - `IncludeOffscreen`: When set to `false` (default), controls with zero bounding boxes `(0,0,0,0)` or `IsOffscreen = true` are skipped and excluded from `node.Children` (`SkippedCount` incremented).
+> - `IgnoredControlTypes` & `IgnoredClassNames`: Matching descendant nodes and their subtrees are excluded from `node.Children`. The requested root remains the traversal anchor and is never removed by filters (`depth > 0`).
+> - `SiblingCount` Integrity: `SiblingCount` is calculated over actual captured non-filtered siblings in the tree, ensuring mathematical consistency for `SiblingPositionScore`.
+> - `Fail-Fast Validation`: `UiTreeWalker.Discover` validates options before traversal, throwing `ArgumentNullException` or `ArgumentOutOfRangeException` for invalid parameters (`MaxDepth < 0`, `MaxElements < 1`, `Timeout <= 0`).
+
+### 3. Tuning Weights & Thresholds
 Customize scoring behavior for applications with unstable positions or static control names:
 
 ```csharp
@@ -179,7 +216,7 @@ var customWeights = new SimilarityWeights
 var result = SelfHealingResolver.Resolve(expected, liveTree, customWeights);
 ```
 
-### 3. LLM Fallback Resolution (Opt-In)
+### 4. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -211,6 +248,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | :--- | :--- | :--- |
 | **Heuristic Scorer** | Structural similarity, weight tuning, unusable `(0,0,0,0)` bounds | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **Candidate Pruner** | Candidate score filtering (`MinCandidateScore`), Top-N shortlist assembly | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
+| **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters & limits | [DiscoveryRobustnessTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini HTTP responses, Hallucination Guard | [LlmHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs) |
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
 | **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs) |
@@ -244,7 +282,7 @@ AutomationSandbox.sln
 ├── WpfApp/                 .NET 8 / .NET 10 WPF application under test
 └── TestAutomation/
     ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
-    ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 (net48)
+    ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
     ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
     ├── LlmHealing/         Claude & Gemini HTTP providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
     └── ScenarioRunner/     xUnit test suite: live UIA scenarios, explainability tests & synthetic benchmarks (net48)
@@ -274,7 +312,7 @@ The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-mem
 graph LR
     subgraph PhaseA [Phase A: Core Hardening]
         M1[M1: Core Hardening MVP - Implemented]
-        M2[M2: Discovery Robustness - In Progress]
+        M2[M2: Discovery Robustness - Implemented]
         M3[M3: Snapshot Repository - Planned]
         M1 --> M2 --> M3
     end
