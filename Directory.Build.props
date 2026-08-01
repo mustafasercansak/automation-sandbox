@@ -1,0 +1,29 @@
+<Project>
+
+
+
+  <!-- Shared metadata for dotnet pack. Only applies where IsPackable isn't overridden
+
+       to false (the two demo apps, and ScenarioRunner as an IsTestProject). -->
+
+  <PropertyGroup>
+
+    <Authors>Mustafa Sercan Sak</Authors>
+
+    <RepositoryUrl>https://github.com/mustafasercansak/automation-sandbox</RepositoryUrl>
+
+    <PackageTags>ui-automation;flaui;self-healing;test-automation</PackageTags>
+
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <Version>0.1.0-preview</Version>
+
+    <Deterministic>true</Deterministic>
+
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+  </PropertyGroup>
+
+
+
+</Project>

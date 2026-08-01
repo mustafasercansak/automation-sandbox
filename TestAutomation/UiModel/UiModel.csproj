@@ -1,14 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>netstandard2.0</TargetFramework>
+
     <LangVersion>latest</LangVersion>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <Nullable>enable</Nullable>
+
+    <Description>Framework-agnostic UI tree snapshot model (UiElementInfo) and JSON (de)serializer, with no FlaUI dependency.</Description>
+
   </PropertyGroup>
 
+
+
   <ItemGroup>
+
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
+
   </ItemGroup>
+
+
 
 </Project>

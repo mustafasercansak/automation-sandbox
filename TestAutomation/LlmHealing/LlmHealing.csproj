@@ -1,18 +1,37 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>netstandard2.0</TargetFramework>
+
     <LangVersion>latest</LangVersion>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <Nullable>enable</Nullable>
+
+    <Description>LLM provider implementations (Claude, Gemini) behind a shared ILlmHealingProvider interface for locator resolution.</Description>
+
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-  </ItemGroup>
+
 
   <ItemGroup>
-    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+
   </ItemGroup>
+
+
+
+  <ItemGroup>
+
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+
+  </ItemGroup>
+
+
 
 </Project>

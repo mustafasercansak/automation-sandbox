@@ -1,59 +1,339 @@
-using System;
 using System.Text.Json;
+
 using UiModel;
 
+
+
 namespace LlmHealing
+
 {
-    // Shared prompt/response format so every provider is asked the same question
-    // the same way - that's what makes the evaluator's comparison meaningful.
-    // Public so it's independently unit-testable from other assemblies.
+
+    // Shared prompt/response format so every provider is asked the same question the same
+
+    // way - that's what makes the evaluator's comparison meaningful. Public so it's
+
+    // independently unit-testable from other assemblies.
+
+    //
+
+    // The model is given a bounded shortlist of pre-scored candidates (not the full UI tree)
+
+    // and asked to pick one by its opaque candidateId - not by AutomationId. This bounds
+
+    // prompt/token cost on large trees and is harder to hallucinate past: the model can only
+
+    // choose from a closed, enumerated set it was actually shown, rather than returning any
+
+    // string it likes.
+
     public static class LlmHealingPrompt
+
     {
-        public static string Build(UiElementInfo expected, UiElementInfo currentTree)
+
+        public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string platform = "windows-uia")
+
         {
+
             var expectedJson = UiTreeSerializer.ToJson(expected);
-            var currentTreeJson = UiTreeSerializer.ToJson(currentTree);
+
+            var candidatesJson = JsonSerializer.Serialize(
+
+                candidates.Select(ToPromptCandidate),
+
+                new JsonSerializerOptions { WriteIndented = true });
+
+
 
             return
-$@"You are diagnosing a broken UI test locator for a Windows desktop application.
+
+$@"You are diagnosing a broken UI test locator for a {platform} application.
+
+
 
 A locator that used to work no longer finds its element - most likely because the
+
 element's AutomationId changed (e.g. after a refactor). Below is the last known
-structural snapshot of that element, and the current full UI tree of the same window.
+
+structural snapshot of that element, and a shortlist of the current tree's candidates
+
+that are structurally closest to it, each with a heuristic score and its component
+
+breakdown.
+
+
 
 Last known element (its AutomationId is stale/unreliable - do not use it to match):
+
 {expectedJson}
 
-Current UI tree:
-{currentTreeJson}
 
-Find the element in the current tree that is structurally the same control: same
-ControlType, similar parent/sibling context, similar screen position, similar Name.
-Ignore AutomationId entirely when deciding which node matches - that's the value
-that's expected to have changed.
+
+Candidates (ordered by heuristic score, best first):
+
+{candidatesJson}
+
+
+
+Pick the candidate that is structurally the same control: same ControlType, similar
+
+parent/sibling context, similar screen position, similar Name. Ignore AutomationId
+
+entirely when deciding which one matches - that's the value that's expected to have
+
+changed. Respond with the candidateId of your pick, not its AutomationId.
+
+
 
 Respond with ONLY a single JSON object, no markdown fences, no other text:
-{{""automationId"": ""<AutomationId of your best match, or empty string if none fits>"", ""confidence"": <number 0.0-1.0>, ""reasoning"": ""<one sentence>""}}";
+
+{{""candidateId"": ""<candidateId of your best match, or empty string if none fits>"", ""confidence"": <number 0.0-1.0>, ""reasoning"": ""<one sentence>""}}";
+
         }
 
-        public static (string? AutomationId, double Confidence, string Reasoning) ParseResponse(string rawText)
+
+
+        public static (string? CandidateId, double Confidence, string Reasoning) ParseResponse(string rawText)
+
         {
-            var jsonStart = rawText.IndexOf('{');
-            var jsonEnd = rawText.LastIndexOf('}');
-            if (jsonStart < 0 || jsonEnd <= jsonStart)
+
+            var json = FindFirstResponseJsonObject(rawText);
+
+            if (json is null)
+
             {
+
                 throw new FormatException($"No JSON object found in model response: {rawText}");
+
             }
 
-            var json = rawText.Substring(jsonStart, jsonEnd - jsonStart + 1);
+
+
             using var doc = JsonDocument.Parse(json);
+
             var root = doc.RootElement;
 
-            var automationId = root.TryGetProperty("automationId", out var idProp) ? idProp.GetString() : null;
+
+
+            var candidateId = root.TryGetProperty("candidateId", out var idProp) ? idProp.GetString() : null;
+
             var confidence = root.TryGetProperty("confidence", out var confProp) ? confProp.GetDouble() : 0.0;
+
             var reasoning = root.TryGetProperty("reasoning", out var reasonProp) ? reasonProp.GetString() ?? "" : "";
 
-            return (string.IsNullOrWhiteSpace(automationId) ? null : automationId, confidence, reasoning);
+
+
+            return (string.IsNullOrWhiteSpace(candidateId) ? null : candidateId, confidence, reasoning);
+
         }
+
+
+
+        private static object ToPromptCandidate(CandidateScore c) => new
+
+        {
+
+            candidateId = c.CandidateId,
+
+            automationId = c.Candidate.AutomationId,
+
+            controlType = c.Candidate.ControlType,
+
+            name = c.Candidate.Name,
+
+            score = Math.Round(c.TotalScore, 2),
+
+            components = new
+
+            {
+
+                controlTypeScore = Math.Round(c.Components.ControlTypeScore, 2),
+
+                parentControlTypeScore = Math.Round(c.Components.ParentControlTypeScore, 2),
+
+                siblingPositionScore = Math.Round(c.Components.SiblingPositionScore, 2),
+
+                nameScore = Math.Round(c.Components.NameScore, 2),
+
+                positionScore = c.Components.PositionScore.HasValue ? Math.Round(c.Components.PositionScore.Value, 2) : (double?)null,
+
+            },
+
+        };
+
+
+
+        private static string? FindFirstResponseJsonObject(string rawText)
+
+        {
+
+            for (var start = 0; start < rawText.Length; start++)
+
+            {
+
+                if (rawText[start] != '{')
+
+                {
+
+                    continue;
+
+                }
+
+
+
+                var end = FindMatchingObjectEnd(rawText, start);
+
+                if (end < 0)
+
+                {
+
+                    continue;
+
+                }
+
+
+
+                var candidate = rawText.Substring(start, end - start + 1);
+
+                try
+
+                {
+
+                    using var doc = JsonDocument.Parse(candidate);
+
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object
+
+                        && (doc.RootElement.TryGetProperty("candidateId", out _)
+
+                            || doc.RootElement.TryGetProperty("confidence", out _)))
+
+                    {
+
+                        return candidate;
+
+                    }
+
+                }
+
+                catch (JsonException)
+
+                {
+
+                }
+
+
+
+                start = end;
+
+            }
+
+
+
+            return null;
+
+        }
+
+
+
+        private static int FindMatchingObjectEnd(string text, int start)
+
+        {
+
+            var depth = 0;
+
+            var inString = false;
+
+            var escaping = false;
+
+
+
+            for (var i = start; i < text.Length; i++)
+
+            {
+
+                var c = text[i];
+
+
+
+                if (inString)
+
+                {
+
+                    if (escaping)
+
+                    {
+
+                        escaping = false;
+
+                    }
+
+                    else if (c == '\\')
+
+                    {
+
+                        escaping = true;
+
+                    }
+
+                    else if (c == '"')
+
+                    {
+
+                        inString = false;
+
+                    }
+
+
+
+                    continue;
+
+                }
+
+
+
+                if (c == '"')
+
+                {
+
+                    inString = true;
+
+                    continue;
+
+                }
+
+
+
+                if (c == '{')
+
+                {
+
+                    depth++;
+
+                }
+
+                else if (c == '}')
+
+                {
+
+                    depth--;
+
+                    if (depth == 0)
+
+                    {
+
+                        return i;
+
+                    }
+
+                }
+
+            }
+
+
+
+            return -1;
+
+        }
+
     }
+
 }

@@ -4,3 +4,9 @@ obj/
 .vs/
 .vscode/
 *.suo
+
+# Local hidden files/directories. Keep .gitignore tracked so these rules are shared.
+.*
+!.gitignore
+!.github/
+!.github/**

@@ -1,14 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>netstandard2.0</TargetFramework>
+
     <LangVersion>latest</LangVersion>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <Nullable>enable</Nullable>
+
+    <Description>Structural-similarity heuristic locator resolver with an optional LLM fallback for low-confidence matches.</Description>
+
   </PropertyGroup>
 
+
+
   <ItemGroup>
+
     <ProjectReference Include="..\UiModel\UiModel.csproj" />
+
+    <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
+
   </ItemGroup>
+
+
 
 </Project>

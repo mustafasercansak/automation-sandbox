@@ -1,19 +1,39 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>net48</TargetFramework>
+
     <LangVersion>latest</LangVersion>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <Nullable>enable</Nullable>
+
+    <Description>Live UI tree capture via FlaUI/UI Automation (net48-only, since FlaUI 5.0.0 ships .NET Framework binaries only).</Description>
+
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FlaUI.Core" Version="5.0.0" />
-    <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
-  </ItemGroup>
+
 
   <ItemGroup>
-    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+
+    <PackageReference Include="FlaUI.Core" Version="5.0.0" />
+
+    <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
+
   </ItemGroup>
+
+
+
+  <ItemGroup>
+
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+
+  </ItemGroup>
+
+
 
 </Project>

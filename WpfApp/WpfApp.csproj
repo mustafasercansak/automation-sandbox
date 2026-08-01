@@ -1,14 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <OutputType>WinExe</OutputType>
+
     <TargetFramework>net8.0-windows</TargetFramework>
+
     <UseWPF>true</UseWPF>
+
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <Nullable>disable</Nullable>
+
     <RootNamespace>WpfApp</RootNamespace>
+
     <AssemblyName>WpfApp</AssemblyName>
+
+    <IsPackable>false</IsPackable>
+
   </PropertyGroup>
+
+
 
 </Project>

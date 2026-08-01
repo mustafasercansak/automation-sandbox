@@ -26,13 +26,13 @@ jobs:
       - name: Build (Debug - WinFormsApp.exe path used by ScenarioRunner tests)
         run: dotnet build AutomationSandbox.sln --configuration Debug --no-restore
 
-      - name: Run tests (Discovery + SelfHealing + live FlaUI/UIA scenarios + LLM comparison)
+      - name: Run tests with Code Coverage (Discovery + SelfHealing + live FlaUI/UIA scenarios + LLM comparison)
         env:
           # Optional: if these repo secrets are unset, GitHub substitutes an empty
           # string and LlmHealingEvaluationTests skips itself - no error either way.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
 
       - name: Upload test results
         if: always()
@@ -40,3 +40,10 @@ jobs:
         with:
           name: test-results
           path: TestAutomation/ScenarioRunner/TestResults/test-results.trx
+
+      - name: Upload code coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: code-coverage
+          path: TestAutomation/ScenarioRunner/TestResults/**/coverage.cobertura.xml
