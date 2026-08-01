@@ -1,4 +1,5 @@
 using FlaUI.Core.AutomationElements;
+using UiModel;
 
 namespace Discovery
 {

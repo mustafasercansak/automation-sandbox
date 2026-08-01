@@ -1,10 +1,11 @@
-using Discovery;
+using UiModel;
 
 namespace SelfHealing
 {
-    // No LLM yet, pure heuristic: ControlType match is a mandatory pre-filter,
+    // Pure heuristic, no LLM involved: ControlType match is a mandatory pre-filter,
     // then parent context + sibling position + name similarity + screen position
-    // are combined with weights into a single 0..1 score.
+    // are combined with weights into a single 0..1 score. See TestAutomation/LlmHealing
+    // for the separate LLM-based comparison harness.
     internal static class SimilarityScorer
     {
         private const double ParentControlTypeWeight = 0.25;

@@ -13,13 +13,20 @@ Commercial tools like Ranorex hide a lot behind proprietary object repositories.
 sandbox explores the same territory with plain FlaUI and a small amount of custom
 tooling:
 
-- **Discovery** — walk an application's entire UI tree via UI Automation and serialize
-  it to JSON (a format meant to eventually be fed to an LLM as context).
+- **UiModel** — the shared `UiElementInfo` tree snapshot + JSON (de)serializer that
+  every other layer builds on. No FlaUI dependency, `netstandard2.0`.
+- **Discovery** — walk an application's entire UI tree via UI Automation and produce a
+  `UiElementInfo` snapshot.
 - **SelfHealing** — when a locator (typically an `AutomationId`) breaks, compare the
   current UI tree against the last known snapshot and re-locate the element using
   structural similarity (control type, parent/sibling context, name, screen position) —
-  no LLM yet, a plain heuristic scorer.
-- **ScenarioRunner** — xUnit tests that exercise both of the above against real,
+  a plain heuristic scorer, no LLM involved.
+- **LlmHealing** — a separate comparison harness: sends the same broken-locator
+  scenario to multiple LLM providers (Claude, Gemini) in parallel and prints their
+  answers side by side, to evaluate whether an LLM-assisted resolution step is worth
+  adding to `SelfHealingResolver` as a fallback for low-confidence heuristic matches.
+  Not wired into the production path — a research tool, not a fallback chain.
+- **ScenarioRunner** — xUnit tests that exercise all of the above against real,
   running applications.
 
 ## Repository structure
@@ -29,8 +36,10 @@ AutomationSandbox.sln
 ├── WinFormsApp/            .NET Framework 4.8 WinForms app under test
 ├── WpfApp/                 .NET 8 WPF app under test
 └── TestAutomation/
-    ├── Discovery/           UI tree walker + JSON serializer (FlaUI.Core, FlaUI.UIA3)
+    ├── UiModel/             Shared UI tree snapshot + JSON (de)serializer (no FlaUI dependency)
+    ├── Discovery/           UI tree walker (FlaUI.Core, FlaUI.UIA3)
     ├── SelfHealing/         Structural-similarity locator resolver (no FlaUI dependency)
+    ├── LlmHealing/          Multi-provider LLM comparison harness for broken locators (no FlaUI dependency)
     └── ScenarioRunner/      xUnit tests, live UIA scenarios + pure-logic unit tests
 ```
 
@@ -53,9 +62,29 @@ precisely the piece of information that's missing or wrong when it gets invoked.
 ## Why .NET Framework 4.8 for the FlaUI-dependent projects
 
 `FlaUI.Core` / `FlaUI.UIA3` 5.0.0 only ship .NET Framework binaries. `WinFormsApp`,
-`Discovery`, `SelfHealing`, and `ScenarioRunner` all target `net48` for that reason.
-`WpfApp` targets `net8.0-windows` — its TFM is irrelevant to the test tooling since UI
-Automation talks to it as an external process either way.
+`Discovery`, and `ScenarioRunner` all target `net48` for that reason. `WpfApp` targets
+`net8.0-windows` — its TFM is irrelevant to the test tooling since UI Automation talks
+to it as an external process either way. `UiModel`, `SelfHealing`, and `LlmHealing`
+have no FlaUI dependency at all and target `netstandard2.0`, so `net48` projects can
+consume them and they can also be exercised directly from a `net8.0` (or any modern)
+console app — useful for iterating on this logic without a Windows machine.
+
+## LLM-assisted resolution (evaluation only)
+
+`LlmHealingEvaluationTests.CompareProviders_OnLiveBrokenLocator` sends the same live,
+real broken-locator scenario used by `SelfHealing_BrokenAutomationId_...` to every
+configured LLM provider and prints a comparison. It's opt-in: with neither
+`ANTHROPIC_API_KEY` nor `GEMINI_API_KEY` set, the test is a no-op by design — it does
+not fail the build, and it is not part of the required test suite.
+
+To include it in your own CI run, add repository secrets `ANTHROPIC_API_KEY` and/or
+`GEMINI_API_KEY` (Settings → Secrets and variables → Actions) — `.github/workflows/ci.yml`
+already passes them through if present. Locally, just set the environment variable
+before running `dotnet test`.
+
+The `GeminiHealingProvider` default model id may drift out of date faster than this
+repo does; override it via the `GEMINI_MODEL` environment variable if requests start
+failing.
 
 ## Running locally
 
@@ -78,5 +107,8 @@ only practical way to validate this code without owning a Windows machine.
 ## Status
 
 WinFormsApp, WpfApp, Discovery, and SelfHealing are all implemented and validated
-end-to-end on real Windows via CI, for both target frameworks. Not yet started: an
-LLM-assisted resolution step for locators the heuristic scorer can't confidently match.
+end-to-end on real Windows via CI, for both target frameworks. LlmHealing exists as an
+opt-in comparison harness (Claude + Gemini); its `ClaudeHealingProvider` HTTP
+request/response handling has been verified against a mocked handler, but neither
+provider has been exercised against a live API key yet, and no decision has been made
+on whether to promote either into `SelfHealingResolver` as a production fallback.

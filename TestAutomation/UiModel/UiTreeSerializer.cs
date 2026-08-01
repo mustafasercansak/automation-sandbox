@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Discovery
+namespace UiModel
 {
     public static class UiTreeSerializer
     {
@@ -13,6 +13,6 @@ namespace Discovery
 
         public static UiElementInfo FromJson(string json) =>
             JsonSerializer.Deserialize<UiElementInfo>(json, Options)
-            ?? throw new JsonException("UI tree JSON'dan deserialize edilemedi.");
+            ?? throw new JsonException("Failed to deserialize UI tree from JSON.");
     }
 }

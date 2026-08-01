@@ -1,4 +1,5 @@
 using Discovery;
+using UiModel;
 using FlaUI.Core.AutomationElements;
 using SelfHealing;
 

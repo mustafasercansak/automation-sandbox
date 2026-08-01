@@ -24,6 +24,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Discovery\Discovery.csproj" />
     <ProjectReference Include="..\SelfHealing\SelfHealing.csproj" />
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+    <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
   </ItemGroup>
 
 </Project>

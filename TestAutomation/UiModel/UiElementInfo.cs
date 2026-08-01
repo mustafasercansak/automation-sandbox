@@ -1,4 +1,4 @@
-namespace Discovery
+namespace UiModel
 {
     public sealed class UiElementInfo
     {

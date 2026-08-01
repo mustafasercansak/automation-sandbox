@@ -1,4 +1,4 @@
-using Discovery;
+using UiModel;
 
 namespace SelfHealing
 {
