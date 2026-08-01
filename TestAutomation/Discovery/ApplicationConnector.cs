@@ -37,7 +37,7 @@ namespace Discovery
                 () => App.GetMainWindow(Automation, TimeSpan.FromSeconds(2)),
                 timeout: effectiveTimeout
             ).Result;
-            return window ?? throw new InvalidOperationException($"Main window for process {App.Name} ({App.Id}) was not found within {effectiveTimeout.TotalSeconds}s.");
+            return window ?? throw new InvalidOperationException($"Main window was not found within {effectiveTimeout.TotalSeconds}s.");
         }
 
         public void Dispose()
