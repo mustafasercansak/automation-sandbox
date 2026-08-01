@@ -6,8 +6,8 @@ namespace SelfHealing
     {
         public const double MinimumConfidence = 0.5;
 
-        // expected: kırılan locator'ın son bilinen snapshot'taki hali.
-        // currentTreeRoot: şu anki uygulamadan yeni çekilmiş UI ağacı.
+        // expected: the last known snapshot state of the locator that just broke.
+        // currentTreeRoot: a freshly captured UI tree from the application right now.
         public static HealResult Resolve(UiElementInfo expected, UiElementInfo currentTreeRoot, Action<string>? log = null)
         {
             log ??= Console.WriteLine;
@@ -20,16 +20,16 @@ namespace SelfHealing
 
             if (scoredCandidates.Count == 0)
             {
-                log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) için aynı ControlType'a sahip hiçbir aday bulunamadı.");
+                log($"[SelfHealing] No candidate with the same ControlType was found for '{expected.AutomationId}' ({expected.ControlType}).");
                 return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0 };
             }
 
             var best = scoredCandidates[0];
-            var confidenceLabel = best.Score >= MinimumConfidence ? "GÜVENİLİR" : "DÜŞÜK GÜVEN";
+            var confidenceLabel = best.Score >= MinimumConfidence ? "CONFIDENT" : "LOW CONFIDENCE";
 
-            log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) bulunamadı. " +
-                $"En iyi aday: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
-                $"Score={best.Score:F2} ({confidenceLabel}), {scoredCandidates.Count} aday arasından seçildi.");
+            log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) not found. " +
+                $"Best candidate: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
+                $"Score={best.Score:F2} ({confidenceLabel}), chosen among {scoredCandidates.Count} candidate(s).");
 
             return new HealResult
             {

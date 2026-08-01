@@ -4,8 +4,8 @@ using FlaUI.UIA3;
 
 namespace Discovery
 {
-    // Framework-agnostic bağlantı noktası: WinForms, WPF ya da başka bir Windows
-    // masaüstü uygulaması olsun fark etmez, UIA3 dışarıdan aynı şekilde konuşur.
+    // Framework-agnostic connection point: whether the target is WinForms, WPF, or any
+    // other Windows desktop app doesn't matter - UIA3 talks to it the same way from outside.
     public sealed class ApplicationConnector : IDisposable
     {
         public Application App { get; }

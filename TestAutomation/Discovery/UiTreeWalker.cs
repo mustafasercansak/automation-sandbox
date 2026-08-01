@@ -16,10 +16,10 @@ namespace Discovery
             int siblingIndex,
             int siblingCount)
         {
-            // Properties.X.ValueOrDefault kullanılıyor çünkü bazı legacy WinForms native
-            // kontrolleri (ör. DataGridView'in iç hücreleri) UIA üzerinden her property'yi
-            // desteklemiyor - element.AutomationId gibi kısayollar bu durumda
-            // PropertyNotSupportedException fırlatır, ValueOrDefault fırlatmadan "" döner.
+            // Properties.X.ValueOrDefault is used because some legacy native WinForms
+            // controls (e.g. DataGridView's internal cells) don't support every UIA
+            // property - shortcuts like element.AutomationId throw
+            // PropertyNotSupportedException in that case, while ValueOrDefault returns "" instead.
             var node = new UiElementInfo
             {
                 ControlType = element.Properties.ControlType.ValueOrDefault.ToString(),

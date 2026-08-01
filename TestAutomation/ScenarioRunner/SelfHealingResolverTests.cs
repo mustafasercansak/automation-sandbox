@@ -8,7 +8,7 @@ namespace ScenarioRunner
         [Fact]
         public void Resolve_FindsRenamedControl_ByStructuralSimilarity()
         {
-            // "Önceki" snapshot: txtEmail'in AutomationId'si hâlâ doğruyken alınmış hali.
+            // "Previous" snapshot: txtEmail's state while its AutomationId was still correct.
             var expected = new UiElementInfo
             {
                 ControlType = "Edit",
@@ -21,15 +21,15 @@ namespace ScenarioRunner
                 BoundingRectangle = new BoundingRectangle(112, 70, 200, 23),
             };
 
-            // "Şimdiki" ağaç: refactor sonrası txtEmail'in AutomationId'si "textBox1" olmuş,
-            // ama pozisyonu ve sibling context'i aynı kalmış.
+            // "Current" tree: after a refactor, txtEmail's AutomationId became "textBox1",
+            // but its position and sibling context stayed the same.
             var currentTree = BuildCurrentMainFormTree(renamedEmailAutomationId: "textBox1");
 
             var result = SelfHealingResolver.Resolve(expected, currentTree, log: _ => { });
 
             Assert.NotNull(result.Matched);
             Assert.Equal("textBox1", result.Matched!.AutomationId);
-            Assert.True(result.IsConfident, $"Beklenen güvenli eşleşme sağlanamadı, skor: {result.Score}");
+            Assert.True(result.IsConfident, $"Expected a confident match, but the score was: {result.Score}");
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace ScenarioRunner
             var expected = new UiElementInfo
             {
                 ControlType = "Hyperlink",
-                AutomationId = "lnkGizli",
+                AutomationId = "lnkHidden",
                 ParentControlType = "Window",
                 SiblingIndex = 0,
                 SiblingCount = 1,
@@ -55,17 +55,17 @@ namespace ScenarioRunner
 
         private static UiElementInfo BuildCurrentMainFormTree(string renamedEmailAutomationId)
         {
-            var root = new UiElementInfo { ControlType = "Window", Name = "Müşteri Kayıt Formu", AutomationId = "MainForm" };
+            var root = new UiElementInfo { ControlType = "Window", Name = "Customer Registration Form", AutomationId = "MainForm" };
 
             var children = new[]
             {
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtAdi", BoundingRectangle = new BoundingRectangle(112, 12, 200, 23) },
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtSoyad", BoundingRectangle = new BoundingRectangle(112, 41, 200, 23) },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtFirstName", BoundingRectangle = new BoundingRectangle(112, 12, 200, 23) },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtLastName", BoundingRectangle = new BoundingRectangle(112, 41, 200, 23) },
                 new UiElementInfo { ControlType = "Edit", AutomationId = renamedEmailAutomationId, BoundingRectangle = new BoundingRectangle(112, 70, 200, 23) },
-                new UiElementInfo { ControlType = "ComboBox", AutomationId = "cmbKayitTuru", BoundingRectangle = new BoundingRectangle(112, 99, 200, 23) },
+                new UiElementInfo { ControlType = "ComboBox", AutomationId = "cmbRecordType", BoundingRectangle = new BoundingRectangle(112, 99, 200, 23) },
                 new UiElementInfo { ControlType = "Pane", AutomationId = "panel1", BoundingRectangle = new BoundingRectangle(12, 131, 300, 34) },
-                new UiElementInfo { ControlType = "Button", AutomationId = "btnKaydet", BoundingRectangle = new BoundingRectangle(112, 178, 100, 30) },
-                new UiElementInfo { ControlType = "DataGrid", AutomationId = "dgvKayitlar", BoundingRectangle = new BoundingRectangle(12, 220, 400, 150) },
+                new UiElementInfo { ControlType = "Button", AutomationId = "btnSave", BoundingRectangle = new BoundingRectangle(112, 178, 100, 30) },
+                new UiElementInfo { ControlType = "DataGrid", AutomationId = "dgvRecords", BoundingRectangle = new BoundingRectangle(12, 220, 400, 150) },
             };
 
             for (var i = 0; i < children.Length; i++)

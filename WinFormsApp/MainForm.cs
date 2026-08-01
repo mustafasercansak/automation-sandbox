@@ -8,56 +8,56 @@ namespace WinFormsApp
         public MainForm()
         {
             InitializeComponent();
-            cmbKayitTuru.SelectedIndex = 0;
+            cmbRecordType.SelectedIndex = 0;
         }
 
-        private void cmbKayitTuru_SelectedIndexChanged(object sender, EventArgs e)
+        private void cmbRecordType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            panel1.Visible = cmbKayitTuru.SelectedItem as string == "Kurumsal";
+            panel1.Visible = cmbRecordType.SelectedItem as string == "Corporate";
             if (!panel1.Visible)
             {
-                txtSirketAdi.Clear();
-                errorProvider1.SetError(txtSirketAdi, string.Empty);
+                txtCompanyName.Clear();
+                errorProvider1.SetError(txtCompanyName, string.Empty);
             }
         }
 
-        private void btnKaydet_Click(object sender, EventArgs e)
+        private void btnSave_Click(object sender, EventArgs e)
         {
             if (!ValidateForm())
             {
                 return;
             }
 
-            dgvKayitlar.Rows.Add(
-                txtAdi.Text.Trim(),
-                txtSoyad.Text.Trim(),
+            dgvRecords.Rows.Add(
+                txtFirstName.Text.Trim(),
+                txtLastName.Text.Trim(),
                 txtEmail.Text.Trim(),
-                cmbKayitTuru.SelectedItem);
+                cmbRecordType.SelectedItem);
 
-            txtAdi.Clear();
-            txtSoyad.Clear();
+            txtFirstName.Clear();
+            txtLastName.Clear();
             txtEmail.Clear();
-            txtSirketAdi.Clear();
-            txtAdi.Focus();
+            txtCompanyName.Clear();
+            txtFirstName.Focus();
         }
 
         private bool ValidateForm()
         {
             var isValid = true;
 
-            isValid &= SetRequiredFieldError(txtAdi, "Ad alanı zorunludur.");
-            isValid &= SetRequiredFieldError(txtSoyad, "Soyad alanı zorunludur.");
-            isValid &= SetRequiredFieldError(txtEmail, "Email alanı zorunludur.");
+            isValid &= SetRequiredFieldError(txtFirstName, "First name is required.");
+            isValid &= SetRequiredFieldError(txtLastName, "Last name is required.");
+            isValid &= SetRequiredFieldError(txtEmail, "Email is required.");
 
             if (isValid && !IsValidEmail(txtEmail.Text.Trim()))
             {
-                errorProvider1.SetError(txtEmail, "Geçerli bir email adresi girin.");
+                errorProvider1.SetError(txtEmail, "Enter a valid email address.");
                 isValid = false;
             }
 
             if (panel1.Visible)
             {
-                isValid &= SetRequiredFieldError(txtSirketAdi, "Kurumsal kayıt için şirket adı zorunludur.");
+                isValid &= SetRequiredFieldError(txtCompanyName, "Company name is required for corporate records.");
             }
 
             return isValid;

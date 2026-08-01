@@ -8,8 +8,8 @@ namespace Discovery
         public string ClassName { get; set; } = "";
         public BoundingRectangle BoundingRectangle { get; set; }
 
-        // Snapshot içinde denormalize edilmiş parent/sibling bağlamı: SelfHealing
-        // katmanı bir aday üzerinden yukarı ağaç gezmeden bu bilgiye erişebilsin diye.
+        // Parent/sibling context denormalized into the snapshot so the SelfHealing
+        // layer can score a candidate without walking back up the tree.
         public string ParentControlType { get; set; } = "";
         public string ParentAutomationId { get; set; } = "";
         public int SiblingIndex { get; set; }

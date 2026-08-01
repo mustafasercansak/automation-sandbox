@@ -2,9 +2,9 @@ using Discovery;
 
 namespace SelfHealing
 {
-    // Henüz LLM yok, saf heuristic: ControlType eşleşmesi zorunlu ön filtre,
-    // ardından parent bağlamı + sibling pozisyonu + isim benzerliği + ekran
-    // konumu ağırlıklı olarak toplanıp 0..1 aralığında tek bir skora indirgenir.
+    // No LLM yet, pure heuristic: ControlType match is a mandatory pre-filter,
+    // then parent context + sibling position + name similarity + screen position
+    // are combined with weights into a single 0..1 score.
     internal static class SimilarityScorer
     {
         private const double ParentControlTypeWeight = 0.25;
