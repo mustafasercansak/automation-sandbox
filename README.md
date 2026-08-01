@@ -71,20 +71,26 @@ console app — useful for iterating on this logic without a Windows machine.
 
 ## LLM-assisted resolution (evaluation only)
 
-`LlmHealingEvaluationTests.CompareProviders_OnLiveBrokenLocator` sends the same live,
-real broken-locator scenario used by `SelfHealing_BrokenAutomationId_...` to every
-configured LLM provider and prints a comparison. It's opt-in: with neither
-`ANTHROPIC_API_KEY` nor `GEMINI_API_KEY` set, the test is a no-op by design — it does
-not fail the build, and it is not part of the required test suite.
+`LlmHealingProviderTests` (mocked `HttpMessageHandler`, no network, no key) is part of
+the required suite and checks the prompt/parsing/plumbing logic. `LlmHealingEvaluationTests.CompareProviders_OnLiveBrokenLocator`
+is the live counterpart: it sends the same real broken-locator scenario used by
+`SelfHealing_BrokenAutomationId_...` to every configured LLM provider and prints a
+comparison. It's opt-in: with neither `ANTHROPIC_API_KEY` nor `GEMINI_API_KEY` set, it's
+a no-op by design — it does not fail the build.
 
 To include it in your own CI run, add repository secrets `ANTHROPIC_API_KEY` and/or
 `GEMINI_API_KEY` (Settings → Secrets and variables → Actions) — `.github/workflows/ci.yml`
 already passes them through if present. Locally, just set the environment variable
 before running `dotnet test`.
 
-The `GeminiHealingProvider` default model id may drift out of date faster than this
-repo does; override it via the `GEMINI_MODEL` environment variable if requests start
-failing.
+`GeminiHealingProvider` targets Google's **Interactions API**
+(`v1beta/interactions`, `x-goog-api-key` header), not the older per-model
+`generateContent` endpoint — as of writing, Google's own docs label `generateContent`
+legacy and steer new code to Interactions. This was confirmed via the current docs
+(WebFetch), not a live call, so treat the request/response shape as "verified against
+documentation, not exercised against a real key" until someone runs it with a key.
+Override the model via the `GEMINI_MODEL` environment variable if requests start
+failing — this API surface has already changed shape once and may again.
 
 ## Running locally
 
@@ -108,7 +114,7 @@ only practical way to validate this code without owning a Windows machine.
 
 WinFormsApp, WpfApp, Discovery, and SelfHealing are all implemented and validated
 end-to-end on real Windows via CI, for both target frameworks. LlmHealing exists as an
-opt-in comparison harness (Claude + Gemini); its `ClaudeHealingProvider` HTTP
-request/response handling has been verified against a mocked handler, but neither
-provider has been exercised against a live API key yet, and no decision has been made
-on whether to promote either into `SelfHealingResolver` as a production fallback.
+opt-in comparison harness (Claude + Gemini); both providers' HTTP request/response
+handling are covered by `LlmHealingProviderTests` against a mocked handler, but neither
+has been exercised against a live API key yet, and no decision has been made on whether
+to promote either into `SelfHealingResolver` as a production fallback.

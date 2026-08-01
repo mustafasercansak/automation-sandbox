@@ -6,7 +6,8 @@ namespace LlmHealing
 {
     // Shared prompt/response format so every provider is asked the same question
     // the same way - that's what makes the evaluator's comparison meaningful.
-    internal static class LlmHealingPrompt
+    // Public so it's independently unit-testable from other assemblies.
+    public static class LlmHealingPrompt
     {
         public static string Build(UiElementInfo expected, UiElementInfo currentTree)
         {

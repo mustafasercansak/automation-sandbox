@@ -9,14 +9,17 @@ using UiModel;
 
 namespace LlmHealing
 {
-    // Unlike ClaudeHealingProvider, this has not been verified against a live Gemini
-    // API key. The request/response shape matches Google's documented
-    // generateContent REST endpoint, but the default model name can drift faster
-    // than this file gets updated - override it via the constructor or the
-    // GEMINI_MODEL environment variable if requests start failing.
+    // Verified against Google's Gemini API documentation as of August 2026 (via
+    // WebFetch, not a live call): the Interactions API superseded the older
+    // per-model generateContent endpoint, which the docs now label legacy. Request
+    // shape, response shape, and the x-goog-api-key auth header below reflect that
+    // migration. Still not exercised against a live key - if requests start
+    // failing, re-check the current docs before assuming this file is stale in the
+    // usual way, since this surface has already changed shape once.
     public sealed class GeminiHealingProvider : ILlmHealingProvider
     {
-        private const string DefaultModel = "gemini-2.0-flash";
+        private const string ApiUrl = "https://generativelanguage.googleapis.com/v1beta/interactions";
+        private const string DefaultModel = "gemini-3.6-flash";
 
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
@@ -43,18 +46,14 @@ namespace LlmHealing
             }
 
             var prompt = LlmHealingPrompt.Build(expected, currentTree);
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
-            var requestBody = new
-            {
-                contents = new[] { new { parts = new[] { new { text = prompt } } } },
-                generationConfig = new { responseMimeType = "application/json" },
-            };
+            var requestBody = new { model = _model, input = prompt };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
             {
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
             };
+            request.Headers.Add("x-goog-api-key", _apiKey);
 
             try
             {
@@ -72,14 +71,7 @@ namespace LlmHealing
                     };
                 }
 
-                using var doc = JsonDocument.Parse(responseBody);
-                var text = doc.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString() ?? "";
-
+                var text = ExtractOutputText(responseBody);
                 var (automationId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(text);
 
                 return new LlmHealingResult
@@ -96,6 +88,34 @@ namespace LlmHealing
             {
                 return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = ex.Message, Elapsed = stopwatch.Elapsed };
             }
+        }
+
+        // Mirrors the Interactions API SDKs' "output_text" convenience property:
+        // find the model_output step(s) and concatenate their text content blocks.
+        private static string ExtractOutputText(string responseBody)
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            var steps = doc.RootElement.GetProperty("steps");
+
+            var textBuilder = new StringBuilder();
+            foreach (var step in steps.EnumerateArray())
+            {
+                if (!step.TryGetProperty("type", out var stepTypeProp) || stepTypeProp.GetString() != "model_output")
+                {
+                    continue;
+                }
+
+                foreach (var contentItem in step.GetProperty("content").EnumerateArray())
+                {
+                    if (contentItem.TryGetProperty("type", out var contentTypeProp) && contentTypeProp.GetString() == "text"
+                        && contentItem.TryGetProperty("text", out var textProp))
+                    {
+                        textBuilder.Append(textProp.GetString());
+                    }
+                }
+            }
+
+            return textBuilder.ToString();
         }
     }
 }
