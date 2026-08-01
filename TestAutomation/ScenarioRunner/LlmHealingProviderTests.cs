@@ -80,7 +80,9 @@ namespace ScenarioRunner
         {
             var callCount = 0;
             var handler = new FakeHttpMessageHandler(_ => { callCount++; return new HttpResponseMessage(HttpStatusCode.OK); });
-            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: null);
+            // Explicit empty string, not null: null falls back to the real ANTHROPIC_API_KEY
+            // environment variable, which would make this test depend on ambient CI/local config.
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "");
 
             Assert.False(provider.IsAvailable);
 
