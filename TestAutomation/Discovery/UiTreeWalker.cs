@@ -16,12 +16,16 @@ namespace Discovery
             int siblingIndex,
             int siblingCount)
         {
+            // Properties.X.ValueOrDefault kullanılıyor çünkü bazı legacy WinForms native
+            // kontrolleri (ör. DataGridView'in iç hücreleri) UIA üzerinden her property'yi
+            // desteklemiyor - element.AutomationId gibi kısayollar bu durumda
+            // PropertyNotSupportedException fırlatır, ValueOrDefault fırlatmadan "" döner.
             var node = new UiElementInfo
             {
-                ControlType = element.ControlType.ToString(),
-                Name = element.Name ?? "",
-                AutomationId = element.AutomationId ?? "",
-                ClassName = element.ClassName ?? "",
+                ControlType = element.Properties.ControlType.ValueOrDefault.ToString(),
+                Name = element.Properties.Name.ValueOrDefault ?? "",
+                AutomationId = element.Properties.AutomationId.ValueOrDefault ?? "",
+                ClassName = element.Properties.ClassName.ValueOrDefault ?? "",
                 BoundingRectangle = ToBoundingRectangle(element),
                 ParentControlType = parentControlType,
                 ParentAutomationId = parentAutomationId,
@@ -40,7 +44,7 @@ namespace Discovery
 
         private static BoundingRectangle ToBoundingRectangle(AutomationElement element)
         {
-            var rect = element.BoundingRectangle;
+            var rect = element.Properties.BoundingRectangle.ValueOrDefault;
             return new BoundingRectangle(rect.X, rect.Y, rect.Width, rect.Height);
         }
     }

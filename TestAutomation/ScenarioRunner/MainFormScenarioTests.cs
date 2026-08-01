@@ -44,7 +44,12 @@ namespace ScenarioRunner
             // Bu yüzden AutomationId yerine ControlType üzerinden buluyoruz - tam olarak
             // SelfHealing katmanının çözmesi gereken sorunu burada canlı örnekliyoruz.
             var panel = window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Pane))!;
-            Assert.False(panel.IsOffscreen);
+
+            // IsOffscreen bu native WinForms Panel'de desteklenmiyor (gerçek CI çalışmasında
+            // PropertyNotSupportedException fırlattığı görüldü) - bounding rectangle her zaman
+            // desteklenen, daha güvenilir bir görünürlük sinyali.
+            var rect = panel.Properties.BoundingRectangle.ValueOrDefault;
+            Assert.True(rect.Width > 0 && rect.Height > 0, $"Panel görünür olmalıydı ama bounding rectangle boş geldi: {rect}");
         }
 
         [Fact]
