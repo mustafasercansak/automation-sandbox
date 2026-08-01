@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore AutomationSandbox.sln
+
+      - name: Build (Debug - WinFormsApp.exe path used by ScenarioRunner tests)
+        run: dotnet build AutomationSandbox.sln --configuration Debug --no-restore
+
+      - name: Run tests (Discovery + SelfHealing + live FlaUI/UIA scenarios)
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestAutomation/ScenarioRunner/TestResults/test-results.trx
