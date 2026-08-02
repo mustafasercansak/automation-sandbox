@@ -14,6 +14,12 @@ namespace SelfHealing
 
     public sealed class HealingReportEntry
     {
+        private const double HeuristicReviewMargin = 0.10;
+
+        public const string AcceptedStatus = "accepted";
+        public const string AcceptedWithLlmStatus = "accepted-with-llm";
+        public const string ManualReviewStatus = "manual-review";
+
         public DateTimeOffset HealedAt { get; set; } = DateTimeOffset.UtcNow;
         public string LocatorKey { get; set; } = "";
         public string Source { get; set; } = "";
@@ -58,7 +64,7 @@ namespace SelfHealing
             {
                 LocatorKey = locatorKey,
                 Source = result.Source == HealSource.Llm ? result.LlmProviderName ?? "llm" : "heuristic",
-                ReviewStatus = result.IsConfident ? "accepted" : "manual-review",
+                ReviewStatus = ClassifyReviewStatus(result),
                 Score = result.Score,
                 ConfidenceThreshold = result.ConfidenceThreshold,
                 CandidateCount = result.CandidateCount,
@@ -69,6 +75,23 @@ namespace SelfHealing
                 AcceptedSnapshot = UiElementSnapshot.Capture(acceptedSnapshot),
                 ScoreBreakdown = result.ScoreBreakdown,
             };
+        }
+
+        private static string ClassifyReviewStatus(HealResult result)
+        {
+            if (!result.IsConfident)
+            {
+                return ManualReviewStatus;
+            }
+
+            if (result.Source == HealSource.Llm)
+            {
+                return AcceptedWithLlmStatus;
+            }
+
+            return result.Score - result.ConfidenceThreshold <= HeuristicReviewMargin
+                ? ManualReviewStatus
+                : AcceptedStatus;
         }
     }
 }

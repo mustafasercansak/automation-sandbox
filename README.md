@@ -272,7 +272,7 @@ Each report event includes:
 
 - `LocatorKey`
 - `Source` (`heuristic` or the LLM provider name)
-- `ReviewStatus` (`accepted` today, ready for future manual-review gates)
+- `ReviewStatus` (`accepted`, `accepted-with-llm`, or `manual-review`)
 - `Score`, `ConfidenceThreshold`, `CandidateCount`
 - `PreviousSnapshot` and `AcceptedSnapshot`
 - LLM fields such as `LlmConfidence`, `LlmProviderName`, and `LlmReasoning` when applicable

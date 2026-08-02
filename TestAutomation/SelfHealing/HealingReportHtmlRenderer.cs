@@ -23,7 +23,7 @@ namespace SelfHealing
             html.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             html.AppendLine("  <title>Self-Healing Report</title>");
             html.AppendLine("  <style>");
-            html.AppendLine("    :root { color-scheme: light; --ink: #17202a; --muted: #5b6777; --line: #d9e1ea; --panel: #f7f9fb; --ok: #176f45; --review: #9a6700; }");
+            html.AppendLine("    :root { color-scheme: light; --ink: #17202a; --muted: #5b6777; --line: #d9e1ea; --panel: #f7f9fb; --ok: #176f45; --llm: #235a97; --review: #9a6700; }");
             html.AppendLine("    body { margin: 0; font-family: Segoe UI, Arial, sans-serif; color: var(--ink); background: #fff; }");
             html.AppendLine("    header { padding: 28px 32px 18px; border-bottom: 1px solid var(--line); background: var(--panel); }");
             html.AppendLine("    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 650; }");
@@ -34,6 +34,7 @@ namespace SelfHealing
             html.AppendLine("    th { background: #eef3f8; font-weight: 650; color: #293747; }");
             html.AppendLine("    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 650; }");
             html.AppendLine("    .accepted { color: var(--ok); background: #e8f5ee; }");
+            html.AppendLine("    .accepted-with-llm { color: var(--llm); background: #e8f1fb; }");
             html.AppendLine("    .manual-review { color: var(--review); background: #fff4d6; }");
             html.AppendLine("    .empty { padding: 24px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); }");
             html.AppendLine("    code { font-family: Consolas, monospace; font-size: 12px; }");

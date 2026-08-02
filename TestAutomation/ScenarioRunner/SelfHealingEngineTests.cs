@@ -200,5 +200,54 @@ namespace ScenarioRunner
             Assert.Contains("email", html);
             Assert.Contains("accepted", html);
         }
+
+        [Fact]
+        public void HealingReportEntry_FromHealResult_ClassifiesLlmAndBorderlineMatchesForReview()
+        {
+            var previous = new UiElementInfo { ControlType = "Button", AutomationId = "old_submit" };
+            var accepted = new UiElementInfo { ControlType = "Button", AutomationId = "submit" };
+
+            var strongHeuristic = HealingReportEntry.FromHealResult(
+                "Submit",
+                previous,
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Heuristic,
+                    Score = 0.92,
+                    ConfidenceThreshold = 0.50
+                });
+
+            var borderlineHeuristic = HealingReportEntry.FromHealResult(
+                "Submit",
+                previous,
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Heuristic,
+                    Score = 0.55,
+                    ConfidenceThreshold = 0.50
+                });
+
+            var llmMatch = HealingReportEntry.FromHealResult(
+                "Submit",
+                previous,
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Llm,
+                    Score = 0.35,
+                    ConfidenceThreshold = 0.50,
+                    LlmConfidence = 0.86,
+                    LlmProviderName = "FakeLlm"
+                });
+
+            Assert.Equal(HealingReportEntry.AcceptedStatus, strongHeuristic.ReviewStatus);
+            Assert.Equal(HealingReportEntry.ManualReviewStatus, borderlineHeuristic.ReviewStatus);
+            Assert.Equal(HealingReportEntry.AcceptedWithLlmStatus, llmMatch.ReviewStatus);
+        }
     }
 }
