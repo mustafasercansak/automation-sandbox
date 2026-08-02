@@ -16,7 +16,11 @@ namespace LlmHealing
     public sealed class ClaudeHealingProvider : ILlmHealingProvider
     {
         private const string ApiUrl = "https://api.anthropic.com/v1/messages";
-        private const string DefaultModel = "claude-opus-5";
+
+        // Cheapest/fastest Claude tier by default - this is a small structured-pick task,
+        // not one that benefits from Opus-level reasoning. Override with the model
+        // constructor parameter or ANTHROPIC_MODEL if a stronger model is ever warranted.
+        private const string DefaultModel = "claude-haiku-4-5-20251001";
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
@@ -27,7 +31,7 @@ namespace LlmHealing
         {
             _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
-            _model = model ?? DefaultModel;
+            _model = model ?? Environment.GetEnvironmentVariable("ANTHROPIC_MODEL") ?? DefaultModel;
         }
 
         public async Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
@@ -44,10 +48,11 @@ namespace LlmHealing
                 model = _model,
                 max_tokens = 1024,
 
-                // Claude Opus 5 thinks by default even with no "thinking" field set,
-                // which would put a thinking block before the text block in the
-                // response. Disabled here (allowed at effort "low") since this is a
-                // small structured-pick task with no need for extended reasoning.
+                // Some Claude models (e.g. Opus 5, if a caller overrides DefaultModel to it)
+                // think by default even with no "thinking" field set, which would put a
+                // thinking block before the text block in the response - ExtractText already
+                // skips non-text blocks, but disabling it here avoids paying for reasoning
+                // this small structured-pick task doesn't need, on any model.
                 thinking = new { type = "disabled" },
                 output_config = new { effort = "low" },
                 messages = new[] { new { role = "user", content = prompt } },

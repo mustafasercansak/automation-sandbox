@@ -34,6 +34,13 @@ jobs:
           # string and LlmHealingEvaluationTests skips itself - no error either way.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # Optional cost control: set these as repo Variables (not Secrets - not
+          # sensitive) to override the hardcoded model defaults, e.g. to a cheaper
+          # tier than ClaudeHealingProvider's default (claude-opus-5). Unset falls
+          # back to each provider's own default.
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
 
       - name: Upload test results

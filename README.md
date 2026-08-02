@@ -270,6 +270,15 @@ if (result.Source == HealSource.Llm)
 }
 ```
 
+Both providers read their API key from an environment variable (`ANTHROPIC_API_KEY` /
+`GEMINI_API_KEY`) and are no-ops (`IsAvailable == false`) without one - safe to leave
+configured everywhere. Both also default to their cheapest/fastest tier
+(`ClaudeHealingProvider`: `claude-haiku-4-5-20251001`; `GeminiHealingProvider`:
+`gemini-3.6-flash`) since this is a small structured-pick task, not one that benefits
+from a flagship model. Override via environment variable (`ANTHROPIC_MODEL` /
+`GEMINI_MODEL`) or the constructor's `model` parameter if a stronger model is ever
+warranted.
+
 ---
 
 ## 🧪 Test Coverage & Code Metrics

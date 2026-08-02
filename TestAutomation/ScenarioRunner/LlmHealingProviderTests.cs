@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using LlmHealing;
 using UiModel;
@@ -151,6 +152,52 @@ namespace ScenarioRunner
             Assert.Equal(0.95, result.Confidence, precision: 3);
             Assert.NotNull(handler.LastRequest);
             Assert.True(handler.LastRequest!.Headers.Contains("x-api-key"));
+        }
+
+        [Fact]
+
+        public async Task ClaudeHealingProvider_UsesConfiguredModelName_InRequestBody()
+        {
+            // Cost control: the model is overridable (constructor param or ANTHROPIC_MODEL
+            // env var) so callers aren't stuck with whatever DefaultModel is set to.
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "claude-haiku-4-5");
+            await provider.ResolveAsync(Expected, BuildShortlist());
+
+            var request = handler.LastRequest;
+            Assert.NotNull(request);
+            Assert.NotNull(request.Content);
+            var body = await request.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("claude-haiku-4-5", doc.RootElement.GetProperty("model").GetString());
+        }
+
+        [Fact]
+
+        public async Task ClaudeHealingProvider_DefaultsToTheCheapestModel_WhenNoneIsConfigured()
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+            await provider.ResolveAsync(Expected, BuildShortlist());
+
+            var request = handler.LastRequest;
+            Assert.NotNull(request);
+            Assert.NotNull(request.Content);
+            var body = await request.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
         }
 
         [Fact]

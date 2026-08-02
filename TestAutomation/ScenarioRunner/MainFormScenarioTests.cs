@@ -196,6 +196,42 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void SelfHealing_PersistsHealedLocatorToRepository()
+        {
+            var window = _connector.GetMainWindow();
+            var currentTree = UiTreeWalker.BuildTree(window);
+
+            var staleExpected = UiElementSnapshot.CaptureByAutomationId(currentTree, "txtEmail")
+                ?? throw new InvalidOperationException("txtEmail was not found in the live tree, test data is invalid.");
+            staleExpected.AutomationId = "txtEmailAddress";
+
+            var healResult = SelfHealingResolver.Resolve(staleExpected, currentTree);
+            Assert.True(healResult.IsConfident, $"Expected a confident match, but the score was: {healResult.Score}");
+
+            // End-to-end: a real heal against the live app, persisted to an actual repository
+            // file on disk and read back - not just a synthetic in-memory round trip.
+            var repositoryPath = Path.Combine(Path.GetTempPath(), "MainFormLocatorRepository_" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                var repository = new LocatorRepository(repositoryPath);
+                var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, previousSnapshot: staleExpected);
+                repository.Upsert("MainForm.Email", healResult.Matched!, entry, applicationName: "WinFormsApp", platform: "windows-uia");
+
+                var persisted = repository.Find("MainForm.Email");
+                Assert.NotNull(persisted);
+                Assert.Equal("txtEmail", persisted!.Snapshot.AutomationId);
+                Assert.Single(persisted.HealingHistory);
+                Assert.Equal("heuristic", persisted.HealingHistory[0].Source);
+                Assert.Equal("txtEmailAddress", persisted.HealingHistory[0].PreviousSnapshot?.AutomationId);
+            }
+            finally
+            {
+                File.Delete(repositoryPath);
+                File.Delete(repositoryPath + ".lock");
+            }
+        }
+
+        [Fact]
         public async Task SelfHealing_LowConfidenceMatch_FallsBackToLlm()
         {
             var window = _connector.GetMainWindow();
