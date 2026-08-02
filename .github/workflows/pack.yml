@@ -1,65 +1,34 @@
 name: Pack
-
 # Manual trigger only - deliberately separate from ci.yml so ordinary pushes/PRs never
-
 # produce or publish a package. This only packs .nupkg files as a build artifact; there
-
 # is no `dotnet nuget push` step, since no publish feed has been chosen yet.
 
 on:
-
   workflow_dispatch:
-
 jobs:
-
   pack:
-
     runs-on: windows-latest
-
     steps:
-
       - name: Checkout
-
         uses: actions/checkout@v5
-
       - name: Setup .NET SDK
-
         uses: actions/setup-dotnet@v5
-
         with:
-
           dotnet-version: 8.0.x
-
       - name: Restore
-
         run: dotnet restore AutomationSandbox.sln
-
       - name: Pack UiModel
-
         run: dotnet pack TestAutomation/UiModel/UiModel.csproj --configuration Release --no-restore --output ./nupkgs
-
       - name: Pack SelfHealing
-
         run: dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-restore --output ./nupkgs
-
       - name: Pack LlmHealing
-
         run: dotnet pack TestAutomation/LlmHealing/LlmHealing.csproj --configuration Release --no-restore --output ./nupkgs
-
       - name: Pack Discovery
-
         run: dotnet pack TestAutomation/Discovery/Discovery.csproj --configuration Release --no-restore --output ./nupkgs
-
       - name: Pack WebDiscovery
-
         run: dotnet pack TestAutomation/WebDiscovery/WebDiscovery.csproj --configuration Release --no-restore --output ./nupkgs
-
       - name: Upload packages
-
         uses: actions/upload-artifact@v7
-
         with:
-
           name: nupkgs
-
           path: ./nupkgs/*.nupkg
