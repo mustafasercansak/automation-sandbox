@@ -21,7 +21,18 @@ namespace UiModel
 
         public static UiElementInfo? CaptureByAutomationId(UiElementInfo treeRoot, string automationId)
         {
-            var found = FindByAutomationId(treeRoot, automationId);
+            var found = FindFirst(treeRoot, node => node.AutomationId == automationId);
+            return found is null ? null : Capture(found);
+        }
+
+        public static UiElementInfo? CaptureFirst(UiElementInfo treeRoot, Predicate<UiElementInfo> predicate)
+        {
+            if (predicate == null)
+            {
+                throw new ArgumentNullException(nameof(predicate));
+            }
+
+            var found = FindFirst(treeRoot, predicate);
             return found is null ? null : Capture(found);
         }
 
@@ -30,14 +41,29 @@ namespace UiModel
 
         public static UiElementInfo? FindByAutomationId(UiElementInfo node, string automationId)
         {
-            if (node.AutomationId == automationId)
+            return FindFirst(node, candidate => candidate.AutomationId == automationId);
+        }
+
+        public static UiElementInfo? FindFirst(UiElementInfo node, Predicate<UiElementInfo> predicate)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException(nameof(node));
+            }
+
+            if (predicate == null)
+            {
+                throw new ArgumentNullException(nameof(predicate));
+            }
+
+            if (predicate(node))
             {
                 return node;
             }
 
             foreach (var child in node.Children)
             {
-                var found = FindByAutomationId(child, automationId);
+                var found = FindFirst(child, predicate);
                 if (found is not null)
                 {
                     return found;

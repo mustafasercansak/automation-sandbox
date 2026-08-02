@@ -28,7 +28,7 @@ timeline
     title Project Evolution
     Phase 1 : Milestone 1 (Core Hardening) : Explainable Scoring : Candidate Pruning : Offscreen Box Exclusion : .NET 10 Support : Hallucination Guard
     Phase 2 : Milestone 2 (Discovery Robustness) : DiscoveryOptions & Telemetry : Root Preservation Guard : SiblingCount Consistency : Best-Effort Timeout Budget
-    Phase 3 : Next Horizon : Persistent Locator Repository JSON : Playwright Web Adapter : NuGet Package Release
+    Phase 3 : Next Horizon : Locator Repository Foundation : Persistent Repository Workflow : Playwright Web Adapter : NuGet Package Release
 ```
 
 ### 1️⃣ Milestone 1: Core Hardening MVP
@@ -176,7 +176,7 @@ graph LR
     subgraph PhaseA [Phase A: Core Hardening]
         M1[M1: Core Hardening MVP - ✅ Implemented]
         M2[M2: Discovery Robustness - ✅ Implemented]
-        M3[M3: Persistent Locator Repository - 📋 Next]
+        M3[M3: Locator Repository Foundation - 🧱 Added / Persistence Next]
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Phase B: Multi-Platform Adapter]
@@ -215,7 +215,7 @@ timeline
     title Proje Gelişim Süreci
     Phase 1 : Milestone 1 (Çekirdek Güçlendirme) : Açıklanabilir Skorlama : Aday Budama : Ekran Dışı Kutu Tespiti : .NET 10 Desteği : Halüsinasyon Koruması
     Phase 2 : Milestone 2 (Keşif Dayanıklılığı) : DiscoveryOptions & Telemetri : Kök Düğüm Koruması : SiblingCount Tutarlılığı : Best-Effort Timeout
-    Phase 3 : Gelecek Ufku : Kalıcı Lokasyon Deposu JSON : Playwright Web Bağlayıcısı : NuGet Paketi Yayınlama
+    Phase 3 : Gelecek Ufku : Lokasyon Deposu Temeli : Kalıcı Depo Akışı : Playwright Web Bağlayıcısı : NuGet Paketi Yayınlama
 ```
 
 ### 1️⃣ Milestone 1: Çekirdek Güçlendirme MVP
@@ -363,7 +363,7 @@ graph LR
     subgraph PhaseA [Aşama A: Çekirdek Güçlendirme]
         M1[M1: Çekirdek MVP - ✅ Tamamlandı]
         M2[M2: Keşif Dayanıklılığı - ✅ Tamamlandı]
-        M3[M3: Kalıcı Lokasyon Deposu - 📋 Sıradaki]
+        M3[M3: Lokasyon Deposu Temeli - 🧱 Eklendi / Kalıcı Akış Sırada]
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Aşama B: Çapraz Platform Bağlayıcı]

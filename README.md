@@ -23,7 +23,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
-| **Locator Repository JSON** | 📋 Planned | Persistent `.locator.json` repository schema with auto-learning history. |
+| **Locator Repository JSON** | 🧱 Foundation Added | Versioned repository DTOs/serializer, stable `LocatorKey`, and healing history contract; persistence workflow is next. |
 | **Playwright Web Automation** | 📋 Planned | Web DOM tree walker and Playwright `GetByRole`/`GetByTestId` locator emitter. |
 
 ---
@@ -216,7 +216,35 @@ var customWeights = new SimilarityWeights
 var result = SelfHealingResolver.Resolve(expected, liveTree, customWeights);
 ```
 
-### 4. LLM Fallback Resolution (Opt-In)
+`SimilarityWeights` are validated before scoring so persisted/configured values fail fast
+when thresholds are outside `0.0..1.0`, weights are negative, or the LLM shortlist size is
+less than one.
+
+### 4. Repository-Ready Snapshots
+Use a caller-owned key for persisted locators. `AutomationId` remains part of the
+snapshot, but it should not be the repository identity because it may be empty,
+duplicated, or stale:
+
+```csharp
+var snapshot = UiElementSnapshot.CaptureFirst(liveTree, node =>
+    node.ControlType == "Group" && node.Name == "Company");
+
+var repository = new LocatorRepositoryDocument
+{
+    ApplicationName = "CustomerApp",
+    Platform = "windows-uia",
+};
+
+repository.Locators.Add(new LocatorRecord
+{
+    LocatorKey = "CustomerForm.Company",
+    Snapshot = snapshot!,
+});
+
+var json = LocatorRepositorySerializer.ToJson(repository);
+```
+
+### 5. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -313,7 +341,7 @@ graph LR
     subgraph PhaseA [Phase A: Core Hardening]
         M1[M1: Core Hardening MVP - Implemented]
         M2[M2: Discovery Robustness - Implemented]
-        M3[M3: Snapshot Repository - Planned]
+        M3[M3: Locator Repository Foundation - Done / Persistence Next]
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Phase B: Web Automation]

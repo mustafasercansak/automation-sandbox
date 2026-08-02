@@ -26,6 +26,50 @@ namespace SelfHealing
 
         public int MaxCandidatesForLlm { get; set; } = 20;
         public double MinCandidateScore { get; set; } = 0.05;
-        public static SimilarityWeights Default { get; } = new();
+        public static SimilarityWeights Default => new();
+
+        public void Validate()
+        {
+            ValidateNonNegative(ControlTypeWeight, nameof(ControlTypeWeight));
+            ValidateNonNegative(ParentControlTypeWeight, nameof(ParentControlTypeWeight));
+            ValidateNonNegative(SiblingPositionWeight, nameof(SiblingPositionWeight));
+            ValidateNonNegative(NameWeight, nameof(NameWeight));
+            ValidateNonNegative(PositionWeight, nameof(PositionWeight));
+            ValidateNonNegative(PositionToleranceRadius, nameof(PositionToleranceRadius));
+            ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
+            ValidateRange(MinimumLlmConfidence, nameof(MinimumLlmConfidence), 0.0, 1.0);
+            ValidateRange(MinCandidateScore, nameof(MinCandidateScore), 0.0, 1.0);
+
+            if (MaxCandidatesForLlm < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(MaxCandidatesForLlm), "MaxCandidatesForLlm must be at least one.");
+            }
+
+            var totalWeight = ControlTypeWeight
+                            + ParentControlTypeWeight
+                            + SiblingPositionWeight
+                            + NameWeight
+                            + PositionWeight;
+            if (totalWeight <= 0.0)
+            {
+                throw new InvalidOperationException("At least one similarity weight must be greater than zero.");
+            }
+        }
+
+        private static void ValidateNonNegative(double value, string propertyName)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0.0)
+            {
+                throw new ArgumentOutOfRangeException(propertyName, $"{propertyName} must be a finite non-negative value.");
+            }
+        }
+
+        private static void ValidateRange(double value, string propertyName, double minimum, double maximum)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < minimum || value > maximum)
+            {
+                throw new ArgumentOutOfRangeException(propertyName, $"{propertyName} must be between {minimum} and {maximum}.");
+            }
+        }
     }
 }

@@ -229,6 +229,25 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveAsync_LlmResult_UsesMinimumLlmConfidenceForIsConfident()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var weights = new SimilarityWeights
+            {
+                MinimumConfidence = 0.8,
+                MinimumLlmConfidence = 0.5,
+            };
+            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.6 });
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { provider }, weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(weights.MinimumLlmConfidence, result.ConfidenceThreshold);
+            Assert.True(result.IsConfident);
+        }
+
+        [Fact]
 
         public async Task ResolveAsync_LlmMatchesCandidateWithEmptyAutomationId_StillSucceeds()
         {
@@ -324,6 +343,67 @@ namespace ScenarioRunner
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.NotNull(provider.LastCandidates);
             Assert.Equal(SimilarityWeights.Default.MaxCandidatesForLlm, provider.LastCandidates!.Count);
+        }
+
+        [Fact]
+        public void ScoreCandidates_UsesDeterministicTieBreakers_WhenScoresAreEqual()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            };
+            var root = new UiElementInfo { ControlType = "Window", SiblingIndex = 99, SiblingCount = 1 };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "zSecond",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "aFirst",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+
+            var candidates = SelfHealingResolver.ScoreCandidates(expected, root);
+
+            Assert.Equal("aFirst", candidates[0].Candidate.AutomationId);
+            Assert.Equal("zSecond", candidates[1].Candidate.AutomationId);
+        }
+
+        [Fact]
+        public void Resolve_WithInvalidWeights_ThrowsBeforeScoring()
+        {
+            var expected = new UiElementInfo { ControlType = "Edit" };
+            var root = new UiElementInfo { ControlType = "Window" };
+            var weights = new SimilarityWeights { MaxCandidatesForLlm = 0 };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => SelfHealingResolver.Resolve(expected, root, weights, log: _ => { }));
+        }
+
+        [Fact]
+        public void SimilarityWeights_Default_ReturnsFreshInstanceEachTime()
+        {
+            var first = SimilarityWeights.Default;
+            var second = SimilarityWeights.Default;
+            first.MinimumConfidence = 0.99;
+
+            Assert.NotSame(first, second);
+            Assert.Equal(0.5, second.MinimumConfidence);
         }
 
         // A heuristic score deliberately pushed well below MinimumConfidence (0.5): mismatched

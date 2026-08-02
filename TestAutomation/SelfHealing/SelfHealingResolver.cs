@@ -15,6 +15,7 @@ namespace SelfHealing
         {
             log ??= Console.WriteLine;
             var w = weights ?? SimilarityWeights.Default;
+            w.Validate();
             var scoredCandidates = ScoreCandidates(expected, currentTreeRoot, w);
             if (scoredCandidates.Count == 0)
             {
@@ -53,6 +54,7 @@ namespace SelfHealing
         {
             log ??= Console.WriteLine;
             var w = weights ?? SimilarityWeights.Default;
+            w.Validate();
             var heuristicResult = Resolve(expected, currentTreeRoot, w, log);
             if (heuristicResult.IsConfident)
             {
@@ -123,7 +125,7 @@ namespace SelfHealing
                 Score = heuristicResult.Score,
                 CandidateCount = heuristicResult.CandidateCount,
                 Source = HealSource.Llm,
-                ConfidenceThreshold = heuristicResult.ConfidenceThreshold,
+                ConfidenceThreshold = w.MinimumLlmConfidence,
                 ScoreBreakdown = heuristicResult.ScoreBreakdown,
                 LlmProviderName = best.ProviderName,
                 LlmConfidence = best.Confidence,
@@ -142,10 +144,20 @@ namespace SelfHealing
         public static List<CandidateScore> ScoreCandidates(UiElementInfo expected, UiElementInfo currentTreeRoot, SimilarityWeights? weights = null)
         {
             weights ??= SimilarityWeights.Default;
+            weights.Validate();
             return Flatten(currentTreeRoot)
                 .Select(candidate => SimilarityScorer.ScoreCandidate(expected, candidate, weights))
                 .Where(c => c.TotalScore >= weights.MinCandidateScore)
                 .OrderByDescending(c => c.TotalScore)
+                .ThenBy(c => c.Candidate.ControlType, StringComparer.Ordinal)
+                .ThenBy(c => c.Candidate.AutomationId, StringComparer.Ordinal)
+                .ThenBy(c => c.Candidate.Name, StringComparer.Ordinal)
+                .ThenBy(c => c.Candidate.ClassName, StringComparer.Ordinal)
+                .ThenBy(c => c.Candidate.SiblingIndex)
+                .ThenBy(c => c.Candidate.BoundingRectangle.X)
+                .ThenBy(c => c.Candidate.BoundingRectangle.Y)
+                .ThenBy(c => c.Candidate.BoundingRectangle.Width)
+                .ThenBy(c => c.Candidate.BoundingRectangle.Height)
                 .ToList();
         }
 
