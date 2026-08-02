@@ -12,6 +12,7 @@ namespace SelfHealing
         private readonly LocatorRepository? _repository;
         private readonly SimilarityWeights _weights;
         private readonly IReadOnlyList<ILlmHealingProvider> _llmProviders;
+        private readonly IHealingReportSink? _reportSink;
 
         public LocatorRepository? Repository => _repository;
         public SimilarityWeights Weights => _weights;
@@ -20,12 +21,14 @@ namespace SelfHealing
         public SelfHealingEngine(
             LocatorRepository? repository = null,
             SimilarityWeights? weights = null,
-            IEnumerable<ILlmHealingProvider>? llmProviders = null)
+            IEnumerable<ILlmHealingProvider>? llmProviders = null,
+            IHealingReportSink? reportSink = null)
         {
             _repository = repository;
             _weights = weights ?? SimilarityWeights.Default;
             _weights.Validate();
             _llmProviders = llmProviders != null ? new List<ILlmHealingProvider>(llmProviders) : new List<ILlmHealingProvider>();
+            _reportSink = reportSink ?? HealingReportFileSink.FromEnvironment();
         }
 
         public async Task<HealResult> ResolveAndRecordAsync(
@@ -43,16 +46,21 @@ namespace SelfHealing
                 log,
                 cancellationToken).ConfigureAwait(false);
 
-            if (healResult.IsConfident && healResult.Matched != null && _repository != null)
+            if (healResult.IsConfident && healResult.Matched != null)
             {
-                var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
                 var matchedSnapshot = UiElementSnapshot.Capture(healResult.Matched);
                 if (string.IsNullOrWhiteSpace(matchedSnapshot.TestIntent) && !string.IsNullOrWhiteSpace(expected.TestIntent))
                 {
                     matchedSnapshot.TestIntent = expected.TestIntent;
                 }
 
-                _repository.Upsert(locatorKey, matchedSnapshot, entry);
+                if (_repository != null)
+                {
+                    var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
+                    _repository.Upsert(locatorKey, matchedSnapshot, entry);
+                }
+
+                _reportSink?.Record(HealingReportEntry.FromHealResult(locatorKey, expected, matchedSnapshot, healResult));
             }
 
             return healResult;

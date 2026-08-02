@@ -27,6 +27,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and action retry. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
+| **Healing Reports & CI Artifacts** | ✅ Implemented | JSON report stream for accepted healing events, including before/after snapshots, confidence, source, and review status. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
@@ -255,7 +256,28 @@ if (healResult.IsConfident)
 }
 ```
 
-### 5. Web DOM Mapping & Playwright Locator Suggestions
+### 5. Self-Healing JSON Reports
+`SelfHealingEngine` can emit an append-only JSON report whenever it accepts a healed
+locator. Set `SELF_HEALING_REPORT_PATH` to enable this without changing test code:
+
+```powershell
+$env:SELF_HEALING_REPORT_PATH = "TestResults/healing-report.json"
+dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build
+```
+
+Each report event includes:
+
+- `LocatorKey`
+- `Source` (`heuristic` or the LLM provider name)
+- `ReviewStatus` (`accepted` today, ready for future manual-review gates)
+- `Score`, `ConfidenceThreshold`, `CandidateCount`
+- `PreviousSnapshot` and `AcceptedSnapshot`
+- LLM fields such as `LlmConfidence`, `LlmProviderName`, and `LlmReasoning` when applicable
+
+GitHub Actions uploads this file as the `self-healing-report` artifact when healing
+events occur during CI.
+
+### 6. Web DOM Mapping & Playwright Locator Suggestions
 `WebDiscovery` maps a Playwright-captured DOM snapshot into the same `UiElementInfo`
 shape used by the desktop engine, so the existing self-healing scorer can work across
 web and desktop trees:
@@ -281,7 +303,7 @@ iframe documents. Hidden or offscreen web elements are marked and mapped with a 
 bounding rectangle, which makes the existing position scorer exclude that signal instead
 of treating invisible layout data as reliable.
 
-### 6. LLM Fallback Resolution (Opt-In)
+### 7. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -394,9 +416,10 @@ graph LR
         M4[M4: Playwright Web Adapter Foundation - Added]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: NuGet Release - Planned]
+        M5[M5: Healing Reports & CI Artifacts - Implemented]
+        M6[M6: NuGet Release - Planned]
     end
-    M3 --> M4 --> M5
+    M3 --> M4 --> M5 --> M6
 ```
 
 ---

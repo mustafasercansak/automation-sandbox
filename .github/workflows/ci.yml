@@ -41,6 +41,7 @@ jobs:
           # back to each provider's own default.
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          SELF_HEALING_REPORT_PATH: ${{ github.workspace }}\TestAutomation\ScenarioRunner\TestResults\healing-report.json
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
 
       - name: Upload test results
@@ -56,3 +57,11 @@ jobs:
         with:
           name: code-coverage
           path: TestAutomation/ScenarioRunner/TestResults/**/coverage.cobertura.xml
+
+      - name: Upload self-healing report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-healing-report
+          path: TestAutomation/ScenarioRunner/TestResults/healing-report.json
+          if-no-files-found: ignore

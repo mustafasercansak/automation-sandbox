@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using SelfHealing;
 using UiModel;
@@ -10,10 +11,12 @@ namespace ScenarioRunner
     public class SelfHealingEngineTests : IDisposable
     {
         private readonly string _tempRepoPath;
+        private readonly string _tempReportPath;
 
         public SelfHealingEngineTests()
         {
             _tempRepoPath = Path.Combine(Path.GetTempPath(), "SelfHealingEngineTest_" + Guid.NewGuid().ToString("N") + ".locator.json");
+            _tempReportPath = Path.Combine(Path.GetTempPath(), "SelfHealingEngineTest_" + Guid.NewGuid().ToString("N") + ".healing-report.json");
         }
 
         public void Dispose()
@@ -27,6 +30,17 @@ namespace ScenarioRunner
             if (File.Exists(lockPath))
             {
                 File.Delete(lockPath);
+            }
+
+            if (File.Exists(_tempReportPath))
+            {
+                File.Delete(_tempReportPath);
+            }
+
+            var reportLockPath = _tempReportPath + ".lock";
+            if (File.Exists(reportLockPath))
+            {
+                File.Delete(reportLockPath);
             }
         }
 
@@ -122,6 +136,54 @@ namespace ScenarioRunner
             var record = repository.Find("submit_btn");
             Assert.NotNull(record);
             Assert.Equal("btnSubmit_Renamed", record!.Snapshot.AutomationId);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_WritesHealingReport()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "legacy_email",
+                Name = "Email",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+                TestIntent = "Enter the customer email address"
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "email",
+                        Name = "Email",
+                        BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+                    }
+                }
+            };
+
+            var healResult = await engine.ResolveAndRecordAsync("CustomerForm.Email", expected, currentTree);
+
+            Assert.True(healResult.IsConfident);
+            Assert.True(File.Exists(_tempReportPath));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal("CustomerForm.Email", entry.LocatorKey);
+            Assert.Equal("heuristic", entry.Source);
+            Assert.Equal("accepted", entry.ReviewStatus);
+            Assert.Equal("legacy_email", entry.PreviousSnapshot!.AutomationId);
+            Assert.Equal("email", entry.AcceptedSnapshot!.AutomationId);
+            Assert.Equal("Enter the customer email address", entry.AcceptedSnapshot.TestIntent);
+            Assert.True(entry.Score >= entry.ConfidenceThreshold);
+            Assert.True(entry.CandidateCount > 0);
         }
     }
 }
