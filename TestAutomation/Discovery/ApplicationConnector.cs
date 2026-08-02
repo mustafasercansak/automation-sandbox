@@ -42,8 +42,18 @@ namespace Discovery
 
         public void Dispose()
         {
-            Automation.Dispose();
-            App.Dispose();
+            try
+            {
+                if (!App.HasExited)
+                {
+                    App.Close(killIfCloseFails: true);
+                }
+            }
+            finally
+            {
+                Automation.Dispose();
+                App.Dispose();
+            }
         }
     }
 }
