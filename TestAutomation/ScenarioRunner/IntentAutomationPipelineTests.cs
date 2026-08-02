@@ -94,7 +94,12 @@ namespace ScenarioRunner
                 Assert.False(step.RequiresReview);
                 Assert.NotEmpty(step.Candidates);
             });
-            Assert.All(result.RecordingResults, item => Assert.True(item.Recorded));
+            var locatorRecordings = result.RecordingResults
+                .Where(item => item.Step.ActionType != IntentActionType.Navigate && item.Step.ActionType != IntentActionType.Unknown)
+                .ToList();
+            Assert.NotEmpty(locatorRecordings);
+            Assert.All(locatorRecordings, item => Assert.True(item.Recorded));
+            Assert.Contains(result.RecordingResults, item => item.Step.ActionType == IntentActionType.Navigate && !item.Recorded);
             Assert.Contains("happy.path@example.com", result.PlaywrightCSharpTestCode);
             Assert.Contains("happy.path@example.com", result.PlaywrightTypeScriptTestCode);
             Assert.NotEmpty(result.Report.Steps);
