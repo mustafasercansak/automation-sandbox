@@ -20,6 +20,11 @@ namespace SelfHealing
         };
 
         public HealingReportFileSink(string filePath)
+            : this(filePath, Path.ChangeExtension(filePath, ".html"))
+        {
+        }
+
+        public HealingReportFileSink(string filePath, string? htmlFilePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
@@ -27,14 +32,22 @@ namespace SelfHealing
             }
 
             FilePath = filePath;
+            HtmlFilePath = htmlFilePath;
         }
 
         public string FilePath { get; }
+        public string? HtmlFilePath { get; }
 
         public static HealingReportFileSink? FromEnvironment()
         {
             var filePath = Environment.GetEnvironmentVariable(EnvironmentVariableName);
-            return string.IsNullOrWhiteSpace(filePath) ? null : new HealingReportFileSink(filePath!);
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return null;
+            }
+
+            var htmlFilePath = Environment.GetEnvironmentVariable("SELF_HEALING_REPORT_HTML_PATH");
+            return new HealingReportFileSink(filePath!, string.IsNullOrWhiteSpace(htmlFilePath) ? Path.ChangeExtension(filePath, ".html") : htmlFilePath);
         }
 
         public void Record(HealingReportEntry entry)
@@ -90,6 +103,17 @@ namespace SelfHealing
             }
 
             File.Move(tempPath, FilePath);
+
+            if (!string.IsNullOrWhiteSpace(HtmlFilePath))
+            {
+                var htmlDirectory = Path.GetDirectoryName(HtmlFilePath);
+                if (!string.IsNullOrEmpty(htmlDirectory))
+                {
+                    Directory.CreateDirectory(htmlDirectory);
+                }
+
+                File.WriteAllText(HtmlFilePath, HealingReportHtmlRenderer.Render(document));
+            }
         }
 
         private FileStream AcquireLock()

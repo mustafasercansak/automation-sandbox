@@ -12,11 +12,13 @@ namespace ScenarioRunner
     {
         private readonly string _tempRepoPath;
         private readonly string _tempReportPath;
+        private readonly string _tempHtmlReportPath;
 
         public SelfHealingEngineTests()
         {
             _tempRepoPath = Path.Combine(Path.GetTempPath(), "SelfHealingEngineTest_" + Guid.NewGuid().ToString("N") + ".locator.json");
             _tempReportPath = Path.Combine(Path.GetTempPath(), "SelfHealingEngineTest_" + Guid.NewGuid().ToString("N") + ".healing-report.json");
+            _tempHtmlReportPath = Path.ChangeExtension(_tempReportPath, ".html");
         }
 
         public void Dispose()
@@ -41,6 +43,11 @@ namespace ScenarioRunner
             if (File.Exists(reportLockPath))
             {
                 File.Delete(reportLockPath);
+            }
+
+            if (File.Exists(_tempHtmlReportPath))
+            {
+                File.Delete(_tempHtmlReportPath);
             }
         }
 
@@ -184,6 +191,14 @@ namespace ScenarioRunner
             Assert.Equal("Enter the customer email address", entry.AcceptedSnapshot.TestIntent);
             Assert.True(entry.Score >= entry.ConfidenceThreshold);
             Assert.True(entry.CandidateCount > 0);
+
+            Assert.True(File.Exists(_tempHtmlReportPath));
+            var html = File.ReadAllText(_tempHtmlReportPath);
+            Assert.Contains("Self-Healing Report", html);
+            Assert.Contains("CustomerForm.Email", html);
+            Assert.Contains("legacy_email", html);
+            Assert.Contains("email", html);
+            Assert.Contains("accepted", html);
         }
     }
 }

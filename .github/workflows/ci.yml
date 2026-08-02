@@ -42,6 +42,7 @@ jobs:
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           SELF_HEALING_REPORT_PATH: ${{ github.workspace }}\TestAutomation\ScenarioRunner\TestResults\healing-report.json
+          SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}\TestAutomation\ScenarioRunner\TestResults\healing-report.html
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
 
       - name: Upload test results
@@ -63,5 +64,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: self-healing-report
-          path: TestAutomation/ScenarioRunner/TestResults/healing-report.json
+          path: |
+            TestAutomation/ScenarioRunner/TestResults/healing-report.json
+            TestAutomation/ScenarioRunner/TestResults/healing-report.html
           if-no-files-found: ignore

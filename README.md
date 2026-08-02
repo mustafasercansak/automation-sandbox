@@ -27,7 +27,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and action retry. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
-| **Healing Reports & CI Artifacts** | ✅ Implemented | JSON report stream for accepted healing events, including before/after snapshots, confidence, source, and review status. |
+| **Healing Reports & CI Artifacts** | ✅ Implemented | JSON + HTML report artifacts for accepted healing events, including before/after snapshots, confidence, source, and review status. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
@@ -257,13 +257,16 @@ if (healResult.IsConfident)
 ```
 
 ### 5. Self-Healing JSON Reports
-`SelfHealingEngine` can emit an append-only JSON report whenever it accepts a healed
-locator. Set `SELF_HEALING_REPORT_PATH` to enable this without changing test code:
+`SelfHealingEngine` can emit append-only JSON and HTML reports whenever it accepts a
+healed locator. Set `SELF_HEALING_REPORT_PATH` to enable this without changing test code:
 
 ```powershell
 $env:SELF_HEALING_REPORT_PATH = "TestResults/healing-report.json"
 dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build
 ```
+
+By default, the HTML report is written next to the JSON file as
+`healing-report.html`. Override it with `SELF_HEALING_REPORT_HTML_PATH` when needed.
 
 Each report event includes:
 
@@ -274,8 +277,8 @@ Each report event includes:
 - `PreviousSnapshot` and `AcceptedSnapshot`
 - LLM fields such as `LlmConfidence`, `LlmProviderName`, and `LlmReasoning` when applicable
 
-GitHub Actions uploads this file as the `self-healing-report` artifact when healing
-events occur during CI.
+GitHub Actions uploads both `healing-report.json` and `healing-report.html` as the
+`self-healing-report` artifact when healing events occur during CI.
 
 ### 6. Web DOM Mapping & Playwright Locator Suggestions
 `WebDiscovery` maps a Playwright-captured DOM snapshot into the same `UiElementInfo`
