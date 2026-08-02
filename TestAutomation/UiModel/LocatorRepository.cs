@@ -119,6 +119,11 @@ namespace UiModel
             }
 
             record.Snapshot = UiElementSnapshot.Capture(snapshot);
+            if (!string.IsNullOrWhiteSpace(snapshot.TestIntent))
+            {
+                record.TestIntent = snapshot.TestIntent;
+            }
+
             record.UpdatedAt = now;
             if (healingEntry != null)
             {

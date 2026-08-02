@@ -113,6 +113,7 @@ namespace ScenarioRunner
             // =========================================================================
             bool actionExecutedSuccessfully = false;
             string clickedAutomationId = "";
+            var attemptCount = 0;
 
             bool result = await engine.ExecuteWithHealingAsync(
                 locatorKey: "RegistrationPage.SubmitButton",
@@ -121,6 +122,12 @@ namespace ScenarioRunner
                 {
                     // If initial element is missing/broken, engine automatically heals it
                     // and passes the healed element into this callback!
+                    attemptCount++;
+                    if (healedElement.AutomationId == "btnRegister_V1_Old")
+                    {
+                        throw new InvalidOperationException("Element not found with stale locator.");
+                    }
+
                     actionExecutedSuccessfully = true;
                     clickedAutomationId = healedElement.AutomationId;
                     return await Task.FromResult(true);
@@ -134,6 +141,7 @@ namespace ScenarioRunner
             // =========================================================================
             Assert.True(result);
             Assert.True(actionExecutedSuccessfully);
+            Assert.Equal(2, attemptCount);
             Assert.Equal("btnRegister_V2", clickedAutomationId);
 
             // Verify that the repository file was automatically created and updated with healed locator
