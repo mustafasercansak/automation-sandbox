@@ -161,7 +161,6 @@ namespace ScenarioRunner
             var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(anthropicResponseJson, Encoding.UTF8, "application/json"),
-                Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json"),
             });
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
@@ -185,7 +184,6 @@ namespace ScenarioRunner
                     """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
                     Encoding.UTF8,
                     "application/json"),
-                Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json"),
             });
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "claude-haiku-4-5");
             await provider.ResolveAsync(Expected, BuildShortlist());
@@ -205,7 +203,6 @@ namespace ScenarioRunner
                     """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
                     Encoding.UTF8,
                     "application/json"),
-                Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json"),
             });
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
             await provider.ResolveAsync(Expected, BuildShortlist());
@@ -230,7 +227,6 @@ namespace ScenarioRunner
                     """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
                     Encoding.UTF8,
                     "application/json"),
-                Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json"),
             });
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "");
             await provider.ResolveAsync(Expected, BuildShortlist());
@@ -327,7 +323,6 @@ namespace ScenarioRunner
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(geminiResponseJson, Encoding.UTF8, "application/json"),
-                    Content = new StringContent(GeminiSuccessResponse, Encoding.UTF8, "application/json"),
                 };
             });
             var provider = new GeminiHealingProvider(httpClient: new HttpClient(handler), apiKey: "test-key");
@@ -353,7 +348,6 @@ namespace ScenarioRunner
                     """{"steps":[{"type":"model_output","status":"done","content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}]}""",
                     Encoding.UTF8,
                     "application/json"),
-                Content = new StringContent(GeminiSuccessResponse, Encoding.UTF8, "application/json"),
             });
             var provider = new GeminiHealingProvider(httpClient: new HttpClient(handler), apiKey: "test-key", model: "");
             await provider.ResolveAsync(Expected, BuildShortlist());
