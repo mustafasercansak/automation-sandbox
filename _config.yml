@@ -1,0 +1,16 @@
+title: Automation Sandbox
+description: Explainable self-healing UI test automation engine.
+markdown: kramdown
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - bin
+  - obj
+  - TestAutomation
+  - WinFormsApp
+  - WpfApp

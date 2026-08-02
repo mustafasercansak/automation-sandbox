@@ -1,0 +1,12 @@
+title: Automation Sandbox
+description: Explainable self-healing UI test automation documentation.
+markdown: kramdown
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - README.md
