@@ -80,7 +80,7 @@ using WebDiscovery;
 using UiModel;
 using SelfHealing;
 
-class WebTesti
+class WebTest
 {
     static async Task Main()
     {
@@ -89,28 +89,28 @@ class WebTesti
         var page = await browser.NewPageAsync();
         await page.GotoAsync("https://example.com/login");
 
-        // 1. JavaScript tarama kodunu tarayıcı sayfasında çalıştırın
+        // 1. Evaluate JavaScript snippet in browser page
         string domJson = await page.EvaluateAsync<string>(PlaywrightDomCaptureScript.JavaScript);
 
-        // 2. DOM JSON verisini standart UI ağacına dönüştürün
-        UiElementInfo webAgaci = PlaywrightApplicationConnector.ParseJson(domJson);
+        // 2. Convert DOM JSON into standard UiElementInfo tree
+        UiElementInfo webTree = PlaywrightApplicationConnector.ParseJson(domJson);
 
-        // 3. Eleman için önerilen en kararlı Playwright kod ifadelerini alın
-        var hedefEleman = new WebElementInfo
+        // 3. Generate prioritized locator suggestions for an element
+        var targetElement = new WebElementInfo
         {
             TagName = "input",
             Role = "textbox",
-            AccessibleName = "E-posta",
+            AccessibleName = "Email",
             TestId = "user-email-input",
             Id = "txtEmail"
         };
 
-        var oneriler = PlaywrightLocatorEmitter.Suggest(hedefEleman);
+        var suggestions = PlaywrightLocatorEmitter.Suggest(targetElement);
 
-        Console.WriteLine("Önerilen Playwright Kod İfadeleri:");
-        foreach (var oneri in oneriler)
+        Console.WriteLine("Suggested Locators:");
+        foreach (var suggestion in suggestions)
         {
-            Console.WriteLine($"[{oneri.Strategy}] (%{oneri.Confidence * 100} Güven): {oneri.Expression}");
+            Console.WriteLine($"[{suggestion.Strategy}] ({suggestion.Confidence * 100}% Confidence): {suggestion.Expression}");
         }
     }
 }

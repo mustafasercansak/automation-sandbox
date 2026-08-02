@@ -1,57 +1,92 @@
 # 🎯 Intent-Aware Healing Guide / Test Amacı İle İyileştirme
 
-This guide explains **Intent-Aware Healing** (`TestIntent`), helping AI models resolve elements after major UI redesigns.
+This guide explains **Intent-Aware Healing** (`TestIntent`), BDD/Gherkin scenario style intents, best practices, and multilingual support.
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
 > - [🇹🇷 Türkçe Kılavuz](#-türkçe-kılavuz)
 
+> 💡 **Zero Token Cost Guarantee:** If your AI API tokens run out or you have no internet access, the engine's deterministic heuristic scorer (`SimilarityScorer`) resolves broken locators in $12\text{ms}$ at **$0 cost and 0 API tokens**!
+
 ---
 
 ## 🇬🇧 English Guide
 
-### What is Test Intent?
-Traditional self-healing tools only ask: *"Where is the element named `btnRegister`?"*
-If developers rename `btnRegister` to `"Create Account"`, traditional tools will fail.
+### 1. BDD / Gherkin Scenario Style Intent (GIVEN-WHEN-THEN)
+Yes! You can write `TestIntent` formatted as a **Gherkin / BDD test scenario step**. LLMs understand structured Gherkin syntax exceptionally well because it provides state preconditions and clear expected outcomes.
 
-By providing **`TestIntent`**, you tell the AI **why** you are clicking the element:
-`TestIntent = "Click the button to finalize registration"`
+#### BDD Scenario Style Examples:
+- `testIntent: "GIVEN user is on registration modal WHEN personal details are filled THEN click primary submit button"`
+- `testIntent: "GIVEN cart contains items WHEN on checkout page THEN click confirm payment button"`
+- `testIntent: "GIVEN user is logged in WHEN in profile settings THEN save changes"`
 
-Even if the name, ID, or screen position changes completely, AI models understand your goal and accurately select the new `"Create Account"` button!
-
-### How to Code Intent-Aware Steps
-
+#### SpecFlow / Reqnroll BDD Integration Example:
 ```csharp
-await engine.ExecuteWithHealingAsync(
-    locatorKey: "Registration.Submit",
-    expected: new UiElementInfo { ControlType = "Button", AutomationId = "btnRegister_Old" },
-    action: async (healedElement) => await page.ClickAsync(healedElement.AutomationId),
-    captureTreeRoot: () => page.CaptureTree(),
-    testIntent: "Click the main registration form submission button" // <--- Test Intent Here!
-);
+[When(@"user clicks the submit button with intent ""(.*)""")]
+public async Task WhenUserClicksSubmitWithIntent(string intent)
+{
+    await engine.ExecuteWithHealingAsync(
+        locatorKey: "Registration.SubmitButton",
+        expected: expectedButton,
+        action: async (element) => await page.ClickAsync(element.AutomationId),
+        captureTreeRoot: () => page.CaptureTree(),
+        testIntent: intent // Passes Gherkin step directly into testIntent!
+    );
+}
 ```
+
+---
+
+### 2. How to Write a Good Intent (The 3-Part Formula)
+Writing an effective `TestIntent` is simple when using the 3-part formula:
+
+$$\text{TestIntent} = \text{[Action Verb]} + \text{[Business Context]} + \text{[Goal / Outcome]}$$
+
+#### ✅ Good Intent Examples:
+- `"Enter corporate email address into the 2FA login form"`
+- `"Click the primary checkout confirmation button to complete payment"`
+
+---
+
+### 3. Multilingual Intent Support
+Automation Sandbox LLM providers are **natively multilingual**. You can write BDD or natural intent in any language (English, Turkish, German, French, etc.):
+
+- **Turkish BDD:** `testIntent: "GIVEN kullanıcı kayıt sayfasında WHEN bilgiler girildi THEN kaydı tamamla butonuna tıkla"`
+- **German BDD:** `testIntent: "GIVEN Benutzer ist im Registrierungsformular WHEN Daten eingegeben THEN Registrierung abschließen"`
 
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
 
-### Test Intent (Test Amacı) Nedir?
-Geleneksel iyileştirme araçları sadece şunu sorar: *"Adı `btnRegister` olan buton nerede?"*
-Eğer yazılımcılar butonun adını `"Hesap Oluştur"` yaparsa eski araçlar **başarısız olur**.
+### 1. BDD / Gherkin Senaryo Formatında Intent Yazımı (GIVEN-WHEN-THEN)
+Evet! `TestIntent` parametresini bir **Gherkin / BDD test senaryosu adımı** biçiminde yazabilirsiniz. Yapay zeka modelleri GIVEN-WHEN-THEN yapısını çok iyi kavrar çünkü bu yapı ön koşulu ve hedeflenen sonucu net şekilde sunar.
 
-**`TestIntent`** vererek yapay zekaya bu butona **neden** tıkladığınızı söylersiniz:
-`TestIntent = "Kullanıcı kayıt formunu onaylama butonuna tıkla"`
+#### BDD Formatında Intent Örnekleri:
+- `testIntent: "GIVEN kullanıcı kayıt sayfasında WHEN bilgiler girildi THEN kaydı tamamla butonuna tıkla"`
+- `testIntent: "GIVEN sepet dolu WHEN ödeme sayfasında THEN ödemeyi onayla butonuna tıkla"`
+- `testIntent: "GIVEN oturum açık WHEN profil ayarlarında THEN değişiklikleri kaydet"`
 
-Butonun adı, ID'si veya ekrandaki yeri tamamen değişse bile yapay zeka adımınızın amacını kavrar ve yeni `"Hesap Oluştur"` butonunu **yanılmadan seçer**!
-
-### Intent Kullanarak Kod Yazımı
-
+#### SpecFlow / Reqnroll BDD Entegrasyon Örneği:
 ```csharp
-await engine.ExecuteWithHealingAsync(
-    locatorKey: "KayitFormu.GonderButonu",
-    expected: new UiElementInfo { ControlType = "Button", AutomationId = "btnRegister_Eski" },
-    action: async (iyilestirilenEleman) => await page.ClickAsync(iyilestirilenEleman.AutomationId),
-    captureTreeRoot: () => CanliEkranYakala(),
-    testIntent: "Kullanıcı kayıt formunu onaylama butonuna tıkla" // <--- Test Amacı Burası!
-);
+[When(@"kullanıcı ""(.*)"" amacıyla butonuna tıklar")]
+public async Task KullaniciTıklarIntentIle(string intent)
+{
+    await engine.ExecuteWithHealingAsync(
+        locatorKey: "Registration.SubmitButton",
+        expected: expectedButton,
+        action: async (element) => await page.ClickAsync(element.AutomationId),
+        captureTreeRoot: () => page.CaptureTree(),
+        testIntent: intent // Gherkin adım metnini doğrudan testIntent olarak aktarır!
+    );
+}
 ```
+
+---
+
+### 2. Intent Nasıl Yazılır? (3 Adımlı Formül)
+$$\text{TestIntent} = \text{[Eylem Fiili]} + \text{[İş Bağlamı]} + \text{[Hedef / Sonuç]}$$
+
+---
+
+### 3. Çok Dilli BDD Intent Desteği
+İster Türkçe BDD, ister İngilizce Gherkin yazın; yapay zeka adımı otomatik çözer ve ekrandaki elemanla eşleştirir.

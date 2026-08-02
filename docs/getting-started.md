@@ -130,48 +130,48 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("🚀 Automation Sandbox Başlatılıyor...");
+        Console.WriteLine("🚀 Automation Sandbox Starting...");
 
-        // 1. Kayıtların saklanacağı dosya yolunu belirleyin
+        // 1. Specify the path to store locators on disk
         var repository = new LocatorRepository("my_locators.locator.json");
 
-        // 2. İsteğe bağlı Yapay Zeka sağlayıcısını ekleyin (0 TL maliyetli yerel Ollama)
+        // 2. Initialize optional AI providers (Local Ollama for 100% free AI healing)
         var llmProviders = new ILlmHealingProvider[]
         {
             new OllamaHealingProvider(host: "http://localhost:11434")
         };
 
-        // 3. İyileştirme Motorunu (SelfHealingEngine) oluşturun
+        // 3. Create the SelfHealingEngine instance
         var engine = new SelfHealingEngine(repository, llmProviders: llmProviders);
 
-        // 4. Aradığınız elemanın beklenen özelliklerini tanımlayın
-        var beklenenEleman = new UiElementInfo
+        // 4. Define what element you expect to find
+        var expectedElement = new UiElementInfo
         {
             ControlType = "Button",
-            AutomationId = "btnSubmit_Eski", // Kırılan eski ID
-            Name = "Formu Gönder",
-            TestIntent = "Kayıt formunu onaylama butonuna tıkla"
+            AutomationId = "btnSubmit_Old", // Broken ID
+            Name = "Submit Form",
+            TestIntent = "Click the main registration form submission button"
         };
 
-        // 5. Otomatik iyileştirme koruması ile eylemi çalıştırın
-        bool basarili = await engine.ExecuteWithHealingAsync(
-            locatorKey: "KayitFormu.GonderButonu",
-            expected: beklenenEleman,
-            action: async (iyilestirilenEleman) =>
+        // 5. Execute action with automatic self-healing
+        bool result = await engine.ExecuteWithHealingAsync(
+            locatorKey: "Registration.SubmitButton",
+            expected: expectedElement,
+            action: async (healedElement) =>
             {
-                // Eleman kırık olsa bile bu kod doğru yeni elemanla çalışır!
-                Console.WriteLine($"✅ Elemana başarıyla tıklandı: AutomationId='{iyilestirilenEleman.AutomationId}'");
+                // This callback runs with the correct healed element!
+                Console.WriteLine($"✅ Successfully clicked element: AutomationId='{healedElement.AutomationId}'");
                 return true;
             },
-            captureTreeRoot: () => CanliEkranYakalaMock(), // Canlı ekran ağacını getiren fonksiyon
-            testIntent: "Kayıt formunu onaylama butonuna tıkla"
+            captureTreeRoot: () => CaptureLiveTreeMock(), // Function that returns live screen tree
+            testIntent: "Click the main registration form submission button"
         );
 
-        Console.WriteLine($"🎉 Test Adımı Başarıyla Tamamlandı: {basarili}");
+        Console.WriteLine($"🎉 Step Execution Completed Successfully: {result}");
     }
 
-    // Canlı ekranı temsil eden örnek simülasyon fonksiyonu
-    static UiElementInfo CanliEkranYakalaMock()
+    // Mock function representing live screen capture
+    static UiElementInfo CaptureLiveTreeMock()
     {
         return new UiElementInfo
         {
@@ -181,8 +181,8 @@ class Program
                 new UiElementInfo
                 {
                     ControlType = "Button",
-                    AutomationId = "btnSubmit_YenilenenID2026", // Canlı ekranda değişen yeni ID
-                    Name = "Formu Gönder"
+                    AutomationId = "btnSubmit_Renamed2026", // The renamed element on live screen
+                    Name = "Submit Form"
                 }
             }
         };

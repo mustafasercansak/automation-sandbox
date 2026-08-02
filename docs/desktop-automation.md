@@ -85,42 +85,42 @@ using FlaUI.UIA3;
 using UiModel;
 using SelfHealing;
 
-class MasaustuTesti
+class DesktopTest
 {
     static void Main()
     {
-        // 1. Ekran tarama seçeneklerini belirleyin
-        var secenekler = new DiscoveryOptions
+        // 1. Configure scan options
+        var options = new DiscoveryOptions
         {
-            MaxDepth = 10,                           // Kaç alt seviyeye inilecek
-            MaxElements = 3000,                      // Maksimum taranacak eleman sayısı
-            Timeout = TimeSpan.FromSeconds(5),       // Güvenlik zaman aşımı
-            IncludeOffscreen = true                  // Ekran dışında kalanları da dahil et
+            MaxDepth = 10,                           // How deep to scan
+            MaxElements = 3000,                      // Maximum controls limit
+            Timeout = TimeSpan.FromSeconds(5),       // Safety timeout
+            IncludeOffscreen = true                  // Also capture offscreen controls
         };
 
-        // 2. Çalışan Windows uygulamasına bağlanın
+        // 2. Attach to running Windows application
         using var automation = new UIA3Automation();
         var app = Application.Attach("WinFormsApp.exe");
-        var anaPencere = app.GetMainWindow(automation);
+        var mainWindow = app.GetMainWindow(automation);
 
-        // 3. Canlı ekran ağacını tarayın
-        DiscoveryResult sonuc = UiTreeWalker.Walk(anaPencere, secenekler);
+        // 3. Capture live UI tree
+        DiscoveryResult result = UiTreeWalker.Walk(mainWindow, options);
 
-        Console.WriteLine($"Toplam {sonuc.CapturedElements} kontrol {sonuc.ElapsedMilliseconds}ms içinde tarandı.");
+        Console.WriteLine($"Captured {result.CapturedElements} controls in {result.ElapsedMilliseconds}ms.");
 
-        // 4. Kırılan elemanı taranan canlı ağaçta arayın
-        var beklenen = new UiElementInfo
+        // 4. Resolve broken locator against captured live tree
+        var expected = new UiElementInfo
         {
             ControlType = "Button",
-            AutomationId = "btnSave_Eski",
-            Name = "Kaydet"
+            AutomationId = "btnSave_Old",
+            Name = "Save Changes"
         };
 
-        HealResult iyilestirmeSonucu = SelfHealingResolver.Resolve(beklenen, sonuc.Root);
+        HealResult healResult = SelfHealingResolver.Resolve(expected, result.Root);
 
-        if (iyilestirmeSonucu.IsConfident)
+        if (healResult.IsConfident)
         {
-            Console.WriteLine($"✅ Eşleşen eleman bulundu: {iyilestirmeSonucu.Matched.AutomationId} (Skor: {iyilestirmeSonucu.Score:F2})");
+            Console.WriteLine($"✅ Found matched control: {healResult.Matched.AutomationId} (Score: {healResult.Score:F2})");
         }
     }
 }
