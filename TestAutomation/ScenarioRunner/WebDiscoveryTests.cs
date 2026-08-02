@@ -99,7 +99,7 @@ namespace ScenarioRunner
             Assert.Equal(new[] { "TestId", "Role", "Id", "NameAttribute", "Css" }, suggestions.Select(s => s.Strategy).ToArray());
             Assert.Equal("page.GetByTestId(\"email-input\")", suggestions[0].Expression);
             Assert.Contains("AriaRole.Textbox", suggestions[1].Expression);
-            Assert.Contains("#customer\\.email", suggestions[2].Expression);
+            Assert.Contains("#customer\\\\.email", suggestions[2].Expression);
         }
 
         [Fact]
@@ -174,4 +174,3 @@ namespace ScenarioRunner
         }
     }
 }
-
