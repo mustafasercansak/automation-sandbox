@@ -1,0 +1,164 @@
+using System.Threading.Tasks;
+using SelfHealing;
+using UiModel;
+namespace ScenarioRunner
+{
+    public class LocatorRepositoryTests : IDisposable
+    {
+        private readonly string _directory;
+        private readonly string _filePath;
+
+        public LocatorRepositoryTests()
+        {
+            _directory = Path.Combine(Path.GetTempPath(), "LocatorRepositoryTests_" + Guid.NewGuid().ToString("N"));
+            _filePath = Path.Combine(_directory, "locators.json");
+        }
+
+        [Fact]
+        public void Load_WhenFileDoesNotExist_ReturnsEmptyDocument()
+        {
+            var repository = new LocatorRepository(_filePath);
+
+            var document = repository.Load();
+
+            Assert.Empty(document.Locators);
+            Assert.Equal(LocatorRepositoryDocument.CurrentSchemaVersion, document.SchemaVersion);
+        }
+
+        [Fact]
+        public void Save_ThenLoad_RoundTrips_AndCreatesDirectory()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var document = new LocatorRepositoryDocument { ApplicationName = "DemoApp" };
+            document.Locators.Add(new LocatorRecord
+            {
+                LocatorKey = "CustomerForm.Email",
+                Snapshot = new UiElementInfo { ControlType = "Edit", AutomationId = "txtEmail" },
+            });
+
+            repository.Save(document);
+            var loaded = repository.Load();
+
+            Assert.True(File.Exists(_filePath));
+            Assert.Equal("DemoApp", loaded.ApplicationName);
+            Assert.Equal("txtEmail", loaded.Locators.Single().Snapshot.AutomationId);
+        }
+
+        [Fact]
+        public void Upsert_WhenKeyIsNew_AddsRecordWithTimestamps()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var snapshot = new UiElementInfo { ControlType = "Edit", AutomationId = "txtEmail" };
+
+            var record = repository.Upsert("CustomerForm.Email", snapshot, applicationName: "DemoApp");
+
+            Assert.Equal("CustomerForm.Email", record.LocatorKey);
+            Assert.Equal("txtEmail", record.Snapshot.AutomationId);
+            Assert.Equal(record.CreatedAt, record.UpdatedAt);
+            Assert.Equal("DemoApp", repository.Load().ApplicationName);
+        }
+
+        [Fact]
+        public void Upsert_WhenKeyAlreadyExists_UpdatesInPlaceInsteadOfDuplicating()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var original = repository.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmailAddress" });
+
+            var updatedSnapshot = new UiElementInfo { AutomationId = "txtEmail" };
+            var entry = new LocatorHealingHistoryEntry { Source = "heuristic", Score = 0.95 };
+            var updated = repository.Upsert("CustomerForm.Email", updatedSnapshot, entry);
+
+            var document = repository.Load();
+            Assert.Single(document.Locators);
+            Assert.Equal("txtEmail", updated.Snapshot.AutomationId);
+            Assert.Equal(original.CreatedAt, updated.CreatedAt);
+            Assert.True(updated.UpdatedAt >= original.UpdatedAt);
+            Assert.Single(updated.HealingHistory);
+        }
+
+        [Fact]
+        public async Task Upsert_CalledConcurrentlyForDifferentKeys_NeverLosesAnUpdate()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var keys = Enumerable.Range(0, 20).Select(i => $"Locator.{i}").ToList();
+
+            await Task.WhenAll(keys.Select(key => Task.Run(() =>
+                repository.Upsert(key, new UiElementInfo { AutomationId = key }))));
+
+            var document = repository.Load();
+            Assert.Equal(keys.Count, document.Locators.Count);
+            foreach (var key in keys)
+            {
+                Assert.Contains(document.Locators, r => r.LocatorKey == key);
+            }
+        }
+
+        [Fact]
+        public void Find_ReturnsNull_WhenLocatorKeyIsNotPresent()
+        {
+            var repository = new LocatorRepository(_filePath);
+            repository.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail" });
+
+            Assert.Null(repository.Find("CustomerForm.Phone"));
+        }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(_directory))
+            {
+                Directory.Delete(_directory, recursive: true);
+            }
+        }
+    }
+
+    public class LocatorHealingHistoryEntryFactoryTests
+    {
+        [Fact]
+        public void FromHealResult_MapsHeuristicResultFields()
+        {
+            var matched = new UiElementInfo { AutomationId = "txtEmail" };
+            var previous = new UiElementInfo { AutomationId = "txtEmailAddress" };
+            var result = new HealResult
+            {
+                Matched = matched,
+                Score = 0.91,
+                Source = HealSource.Heuristic,
+                ConfidenceThreshold = 0.5,
+            };
+
+            var entry = LocatorHealingHistoryEntryFactory.FromHealResult(result, previous);
+
+            Assert.Equal("heuristic", entry.Source);
+            Assert.Equal(0.91, entry.Score);
+            Assert.Same(matched, entry.AcceptedSnapshot);
+            Assert.Same(previous, entry.PreviousSnapshot);
+            Assert.Null(entry.LlmProviderName);
+        }
+
+        [Fact]
+        public void FromHealResult_MapsLlmProviderNameAsSource()
+        {
+            var result = new HealResult
+            {
+                Matched = new UiElementInfo { AutomationId = "txtEmail" },
+                Source = HealSource.Llm,
+                LlmProviderName = "Gemini",
+                LlmConfidence = 0.9,
+            };
+
+            var entry = LocatorHealingHistoryEntryFactory.FromHealResult(result, previousSnapshot: null);
+
+            Assert.Equal("Gemini", entry.Source);
+            Assert.Equal(0.9, entry.LlmConfidence);
+            Assert.Null(entry.PreviousSnapshot);
+        }
+
+        [Fact]
+        public void FromHealResult_ThrowsWhenNoMatchWasFound()
+        {
+            var result = new HealResult { Matched = null };
+
+            Assert.Throws<InvalidOperationException>(() => LocatorHealingHistoryEntryFactory.FromHealResult(result, previousSnapshot: null));
+        }
+    }
+}

@@ -23,7 +23,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
-| **Locator Repository JSON** | 🧱 Foundation Added | Versioned repository DTOs/serializer, stable `LocatorKey`, and healing history contract; persistence workflow is next. |
+| **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and a `LocatorRepository` load/save/upsert workflow with concurrency-safe file locking. |
 | **Playwright Web Automation** | 📋 Planned | Web DOM tree walker and Playwright `GetByRole`/`GetByTestId` locator emitter. |
 
 ---
@@ -220,28 +220,32 @@ var result = SelfHealingResolver.Resolve(expected, liveTree, customWeights);
 when thresholds are outside `0.0..1.0`, weights are negative, or the LLM shortlist size is
 less than one.
 
-### 4. Repository-Ready Snapshots
+### 4. Persistent Locator Repository
 Use a caller-owned key for persisted locators. `AutomationId` remains part of the
 snapshot, but it should not be the repository identity because it may be empty,
-duplicated, or stale:
+duplicated, or stale. `LocatorRepository` owns a single `.locator.json` file and
+guards its load-modify-save cycle with an exclusive file lock, so concurrent callers
+(e.g. parallel test collections healing against the same file) don't race:
 
 ```csharp
+var repository = new LocatorRepository("locators.json");
+
 var snapshot = UiElementSnapshot.CaptureFirst(liveTree, node =>
     node.ControlType == "Group" && node.Name == "Company");
 
-var repository = new LocatorRepositoryDocument
-{
-    ApplicationName = "CustomerApp",
-    Platform = "windows-uia",
-};
+repository.Upsert("CustomerForm.Company", snapshot!, applicationName: "CustomerApp", platform: "windows-uia");
+```
 
-repository.Locators.Add(new LocatorRecord
-{
-    LocatorKey = "CustomerForm.Company",
-    Snapshot = snapshot!,
-});
+When a heal actually happens, bridge the `HealResult` into a `LocatorHealingHistoryEntry`
+and pass it to `Upsert` so the repository keeps an audit trail of what changed and why:
 
-var json = LocatorRepositorySerializer.ToJson(repository);
+```csharp
+var healResult = SelfHealingResolver.Resolve(staleExpected, liveTree);
+if (healResult.IsConfident)
+{
+    var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, previousSnapshot: staleExpected);
+    repository.Upsert("CustomerForm.Email", healResult.Matched!, entry);
+}
 ```
 
 ### 5. LLM Fallback Resolution (Opt-In)
@@ -341,7 +345,7 @@ graph LR
     subgraph PhaseA [Phase A: Core Hardening]
         M1[M1: Core Hardening MVP - Implemented]
         M2[M2: Discovery Robustness - Implemented]
-        M3[M3: Locator Repository Foundation - Done / Persistence Next]
+        M3[M3: Persistent Locator Repository - Implemented]
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Phase B: Web Automation]
