@@ -29,7 +29,7 @@ timeline
     Phase 1 : Milestone 1 (Core Hardening) : Explainable Scoring : Candidate Pruning : Offscreen Box Exclusion : .NET 10 Support : Hallucination Guard
     Phase 2 : Milestone 2 (Discovery Robustness) : DiscoveryOptions & Telemetry : Root Preservation Guard : SiblingCount Consistency : Best-Effort Timeout Budget
     Phase 3 : Milestone 3 (Persistent Locator Repository) : Versioned Repository Schema : Concurrency-Safe Load/Save/Upsert : Healing History Audit Trail
-    Phase 4 : Next Horizon : Playwright Web Adapter Foundation : Shadow DOM & iframe Capture : Live Browser Capture : NuGet Package Release
+    Phase 4 : Milestone 4 (Web & SDK Foundation) : Playwright Web Adapter : Extended LLM Providers : High-Level SelfHealingEngine SDK
 ```
 
 ### 1️⃣ Milestone 1: Core Hardening MVP
@@ -42,6 +42,15 @@ timeline
 * **`DiscoveryOptions` & `DiscoveryResult`:** Traversal parameters (`MaxDepth`, `MaxElements`, `Timeout`, `IncludeOffscreen`, `IgnoredControlTypes`, `IgnoredClassNames`) and full diagnostic telemetry counters.
 * **Root Preservation Guard (`depth > 0`):** Ensuring the anchor root element is never filtered out by control filters.
 * **`SiblingCount` Consistency:** Calculating sibling count based on valid captured tree nodes to preserve mathematical ratios for similarity scoring.
+
+### 3️⃣ Milestone 3: Persistent Locator Repository
+* **Versioned Repository Schema:** JSON storage (`LocatorRepositoryDocument`), thread-safe file lock synchronization, and healing history audit trail (`LocatorHealingHistoryEntry`).
+
+### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers & High-Level SDK
+* **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
+* **Extended LLM Providers:** Added `OpenAiHealingProvider` (`gpt-4o-mini`) and offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
+* **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with automatic repository update on healing (`ExecuteWithHealingAsync`).
+
 
 ---
 

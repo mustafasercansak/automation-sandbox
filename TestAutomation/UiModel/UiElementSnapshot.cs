@@ -17,6 +17,7 @@ namespace UiModel
             ParentAutomationId = node.ParentAutomationId,
             SiblingIndex = node.SiblingIndex,
             SiblingCount = node.SiblingCount,
+            TestIntent = node.TestIntent,
         };
 
         public static UiElementInfo? CaptureByAutomationId(UiElementInfo treeRoot, string automationId)

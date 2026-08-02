@@ -33,11 +33,17 @@ namespace LlmHealing
                 ParentControlType = expected.ParentControlType,
                 SiblingIndex = expected.SiblingIndex,
                 SiblingCount = expected.SiblingCount,
+                TestIntent = expected.TestIntent,
             };
             var expectedJson = UiTreeSerializer.ToJson(expectedForPrompt);
             var candidatesJson = JsonSerializer.Serialize(
                 candidates.Select(ToPromptCandidate),
                 new JsonSerializerOptions { WriteIndented = true });
+
+            var intentHeader = string.IsNullOrWhiteSpace(expected.TestIntent)
+                ? ""
+                : $"\nTEST INTENT (Goal of this test step):\n\"{expected.TestIntent}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n";
+
             return
 $@"You are diagnosing a broken UI test locator for a {platform} application.
 A locator that used to work no longer finds its element - most likely because the
@@ -46,6 +52,7 @@ deliberately omitted below since it's stale and irrelevant to matching. Below is
 last known structural snapshot of that element, and a shortlist of the current tree's
 candidates that are structurally closest to it, each with a heuristic score and its
 component breakdown.
+{intentHeader}
 Last known element (structural fields only - do not try to infer or guess its old
 AutomationId from context, it isn't shown for a reason):
 {expectedJson}

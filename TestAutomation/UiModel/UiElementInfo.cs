@@ -15,6 +15,7 @@ namespace UiModel
         public string ParentAutomationId { get; set; } = "";
         public int SiblingIndex { get; set; }
         public int SiblingCount { get; set; }
+        public string TestIntent { get; set; } = "";
         public List<UiElementInfo> Children { get; set; } = new();
     }
 

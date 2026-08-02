@@ -15,6 +15,7 @@ namespace UiModel
         // AutomationId is deliberately just snapshot data, not the repository identity.
         public string LocatorKey { get; set; } = "";
         public string Description { get; set; } = "";
+        public string TestIntent { get; set; } = "";
         public UiElementInfo Snapshot { get; set; } = new();
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

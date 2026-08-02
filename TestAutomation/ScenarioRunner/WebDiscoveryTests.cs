@@ -150,5 +150,28 @@ namespace ScenarioRunner
             Assert.Contains("IsHidden", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("IsOffscreen", PlaywrightDomCaptureScript.JavaScript);
         }
+
+        [Fact]
+        public void PlaywrightApplicationConnector_ParsesJsonToUiElementTree()
+        {
+            var json = @"{
+                ""TagName"": ""body"",
+                ""Children"": [
+                    {
+                        ""TagName"": ""button"",
+                        ""Role"": ""button"",
+                        ""AccessibleName"": ""Submit"",
+                        ""TestId"": ""submit-btn""
+                    }
+                ]
+            }";
+
+            var tree = PlaywrightApplicationConnector.ParseJson(json);
+            Assert.Equal("body", tree.ControlType);
+            Assert.Single(tree.Children);
+            Assert.Equal("Button", tree.Children[0].ControlType);
+            Assert.Equal("submit-btn", tree.Children[0].AutomationId);
+        }
     }
 }
+
