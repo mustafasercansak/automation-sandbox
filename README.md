@@ -11,6 +11,10 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 
 ---
 
+> 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
+
+---
+
 ## 📌 Implementation Status
 
 | Feature / Module | Status | Description |
@@ -19,12 +23,15 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Explainable Scoring** | ✅ Implemented | `ScoreComponents` breakdown (ControlType, Parent, Sibling, Name, Position). |
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
 | **Candidate Pruning & Shortlist** | ✅ Implemented | `MinCandidateScore` filtering and Top-N shortlist assembly (~500 token LLM prompt). |
-| **LLM Fallback & Guard** | ✅ Implemented | Parallel Claude/Gemini provider integration with shortlist `candidateId` **Hallucination Guard**. |
+| **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI, and offline Ollama providers with **Hallucination Guard**. |
+| **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
+| **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and action retry. |
+| **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
-| **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and a `LocatorRepository` load/save/upsert workflow with concurrency-safe file locking. |
-| **Playwright Web Automation** | 🧱 Foundation Added | `WebDiscovery` DOM snapshot model, Shadow DOM / same-origin iframe traversal, hidden/offscreen handling, `UiElementInfo` mapper, and Playwright locator emitter. |
+| **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
+| **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
 
 ---
 
