@@ -21,6 +21,8 @@ namespace Discovery
         public static ApplicationConnector Launch(string exePath)
         {
             var app = Application.Launch(exePath);
+            app.WaitWhileMainHandleIsMissing(TimeSpan.FromSeconds(10));
+            app.WaitWhileBusy(TimeSpan.FromSeconds(10));
             return new ApplicationConnector(app, new UIA3Automation());
         }
 
@@ -33,6 +35,7 @@ namespace Discovery
         public Window GetMainWindow(TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            App.WaitWhileBusy(TimeSpan.FromSeconds(5));
             var window = Retry.WhileNull(
                 () => App.GetMainWindow(Automation, TimeSpan.FromSeconds(2)),
                 timeout: effectiveTimeout

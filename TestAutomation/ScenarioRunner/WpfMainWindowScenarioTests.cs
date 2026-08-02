@@ -46,7 +46,6 @@ namespace ScenarioRunner
                 timeout: TimeSpan.FromSeconds(5)
             ).Result ?? throw new InvalidOperationException("cmbRecordType combo box was not found in WPF main window.");
             var combo = comboElement.AsComboBox();
-            combo.Select("Corporate");
 
             // CompanyPanel deliberately has no AutomationProperties.AutomationId set in
             // MainWindow.xaml. Assert that the brittle id-based locator cannot see the
@@ -54,8 +53,12 @@ namespace ScenarioRunner
             // headerless GroupBox automation peer being materialized on every CI run.
             Assert.Null(window.FindFirstDescendant(cf => cf.ByAutomationId("CompanyPanel")));
             var companyNameField = Retry.WhileNull(
-                () => window.FindFirstDescendant(cf => cf.ByAutomationId("txtCompanyName")),
-                timeout: TimeSpan.FromSeconds(5)
+                () =>
+                {
+                    combo.Select("Corporate");
+                    return window.FindFirstDescendant(cf => cf.ByAutomationId("txtCompanyName"));
+                },
+                timeout: TimeSpan.FromSeconds(10)
             ).Result ?? throw new InvalidOperationException("txtCompanyName field was not found after selecting Corporate in WPF main window.");
             var rect = companyNameField.Properties.BoundingRectangle.ValueOrDefault;
             Assert.True(rect.Width > 0 && rect.Height > 0, $"Company panel should be visible but its bounding rectangle came back empty: {rect}");
