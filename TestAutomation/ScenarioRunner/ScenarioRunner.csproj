@@ -44,6 +44,8 @@
 
     <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
 
+    <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
+
   </ItemGroup>
 
 </Project>

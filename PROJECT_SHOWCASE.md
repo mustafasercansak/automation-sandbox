@@ -29,7 +29,7 @@ timeline
     Phase 1 : Milestone 1 (Core Hardening) : Explainable Scoring : Candidate Pruning : Offscreen Box Exclusion : .NET 10 Support : Hallucination Guard
     Phase 2 : Milestone 2 (Discovery Robustness) : DiscoveryOptions & Telemetry : Root Preservation Guard : SiblingCount Consistency : Best-Effort Timeout Budget
     Phase 3 : Milestone 3 (Persistent Locator Repository) : Versioned Repository Schema : Concurrency-Safe Load/Save/Upsert : Healing History Audit Trail
-    Phase 4 : Next Horizon : Playwright Web Adapter : NuGet Package Release
+    Phase 4 : Next Horizon : Playwright Web Adapter Foundation : Shadow DOM & iframe Capture : Live Browser Capture : NuGet Package Release
 ```
 
 ### 1️⃣ Milestone 1: Core Hardening MVP
@@ -181,7 +181,7 @@ graph LR
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Phase B: Multi-Platform Adapter]
-        M4[M4: Playwright Web Automation Adapter - 📋 Planned]
+        M4[M4: Playwright Web Automation Adapter - 🧱 Foundation Added]
     end
     subgraph PhaseC [Phase C: Productization]
         M5[M5: NuGet Package & CLI Tool - 📋 Planned]
@@ -217,7 +217,7 @@ timeline
     Phase 1 : Milestone 1 (Çekirdek Güçlendirme) : Açıklanabilir Skorlama : Aday Budama : Ekran Dışı Kutu Tespiti : .NET 10 Desteği : Halüsinasyon Koruması
     Phase 2 : Milestone 2 (Keşif Dayanıklılığı) : DiscoveryOptions & Telemetri : Kök Düğüm Koruması : SiblingCount Tutarlılığı : Best-Effort Timeout
     Phase 3 : Kilometre Taşı 3 (Kalıcı Lokasyon Deposu) : Sürümlenmiş Depo Şeması : Eşzamanlılığa Dayanıklı Load/Save/Upsert : Onarım Geçmişi Denetim İzi
-    Phase 4 : Gelecek Ufku : Playwright Web Bağlayıcısı : NuGet Paketi Yayınlama
+    Phase 4 : Gelecek Ufku : Playwright Web Bağlayıcısı Temeli : Shadow DOM & iframe Yakalama : Canlı Tarayıcı Yakalama : NuGet Paketi Yayınlama
 ```
 
 ### 1️⃣ Milestone 1: Çekirdek Güçlendirme MVP
@@ -369,7 +369,7 @@ graph LR
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Aşama B: Çapraz Platform Bağlayıcı]
-        M4[M4: Playwright Web Bağlayıcısı - 📋 Planlandı]
+        M4[M4: Playwright Web Bağlayıcısı - 🧱 Temel Eklendi]
     end
     subgraph PhaseC [Aşama C: Ürünleştirme]
         M5[M5: NuGet Paketi & CLI - 📋 Planlandı]

@@ -24,7 +24,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and a `LocatorRepository` load/save/upsert workflow with concurrency-safe file locking. |
-| **Playwright Web Automation** | 📋 Planned | Web DOM tree walker and Playwright `GetByRole`/`GetByTestId` locator emitter. |
+| **Playwright Web Automation** | 🧱 Foundation Added | `WebDiscovery` DOM snapshot model, Shadow DOM / same-origin iframe traversal, hidden/offscreen handling, `UiElementInfo` mapper, and Playwright locator emitter. |
 
 ---
 
@@ -248,7 +248,33 @@ if (healResult.IsConfident)
 }
 ```
 
-### 5. LLM Fallback Resolution (Opt-In)
+### 5. Web DOM Mapping & Playwright Locator Suggestions
+`WebDiscovery` maps a Playwright-captured DOM snapshot into the same `UiElementInfo`
+shape used by the desktop engine, so the existing self-healing scorer can work across
+web and desktop trees:
+
+```csharp
+using WebDiscovery;
+
+// In a Playwright test:
+// WebElementInfo dom = await page.EvaluateAsync<WebElementInfo>(PlaywrightDomCaptureScript.JavaScript);
+var liveTree = WebElementMapper.ToUiElementTree(dom);
+var result = SelfHealingResolver.Resolve(expectedWebSnapshot, liveTree);
+
+if (result.IsConfident)
+{
+    var healedDomElement = dom.Children.First(e => e.TestId == result.Matched!.AutomationId);
+    var suggestions = PlaywrightLocatorEmitter.Suggest(healedDomElement);
+    Console.WriteLine(suggestions[0].Expression); // page.GetByTestId("...")
+}
+```
+
+The capture script walks regular DOM children, open Shadow DOM roots, and same-origin
+iframe documents. Hidden or offscreen web elements are marked and mapped with a zero
+bounding rectangle, which makes the existing position scorer exclude that signal instead
+of treating invisible layout data as reliable.
+
+### 6. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -358,7 +384,7 @@ graph LR
         M1 --> M2 --> M3
     end
     subgraph PhaseB [Phase B: Web Automation]
-        M4[M4: Playwright Web Adapter - Planned]
+        M4[M4: Playwright Web Adapter Foundation - Added]
     end
     subgraph PhaseC [Phase C: Productization]
         M5[M5: NuGet Release - Planned]
