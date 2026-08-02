@@ -202,6 +202,33 @@ namespace ScenarioRunner
 
         [Fact]
 
+        public async Task ClaudeHealingProvider_TreatsEmptyStringModel_AsUnsetAndUsesDefault()
+        {
+            // Regression: GitHub Actions substitutes an unset repo Variable with an empty
+            // string, not a missing env var - ANTHROPIC_MODEL="" must fall through to
+            // DefaultModel, not send model: "" to the API (that 404'd live in CI). The
+            // constructor's model parameter shares the same fallback logic as the env var
+            // read, so exercising it here proves the fix without mutating process-wide state.
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "");
+            await provider.ResolveAsync(Expected, BuildShortlist());
+
+            var request = handler.LastRequest;
+            Assert.NotNull(request);
+            Assert.NotNull(request.Content);
+            var body = await request.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
+        }
+
+        [Fact]
+
         public async Task ClaudeHealingProvider_SkipsAThinkingBlockAndFindsTheTextBlock()
         {
             // Regression test: Claude Opus 5 thinks by default, which would put a
@@ -293,6 +320,34 @@ namespace ScenarioRunner
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
             Assert.True(result.Success, result.ErrorMessage);
             Assert.Equal("txtEmail", result.MatchedAutomationId);
+        }
+
+        [Fact]
+
+        public async Task GeminiHealingProvider_TreatsEmptyStringModel_AsUnsetAndUsesDefault()
+        {
+            // Regression: GitHub Actions substitutes an unset repo Variable with an empty
+            // string, not a missing env var - GEMINI_MODEL="" must fall through to
+            // DefaultModel, not send model: "" to the API (that 404'd live in CI: "Model ''
+            // not found"). The constructor's model parameter shares the same fallback logic
+            // as the env var read, so exercising it here proves the fix without mutating
+            // process-wide state.
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"steps":[{"type":"model_output","status":"done","content":[{"type":"text","text":"{\"candidateId\":\"c0\",\"confidence\":0.9,\"reasoning\":\"x\"}"}]}]}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+            var provider = new GeminiHealingProvider(httpClient: new HttpClient(handler), apiKey: "test-key", model: "");
+            await provider.ResolveAsync(Expected, BuildShortlist());
+
+            var request = handler.LastRequest;
+            Assert.NotNull(request);
+            Assert.NotNull(request.Content);
+            var body = await request.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("gemini-3.6-flash", doc.RootElement.GetProperty("model").GetString());
         }
 
         [Fact]

@@ -31,8 +31,14 @@ namespace LlmHealing
         {
             _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
-            _model = model ?? Environment.GetEnvironmentVariable("ANTHROPIC_MODEL") ?? DefaultModel;
+
+            // GitHub Actions substitutes an unset repo Variable with an empty string, not a
+            // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
+            // (confirmed live: CI sent model: "" and the API 404'd). NullIfEmpty closes that gap.
+            _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")) ?? DefaultModel;
         }
+
+        private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
         public async Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
         {
