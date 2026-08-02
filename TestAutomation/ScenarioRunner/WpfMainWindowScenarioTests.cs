@@ -48,14 +48,16 @@ namespace ScenarioRunner
             var combo = comboElement.AsComboBox();
             combo.Select("Corporate");
 
-            // CompanyPanel (a GroupBox): deliberately has no AutomationProperties.AutomationId
-            // set in MainWindow.xaml. We find it by ControlType instead - the WPF-flavored
-            // version of the exact same weak-locator problem SelfHealing is meant to solve.
-            var companyPanel = Retry.WhileNull(
-                () => window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Group)),
+            // CompanyPanel deliberately has no AutomationProperties.AutomationId set in
+            // MainWindow.xaml. Assert that the brittle id-based locator cannot see the
+            // panel, then verify the visible child field instead of depending on WPF's
+            // headerless GroupBox automation peer being materialized on every CI run.
+            Assert.Null(window.FindFirstDescendant(cf => cf.ByAutomationId("CompanyPanel")));
+            var companyNameField = Retry.WhileNull(
+                () => window.FindFirstDescendant(cf => cf.ByAutomationId("txtCompanyName")),
                 timeout: TimeSpan.FromSeconds(5)
-            ).Result ?? throw new InvalidOperationException("CompanyPanel GroupBox was not found in WPF main window.");
-            var rect = companyPanel.Properties.BoundingRectangle.ValueOrDefault;
+            ).Result ?? throw new InvalidOperationException("txtCompanyName field was not found after selecting Corporate in WPF main window.");
+            var rect = companyNameField.Properties.BoundingRectangle.ValueOrDefault;
             Assert.True(rect.Width > 0 && rect.Height > 0, $"Company panel should be visible but its bounding rectangle came back empty: {rect}");
         }
 
