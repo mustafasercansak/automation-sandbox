@@ -1,0 +1,12 @@
+#!/bin/sh
+# Rejects any commit message that credits an AI tool as (co-)author. This repository
+# never attributes commits to AI assistants, regardless of what tool made the edits -
+# see AGENTS.md. Enable with: git config core.hooksPath githooks
+
+if grep -qiE '^(Co-Authored-By|Author|Signed-off-by):.*(claude|anthropic|copilot|chatgpt|openai|codex|gemini)' "$1"; then
+    echo "commit-msg hook: rejected - commit message credits an AI tool." >&2
+    echo "This repository never attributes commits to AI assistants. Remove that line and commit again." >&2
+    exit 1
+fi
+
+exit 0
