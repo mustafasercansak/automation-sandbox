@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LlmHealing;
@@ -57,16 +58,25 @@ namespace ScenarioRunner
         [Fact]
         public async Task OpenAiHealingProvider_ParsesValidResponse_AndMatchesShortlistCandidate()
         {
-            var fakeResponse = @"{
-                ""choices"": [
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                choices = new[]
+                {
+                    new
                     {
-                        ""message"": {
-                            ""role"": ""assistant"",
-                            ""content"": ""{\""candidateId\"":\""c0\"",\""confidence\"":0.95,\""reasoning\"":\""The candidate has exact matching properties.\""}""
-                        }
-                    }
-                ]
-            }";
+                        message = new
+                        {
+                            role = "assistant",
+                            content = JsonSerializer.Serialize(new
+                            {
+                                candidateId = "c0",
+                                confidence = 0.95,
+                                reasoning = "The candidate has exact matching properties.",
+                            }),
+                        },
+                    },
+                },
+            });
 
             var handler = new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK);
             var httpClient = new HttpClient(handler);
@@ -95,12 +105,19 @@ namespace ScenarioRunner
         [Fact]
         public async Task OllamaHealingProvider_ParsesValidResponse_AndMatchesShortlistCandidate()
         {
-            var fakeResponse = @"{
-                ""message"": {
-                    ""role"": ""assistant"",
-                    ""content"": ""{\""candidateId\"":\""c0\"",\""confidence\"":0.88,\""reasoning\"":\""Matched edit field.\""}""
-                }
-            }";
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                message = new
+                {
+                    role = "assistant",
+                    content = JsonSerializer.Serialize(new
+                    {
+                        candidateId = "c0",
+                        confidence = 0.88,
+                        reasoning = "Matched edit field.",
+                    }),
+                },
+            });
 
             var handler = new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK);
             var httpClient = new HttpClient(handler);
