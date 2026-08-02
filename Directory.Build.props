@@ -10,9 +10,23 @@
 
     <RepositoryUrl>https://github.com/mustafasercansak/automation-sandbox</RepositoryUrl>
 
+    <RepositoryType>git</RepositoryType>
+
+    <PackageProjectUrl>https://github.com/mustafasercansak/automation-sandbox</PackageProjectUrl>
+
     <PackageTags>ui-automation;flaui;self-healing;test-automation</PackageTags>
 
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+
+    <IncludeSymbols>true</IncludeSymbols>
+
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
     <Version>0.1.0-preview</Version>
 
@@ -21,5 +35,10 @@
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

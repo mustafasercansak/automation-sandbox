@@ -6,6 +6,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>AutomationSandbox.WebDiscovery</PackageId>
     <Description>Framework-agnostic web DOM snapshot mapper and Playwright locator emitter for self-healing web automation.</Description>
   </PropertyGroup>
 

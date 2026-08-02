@@ -13,6 +13,8 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
+> 📦 **Milestone 5 Preview Packaging:** NuGet artifact generation is available through the manual [Pack workflow](.github/workflows/pack.yml). See the [NuGet Packaging Guide](docs/nuget-packaging.md).
+
 ---
 
 ## 📌 Implementation Status
@@ -33,6 +35,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
+| **NuGet Preview Packaging** | 🟡 In Progress | `AutomationSandbox.*` package IDs, README/license metadata, symbol packages, and manual pack workflow. |
 
 ---
 
@@ -419,7 +422,7 @@ graph LR
         M4[M4: Web Adapter, Reports & Docs - Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: NuGet Release - Planned]
+        M5[M5: NuGet Preview Packaging - In Progress]
     end
     M3 --> M4 --> M5
 ```

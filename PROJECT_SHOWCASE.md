@@ -195,7 +195,7 @@ graph LR
         M4[M4: Web, SDK, Reports & Docs - ✅ Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: NuGet Package & CLI Tool - 📋 Planned]
+        M5[M5: NuGet Preview Packaging - 🟡 In Progress]
     end
     M3 --> M4 --> M5
 ```
@@ -393,7 +393,7 @@ graph LR
         M4[M4: Web, SDK, Raporlar & Dokümanlar - ✅ Tamamlandı]
     end
     subgraph PhaseC [Aşama C: Ürünleştirme]
-        M5[M5: NuGet Paketi & CLI - 📋 Planlandı]
+        M5[M5: NuGet Preview Paketleme - 🟡 Devam Ediyor]
     end
     M3 --> M4 --> M5
 ```

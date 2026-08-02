@@ -7,6 +7,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>AutomationSandbox.LlmHealing</PackageId>
     <Description>LLM provider implementations (Claude, Gemini) behind a shared ILlmHealingProvider interface for locator resolution.</Description>
   </PropertyGroup>
 

@@ -7,6 +7,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>AutomationSandbox.SelfHealing</PackageId>
     <Description>Structural-similarity heuristic locator resolver with an optional LLM fallback for low-confidence matches.</Description>
   </PropertyGroup>
 

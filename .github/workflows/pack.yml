@@ -5,30 +5,54 @@ name: Pack
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to stamp into produced .nupkg files'
+        required: true
+        default: '0.1.0-preview'
+
 jobs:
   pack:
     runs-on: windows-latest
+    env:
+      PACKAGE_VERSION: ${{ inputs.version }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
       - name: Restore
         run: dotnet restore AutomationSandbox.sln
+
+      - name: Build Release
+        run: dotnet build AutomationSandbox.sln --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+
       - name: Pack UiModel
-        run: dotnet pack TestAutomation/UiModel/UiModel.csproj --configuration Release --no-restore --output ./nupkgs
+        run: dotnet pack TestAutomation/UiModel/UiModel.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Pack SelfHealing
-        run: dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-restore --output ./nupkgs
+        run: dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Pack LlmHealing
-        run: dotnet pack TestAutomation/LlmHealing/LlmHealing.csproj --configuration Release --no-restore --output ./nupkgs
+        run: dotnet pack TestAutomation/LlmHealing/LlmHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Pack Discovery
-        run: dotnet pack TestAutomation/Discovery/Discovery.csproj --configuration Release --no-restore --output ./nupkgs
+        run: dotnet pack TestAutomation/Discovery/Discovery.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Pack WebDiscovery
-        run: dotnet pack TestAutomation/WebDiscovery/WebDiscovery.csproj --configuration Release --no-restore --output ./nupkgs
+        run: dotnet pack TestAutomation/WebDiscovery/WebDiscovery.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Upload packages
         uses: actions/upload-artifact@v7
         with:
           name: nupkgs
-          path: ./nupkgs/*.nupkg
+          path: |
+            ./nupkgs/*.nupkg
+            ./nupkgs/*.snupkg
