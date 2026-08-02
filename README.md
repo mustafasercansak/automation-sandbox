@@ -30,12 +30,13 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and action retry. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
 | **Healing Reports & CI Artifacts** | ✅ Implemented | JSON + HTML report artifacts for accepted healing events, including before/after snapshots, confidence, source, and review status. |
-| **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees running on Linux CI. |
+| **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees; core targets `netstandard2.0` so these can run on Linux/macOS, though CI itself currently only runs on Windows. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
-| **NuGet Preview Packaging** | 🟡 In Progress | `AutomationSandbox.*` package IDs, README/license metadata, symbol packages, and manual pack workflow. |
+| **NuGet Preview Packaging** | ✅ Implemented | Six validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
+| **Intent-Driven Automation & MCP Exploration** | 🟡 In Progress | `AutomationSandbox.IntentAutomation` now includes intent contracts, deterministic planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. |
 
 ---
 
@@ -309,7 +310,45 @@ iframe documents. Hidden or offscreen web elements are marked and mapped with a 
 bounding rectangle, which makes the existing position scorer exclude that signal instead
 of treating invisible layout data as reliable.
 
-### 7. LLM Fallback Resolution (Opt-In)
+### 7. Intent Automation Pipeline
+`IntentAutomationPipeline` ties the M6 flow together: plan intent steps, match them
+against a `WebDiscovery` DOM snapshot, record accepted locators, generate Playwright
+C# and TypeScript test skeletons, and expose a JSON/HTML-ready intent flow report.
+
+```csharp
+using IntentAutomation;
+using UiModel;
+using WebDiscovery;
+
+var request = new IntentPlanningRequest
+{
+    Name = "Create customer",
+    Goal = "Create a customer record with valid email",
+    TargetUrl = "https://example.test/customers",
+    TestData = new Dictionary<string, string>
+    {
+        ["email"] = "jane.doe@example.com",
+    },
+};
+
+// In a Playwright test, capture this with PlaywrightDomCaptureScript.JavaScript.
+WebElementInfo dom = CaptureDomSnapshotSomehow();
+var repository = new LocatorRepository("web.locators.json");
+
+var pipeline = new IntentAutomationPipeline(options: new IntentAutomationPipelineOptions
+{
+    Recording = new IntentLocatorRecordingOptions { ApplicationName = "CustomerPortal" },
+    Generation = new PlaywrightCSharpTestGenerationOptions { Namespace = "CustomerPortal.Generated" },
+});
+
+var result = pipeline.Run(request, dom, repository);
+
+File.WriteAllText("GeneratedCustomerTest.cs", result.PlaywrightCSharpTestCode);
+File.WriteAllText("generated-customer.spec.ts", result.PlaywrightTypeScriptTestCode);
+new IntentFlowReportFileSink("intent-flow-report.json").Write(result.Report);
+```
+
+### 8. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -318,7 +357,9 @@ using var httpClient = new HttpClient();
 var providers = new ILlmHealingProvider[]
 {
     new ClaudeHealingProvider(httpClient),
-    new GeminiHealingProvider(httpClient)
+    new GeminiHealingProvider(httpClient),
+    new OpenAiHealingProvider(httpClient),
+    new OllamaHealingProvider(httpClient)
 };
 
 // Falls back to LLM only if heuristic score < MinimumConfidence (0.50)
@@ -331,14 +372,21 @@ if (result.Source == HealSource.Llm)
 }
 ```
 
-Both providers read their API key from an environment variable (`ANTHROPIC_API_KEY` /
-`GEMINI_API_KEY`) and are no-ops (`IsAvailable == false`) without one - safe to leave
-configured everywhere. Both also default to their cheapest/fastest tier
-(`ClaudeHealingProvider`: `claude-haiku-4-5-20251001`; `GeminiHealingProvider`:
-`gemini-3.6-flash`) since this is a small structured-pick task, not one that benefits
-from a flagship model. Override via environment variable (`ANTHROPIC_MODEL` /
-`GEMINI_MODEL`) or the constructor's `model` parameter if a stronger model is ever
-warranted.
+Claude, Gemini, and OpenAI read their API key from an environment variable
+(`ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`) and are no-ops
+(`IsAvailable == false`) without one - safe to leave configured everywhere. They
+default to their cheapest/fastest tier (`ClaudeHealingProvider`:
+`claude-haiku-4-5-20251001`; `GeminiHealingProvider`: `gemini-3.6-flash`;
+`OpenAiHealingProvider`: `gpt-4o-mini`) since this is a small structured-pick task,
+not one that benefits from a flagship model. Override via environment variable
+(`ANTHROPIC_MODEL` / `GEMINI_MODEL` / `OPENAI_MODEL`) or the constructor's `model`
+parameter if a stronger model is ever warranted.
+
+`OllamaHealingProvider` is the offline/local option: it targets `llama3.2` against
+`http://localhost:11434` by default and is only available (`IsAvailable == true`)
+when `OLLAMA_HOST`, `OLLAMA_MODEL`, or `OLLAMA_ENABLED=true` is explicitly set, so it
+stays a no-op everywhere else. Override the host/model via `OLLAMA_HOST` /
+`OLLAMA_MODEL` or the constructor parameters.
 
 ---
 
@@ -352,6 +400,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Candidate Pruner** | Candidate score filtering (`MinCandidateScore`), Top-N shortlist assembly | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters & limits | [DiscoveryRobustnessTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini HTTP responses, Hallucination Guard | [LlmHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs) |
+| **Intent Automation** | Happy-path intent planning, DOM candidate matching, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs) |
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
 | **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs) |
 
@@ -386,8 +435,10 @@ AutomationSandbox.sln
     ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
     ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
     ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
-    ├── LlmHealing/         Claude & Gemini HTTP providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
-    └── ScenarioRunner/     xUnit test suite: live UIA scenarios, explainability tests & synthetic benchmarks (net48)
+    ├── LlmHealing/         Claude, Gemini, OpenAI & offline Ollama providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
+    ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions
+    ├── IntentAutomation/   Intent planning, DOM matching, locator recording, C#/TypeScript generation & reports
+    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery & intent automation coverage (net48)
 ```
 
 ---
@@ -422,9 +473,12 @@ graph LR
         M4[M4: Web Adapter, Reports & Docs - Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: NuGet Preview Packaging - In Progress]
+        M5[M5: NuGet Preview Packaging - Implemented]
     end
-    M3 --> M4 --> M5
+    subgraph PhaseD [Phase D: Intent-Driven Automation]
+        M6[M6: Intent Planner & Playwright MCP Exploration - In Progress]
+    end
+    M3 --> M4 --> M5 --> M6
 ```
 
 ---

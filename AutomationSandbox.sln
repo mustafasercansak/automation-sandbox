@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LlmHealing", "TestAutomatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebDiscovery", "TestAutomation\WebDiscovery\WebDiscovery.csproj", "{2C83DB02-FC1D-4E5C-B827-C54A0F1D20A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntentAutomation", "TestAutomation\IntentAutomation\IntentAutomation.csproj", "{AE5EC857-6897-43A7-82AB-3D217B5089EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{2C83DB02-FC1D-4E5C-B827-C54A0F1D20A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C83DB02-FC1D-4E5C-B827-C54A0F1D20A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C83DB02-FC1D-4E5C-B827-C54A0F1D20A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE5EC857-6897-43A7-82AB-3D217B5089EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE5EC857-6897-43A7-82AB-3D217B5089EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE5EC857-6897-43A7-82AB-3D217B5089EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE5EC857-6897-43A7-82AB-3D217B5089EB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +76,7 @@ Global
 		{C677AFFE-FFDE-44C4-900B-67E3E6652D3E} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 		{8553AD2A-9ADC-4C68-B5D5-BBB16C2D0E33} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 		{2C83DB02-FC1D-4E5C-B827-C54A0F1D20A4} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
+		{AE5EC857-6897-43A7-82AB-3D217B5089EB} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EA91CBE7-566C-4B00-B8E9-0B27D1D598EA}

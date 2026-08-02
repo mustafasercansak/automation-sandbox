@@ -2,6 +2,9 @@
 
 This guide explains how to capture Web DOM trees with **Playwright**, support Shadow DOM / iframes, and generate prioritized locators.
 
+> 🧭 **Planned M6 direction:** Playwright capture will become the exploration layer
+> for [Intent-Driven Automation & MCP Exploration](intent-driven-automation.md).
+
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
 > - [🇹🇷 Türkçe Kılavuz](#-türkçe-kılavuz)
@@ -14,6 +17,18 @@ This guide explains how to capture Web DOM trees with **Playwright**, support Sh
 1. Run `PlaywrightDomCaptureScript.JavaScript` inside browser using Playwright's `page.EvaluateAsync`.
 2. Pass the returned DOM JSON to `PlaywrightApplicationConnector.ParseJson`.
 3. Use the resulting `UiElementInfo` tree for self-healing or locator generation with `PlaywrightLocatorEmitter`.
+
+### Planned MCP Exploration
+
+The planned MCP bridge will let the automation layer drive a browser, capture
+DOM/accessibility snapshots, and feed them into the same `UiElementInfo` +
+self-healing pipeline. This is intended to support:
+
+- page exploration from a URL
+- intent-to-element candidate matching
+- locator repository recording
+- generated Playwright tests
+- JSON/HTML reporting
 
 ### Complete Web Automation Example
 
@@ -69,6 +84,12 @@ class WebTest
 1. Playwright'ın `page.EvaluateAsync` fonksiyonu ile `PlaywrightDomCaptureScript.JavaScript` kodunu tarayıcıda çalıştırın.
 2. Dönen DOM JSON verisini `PlaywrightApplicationConnector.ParseJson` fonksiyonuna verin.
 3. Oluşan standart `UiElementInfo` ağacını iyileştirme motoruna verin veya `PlaywrightLocatorEmitter` ile önerilen Playwright kodlarını alın.
+
+### Planlanan MCP Keşfi
+
+M6 kapsamında Playwright/MCP katmanı tarayıcıyı yönetip DOM/accessibility snapshot
+alabilecek, bu veriyi `UiElementInfo` modeline dönüştürüp intent tabanlı test üretimi
+ve self-healing akışına bağlayacaktır.
 
 ### Tam C# Web Otomasyon Örneği
 

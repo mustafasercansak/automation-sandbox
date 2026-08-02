@@ -195,9 +195,12 @@ graph LR
         M4[M4: Web, SDK, Reports & Docs - ✅ Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: NuGet Preview Packaging - 🟡 In Progress]
+        M5[M5: NuGet Preview Packaging - ✅ Implemented]
     end
-    M3 --> M4 --> M5
+    subgraph PhaseD [Phase D: Intent-Driven Automation]
+        M6[M6: Intent Planner & Playwright MCP Exploration - 🟡 In Progress]
+    end
+    M3 --> M4 --> M5 --> M6
 ```
 
 </details>
@@ -393,9 +396,12 @@ graph LR
         M4[M4: Web, SDK, Raporlar & Dokümanlar - ✅ Tamamlandı]
     end
     subgraph PhaseC [Aşama C: Ürünleştirme]
-        M5[M5: NuGet Preview Paketleme - 🟡 Devam Ediyor]
+        M5[M5: NuGet Preview Paketleme - ✅ Tamamlandı]
     end
-    M3 --> M4 --> M5
+    subgraph PhaseD [Aşama D: Intent Tabanlı Otomasyon]
+        M6[M6: Intent Planner & Playwright MCP Keşfi - 🟡 Devam Ediyor]
+    end
+    M3 --> M4 --> M5 --> M6
 ```
 
 </details>

@@ -2,6 +2,10 @@
 
 This guide explains **Intent-Aware Healing** (`TestIntent`), BDD/Gherkin scenario style intents, best practices, and multilingual support.
 
+> 🧭 **Next phase:** Intent-aware healing is the foundation for planned
+> [Intent-Driven Automation & MCP Exploration](intent-driven-automation.md), where
+> business goals can become explored, recorded, and generated test flows.
+
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
 > - [🇹🇷 Türkçe Kılavuz](#-türkçe-kılavuz)
@@ -54,6 +58,18 @@ Automation Sandbox LLM providers are **natively multilingual**. You can write BD
 - **Turkish BDD:** `testIntent: "GIVEN kullanıcı kayıt sayfasında WHEN bilgiler girildi THEN kaydı tamamla butonuna tıkla"`
 - **German BDD:** `testIntent: "GIVEN Benutzer ist im Registrierungsformular WHEN Daten eingegeben THEN Registrierung abschließen"`
 
+### 4. What TestIntent Does Today
+
+`TestIntent` currently supports healing, not full autonomous test generation:
+
+- It is stored with snapshots and locator repository records.
+- It is sent to LLM providers as semantic context.
+- It is preserved when a locator is healed.
+- It appears in reports and audit history.
+
+Full intent-driven automation is planned as M6, starting with a structured
+intent scenario model and deterministic planner.
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -90,3 +106,14 @@ $$\text{TestIntent} = \text{[Eylem Fiili]} + \text{[İş Bağlamı]} + \text{[He
 
 ### 3. Çok Dilli BDD Intent Desteği
 İster Türkçe BDD, ister İngilizce Gherkin yazın; yapay zeka adımı otomatik çözer ve ekrandaki elemanla eşleştirir.
+
+### 4. TestIntent Bugün Ne Yapar?
+
+`TestIntent` bugün tam otomatik test üretmez; self-healing kararına anlam katar:
+
+- Snapshot ve locator repository içinde saklanır.
+- LLM prompt'una semantik bağlam olarak eklenir.
+- Locator iyileştirildiğinde korunur.
+- Raporlarda ve audit history içinde görünür.
+
+Tam intent tabanlı otomasyon M6 kapsamındadır.

@@ -46,6 +46,8 @@
 
     <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
 
+    <ProjectReference Include="..\IntentAutomation\IntentAutomation.csproj" />
+
   </ItemGroup>
 
 </Project>

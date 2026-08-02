@@ -57,6 +57,13 @@ jobs:
       - name: Pack WebDiscovery
         run: dotnet pack TestAutomation/WebDiscovery/WebDiscovery.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      - name: Pack IntentAutomation
+        run: dotnet pack TestAutomation/IntentAutomation/IntentAutomation.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Validate package contents
+        shell: pwsh
+        run: ./eng/Validate-NuGetPackages.ps1 -PackageDirectory ./nupkgs -Version $env:PACKAGE_VERSION
+
       - name: Write release notes
         shell: pwsh
         run: |
@@ -65,6 +72,12 @@ jobs:
 
           Preview NuGet package artifact release.
 
+          ## Highlights
+
+          - Intent automation pipeline: plan, match, record, and generate tests from a single API.
+          - Playwright C# and TypeScript test skeleton generation from recorded intent locators.
+          - Intent flow JSON/HTML reports for reviewable candidate and locator decisions.
+
           ## Packages
 
           - AutomationSandbox.UiModel
@@ -72,6 +85,7 @@ jobs:
           - AutomationSandbox.LlmHealing
           - AutomationSandbox.Discovery
           - AutomationSandbox.WebDiscovery
+          - AutomationSandbox.IntentAutomation
 
           This release publishes package files as GitHub Release assets only. It does not push to nuget.org or GitHub Packages.
           "@ | Out-File -FilePath release-notes.md -Encoding utf8

@@ -29,6 +29,8 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
+| 📊 [**Healing Reports & Dashboard**](healing-reports.md) | JSON and HTML visual report artifacts for accepted healing events. |
+| 🧭 [**Intent-Driven Automation**](intent-driven-automation.md) | M6 direction for intent planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, pipeline orchestration, and MCP exploration. |
 | 🤖 [**LLM Providers**](llm-providers.md) | Setting up AI providers (Gemini, Claude, OpenAI, and 100% free local Ollama). |
 | 📄 [**JSON Schema Reference**](json-schema.md) | Field-by-field breakdown of the `.locator.json` repository file. |
 | 📦 [**NuGet Packaging**](nuget-packaging.md) | Creating preview `.nupkg` artifacts and preparing a publish checklist. |
@@ -56,6 +58,8 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
+| 📊 [**İyileştirme Raporları & Panel**](healing-reports.md) | İyileştirilen elemanlar için otomatik JSON ve HTML görsel raporları. |
+| 🧭 [**Intent Tabanlı Otomasyon**](intent-driven-automation.md) | M6 için intent planner, DOM eşleştirme, locator kaydı, Playwright C#/TypeScript üretimi, intent raporu, pipeline orkestrasyonu ve MCP keşfi. |
 | 🤖 [**Yapay Zeka Kurulumu**](llm-providers.md) | Gemini, Claude, OpenAI ve 0 TL maliyetli yerel Ollama kurulumu. |
 | 📄 [**JSON Şema Rehberi**](json-schema.md) | `.locator.json` kayıt dosyasının alan alan detaylı açıklaması. |
 | 📦 [**NuGet Paketleme**](nuget-packaging.md) | Preview `.nupkg` artifact üretimi ve yayın kontrol listesi. |
