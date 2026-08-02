@@ -1,0 +1,97 @@
+name: Release Preview Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'SemVer package version, for example 0.1.0-preview.1'
+        required: true
+        default: '0.1.0-preview.1'
+      prerelease:
+        description: 'Mark the GitHub Release as a prerelease'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      PACKAGE_VERSION: ${{ inputs.version }}
+      TAG_NAME: v${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore AutomationSandbox.sln
+
+      - name: Build Release
+        run: dotnet build AutomationSandbox.sln --configuration Release --no-restore /p:ContinuousIntegrationBuild=true
+
+      - name: Pack UiModel
+        run: dotnet pack TestAutomation/UiModel/UiModel.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack SelfHealing
+        run: dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack LlmHealing
+        run: dotnet pack TestAutomation/LlmHealing/LlmHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack Discovery
+        run: dotnet pack TestAutomation/Discovery/Discovery.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack WebDiscovery
+        run: dotnet pack TestAutomation/WebDiscovery/WebDiscovery.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Write release notes
+        shell: pwsh
+        run: |
+          @"
+          # Automation Sandbox $env:TAG_NAME
+
+          Preview NuGet package artifact release.
+
+          ## Packages
+
+          - AutomationSandbox.UiModel
+          - AutomationSandbox.SelfHealing
+          - AutomationSandbox.LlmHealing
+          - AutomationSandbox.Discovery
+          - AutomationSandbox.WebDiscovery
+
+          This release publishes package files as GitHub Release assets only. It does not push to nuget.org or GitHub Packages.
+          "@ | Out-File -FilePath release-notes.md -Encoding utf8
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $args = @(
+            "release", "create", "$env:TAG_NAME",
+            "./nupkgs/*.nupkg",
+            "./nupkgs/*.snupkg",
+            "--target", "${{ github.sha }}",
+            "--title", "$env:TAG_NAME",
+            "--notes-file", "release-notes.md"
+          )
+
+          if ("${{ inputs.prerelease }}" -eq "true") {
+            $args += "--prerelease"
+          }
+
+          gh @args

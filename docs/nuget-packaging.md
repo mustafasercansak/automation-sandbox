@@ -24,6 +24,18 @@ In GitHub Actions:
 4. Enter a version such as `0.1.0-preview.1`.
 5. Download the `nupkgs` artifact.
 
+## Create A GitHub Release
+
+Use **Release Preview Packages** when you want the package files to appear on the
+repository's **Releases** page without publishing to nuget.org:
+
+1. Open **Actions**.
+2. Select **Release Preview Packages**.
+3. Click **Run workflow**.
+4. Enter a version such as `0.1.0-preview.1`.
+5. Keep `prerelease` enabled for preview builds.
+6. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
+
 Locally:
 
 ```powershell
