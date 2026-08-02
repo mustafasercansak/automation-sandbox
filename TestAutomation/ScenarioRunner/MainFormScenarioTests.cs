@@ -196,16 +196,8 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public async Task SelfHealing_LowConfidenceMatch_FallsBackToLlm_WhenApiKeyConfigured()
+        public async Task SelfHealing_LowConfidenceMatch_FallsBackToLlm()
         {
-            using var httpClient = new HttpClient();
-            ILlmHealingProvider[] providers = { new ClaudeHealingProvider(httpClient), new GeminiHealingProvider(httpClient) };
-            if (!providers.Any(p => p.IsAvailable))
-            {
-                Console.WriteLine("[SelfHealing] No provider API keys configured - skipping LLM fallback live check.");
-                return;
-            }
-
             var window = _connector.GetMainWindow();
             var currentTree = UiTreeWalker.BuildTree(window);
 
@@ -213,12 +205,15 @@ namespace ScenarioRunner
             // and bounding box are all wrong too. This is deliberately pushed below MinimumConfidence (0.50)
             // so the heuristic result alone isn't confident, forcing SelfHealingResolver.ResolveAsync
             // to reach the LLM fallback branch while keeping txtEmail as top shortlist candidate c0.
+            // Use a deterministic fake provider here; real provider availability/quota is covered by
+            // LlmHealingEvaluationTests as a non-gating comparison harness.
             var staleExpected = UiElementSnapshot.CaptureByAutomationId(currentTree, "txtEmail")
                 ?? throw new InvalidOperationException("txtEmail was not found in the live tree, test data is invalid.");
             staleExpected.AutomationId = "txtEmailAddress";
             staleExpected.Name = "Unrelated Label Text";
             staleExpected.ParentControlType = "UnrelatedParentType";
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
+            ILlmHealingProvider[] providers = { new DeterministicProvider("FakeLlm", "c0", 0.85) };
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
@@ -239,6 +234,36 @@ namespace ScenarioRunner
         public void Dispose()
         {
             _connector.Dispose();
+        }
+
+        private sealed class DeterministicProvider : ILlmHealingProvider
+        {
+            private readonly string _candidateId;
+            private readonly double _confidence;
+
+            public DeterministicProvider(string name, string candidateId, double confidence)
+            {
+                Name = name;
+                _candidateId = candidateId;
+                _confidence = confidence;
+            }
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
+            {
+                var matched = candidates.FirstOrDefault(c => c.CandidateId == _candidateId);
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = _candidateId,
+                    MatchedAutomationId = matched?.Candidate.AutomationId,
+                    Confidence = _confidence,
+                    Reasoning = "deterministic test provider",
+                });
+            }
         }
     }
 }
