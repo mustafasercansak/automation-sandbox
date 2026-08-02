@@ -25,8 +25,8 @@ namespace SelfHealing
                 ConfidenceThreshold = result.ConfidenceThreshold,
                 LlmConfidence = result.LlmConfidence,
                 LlmProviderName = result.LlmProviderName,
-                PreviousSnapshot = previousSnapshot,
-                AcceptedSnapshot = result.Matched,
+                PreviousSnapshot = previousSnapshot is null ? null : UiElementSnapshot.Capture(previousSnapshot),
+                AcceptedSnapshot = UiElementSnapshot.Capture(result.Matched),
                 ScoreBreakdown = result.ScoreBreakdown,
             };
         }

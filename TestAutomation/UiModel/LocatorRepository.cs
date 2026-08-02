@@ -48,16 +48,29 @@ namespace UiModel
                 Directory.CreateDirectory(directory);
             }
 
-            // Write to a temp file then swap it into place, so a crash or a concurrent reader
-            // mid-write never observes (or is left with) a half-written, corrupt repository file.
+            // Write to a temp file then atomically replace/move it into place, so a crash or a
+            // concurrent reader mid-write never observes a half-written repository file.
             var tempPath = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllText(tempPath, json);
-            if (File.Exists(FilePath))
+            try
             {
-                File.Delete(FilePath);
+                if (File.Exists(FilePath))
+                {
+                    File.Replace(tempPath, FilePath, destinationBackupFileName: null);
+                }
+                else
+                {
+                    File.Move(tempPath, FilePath);
+                }
             }
 
-            File.Move(tempPath, FilePath);
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
         }
 
         public LocatorRecord? Find(string locatorKey)
@@ -105,7 +118,7 @@ namespace UiModel
                 document.Locators.Add(record);
             }
 
-            record.Snapshot = snapshot;
+            record.Snapshot = UiElementSnapshot.Capture(snapshot);
             record.UpdatedAt = now;
             if (healingEntry != null)
             {

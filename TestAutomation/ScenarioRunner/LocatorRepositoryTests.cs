@@ -77,6 +77,21 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Upsert_PersistsSnapshotWithoutDescendantTreeBloat()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var liveNode = new UiElementInfo { AutomationId = "txtEmail" };
+            liveNode.Children.Add(new UiElementInfo { AutomationId = "autocompletePopup" });
+
+            repository.Upsert("CustomerForm.Email", liveNode);
+
+            var persisted = repository.Find("CustomerForm.Email");
+            Assert.NotNull(persisted);
+            Assert.Equal("txtEmail", persisted!.Snapshot.AutomationId);
+            Assert.Empty(persisted.Snapshot.Children);
+        }
+
+        [Fact]
         public async Task Upsert_CalledConcurrentlyForDifferentKeys_NeverLosesAnUpdate()
         {
             var repository = new LocatorRepository(_filePath);
@@ -117,7 +132,9 @@ namespace ScenarioRunner
         public void FromHealResult_MapsHeuristicResultFields()
         {
             var matched = new UiElementInfo { AutomationId = "txtEmail" };
+            matched.Children.Add(new UiElementInfo { AutomationId = "childThatShouldNotPersist" });
             var previous = new UiElementInfo { AutomationId = "txtEmailAddress" };
+            previous.Children.Add(new UiElementInfo { AutomationId = "oldChildThatShouldNotPersist" });
             var result = new HealResult
             {
                 Matched = matched,
@@ -130,8 +147,12 @@ namespace ScenarioRunner
 
             Assert.Equal("heuristic", entry.Source);
             Assert.Equal(0.91, entry.Score);
-            Assert.Same(matched, entry.AcceptedSnapshot);
-            Assert.Same(previous, entry.PreviousSnapshot);
+            Assert.NotSame(matched, entry.AcceptedSnapshot);
+            Assert.NotSame(previous, entry.PreviousSnapshot);
+            Assert.Equal("txtEmail", entry.AcceptedSnapshot!.AutomationId);
+            Assert.Equal("txtEmailAddress", entry.PreviousSnapshot!.AutomationId);
+            Assert.Empty(entry.AcceptedSnapshot.Children);
+            Assert.Empty(entry.PreviousSnapshot.Children);
             Assert.Null(entry.LlmProviderName);
         }
 

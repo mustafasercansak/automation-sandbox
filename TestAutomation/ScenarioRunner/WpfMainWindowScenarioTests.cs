@@ -137,7 +137,7 @@ namespace ScenarioRunner
             staleExpected.Name = "Unrelated Label Text";
             staleExpected.ParentControlType = "UnrelatedParentType";
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
-            ILlmHealingProvider[] providers = { new DeterministicProvider("FakeLlm", "c0", 0.85) };
+            ILlmHealingProvider[] providers = { new DeterministicProvider("FakeLlm", "txtEmail", 0.85) };
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);
@@ -152,13 +152,13 @@ namespace ScenarioRunner
 
         private sealed class DeterministicProvider : ILlmHealingProvider
         {
-            private readonly string _candidateId;
+            private readonly string _automationId;
             private readonly double _confidence;
 
-            public DeterministicProvider(string name, string candidateId, double confidence)
+            public DeterministicProvider(string name, string automationId, double confidence)
             {
                 Name = name;
-                _candidateId = candidateId;
+                _automationId = automationId;
                 _confidence = confidence;
             }
 
@@ -167,12 +167,12 @@ namespace ScenarioRunner
 
             public Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
             {
-                var matched = candidates.FirstOrDefault(c => c.CandidateId == _candidateId);
+                var matched = candidates.FirstOrDefault(c => c.Candidate.AutomationId == _automationId);
                 return Task.FromResult(new LlmHealingResult
                 {
                     ProviderName = Name,
-                    Success = true,
-                    MatchedCandidateId = _candidateId,
+                    Success = matched != null,
+                    MatchedCandidateId = matched?.CandidateId,
                     MatchedAutomationId = matched?.Candidate.AutomationId,
                     Confidence = _confidence,
                     Reasoning = "deterministic test provider",
