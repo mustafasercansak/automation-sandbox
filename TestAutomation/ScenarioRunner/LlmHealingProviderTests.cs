@@ -170,11 +170,8 @@ namespace ScenarioRunner
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "claude-haiku-4-5");
             await provider.ResolveAsync(Expected, BuildShortlist());
 
-            var request = handler.LastRequest;
-            Assert.NotNull(request);
-            Assert.NotNull(request.Content);
-            var body = await request.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
+            Assert.NotNull(handler.LastRequestBody);
+            using var doc = JsonDocument.Parse(handler.LastRequestBody);
             Assert.Equal("claude-haiku-4-5", doc.RootElement.GetProperty("model").GetString());
         }
 
@@ -192,11 +189,8 @@ namespace ScenarioRunner
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
             await provider.ResolveAsync(Expected, BuildShortlist());
 
-            var request = handler.LastRequest;
-            Assert.NotNull(request);
-            Assert.NotNull(request.Content);
-            var body = await request.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
+            Assert.NotNull(handler.LastRequestBody);
+            using var doc = JsonDocument.Parse(handler.LastRequestBody);
             Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
         }
 
@@ -219,11 +213,8 @@ namespace ScenarioRunner
             var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key", model: "");
             await provider.ResolveAsync(Expected, BuildShortlist());
 
-            var request = handler.LastRequest;
-            Assert.NotNull(request);
-            Assert.NotNull(request.Content);
-            var body = await request.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
+            Assert.NotNull(handler.LastRequestBody);
+            using var doc = JsonDocument.Parse(handler.LastRequestBody);
             Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
         }
 
@@ -342,11 +333,8 @@ namespace ScenarioRunner
             var provider = new GeminiHealingProvider(httpClient: new HttpClient(handler), apiKey: "test-key", model: "");
             await provider.ResolveAsync(Expected, BuildShortlist());
 
-            var request = handler.LastRequest;
-            Assert.NotNull(request);
-            Assert.NotNull(request.Content);
-            var body = await request.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
+            Assert.NotNull(handler.LastRequestBody);
+            using var doc = JsonDocument.Parse(handler.LastRequestBody);
             Assert.Equal("gemini-3.6-flash", doc.RootElement.GetProperty("model").GetString());
         }
 
@@ -368,15 +356,24 @@ namespace ScenarioRunner
             private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
             public HttpRequestMessage? LastRequest { get; private set; }
 
+            // Captured eagerly, while request.Content is still alive - the providers wrap
+            // their request in `using var request = ...`, which disposes Content the moment
+            // ResolveAsync returns, so reading it back from LastRequest afterwards throws
+            // ObjectDisposedException. This plain string survives that disposal.
+            public string? LastRequestBody { get; private set; }
+
             public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
             {
                 _responder = responder;
             }
 
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 LastRequest = request;
-                return Task.FromResult(_responder(request));
+                LastRequestBody = request.Content is null
+                    ? null
+                    : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return _responder(request);
             }
         }
 
