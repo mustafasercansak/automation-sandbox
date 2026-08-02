@@ -48,11 +48,10 @@ namespace ScenarioRunner
             var combo = comboElement.AsComboBox();
             combo.Select("Corporate");
 
-            // CompanyPanel deliberately has no AutomationProperties.AutomationId set in
-            // MainWindow.xaml. Assert that the brittle id-based locator cannot see the
-            // panel, then verify the visible child field instead of depending on WPF's
-            // headerless GroupBox automation peer being materialized on every CI run.
-            Assert.Null(window.FindFirstDescendant(cf => cf.ByAutomationId("CompanyPanel")));
+            // CompanyPanel has no explicit AutomationProperties.AutomationId in MainWindow.xaml,
+            // but WPF falls back to FrameworkElement.Name (i.e. x:Name) when none is set, so
+            // the GroupBox IS reachable as AutomationId="CompanyPanel". Verify the panel became
+            // visible by asserting its child field is present and has a non-zero bounding rect.
             var companyNameField = Retry.WhileNull(
                 () => window.FindFirstDescendant(cf => cf.ByAutomationId("txtCompanyName")),
                 timeout: TimeSpan.FromSeconds(5)

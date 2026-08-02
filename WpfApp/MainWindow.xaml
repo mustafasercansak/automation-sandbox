@@ -35,12 +35,14 @@
             <ComboBoxItem Content="Corporate" />
         </ComboBox>
 
-        <!-- CompanyPanel: deliberately has no AutomationProperties.AutomationId set.
-             In WPF, AutomationId is never inferred from x:Name - a control without an
-             explicit AutomationId tag is invisible to id-based locators, which is the
-             single most common real-world cause of brittle WPF UI automation. GroupBox
-             (unlike a plain Border/Grid/StackPanel) does have its own automation peer
-             (ControlType.Group), so it's still discoverable structurally. -->
+        <!-- CompanyPanel: deliberately has no explicit AutomationProperties.AutomationId set.
+             WPF's FrameworkElementAutomationPeer falls back to FrameworkElement.Name
+             (i.e. x:Name) when no explicit AutomationId is provided, so this GroupBox
+             is reachable as AutomationId="CompanyPanel". The brittle-locator case study
+             here is that renaming x:Name silently changes the AutomationId, breaking any
+             automation that relied on it without the developer noticing. GroupBox also
+             has its own automation peer (ControlType.Group), so it is discoverable
+             structurally even if the AutomationId changes. -->
         <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" x:Name="CompanyPanel" Visibility="Collapsed" Margin="0,4">
             <Grid>
                 <Grid.ColumnDefinitions>

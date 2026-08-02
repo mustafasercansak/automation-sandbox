@@ -372,7 +372,7 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 | Application | Problematic Control | Cause / Framework Behavior | How Self-Healing Solves It |
 | :--- | :--- | :--- | :--- |
 | **WinForms** (`net48`) | `panel1` | WinForms automatically surfaces `Control.Name` as UIA `AutomationId`. Auto-generated names (e.g. `panel1`) are frequently left unrenamed in legacy codebases. | `SelfHealingResolver` ignores `AutomationId` during scoring and matches the panel using parent context, child count, and screen bounding box. |
-| **WPF** (`net8.0-windows` / `net10.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF **never** infers `AutomationId` from `x:Name`. Unless `AutomationProperties.AutomationId` is set explicitly in XAML, `AutomationId` comes back empty. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
+| **WPF** (`net8.0-windows` / `net10.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF's `FrameworkElementAutomationPeer` falls back to `FrameworkElement.Name` (i.e. `x:Name`) when no explicit `AutomationProperties.AutomationId` is set. Renaming `x:Name` in a refactor silently changes the `AutomationId`, breaking automation without any compile-time warning. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
 
 ---
 
