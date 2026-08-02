@@ -36,7 +36,7 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
 | **NuGet Preview Packaging** | ✅ Implemented | Six validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
-| **Intent-Driven Automation & MCP Exploration** | 🟡 In Progress | `AutomationSandbox.IntentAutomation` now includes intent contracts, deterministic planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. |
+| **Intent-Driven Automation & MCP Exploration** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, deterministic planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. |
 
 ---
 
@@ -437,7 +437,7 @@ AutomationSandbox.sln
     ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
     ├── LlmHealing/         Claude, Gemini, OpenAI & offline Ollama providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
     ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions
-    ├── IntentAutomation/   Intent planning, DOM matching, locator recording, C#/TypeScript generation & reports
+    ├── IntentAutomation/   Cross-platform intent pipeline & Playwright generators (netstandard2.0, net8.0, net10.0)
     └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery & intent automation coverage (net48)
 ```
 
@@ -476,7 +476,7 @@ graph LR
         M5[M5: NuGet Preview Packaging - Implemented]
     end
     subgraph PhaseD [Phase D: Intent-Driven Automation]
-        M6[M6: Intent Planner & Playwright MCP Exploration - In Progress]
+        M6[M6: Intent Planner & Playwright MCP Exploration - Implemented]
     end
     M3 --> M4 --> M5 --> M6
 ```
