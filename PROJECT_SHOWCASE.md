@@ -29,7 +29,7 @@ timeline
     Phase 1 : Milestone 1 (Core Hardening) : Explainable Scoring : Candidate Pruning : Offscreen Box Exclusion : .NET 10 Support : Hallucination Guard
     Phase 2 : Milestone 2 (Discovery Robustness) : DiscoveryOptions & Telemetry : Root Preservation Guard : SiblingCount Consistency : Best-Effort Timeout Budget
     Phase 3 : Milestone 3 (Persistent Locator Repository) : Versioned Repository Schema : Concurrency-Safe Load/Save/Upsert : Healing History Audit Trail
-    Phase 4 : Milestone 4 (Web & SDK Foundation) : Playwright Web Adapter : Extended LLM Providers : High-Level SelfHealingEngine SDK
+    Phase 4 : Milestone 4 (Web, SDK & Reporting) : Playwright Web Adapter : Extended LLM Providers : SelfHealingEngine SDK : JSON/HTML Healing Reports : Mermaid Pages Docs
 ```
 
 ### 1️⃣ Milestone 1: Core Hardening MVP
@@ -46,10 +46,12 @@ timeline
 ### 3️⃣ Milestone 3: Persistent Locator Repository
 * **Versioned Repository Schema:** JSON storage (`LocatorRepositoryDocument`), thread-safe file lock synchronization, and healing history audit trail (`LocatorHealingHistoryEntry`).
 
-### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers & High-Level SDK
+### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers, Reports & Docs
 * **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
 * **Extended LLM Providers:** Added `OpenAiHealingProvider` (`gpt-4o-mini`) and offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
 * **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with automatic repository update on healing (`ExecuteWithHealingAsync`).
+* **Healing Reports & CI Artifacts:** JSON and HTML reports emitted during CI with before/after snapshots, source, confidence, risk status (`accepted`, `accepted-with-llm`, `manual-review`), and LLM reasoning where available.
+* **GitHub Pages Documentation:** Jekyll-based documentation site with Mermaid diagram rendering for architecture, workflow, and roadmap diagrams.
 
 
 ---
@@ -189,8 +191,8 @@ graph LR
         M3[M3: Persistent Locator Repository - ✅ Implemented]
         M1 --> M2 --> M3
     end
-    subgraph PhaseB [Phase B: Multi-Platform Adapter]
-        M4[M4: Playwright Web Automation Adapter - 🧱 Foundation Added]
+    subgraph PhaseB [Phase B: Multi-Platform Adapter & Reporting]
+        M4[M4: Web, SDK, Reports & Docs - ✅ Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
         M5[M5: NuGet Package & CLI Tool - 📋 Planned]
@@ -226,7 +228,7 @@ timeline
     Phase 1 : Milestone 1 (Çekirdek Güçlendirme) : Açıklanabilir Skorlama : Aday Budama : Ekran Dışı Kutu Tespiti : .NET 10 Desteği : Halüsinasyon Koruması
     Phase 2 : Milestone 2 (Keşif Dayanıklılığı) : DiscoveryOptions & Telemetri : Kök Düğüm Koruması : SiblingCount Tutarlılığı : Best-Effort Timeout
     Phase 3 : Kilometre Taşı 3 (Kalıcı Lokasyon Deposu) : Sürümlenmiş Depo Şeması : Eşzamanlılığa Dayanıklı Load/Save/Upsert : Onarım Geçmişi Denetim İzi
-    Phase 4 : Gelecek Ufku : Playwright Web Bağlayıcısı Temeli : Shadow DOM & iframe Yakalama : Canlı Tarayıcı Yakalama : NuGet Paketi Yayınlama
+    Phase 4 : Kilometre Taşı 4 (Web, SDK & Raporlama) : Playwright Web Bağlayıcısı : Genişletilmiş LLM Sağlayıcıları : SelfHealingEngine SDK : JSON/HTML Onarım Raporları : Mermaid Pages Dokümanları
 ```
 
 ### 1️⃣ Milestone 1: Çekirdek Güçlendirme MVP
@@ -239,6 +241,16 @@ timeline
 * **`DiscoveryOptions` & `DiscoveryResult`:** Taramayı sınırlayan parametreler (`MaxDepth`, `MaxElements`, `Timeout`, `IncludeOffscreen`, `IgnoredControlTypes`, `IgnoredClassNames`) ve detaylı teşhis sayaçları.
 * **Kök Düğüm Koruması (`depth > 0`):** Ana pencerenin (`Root`) filtreler tarafından silinmesini önleyen koruma katmanı.
 * **`SiblingCount` Tutarlılığı:** Kardeş eleman sayısının filtrelenmiş geçerli elemanlar üzerinden hesaplanarak konum skor oranının korunması.
+
+### 3️⃣ Milestone 3: Kalıcı Lokasyon Deposu
+* **Sürümlenmiş Depo Şeması:** `LocatorRepositoryDocument`, eşzamanlı dosya kilidi ve `LocatorHealingHistoryEntry` ile denetlenebilir onarım geçmişi.
+
+### 4️⃣ Milestone 4: Web, SDK, Raporlama & Dokümantasyon
+* **Playwright Web Bağlayıcısı:** Shadow DOM, iframe ve hidden/offscreen CSS tespitiyle web DOM ağacını ortak `UiElementInfo` modeline taşır.
+* **Genişletilmiş LLM Sağlayıcıları:** Claude ve Gemini yanında OpenAI ve yerel/offline Ollama desteği.
+* **SelfHealingEngine SDK:** Locator repository, resolver ve LLM sağlayıcılarını tek yüksek seviyeli API ile birleştirir.
+* **Onarım Raporları:** CI artifact olarak JSON + HTML rapor üretir; eski/yeni snapshot, kaynak, skor, risk durumu ve LLM gerekçesini gösterir.
+* **GitHub Pages Dokümanları:** Mermaid diyagramlarını render eden Jekyll tabanlı dokümantasyon sitesi.
 
 ---
 
@@ -377,8 +389,8 @@ graph LR
         M3[M3: Kalıcı Lokasyon Deposu - ✅ Tamamlandı]
         M1 --> M2 --> M3
     end
-    subgraph PhaseB [Aşama B: Çapraz Platform Bağlayıcı]
-        M4[M4: Playwright Web Bağlayıcısı - 🧱 Temel Eklendi]
+    subgraph PhaseB [Aşama B: Çapraz Platform & Raporlama]
+        M4[M4: Web, SDK, Raporlar & Dokümanlar - ✅ Tamamlandı]
     end
     subgraph PhaseC [Aşama C: Ürünleştirme]
         M5[M5: NuGet Paketi & CLI - 📋 Planlandı]

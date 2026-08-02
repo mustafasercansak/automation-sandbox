@@ -415,14 +415,13 @@ graph LR
         M3[M3: Persistent Locator Repository - Implemented]
         M1 --> M2 --> M3
     end
-    subgraph PhaseB [Phase B: Web Automation]
-        M4[M4: Playwright Web Adapter Foundation - Added]
+    subgraph PhaseB [Phase B: Web Automation & Reporting]
+        M4[M4: Web Adapter, Reports & Docs - Implemented]
     end
     subgraph PhaseC [Phase C: Productization]
-        M5[M5: Healing Reports & CI Artifacts - Implemented]
-        M6[M6: NuGet Release - Planned]
+        M5[M5: NuGet Release - Planned]
     end
-    M3 --> M4 --> M5 --> M6
+    M3 --> M4 --> M5
 ```
 
 ---
