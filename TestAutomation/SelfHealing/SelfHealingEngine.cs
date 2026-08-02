@@ -46,7 +46,13 @@ namespace SelfHealing
             if (healResult.IsConfident && healResult.Matched != null && _repository != null)
             {
                 var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
-                _repository.Upsert(locatorKey, healResult.Matched, entry);
+                var matchedSnapshot = UiElementSnapshot.Capture(healResult.Matched);
+                if (string.IsNullOrWhiteSpace(matchedSnapshot.TestIntent) && !string.IsNullOrWhiteSpace(expected.TestIntent))
+                {
+                    matchedSnapshot.TestIntent = expected.TestIntent;
+                }
+
+                _repository.Upsert(locatorKey, matchedSnapshot, entry);
             }
 
             return healResult;
