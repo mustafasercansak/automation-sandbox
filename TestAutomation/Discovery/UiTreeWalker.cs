@@ -12,13 +12,23 @@ namespace Discovery
     {
         private const int DefaultMaxDepth = 25;
         private const int DefaultMaxElements = 5000;
+
+        // DiscoveryOptions.Default.Timeout (10s) is sized for a typical scoped walk, but
+        // BuildTree's IncludeOffscreen=true can pull in thousands of offscreen elements
+        // (e.g. a DataGridView's internal cell tree) - confirmed live in CI, where a
+        // contended runner timed out mid-walk (Elapsed == 10.00s, Errors=0) after visiting
+        // ~1500 elements and never reached later siblings. A caller asking for the full
+        // tree needs a budget that matches MaxElements' generosity, not the scoped default.
+        private static readonly TimeSpan DefaultBuildTreeTimeout = TimeSpan.FromSeconds(60);
+
         public static UiElementInfo BuildTree(AutomationElement element, int maxDepth = DefaultMaxDepth, int maxElements = DefaultMaxElements)
         {
             var options = new DiscoveryOptions
             {
                 MaxDepth = maxDepth,
                 MaxElements = maxElements,
-                IncludeOffscreen = true // BuildTree preserves full tree for legacy calls
+                IncludeOffscreen = true, // BuildTree preserves full tree for legacy calls
+                Timeout = DefaultBuildTreeTimeout
             };
             return Discover(element, options).Root ?? new UiElementInfo();
         }
@@ -44,7 +54,8 @@ namespace Discovery
                     options,
                     result,
                     stopwatch,
-                    cancellationToken);
+                    cancellationToken,
+                    precomputed: null);
                 if (discoveredRoot != null)
                 {
                     result.Root = discoveredRoot;
@@ -63,6 +74,26 @@ namespace Discovery
             return result;
         }
 
+        // Caches a child's ControlType/ClassName/BoundingRectangle/IsOffscreen from the
+        // pre-filter pass so WalkNode doesn't read the same COM properties a second time -
+        // on a tree with thousands of nodes, reading each property twice was enough to push
+        // real walks past the default Timeout (observed live in CI).
+        private readonly struct PrecomputedProperties
+        {
+            public PrecomputedProperties(string controlType, string className, BoundingRectangle rect, bool isOffscreen)
+            {
+                ControlType = controlType;
+                ClassName = className;
+                Rect = rect;
+                IsOffscreen = isOffscreen;
+            }
+
+            public string ControlType { get; }
+            public string ClassName { get; }
+            public BoundingRectangle Rect { get; }
+            public bool IsOffscreen { get; }
+        }
+
         private static UiElementInfo? WalkNodeSafely(
             AutomationElement element,
             string parentControlType,
@@ -73,7 +104,8 @@ namespace Discovery
             DiscoveryOptions options,
             DiscoveryResult result,
             Stopwatch stopwatch,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            PrecomputedProperties? precomputed)
         {
             try
             {
@@ -87,7 +119,8 @@ namespace Discovery
                     options,
                     result,
                     stopwatch,
-                    cancellationToken);
+                    cancellationToken,
+                    precomputed);
             }
             catch (COMException ex)
             {
@@ -115,7 +148,8 @@ namespace Discovery
             DiscoveryOptions options,
             DiscoveryResult result,
             Stopwatch stopwatch,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            PrecomputedProperties? precomputed)
         {
             if (ShouldStop(options, result, stopwatch, cancellationToken))
             {
@@ -129,10 +163,13 @@ namespace Discovery
             }
 
             result.VisitedCount++;
-            var controlType = element.Properties.ControlType.ValueOrDefault.ToString();
-            var className = element.Properties.ClassName.ValueOrDefault ?? "";
-            var rect = ToBoundingRectangle(element);
-            var isOffscreen = element.Properties.IsOffscreen.ValueOrDefault;
+
+            // Only the root call (precomputed == null) actually reads these from the element -
+            // every child was already read once during the parent's pre-filter pass.
+            var controlType = precomputed?.ControlType ?? element.Properties.ControlType.ValueOrDefault.ToString();
+            var className = precomputed?.ClassName ?? element.Properties.ClassName.ValueOrDefault ?? "";
+            var rect = precomputed?.Rect ?? ToBoundingRectangle(element);
+            var isOffscreen = precomputed?.IsOffscreen ?? element.Properties.IsOffscreen.ValueOrDefault;
 
             // Check ControlType & ClassName filters
             if (depth > 0 &&
@@ -181,8 +218,10 @@ namespace Discovery
 
             var children = FindChildrenSafely(element, options, result);
 
-            // Pre-filter valid children so SiblingCount reflects captured tree consistency
-            var validChildren = new List<AutomationElement>();
+            // Pre-filter valid children so SiblingCount reflects captured tree consistency -
+            // each child's properties are read exactly once here and carried forward into
+            // WalkNode via PrecomputedProperties, instead of being read again there.
+            var validChildren = new List<(AutomationElement Element, PrecomputedProperties Properties)>();
             foreach (var child in children)
             {
                 if (ShouldStop(options, result, stopwatch, cancellationToken))
@@ -208,7 +247,7 @@ namespace Discovery
                         continue;
                     }
 
-                    validChildren.Add(child);
+                    validChildren.Add((child, new PrecomputedProperties(childType, childClass, childRect, childOffscreen)));
                 }
                 catch (COMException ex)
                 {
@@ -238,7 +277,7 @@ namespace Discovery
                 }
 
                 var childNode = WalkNodeSafely(
-                    validChildren[i],
+                    validChildren[i].Element,
                     node.ControlType,
                     node.AutomationId,
                     siblingIndex: i,
@@ -247,7 +286,8 @@ namespace Discovery
                     options,
                     result,
                     stopwatch,
-                    cancellationToken);
+                    cancellationToken,
+                    validChildren[i].Properties);
                 if (childNode != null)
                 {
                     node.Children.Add(childNode);
