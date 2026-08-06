@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>AutomationSandbox.PlaywrightLiveExploration</PackageId>
+    <Description>Live browser page exploration via the Microsoft.Playwright .NET SDK: launches a browser, navigates to a URL, and captures a WebElementInfo DOM snapshot without a hand-written Playwright test.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Playwright" Version="1.49.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
+  </ItemGroup>
+
+</Project>

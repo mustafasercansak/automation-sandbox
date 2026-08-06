@@ -2,9 +2,9 @@
 
 This guide explains **Intent-Aware Healing** (`TestIntent`), BDD/Gherkin scenario style intents, best practices, and multilingual support.
 
-> 🧭 **Next phase:** Intent-aware healing is the foundation for planned
-> [Intent-Driven Automation & MCP Exploration](intent-driven-automation.md), where
-> business goals can become explored, recorded, and generated test flows.
+> 🧭 **Built on this:** Intent-aware healing is the foundation for
+> [Intent-Driven Automation](intent-driven-automation.md), where business goals
+> become explored, recorded, and generated test flows.
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)

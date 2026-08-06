@@ -2,8 +2,9 @@
 
 This guide explains how to capture Web DOM trees with **Playwright**, support Shadow DOM / iframes, and generate prioritized locators.
 
-> 🧭 **Planned M6 direction:** Playwright capture will become the exploration layer
-> for [Intent-Driven Automation & MCP Exploration](intent-driven-automation.md).
+> 🧭 **M6:** Live page capture is implemented via `PlaywrightLiveExplorer` (Microsoft.Playwright
+> .NET SDK) - see [Intent-Driven Automation](intent-driven-automation.md) for why this uses
+> Playwright directly instead of the Model Context Protocol.
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
@@ -18,17 +19,26 @@ This guide explains how to capture Web DOM trees with **Playwright**, support Sh
 2. Pass the returned DOM JSON to `PlaywrightApplicationConnector.ParseJson`.
 3. Use the resulting `UiElementInfo` tree for self-healing or locator generation with `PlaywrightLocatorEmitter`.
 
-### Planned MCP Exploration
+### Live Page Exploration
 
-The planned MCP bridge will let the automation layer drive a browser, capture
-DOM/accessibility snapshots, and feed them into the same `UiElementInfo` +
-self-healing pipeline. This is intended to support:
+`PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) drives a browser,
+navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly - no hand-written
+Playwright test required, and no external Model Context Protocol server:
 
-- page exploration from a URL
-- intent-to-element candidate matching
-- locator repository recording
-- generated Playwright tests
-- JSON/HTML reporting
+```csharp
+using PlaywrightLiveExploration;
+
+await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
+```
+
+This feeds the same `WebElementInfo` + self-healing pipeline as a manually captured
+snapshot, so it composes with `IntentAutomationPipeline`, `IntentExplorationBridge`, and
+locator repository recording exactly like `CaptureDomSnapshotSomehow()` did in earlier
+examples. See [Intent-Driven Automation](intent-driven-automation.md) for why this project
+uses the Playwright .NET SDK directly rather than a real MCP bridge (which would have
+required a Node.js-based Playwright MCP server process - a first for this otherwise pure
+C#/.NET codebase).
 
 ### Complete Web Automation Example
 
@@ -50,7 +60,9 @@ class WebTest
         await page.GotoAsync("https://example.com/login");
 
         // 1. Evaluate JavaScript snippet in browser page
-        string domJson = await page.EvaluateAsync<string>(PlaywrightDomCaptureScript.JavaScript);
+        // Wrap in JSON.stringify(...): EvaluateAsync<string> expects the script's result to
+        // already be a string, and the capture script itself returns an object.
+        string domJson = await page.EvaluateAsync<string>($"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
 
         // 2. Convert DOM JSON into standard UiElementInfo tree
         UiElementInfo webTree = PlaywrightApplicationConnector.ParseJson(domJson);
@@ -85,11 +97,26 @@ class WebTest
 2. Dönen DOM JSON verisini `PlaywrightApplicationConnector.ParseJson` fonksiyonuna verin.
 3. Oluşan standart `UiElementInfo` ağacını iyileştirme motoruna verin veya `PlaywrightLocatorEmitter` ile önerilen Playwright kodlarını alın.
 
-### Planlanan MCP Keşfi
+### Canlı Sayfa Keşfi
 
-M6 kapsamında Playwright/MCP katmanı tarayıcıyı yönetip DOM/accessibility snapshot
-alabilecek, bu veriyi `UiElementInfo` modeline dönüştürüp intent tabanlı test üretimi
-ve self-healing akışına bağlayacaktır.
+`PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) bir tarayıcıyı
+yönetip verilen URL'ye gider ve doğrudan bir `WebElementInfo` DOM snapshot'ı yakalar - elle
+yazılmış bir Playwright testine ya da harici bir Model Context Protocol sunucusuna gerek
+kalmadan:
+
+```csharp
+using PlaywrightLiveExploration;
+
+await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
+```
+
+Bu, elle yakalanmış bir snapshot ile aynı `WebElementInfo` + self-healing akışını besler;
+`IntentAutomationPipeline`, `IntentExplorationBridge` ve locator repository kaydı ile aynen
+uyumludur. Bu projenin neden gerçek bir MCP köprüsü yerine (bu, saf C#/.NET kod tabanına ilk
+kez bir Node.js tabanlı Playwright MCP sunucu süreci gerektirirdi) doğrudan Playwright .NET
+SDK'sını kullandığına dair gerekçe için [Intent Tabanlı Otomasyon](intent-driven-automation.md)
+sayfasına bakın.
 
 ### Tam C# Web Otomasyon Örneği
 
@@ -111,7 +138,9 @@ class WebTest
         await page.GotoAsync("https://example.com/login");
 
         // 1. Evaluate JavaScript snippet in browser page
-        string domJson = await page.EvaluateAsync<string>(PlaywrightDomCaptureScript.JavaScript);
+        // Wrap in JSON.stringify(...): EvaluateAsync<string> expects the script's result to
+        // already be a string, and the capture script itself returns an object.
+        string domJson = await page.EvaluateAsync<string>($"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
 
         // 2. Convert DOM JSON into standard UiElementInfo tree
         UiElementInfo webTree = PlaywrightApplicationConnector.ParseJson(domJson);

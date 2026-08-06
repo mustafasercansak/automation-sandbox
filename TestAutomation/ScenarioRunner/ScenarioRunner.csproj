@@ -48,6 +48,8 @@
 
     <ProjectReference Include="..\IntentAutomation\IntentAutomation.csproj" />
 
+    <ProjectReference Include="..\PlaywrightLiveExploration\PlaywrightLiveExploration.csproj" />
+
   </ItemGroup>
 
 </Project>

@@ -15,6 +15,8 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 
 > 📦 **Milestone 5 Preview Packaging:** NuGet artifact generation is available through the manual [Pack workflow](.github/workflows/pack.yml), and preview package files can be attached to GitHub Releases through [Release Preview Packages](.github/workflows/release.yml). See the [NuGet Packaging Guide](docs/nuget-packaging.md).
 
+> 🎤 **Project Showcase:** For a bilingual (EN/TR) architecture presentation and executive summary, see [PROJECT_SHOWCASE.md](PROJECT_SHOWCASE.md).
+
 ---
 
 ## 📌 Implementation Status
@@ -35,8 +37,10 @@ Commercial test automation tools (e.g. Ranorex, Tosca) hide object repositories 
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
-| **NuGet Preview Packaging** | ✅ Implemented | Six validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
-| **Intent-Driven Automation & MCP Exploration** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, deterministic planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. |
+| **NuGet Preview Packaging** | ✅ Implemented | Seven validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
+| **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
+| **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, and generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `Discovery.ApplicationConnector`. |
+| **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
 
 ---
 
@@ -290,10 +294,15 @@ shape used by the desktop engine, so the existing self-healing scorer can work a
 web and desktop trees:
 
 ```csharp
+using PlaywrightLiveExploration;
 using WebDiscovery;
 
-// In a Playwright test:
-// WebElementInfo dom = await page.EvaluateAsync<WebElementInfo>(PlaywrightDomCaptureScript.JavaScript);
+// PlaywrightLiveExplorer owns the browser + capture round-trip (see Quick Start #8 below).
+// If you're inside your own Playwright test instead, capture the DOM with:
+//   var json = await page.EvaluateAsync<string>($"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
+//   var dom = JsonSerializer.Deserialize<WebElementInfo>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+// (page.EvaluateAsync<WebElementInfo>(...) directly does NOT work - Playwright's own
+// deserializer can't populate UiModel.BoundingRectangle, a readonly struct with no setters.)
 var liveTree = WebElementMapper.ToUiElementTree(dom);
 var result = SelfHealingResolver.Resolve(expectedWebSnapshot, liveTree);
 
@@ -348,7 +357,89 @@ File.WriteAllText("generated-customer.spec.ts", result.PlaywrightTypeScriptTestC
 new IntentFlowReportFileSink("intent-flow-report.json").Write(result.Report);
 ```
 
-### 8. LLM Fallback Resolution (Opt-In)
+By default the pipeline plans steps with `DeterministicIntentPlanner`, which matches a
+fixed vocabulary of verbs (save/submit/create/...) in the goal text. Pass
+`LlmIntentPlanner` instead to plan from the goal's natural language directly - it reads
+its API key the same way `ClaudeHealingProvider` does (`ANTHROPIC_API_KEY` /
+`ANTHROPIC_MODEL`) and degrades safely back to `DeterministicIntentPlanner` if the key
+is missing, the request fails, or the model's response isn't a well-formed step list:
+
+```csharp
+var pipeline = new IntentAutomationPipeline(planner: new LlmIntentPlanner());
+```
+
+### 8. Desktop Intent Automation Pipeline
+`IntentDesktopAutomationPipeline` is the Windows desktop counterpart to
+`IntentAutomationPipeline`: it plans intent steps with the same `IIntentPlanner`, matches
+them against a live `UiElementInfo` tree (as captured by `Discovery.UiTreeWalker`) instead
+of a `WebDiscovery` DOM snapshot, records accepted locators, and generates an xUnit +
+FlaUI test skeleton built on this project's own `Discovery.ApplicationConnector`.
+
+```csharp
+using IntentAutomation;
+using UiModel;
+
+var request = new IntentPlanningRequest
+{
+    Name = "Create customer",
+    Goal = "Create a customer record with valid email",
+    TestData = new Dictionary<string, string>
+    {
+        ["email"] = "jane.doe@example.com",
+    },
+};
+
+UiElementInfo window = UiTreeWalker.BuildTree(connector.GetMainWindow());
+var repository = new LocatorRepository("desktop.locators.json");
+
+var pipeline = new IntentDesktopAutomationPipeline(options: new IntentDesktopAutomationPipelineOptions
+{
+    Recording = new IntentDesktopLocatorRecordingOptions { ApplicationName = "CustomerApp" },
+    Generation = new FlaUiCSharpTestGenerationOptions
+    {
+        Namespace = "CustomerApp.Generated",
+        ApplicationExecutablePath = @"CustomerApp\bin\Debug\net48\CustomerApp.exe",
+    },
+});
+
+var result = pipeline.Run(request, window, repository);
+File.WriteAllText("GeneratedCustomerDesktopTest.cs", result.FlaUiCSharpTestCode);
+```
+
+Matching favors `AutomationId` when the recorded snapshot has one, falling back to `Name`
+and then bare `ControlType` - the same tiering `MainFormScenarioTests` uses by hand for
+`panel1`, whose `AutomationId` is deliberately meaningless. The generated code uses direct
+FlaUI locators rather than `SelfHealingEngine`, matching how `PlaywrightCSharpTestGenerator`
+generates direct Playwright locators for the web pipeline: self-healing is a separate,
+already-implemented concern (see [Quick Start #5](#5-self-healing-json-reports)), not
+something codegen output should wrap every call in.
+
+### 9. Live Page Exploration
+`PlaywrightLiveExplorer` closes the gap the "MCP Exploration" docs originally described as
+Planned: it launches a browser, navigates to a URL, and captures a `WebElementInfo`
+snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test
+required to feed a snapshot into `IntentAutomationPipeline`, `IntentExplorationBridge`, or
+any of the other Quick Start examples above:
+
+```csharp
+using PlaywrightLiveExploration;
+
+await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
+
+var pipeline = new IntentAutomationPipeline();
+var result = pipeline.Run(request, dom, repository);
+```
+
+This deliberately uses the Playwright .NET SDK rather than a real Model Context Protocol
+bridge: the canonical Playwright MCP server is a Node.js process, and connecting to it
+would have made this the first JavaScript/Node.js runtime dependency in an otherwise pure
+C#/.NET codebase (see AGENTS.md). `Microsoft.Playwright` reaches the same functional
+outcome as a fully managed .NET client, no Node.js required at runtime. See
+[Live Page Exploration](docs/intent-driven-automation.md#3-live-page-exploration) for the
+full rationale.
+
+### 10. LLM Fallback Resolution (Opt-In)
 ```csharp
 using LlmHealing;
 using System.Net.Http;
@@ -396,13 +487,18 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 
 | Target Component | Covered Behaviors | Test File |
 | :--- | :--- | :--- |
-| **Heuristic Scorer** | Structural similarity, weight tuning, unusable `(0,0,0,0)` bounds | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
+| **Heuristic Scorer** | Structural similarity, weight tuning, unusable `(0,0,0,0)` bounds | [SelfHealingResolverTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **Candidate Pruner** | Candidate score filtering (`MinCandidateScore`), Top-N shortlist assembly | [SelfHealingResolverExplainabilityTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters & limits | [DiscoveryRobustnessTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
-| **LLM Providers & Guard** | Mocked Anthropic/Gemini HTTP responses, Hallucination Guard | [LlmHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs) |
-| **Intent Automation** | Happy-path intent planning, DOM candidate matching, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs) |
+| **Locator Repository & Snapshots** | Versioned JSON persistence, file locking, `LocatorKey` stability, `UiElementSnapshot` round-tripping | [LocatorRepositoryTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LocatorRepositoryTests.cs), [UiElementSnapshotTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/UiElementSnapshotTests.cs) |
+| **Self-Healing Engine & Intent Metadata** | Repository auto-upsert, action retry, `TestIntent`-guided healing, JSON/HTML report emission | [SelfHealingEngineTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SelfHealingEngineTests.cs), [TestIntentHealingTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/TestIntentHealingTests.cs) |
+| **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, confidence evaluation, Hallucination Guard | [LlmHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |
+| **Web Discovery** | DOM snapshot mapping, Shadow DOM / iframe traversal, hidden/offscreen handling | [WebDiscoveryTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WebDiscoveryTests.cs) |
+| **Intent Automation (Web)** | Deterministic + LLM-backed planning (with guarded fallback), DOM candidate matching/exploration, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs), [IntentPlannerTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentPlannerTests.cs), [LlmIntentPlannerTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/LlmIntentPlannerTests.cs), [IntentExplorationBridgeTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentExplorationBridgeTests.cs), [IntentLocatorRepositoryRecorderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentLocatorRepositoryRecorderTests.cs), [IntentFlowReportTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentFlowReportTests.cs), [PlaywrightCSharpTestGeneratorTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/PlaywrightCSharpTestGeneratorTests.cs), [PlaywrightTypeScriptTestGeneratorTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/PlaywrightTypeScriptTestGeneratorTests.cs) |
+| **Intent Automation (Desktop)** | `UiElementInfo` candidate matching/exploration, locator recording, xUnit + FlaUI test skeleton generation, and pipeline orchestration | [IntentDesktopExplorationBridgeTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentDesktopExplorationBridgeTests.cs), [IntentDesktopLocatorRepositoryRecorderTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentDesktopLocatorRepositoryRecorderTests.cs), [FlaUiCSharpTestGeneratorTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/FlaUiCSharpTestGeneratorTests.cs), [IntentDesktopAutomationPipelineTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/IntentDesktopAutomationPipelineTests.cs) |
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
-| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs) |
+| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
+| **Live Page Exploration** | Real headless-Chromium browser launch, navigation, and DOM capture via `PlaywrightLiveExplorer` against a local HTML fixture | [PlaywrightLiveExplorerTests](file:///home/m/projects/automation-sandbox/TestAutomation/ScenarioRunner/PlaywrightLiveExplorerTests.cs) |
 
 ### Running Code Coverage Locally
 
@@ -437,8 +533,9 @@ AutomationSandbox.sln
     ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
     ├── LlmHealing/         Claude, Gemini, OpenAI & offline Ollama providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
     ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions
-    ├── IntentAutomation/   Cross-platform intent pipeline & Playwright generators (netstandard2.0, net8.0, net10.0)
-    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery & intent automation coverage (net48)
+    ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
+    ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
+    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48)
 ```
 
 ---
@@ -476,7 +573,7 @@ graph LR
         M5[M5: NuGet Preview Packaging - Implemented]
     end
     subgraph PhaseD [Phase D: Intent-Driven Automation]
-        M6[M6: Intent Planner & Playwright MCP Exploration - Implemented]
+        M6[M6: Intent Planner & DOM-Snapshot Matching - Implemented]
     end
     M3 --> M4 --> M5 --> M6
 ```

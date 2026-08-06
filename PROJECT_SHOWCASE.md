@@ -198,7 +198,7 @@ graph LR
         M5[M5: NuGet Preview Packaging - ✅ Implemented]
     end
     subgraph PhaseD [Phase D: Intent-Driven Automation]
-        M6[M6: Intent Planner & Playwright MCP Exploration - 🟡 In Progress]
+        M6[M6: Intent Planner & DOM-Snapshot Matching - ✅ Implemented]
     end
     M3 --> M4 --> M5 --> M6
 ```
@@ -399,7 +399,7 @@ graph LR
         M5[M5: NuGet Preview Paketleme - ✅ Tamamlandı]
     end
     subgraph PhaseD [Aşama D: Intent Tabanlı Otomasyon]
-        M6[M6: Intent Planner & Playwright MCP Keşfi - 🟡 Devam Ediyor]
+        M6[M6: Intent Planner & DOM Eşleştirme - ✅ Tamamlandı]
     end
     M3 --> M4 --> M5 --> M6
 ```

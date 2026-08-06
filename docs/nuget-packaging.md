@@ -4,7 +4,7 @@ Automation Sandbox packages are prepared as preview artifacts first. The `Pack`
 workflow creates `.nupkg` and `.snupkg` files, but it does not publish to nuget.org
 until a package feed and API key policy are chosen.
 
-M5 preview packaging is implemented. Both packaging workflows build all six packages,
+M5 preview packaging is implemented. Both packaging workflows build all seven packages,
 validate their package/symbol pairs and required contents, and expose the artifacts
 either as a workflow download or as GitHub prerelease assets. Publishing to a public
 feed remains a separate release-policy decision rather than part of M5.
@@ -18,7 +18,8 @@ feed remains a separate release-policy decision rather than part of M5.
 | `AutomationSandbox.LlmHealing` | Claude, Gemini, OpenAI, and Ollama healing providers. |
 | `AutomationSandbox.Discovery` | Windows UIA/FlaUI desktop tree capture (`net48`). |
 | `AutomationSandbox.WebDiscovery` | Playwright DOM mapping and locator suggestions. |
-| `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic planner, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and pipeline orchestration. |
+| `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic + LLM-backed planning, web and desktop candidate matching, locator recording, Playwright C#/TypeScript and FlaUI test generation, intent flow reports, and pipeline orchestration. |
+| `AutomationSandbox.PlaywrightLiveExploration` | `PlaywrightLiveExplorer`: live browser page capture (Microsoft.Playwright .NET SDK) into a `WebElementInfo` snapshot. |
 
 ## Create Preview Packages
 
@@ -66,7 +67,7 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.1.0-preview.1 --sou
 
 - CI is green on `main`.
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
-- GitHub Release assets include all six packages and their symbol packages.
+- GitHub Release assets include all seven packages and their symbol packages.
 - Package names, README, license, repository URL, and symbols are present.
 - Version follows prerelease SemVer, for example `0.1.0-preview.1`.
 - Publish target is decided: nuget.org, GitHub Packages, or internal feed.

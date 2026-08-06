@@ -1,4 +1,4 @@
-# Intent-Driven Automation & MCP Exploration / Intent Tabanlı Otomasyon ve MCP Keşfi
+# Intent-Driven Automation / Intent Tabanlı Otomasyon
 
 This page documents the **M6** direction: moving from intent-aware self-healing
 to intent-driven test exploration, locator recording, and test generation.
@@ -26,8 +26,11 @@ Playwright C#/TypeScript test skeletons, and render a reviewable intent flow rep
 | Run planning, matching, recording, and generation through one pipeline API | Implemented |
 | Generate Playwright TypeScript test skeletons from recorded intent locators | Implemented |
 | Render intent flow JSON/HTML reports | Implemented |
-| Generate full tests from natural-language intent | Planned |
-| Explore a live Playwright page through MCP | Planned |
+| Generate full tests from natural-language intent | Implemented (`LlmIntentPlanner`, opt-in, guarded fallback to the deterministic planner) |
+| Match intent steps to a live Windows desktop `UiElementInfo` tree | Implemented (`IntentDesktopExplorationBridge`) |
+| Generate xUnit + FlaUI test skeletons from recorded desktop intent locators | Implemented (`FlaUiCSharpTestGenerator`) |
+| Run desktop planning, matching, recording, and generation through one pipeline API | Implemented (`IntentDesktopAutomationPipeline`) |
+| Explore a live page via the Playwright .NET SDK (not MCP - see below) | Implemented (`PlaywrightLiveExplorer`) |
 
 ## M6 Target Architecture
 
@@ -35,7 +38,7 @@ Playwright C#/TypeScript test skeletons, and render a reviewable intent flow rep
 flowchart TB
     Intent["User Intent / Business Goal"]
     Planner["Intent Planner"]
-    Explorer["Playwright MCP Explorer"]
+    Explorer["PlaywrightLiveExplorer"]
     Snapshot["DOM + Accessibility Snapshot"]
     Mapper["WebDiscovery Mapper"]
     Resolver["SelfHealingResolver + LLM Fallback"]
@@ -94,19 +97,45 @@ Steps:
 7. Assert that a grid row exists
 ```
 
-The first implementation should be deterministic and testable. LLM planning can
-be added later behind a guarded interface.
+The first implementation is deterministic and testable (`DeterministicIntentPlanner`):
+it derives steps from a fixed vocabulary of verbs in the goal text (save/submit/create/...)
+and sets `RequiresReview` when it can't confidently do so.
 
-### 3. Playwright MCP Exploration
+`LlmIntentPlanner` implements the same `IIntentPlanner` interface and asks a model to
+read the goal directly instead of pattern-matching keywords, so goals phrased outside
+that fixed vocabulary still produce a complete plan. It never trusts the model's output
+blindly: a structurally invalid response (unparseable `ActionType`, empty steps array),
+a missing `ANTHROPIC_API_KEY`, or an HTTP failure all degrade to
+`DeterministicIntentPlanner`'s own result rather than surfacing malformed steps. It is
+a drop-in `IIntentPlanner`, so it can be passed directly to `IntentAutomationPipeline`:
 
-The planned MCP bridge should be able to:
+```csharp
+var pipeline = new IntentAutomationPipeline(planner: new LlmIntentPlanner());
+```
 
-- open a browser page
-- navigate to a URL
-- capture DOM and accessibility snapshots
-- include Shadow DOM and same-origin iframe content
-- mark hidden/offscreen elements
-- return the snapshot to the C# engine as `UiElementInfo`
+### 3. Live Page Exploration
+
+`PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) opens a browser
+page, navigates to a URL, and returns a `WebElementInfo` snapshot - including Shadow DOM
+and same-origin iframe content, with hidden/offscreen elements marked, via the same
+`PlaywrightDomCaptureScript` the manual capture workflow uses:
+
+```csharp
+using PlaywrightLiveExploration;
+
+await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
+```
+
+**Why the Playwright .NET SDK instead of a real MCP bridge:** the canonical Playwright MCP
+server (`@playwright/mcp`) is a Node.js process - connecting to it from C# would mean
+spawning and talking JSON-RPC to an external Node.js runtime, the first such dependency in
+an otherwise pure C#/.NET codebase (see AGENTS.md). `Microsoft.Playwright`, by contrast, is
+a fully managed .NET client with no Node.js requirement at runtime, and reaches the same
+functional outcome (open a page, capture a DOM/accessibility-flavored snapshot) that this
+capability actually needs. This was a deliberate scope decision, not an oversight - if a
+literal MCP integration is wanted later (e.g. to reuse MCP-based tooling beyond Playwright),
+it should be scoped and evaluated as a separate, explicit addition.
 
 ### 4. Locator Selection
 
@@ -189,11 +218,72 @@ test('Create customer', async ({ page }) => {
 });
 ```
 
+## Desktop Pipeline Usage
+
+`IntentDesktopAutomationPipeline` is the Windows desktop counterpart: the same
+`IIntentPlanner` plans steps, but they are matched against a live `UiElementInfo` tree
+(captured via `Discovery.UiTreeWalker`) instead of a `WebDiscovery` DOM snapshot, and the
+generator emits an xUnit + FlaUI test instead of Playwright C#/TypeScript.
+
+```csharp
+UiElementInfo window = UiTreeWalker.BuildTree(connector.GetMainWindow());
+var repository = new LocatorRepository("desktop.locators.json");
+var pipeline = new IntentDesktopAutomationPipeline();
+
+IntentDesktopAutomationPipelineResult result = pipeline.Run(request, window, repository);
+
+File.WriteAllText("GeneratedCustomerDesktopTest.cs", result.FlaUiCSharpTestCode);
+```
+
+Note: `IntentDesktopAutomationPipelineResult` does not currently produce an
+`IntentFlowReportDocument` - flow report rendering is web-pipeline-only for now.
+
+## Generated FlaUI C# Example
+
+```csharp
+using System;
+using Discovery;
+using FlaUI.Core.AutomationElements;
+using Xunit;
+
+namespace GeneratedTests
+{
+    public class CreateCustomer : IDisposable
+    {
+        private readonly ApplicationConnector _connector;
+
+        public CreateCustomer()
+        {
+            _connector = ApplicationConnector.Launch(@"TODO: path to the compiled application executable");
+        }
+
+        [Fact]
+        public void CreateACustomerRecord()
+        {
+            var window = _connector.GetMainWindow();
+            window.FindFirstDescendant(cf => cf.ByAutomationId("txtEmail"))!.AsTextBox().Text = "jane.doe@example.com";
+            window.FindFirstDescendant(cf => cf.ByAutomationId("btnSave"))!.AsButton().Invoke();
+            Assert.NotNull(window.FindFirstDescendant(cf => cf.ByAutomationId("dgvRecords")));
+        }
+
+        public void Dispose() => _connector.Dispose();
+    }
+}
+```
+
+Locator resolution favors `AutomationId`, falling back to `Name` and then bare
+`ControlType` - the same tiering `MainFormScenarioTests` uses by hand for `panel1`, whose
+`AutomationId` is deliberately meaningless (see
+[Framework Case Studies](../README.md#-framework-case-studies-winforms-vs-wpf)). The
+generated code calls FlaUI directly rather than going through `SelfHealingEngine`: codegen
+output and self-healing are separate, already-implemented concerns.
+
 ## Intent Flow Report
 
 `IntentFlowReportFileSink` writes a JSON report plus an HTML sibling by default.
 The report explains each step's intent, candidate count, best locator expression,
-review status, recording result, and generated C#/TypeScript code.
+review status, recording result, and generated C#/TypeScript code. This currently covers
+the web pipeline only (see note above).
 
 ## Proposed Milestone Plan
 
@@ -206,7 +296,10 @@ review status, recording result, and generated C#/TypeScript code.
 | M6.5 | End-to-end intent automation pipeline API. Implemented. |
 | M6.6 | Playwright TypeScript test skeleton generation. Implemented. |
 | M6.7 | Intent flow JSON/HTML report rendering. Implemented. |
-| M6.8 | Optional npm adapter for direct Playwright/TypeScript users. |
+| M6.8 | LLM-backed natural-language intent planner (`LlmIntentPlanner`), guarded with fallback to the deterministic planner. Implemented. |
+| M6.9 | Desktop intent automation: `IntentDesktopExplorationBridge`, `IntentDesktopLocatorRepositoryRecorder`, `FlaUiCSharpTestGenerator`, `IntentDesktopAutomationPipeline`. Implemented. |
+| M6.10 | Live page exploration via the Playwright .NET SDK (`PlaywrightLiveExplorer`), superseding the originally planned Node.js-based MCP bridge. Implemented. |
+| M6.11 | Optional npm adapter for direct Playwright/TypeScript users. |
 
 ---
 
@@ -214,10 +307,18 @@ review status, recording result, and generated C#/TypeScript code.
 
 Bugün `TestIntent`, kırılan locator'ı iyileştirirken test adımının amacını anlatan
 metadata'dır. M6 ile hedef bunu bir üst seviyeye taşımaktır: kullanıcı iş hedefini
-yazar, sistem Playwright/MCP ile sayfayı keşfeder, aday elementleri bulur, locator
-deposuna kaydeder ve çalıştırılabilir test adımları üretir.
+yazar, sistem sayfayı keşfeder, aday elementleri bulur, locator deposuna kaydeder ve
+çalıştırılabilir test adımları üretir.
 
-M6.1-M6.7 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
+M6.1-M6.10 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
 planlayabilir, DOM adaylarıyla eşleştirebilir, review gerekmeyen locator'ları
 repository'ye kaydedebilir, Playwright C#/TypeScript test iskeleti üretebilir ve
-intent flow raporunu JSON/HTML olarak dışa verebilir.
+intent flow raporunu JSON/HTML olarak dışa verebilir. `LlmIntentPlanner` ile hedef
+metni sabit bir anahtar kelime kümesine bağlı kalmadan, doğal dilden doğrudan
+planlanabilir; API anahtarı yoksa veya model çıktısı bozuksa sistem otomatik olarak
+`DeterministicIntentPlanner`'a düşer. `IntentDesktopAutomationPipeline` ile aynı akış
+Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent adımları canlı bir
+`UiElementInfo` ağacıyla eşleştirilir ve xUnit + FlaUI test iskeleti üretilir.
+`PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
+MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
+olarak tutar.
