@@ -66,6 +66,32 @@ namespace SelfHealing
             return healResult;
         }
 
+        // Exact type names that mark an exception as a locator/element-resolution failure.
+        // Matching by name rather than by type identity is deliberate: this assembly is
+        // FlaUI-free (it multi-targets netstandard2.0/net8.0 and runs cross-platform), so it
+        // cannot reference FlaUI's ElementNotAvailableException, and name matching also
+        // covers Playwright/Selenium-style and hand-rolled locator exceptions without
+        // depending on any of them. Matching is exact rather than substring - a substring
+        // check would also treat an unrelated backend/state exception that merely happens to
+        // contain one of these words (e.g. a hypothetical "ElementNotFoundInCacheException"
+        // raised by something other than locator resolution) as healable, which is exactly
+        // the misclassification risk this policy exists to prevent. Callers running
+        // non-idempotent actions (e.g. placing an order) should still pass their own
+        // shouldHeal policy to ExecuteWithHealingAsync rather than relying on this default.
+        private static readonly HashSet<string> LocatorResolutionExceptionTypeNames =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "ElementNotFoundException",
+                "ElementNotAvailableException",
+                "LocatorNotFoundException",
+                "NoSuchElementException",
+            };
+
+        public static bool IsLocatorResolutionException(Exception exception)
+        {
+            return LocatorResolutionExceptionTypeNames.Contains(exception.GetType().Name);
+        }
+
         public async Task<T> ExecuteWithHealingAsync<T>(
             string locatorKey,
             UiElementInfo expected,
@@ -73,7 +99,8 @@ namespace SelfHealing
             Func<UiElementInfo> captureTreeRoot,
             string? testIntent = null,
             Action<string>? log = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<Exception, bool>? shouldHeal = null)
         {
             // Capture (clone) before mutating TestIntent below - expected and record.Snapshot
             // are caller/repository-owned objects, and UiElementInfo is a reference type, so
@@ -104,7 +131,20 @@ namespace SelfHealing
             }
             catch (Exception ex)
             {
-                log?.Invoke($"[SelfHealingEngine] Initial action execution for locator '{locatorKey}' failed: {ex.Message}. Initiating self-healing...");
+                // Classify before touching the tree: re-running the whole action on the
+                // strength of an unrelated failure (assertion, timeout, backend error) is
+                // dangerous for non-idempotent actions - if the click already succeeded
+                // server-side and only a later parse threw, a blind retry would duplicate
+                // the side effect. Anything the policy does not accept bubbles up untouched.
+                var attemptHealing = shouldHeal?.Invoke(ex) ?? IsLocatorResolutionException(ex);
+                log?.Invoke(attemptHealing
+                    ? $"[SelfHealingEngine] Action for locator '{locatorKey}' threw {ex.GetType().Name} ('{ex.Message}'), classified as a locator-resolution failure. Initiating self-healing..."
+                    : $"[SelfHealingEngine] Action for locator '{locatorKey}' threw {ex.GetType().Name} ('{ex.Message}'), classified as a non-locator failure. Rethrowing without healing or retrying the action.");
+                if (!attemptHealing)
+                {
+                    throw;
+                }
+
                 var currentTree = captureTreeRoot();
                 var healResult = await ResolveAndRecordAsync(locatorKey, target, currentTree, log, cancellationToken).ConfigureAwait(false);
 
