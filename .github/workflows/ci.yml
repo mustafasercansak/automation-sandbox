@@ -28,6 +28,11 @@ jobs:
       - name: Build (Debug - WinFormsApp.exe path used by ScenarioRunner tests)
         run: dotnet build AutomationSandbox.sln --configuration Debug --no-restore
 
+      # PlaywrightLiveExplorerTests launch real headless Chromium; a clean runner has no
+      # browsers cached, so download them once (the script ships in the build output).
+      - name: Install Playwright Chromium (one-time browser download for live web tests)
+        run: pwsh TestAutomation/ScenarioRunner/bin/Debug/net48/playwright.ps1 install chromium
+
       - name: Run tests with Code Coverage (Discovery + SelfHealing + live FlaUI/UIA scenarios + LLM comparison)
         env:
           # Optional: if these repo secrets are unset, GitHub substitutes an empty

@@ -81,7 +81,7 @@ When changing scoring, discovery, or resolver behavior, add or update tests here
 
 ## CI and deployment
 
-- `.github/workflows/ci.yml` — on push/PR to `main` and manual dispatch, on `windows-latest`: sets up .NET 8 and 10 SDKs, restores, builds Debug, runs the full ScenarioRunner suite with XPlat Code Coverage and a TRX logger, uploads test results and coverage as artifacts. `ANTHROPIC_API_KEY`/`GEMINI_API_KEY` repo secrets are optional; the LLM comparison test self-skips without them.
+- `.github/workflows/ci.yml` — on push/PR to `main` and manual dispatch, on `windows-latest`: sets up .NET 8 and 10 SDKs, restores, builds Debug, installs the Playwright Chromium browser (`playwright.ps1 install chromium`, required by the live `PlaywrightLiveExplorerTests`), runs the full ScenarioRunner suite with XPlat Code Coverage and a TRX logger, uploads test results and coverage as artifacts. `ANTHROPIC_API_KEY`/`GEMINI_API_KEY` repo secrets are optional; the LLM comparison test self-skips without them.
 - `.github/workflows/pack.yml` — manual `workflow_dispatch` only, deliberately separate from CI. Packs `UiModel`, `SelfHealing`, `LlmHealing`, `Discovery`, `WebDiscovery`, and `IntentAutomation` in Release and uploads `.nupkg` files as a build artifact. There is intentionally no `dotnet nuget push` step — no publish feed has been chosen yet. Do not add publishing without explicit instruction.
 - Planned (not implemented — don't assume they exist): NuGet release (no publish feed chosen yet), a real Model Context Protocol bridge (deliberately rejected in favor of `PlaywrightLiveExplorer` — see `docs/intent-driven-automation.md`).
 
