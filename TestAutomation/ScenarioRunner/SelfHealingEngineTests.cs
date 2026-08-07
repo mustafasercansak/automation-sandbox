@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -130,7 +131,7 @@ namespace ScenarioRunner
                     attemptCount++;
                     if (element.AutomationId == "btnSubmit_Old")
                     {
-                        throw new InvalidOperationException("Element not found with old automation ID!");
+                        throw new ElementNotFoundException("Element not found with old automation ID!");
                     }
 
                     return Task.FromResult("Clicked: " + element.AutomationId);
@@ -143,6 +144,266 @@ namespace ScenarioRunner
             var record = repository.Find("submit_btn");
             Assert.NotNull(record);
             Assert.Equal("btnSubmit_Renamed", record!.Snapshot.AutomationId);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_DoesNotHealOrRetryNonLocatorExceptions()
+        {
+            // A non-idempotent action (e.g. placing an order) must never be re-run when an
+            // unrelated failure occurs after the side effect already happened.
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnPlaceOrder",
+                Name = "Place Order",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnPlaceOrder",
+                        Name = "Place Order",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+
+            var clickCount = 0;
+            var treeCaptureCount = 0;
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "place_order_btn",
+                    expected,
+                    action: element =>
+                    {
+                        clickCount++; // The click (side effect) succeeds...
+                        throw new InvalidOperationException("Could not parse the order confirmation."); // ...but a later step fails.
+                    },
+                    captureTreeRoot: () =>
+                    {
+                        treeCaptureCount++;
+                        return currentTree;
+                    }));
+
+            Assert.Equal("Could not parse the order confirmation.", exception.Message);
+            Assert.Equal(1, clickCount);
+            Assert.Equal(0, treeCaptureCount);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_DoesNotHealBackendExceptionsWithLocatorLikeNames()
+        {
+            // Guards against substring false-positives: a backend/state exception whose name
+            // merely contains a locator-related word (but isn't one of the exact recognized
+            // locator-resolution exception types) must not be classified as healable.
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var attemptCount = 0;
+            var treeCaptureCount = 0;
+            var exception = await Assert.ThrowsAsync<AutomationElementBackendException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element =>
+                    {
+                        attemptCount++;
+                        throw new AutomationElementBackendException("Backend rejected the automation element state.");
+                    },
+                    captureTreeRoot: () =>
+                    {
+                        treeCaptureCount++;
+                        return new UiElementInfo { ControlType = "Window" };
+                    }));
+
+            Assert.Equal("Backend rejected the automation element state.", exception.Message);
+            Assert.Equal(1, attemptCount);
+            Assert.Equal(0, treeCaptureCount);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_LogsClassificationBeforeTreeCaptureAndRetry()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnSubmit_Renamed",
+                        Name = "Submit",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+
+            var events = new List<string>();
+            var attemptCount = 0;
+            await engine.ExecuteWithHealingAsync(
+                "submit_btn",
+                expected,
+                action: element =>
+                {
+                    attemptCount++;
+                    if (element.AutomationId == "btnSubmit_Old")
+                    {
+                        throw new ElementNotFoundException("Element not found with old automation ID!");
+                    }
+
+                    return Task.FromResult("Clicked: " + element.AutomationId);
+                },
+                captureTreeRoot: () =>
+                {
+                    events.Add("captureTreeRoot");
+                    return currentTree;
+                },
+                log: message =>
+                {
+                    if (message.Contains("classified as a locator-resolution failure"))
+                    {
+                        events.Add("classificationLog");
+                    }
+                });
+
+            Assert.Equal(2, attemptCount);
+            var classificationIndex = events.IndexOf("classificationLog");
+            var captureIndex = events.IndexOf("captureTreeRoot");
+            Assert.True(classificationIndex >= 0, "Expected the classification log entry to be recorded.");
+            Assert.True(captureIndex >= 0, "Expected captureTreeRoot to be invoked.");
+            Assert.True(classificationIndex < captureIndex,
+                "Exception classification must be logged before the tree is captured for healing/retry.");
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_HonorsCustomShouldHealPolicy()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnSubmit_Renamed",
+                        Name = "Submit",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+
+            var attemptCount = 0;
+            var resultText = await engine.ExecuteWithHealingAsync(
+                "submit_btn",
+                expected,
+                action: element =>
+                {
+                    attemptCount++;
+                    if (element.AutomationId == "btnSubmit_Old")
+                    {
+                        throw new InvalidOperationException("Simulated locator failure the caller wants to heal.");
+                    }
+
+                    return Task.FromResult("Clicked: " + element.AutomationId);
+                },
+                captureTreeRoot: () => currentTree,
+                shouldHeal: ex => ex is InvalidOperationException);
+
+            Assert.Equal(2, attemptCount);
+            Assert.Equal("Clicked: btnSubmit_Renamed", resultText);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_CustomPolicyCanRejectLocatorExceptions()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var attemptCount = 0;
+            await Assert.ThrowsAsync<ElementNotFoundException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element =>
+                    {
+                        attemptCount++;
+                        throw new ElementNotFoundException("Element not found with old automation ID!");
+                    },
+                    captureTreeRoot: () => new UiElementInfo { ControlType = "Window" },
+                    shouldHeal: ex => false));
+
+            Assert.Equal(1, attemptCount);
+        }
+
+        // Stands in for the exception a UI framework throws when a locator no longer
+        // resolves (FlaUI's ElementNotAvailableException, Playwright/Selenium-style
+        // NoSuchElement errors). The default healing policy matches by type name, so this
+        // fake lets the tests exercise that path without any UI-framework dependency.
+        private sealed class ElementNotFoundException : Exception
+        {
+            public ElementNotFoundException(string message) : base(message)
+            {
+            }
+        }
+
+        // A backend/state exception whose name happens to contain locator-related words
+        // ("AutomationElement") without being one of the exact recognized locator-resolution
+        // exception types - exercises the false-positive substring-match this default policy
+        // must not fall into.
+        private sealed class AutomationElementBackendException : Exception
+        {
+            public AutomationElementBackendException(string message) : base(message)
+            {
+            }
         }
 
         [Fact]

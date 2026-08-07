@@ -49,7 +49,7 @@ timeline
 ### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers, Reports & Docs
 * **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
 * **Extended LLM Providers:** Added `OpenAiHealingProvider` (`gpt-4o-mini`) and offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
-* **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with automatic repository update on healing (`ExecuteWithHealingAsync`).
+* **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with automatic repository update on healing (`ExecuteWithHealingAsync`), guarded by an opt-in `shouldHeal` exception-classification policy (default: locator-resolution failures only).
 * **Healing Reports & CI Artifacts:** JSON and HTML reports emitted during CI with before/after snapshots, source, confidence, risk status (`accepted`, `accepted-with-llm`, `manual-review`), and LLM reasoning where available.
 * **GitHub Pages Documentation:** Jekyll-based documentation site with Mermaid diagram rendering for architecture, workflow, and roadmap diagrams.
 

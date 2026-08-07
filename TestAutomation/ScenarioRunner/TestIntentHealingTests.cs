@@ -93,7 +93,7 @@ namespace ScenarioRunner
                     capturedReceivedTarget = element;
                     if (element.AutomationId == "btnSave_Old")
                     {
-                        throw new InvalidOperationException("Missing!");
+                        throw new ElementNotFoundException("Missing!");
                     }
                     return Task.FromResult(true);
                 },
@@ -103,6 +103,15 @@ namespace ScenarioRunner
             Assert.True(result);
             Assert.NotNull(capturedReceivedTarget);
             Assert.Equal("btnSave_New", capturedReceivedTarget!.AutomationId);
+        }
+
+        // Stands in for the exception a UI framework throws when a locator no longer
+        // resolves; the engine's default healing policy matches by exception type name.
+        private sealed class ElementNotFoundException : Exception
+        {
+            public ElementNotFoundException(string message) : base(message)
+            {
+            }
         }
     }
 }
