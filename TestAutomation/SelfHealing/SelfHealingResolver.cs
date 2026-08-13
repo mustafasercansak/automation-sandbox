@@ -28,12 +28,18 @@ namespace SelfHealing
             }
 
             var best = scoredCandidates[0];
-            var isConfident = best.TotalScore >= w.MinimumConfidence && best.EvidenceCoverage >= w.MinimumEvidenceWeight;
+            var runnerUpScore = scoredCandidates.Count > 1 ? scoredCandidates[1].TotalScore : (double?)null;
+            var marginSufficient = CandidateMargin.HasSufficientMargin(best.TotalScore, runnerUpScore, w.MinimumCandidateMargin);
+            var isConfident = best.TotalScore >= w.MinimumConfidence
+                && best.EvidenceCoverage >= w.MinimumEvidenceWeight
+                && marginSufficient;
             var confidenceLabel = isConfident
                 ? "CONFIDENT"
                 : best.EvidenceCoverage < w.MinimumEvidenceWeight
                     ? $"LOW EVIDENCE (coverage {best.EvidenceCoverage:F2} < {w.MinimumEvidenceWeight:F2})"
-                    : "LOW CONFIDENCE";
+                    : !marginSufficient
+                        ? $"AMBIGUOUS (runner-up margin {best.TotalScore - (runnerUpScore ?? 0.0):F3} < {w.MinimumCandidateMargin:F2})"
+                        : "LOW CONFIDENCE";
             log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) not found. " +
                 $"Best candidate: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
                 $"Score={best.TotalScore:F2} ({confidenceLabel}), chosen among {scoredCandidates.Count} candidate(s).");
@@ -46,6 +52,8 @@ namespace SelfHealing
                 ConfidenceThreshold = w.MinimumConfidence,
                 EvidenceCoverage = best.EvidenceCoverage,
                 EvidenceThreshold = w.MinimumEvidenceWeight,
+                RunnerUpScore = runnerUpScore,
+                MarginThreshold = w.MinimumCandidateMargin,
                 Candidates = allScored,
                 ScoreBreakdown = best.Components,
             };
@@ -140,6 +148,8 @@ namespace SelfHealing
                 ConfidenceThreshold = w.MinimumLlmConfidence,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
+                RunnerUpScore = heuristicResult.RunnerUpScore,
+                MarginThreshold = heuristicResult.MarginThreshold,
                 Candidates = heuristicResult.Candidates,
                 ScoreBreakdown = heuristicResult.ScoreBreakdown,
                 LlmProviderName = best.ProviderName,

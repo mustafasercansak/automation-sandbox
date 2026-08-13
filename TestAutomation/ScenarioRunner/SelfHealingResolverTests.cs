@@ -400,6 +400,8 @@ namespace ScenarioRunner
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumEvidenceWeight = 1.5 }.Validate());
             Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumEvidenceWeight = -0.1 }.Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumCandidateMargin = 1.5 }.Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumCandidateMargin = -0.1 }.Validate());
         }
 
         [Fact]
@@ -573,6 +575,171 @@ namespace ScenarioRunner
             Assert.Equal("weakerMatch", entry.Candidates[1].AutomationId);
             Assert.Equal(0.0, entry.Candidates[2].TotalScore); // the pruned root is still recorded
             Assert.Equal(result.EvidenceCoverage, entry.EvidenceCoverage!.Value);
+            Assert.Equal(result.RunnerUpScore, entry.RunnerUpScore);
+        }
+
+        [Fact]
+        public void Resolve_IdenticalTopCandidates_AreAmbiguous_AndNotConfident()
+        {
+            // Two candidates with identical structural evidence: margin = 0 < 0.05, so the
+            // resolver must say "I don't know" instead of silently picking the tie-break winner.
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Save",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            };
+            var root = new UiElementInfo { ControlType = "Window", SiblingIndex = 999, SiblingCount = 1 };
+            foreach (var automationId in new[] { "candidateA", "candidateB" })
+            {
+                root.Children.Add(new UiElementInfo
+                {
+                    ControlType = "Button",
+                    AutomationId = automationId,
+                    Name = "Save",
+                    ParentControlType = "Window",
+                    SiblingIndex = 0,
+                    SiblingCount = 2,
+                    BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+                });
+            }
+
+            var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+
+            Assert.NotNull(result.Matched); // deterministic tie-break still picks one
+            Assert.Equal(1.0, result.Score);
+            Assert.Equal(1.0, result.RunnerUpScore);
+            Assert.False(result.IsConfident, "A zero margin must not be confident even at score 1.0.");
+        }
+
+        [Fact]
+        public void Resolve_ClearWinner_RecordsRunnerUp_AndStaysConfident()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            };
+            var root = new UiElementInfo { ControlType = "Window", SiblingIndex = 999, SiblingCount = 1 };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "clearWinner",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "distantRunnerUp",
+                Name = "Something Else Entirely",
+                ParentControlType = "Window",
+                SiblingIndex = 1,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(400, 400, 50, 20),
+            });
+
+            var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+
+            Assert.Equal("clearWinner", result.Matched!.AutomationId);
+            Assert.True(result.IsConfident, $"Score {result.Score} with runner-up {result.RunnerUpScore} should clear the margin.");
+            Assert.NotNull(result.RunnerUpScore);
+            Assert.True(result.Score - result.RunnerUpScore!.Value >= 0.05, "Margin should be at least the default MinimumCandidateMargin.");
+        }
+
+        [Fact]
+        public void Resolve_SingleCandidate_HasNoRunnerUp_AndMarginDoesNotBlock()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            };
+            var root = new UiElementInfo { ControlType = "Window", SiblingIndex = 999, SiblingCount = 1 };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "onlyCandidate",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            });
+
+            var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+
+            Assert.Equal("onlyCandidate", result.Matched!.AutomationId);
+            Assert.Null(result.RunnerUpScore);
+            Assert.True(result.IsConfident, "With no runner-up there is no competition - margin must not block.");
+        }
+
+        [Fact]
+
+        public void CandidateMargin_SatisfiesBothCasesFromIssue4()
+        {
+            var minimumMargin = SimilarityWeights.Default.MinimumCandidateMargin;
+
+            // Issue #4's two suggested cases, verbatim. They also pin down why the default is
+            // 0.05 rather than the "e.g. 0.10" the issue text floats: 0.88 - 0.79 = 0.09, so a
+            // 0.10 threshold would make the issue's own first case fail. Anything in
+            // (0.001, 0.057] satisfies both cases and the WinForms demo margin below;
+            // recalibration against real data is #15's job, not a reason to reopen #4.
+            Assert.True(CandidateMargin.HasSufficientMargin(0.88, 0.79, minimumMargin), "0.88 vs 0.79 is a clear winner.");
+            Assert.False(CandidateMargin.HasSufficientMargin(0.88, 0.879, minimumMargin), "0.88 vs 0.879 is a coin flip, not a match.");
+            Assert.True(CandidateMargin.HasSufficientMargin(0.88, null, minimumMargin), "No runner-up means no competition.");
+        }
+
+        [Fact]
+
+        public void Resolve_WinFormsDemoScenario_KeepsMarginAboveThreshold()
+        {
+            // Guard for the flagship demo (txtEmail -> textBox1). Its runner-up is txtLastName -
+            // a sibling Edit one row up, structurally almost identical - so the margin is only
+            // ~0.057 against a 0.05 threshold: barely 0.007 of headroom. Any weight or tolerance
+            // change that eats it silently turns the demo AMBIGUOUS and diverts it to LLM
+            // fallback. This test fails first, on every platform, with the actual number -
+            // instead of the Windows-only live MainFormScenarioTests failing for reasons that
+            // look unrelated.
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "",
+                AutomationId = "txtEmail",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainForm",
+                SiblingIndex = 2,
+                SiblingCount = 7,
+                BoundingRectangle = new BoundingRectangle(112, 70, 200, 23),
+            };
+            var currentTree = BuildCurrentMainFormTree(renamedEmailAutomationId: "textBox1");
+            var minimumMargin = SimilarityWeights.Default.MinimumCandidateMargin;
+
+            var result = SelfHealingResolver.Resolve(expected, currentTree, log: _ => { });
+
+            Assert.Equal("textBox1", result.Matched!.AutomationId);
+            Assert.NotNull(result.RunnerUpScore);
+            var margin = result.Score - result.RunnerUpScore!.Value;
+            Assert.True(
+                margin >= minimumMargin,
+                $"The demo scenario's runner-up margin dropped to {margin:F4}, below MinimumCandidateMargin ({minimumMargin:F2}). " +
+                "If a scoring weight changed deliberately, recalibrate the margin default against the #15 benchmark " +
+                "rather than loosening this assertion.");
+            Assert.True(result.IsConfident, $"The demo must heal confidently without LLM fallback (margin {margin:F4}).");
         }
 
         // A heuristic score deliberately pushed well below MinimumConfidence (0.5): mismatched

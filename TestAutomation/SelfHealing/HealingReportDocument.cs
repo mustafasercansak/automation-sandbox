@@ -6,9 +6,10 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
-        // v2: entries carry EvidenceCoverage and the full scored candidate list (added for
-        // the missing-evidence gate, issue #3) - additive only, v1 reports still deserialize.
-        public const int CurrentSchemaVersion = 2;
+        // v3: entries carry RunnerUpScore (margin gate, issue #4) - additive over v2, which
+        // added EvidenceCoverage and the full candidate list (#3). Older reports upgrade in
+        // place; only newer-than-current schemas are rejected.
+        public const int CurrentSchemaVersion = 3;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
@@ -30,7 +31,11 @@ namespace SelfHealing
 
     public sealed class HealingReportEntry
     {
-        private const double HeuristicReviewMargin = 0.10;
+        // Renamed from HeuristicReviewMargin: that name collided with the runner-up margin
+        // gate (issue #4). This one is different - it flags heuristic matches whose score
+        // sits barely above the confidence threshold, i.e. proximity to the threshold, not
+        // distance from the runner-up.
+        private const double ReviewProximityBand = 0.10;
 
         public const string AcceptedStatus = "accepted";
         public const string AcceptedWithLlmStatus = "accepted-with-llm";
@@ -54,6 +59,11 @@ namespace SelfHealing
         // would be misread as thin evidence by offline threshold sweeps.
 
         public double? EvidenceCoverage { get; set; }
+
+        // Second-best candidate score at decision time (null = no runner-up). Persisted so
+        // the margin gate's behavior is auditable offline, not just the final verdict.
+
+        public double? RunnerUpScore { get; set; }
         public List<HealingReportCandidate>? Candidates { get; set; }
 
         public static HealingReportEntry FromHealResult(
@@ -97,6 +107,7 @@ namespace SelfHealing
                 AcceptedSnapshot = UiElementSnapshot.Capture(acceptedSnapshot),
                 ScoreBreakdown = result.ScoreBreakdown,
                 EvidenceCoverage = result.EvidenceCoverage,
+                RunnerUpScore = result.RunnerUpScore,
                 Candidates = result.Candidates?
                     .Select(c => new HealingReportCandidate
                     {
@@ -123,7 +134,7 @@ namespace SelfHealing
                 return AcceptedWithLlmStatus;
             }
 
-            return result.Score - result.ConfidenceThreshold <= HeuristicReviewMargin
+            return result.Score - result.ConfidenceThreshold <= ReviewProximityBand
                 ? ManualReviewStatus
                 : AcceptedStatus;
         }
