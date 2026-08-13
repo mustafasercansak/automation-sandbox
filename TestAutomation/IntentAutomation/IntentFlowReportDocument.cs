@@ -5,10 +5,13 @@ namespace IntentAutomation
 {
     public sealed class IntentFlowReportDocument
     {
+        // Schema v3 (issue #9): added AssertionKind and ExpectedValue to IntentFlowReportStep so a
+        // reviewer can tell from the report whether a step produced a real assertion or only a
+        // review marker - the generated code is not always at hand when the report is read.
         // Schema v2 (issue #5): added BestCandidateSemanticScore and RunnerUpScore to IntentFlowReportStep
         // for full visibility into semantic gating and candidate runner-up margins.
         // Schema v1: initial pipeline report with BestCandidateScore and locator expression.
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public string ScenarioName { get; set; } = "";
@@ -53,6 +56,8 @@ namespace IntentAutomation
                     TargetDescription = stepResult.Step.TargetDescription,
                     Value = stepResult.Step.Value,
                     ExpectedOutcome = stepResult.Step.ExpectedOutcome,
+                    AssertionKind = stepResult.Step.AssertionKind.ToString(),
+                    ExpectedValue = stepResult.Step.ExpectedValue,
                     CandidateCount = stepResult.Candidates.Count,
                     BestCandidateScore = best?.Score,
                     BestCandidateSemanticScore = best?.SemanticScore,
@@ -91,6 +96,13 @@ namespace IntentAutomation
         public string TargetDescription { get; set; } = "";
         public string Value { get; set; } = "";
         public string ExpectedOutcome { get; set; } = "";
+
+        // Structured assertion the step generated code from (issue #9). "None" means the outcome
+        // could not be mapped to a known AssertionKind, so the generated test carries a review
+        // marker instead of a real assertion - visible here without opening the generated file.
+        public string AssertionKind { get; set; } = "";
+        public string ExpectedValue { get; set; } = "";
+
         public int CandidateCount { get; set; }
         public double? BestCandidateScore { get; set; }
         public double? BestCandidateSemanticScore { get; set; }

@@ -79,6 +79,13 @@ Each step can carry:
 - `TargetDescription`
 - `Value`
 - `ExpectedOutcome`
+- `AssertionKind`: `Visible`, `NotVisible`, `TextEquals`, `TextContains`, `ValueEquals`, `UrlEquals`, `UrlContains`
+- `ExpectedValue`: Target value for value-checked assertions (e.g. `"$125"`)
+
+Assert generation behavior across all generators is configured via `AssertGenerationMode`:
+- `Strict` (default): Emits real assertions for mapped `AssertionKind`s; emits inconclusive review checks (`Assert.Inconclusive` / `test.skip` / `Assert.True(false, ...)`) for unmapped kinds.
+- `Lenient`: Emits real assertions for mapped kinds; emits presence checks with a `// TODO` review comment for unmapped kinds.
+- `Fallback`: Emits presence/visibility checks for unmapped kinds.
 
 ### 2. Intent Planner
 
@@ -296,6 +303,11 @@ output and self-healing are separate, already-implemented concerns.
 The report explains each step's intent, candidate count, best locator expression,
 review status, recording result, and generated C#/TypeScript code. This currently covers
 the web pipeline only (see note above).
+
+Schema v3 adds `AssertionKind` and `ExpectedValue` per step, so a reviewer can tell from
+the report alone whether a step generated a real assertion (e.g. `TextEquals` / `"$125"`)
+or only a review marker (`None`) — without opening the generated test file. Schema v2
+added `BestCandidateSemanticScore` and `RunnerUpScore`.
 
 ## Proposed Milestone Plan
 

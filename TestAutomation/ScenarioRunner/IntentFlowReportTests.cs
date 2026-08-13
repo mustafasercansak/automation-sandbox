@@ -36,6 +36,59 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void FromPipelineResult_CarriesStructuredAssertionPerStep()
+        {
+            // Issue #9: the report must show whether a step produced a real assertion or only a
+            // review marker - a reviewer reading the report does not have the generated file open.
+            var valueStep = new IntentStep
+            {
+                Order = 1,
+                ActionType = IntentActionType.Assert,
+                LocatorKey = "Assert.OrderTotal",
+                TestIntent = "Verify the order total",
+                ExpectedOutcome = "Order total should be $125",
+                AssertionKind = AssertionKind.TextEquals,
+                ExpectedValue = "$125",
+            };
+            var unmappedStep = new IntentStep
+            {
+                Order = 2,
+                ActionType = IntentActionType.Assert,
+                LocatorKey = "Assert.Mystery",
+                TestIntent = "Verify something the planner could not map",
+                ExpectedOutcome = "The workflow behaves correctly",
+            };
+            var scenario = new IntentScenario
+            {
+                Name = "Order flow",
+                Goal = "Check the order total",
+                Steps = new List<IntentStep> { valueStep, unmappedStep },
+            };
+
+            var document = IntentFlowReportDocument.FromPipelineResult(new IntentAutomationPipelineResult
+            {
+                Planning = new IntentPlanningResult { Scenario = scenario },
+                Exploration = new IntentExplorationResult
+                {
+                    Scenario = scenario,
+                    StepResults = new List<IntentStepExplorationResult>
+                    {
+                        new IntentStepExplorationResult { Step = valueStep },
+                        new IntentStepExplorationResult { Step = unmappedStep },
+                    },
+                },
+            });
+
+            Assert.Equal(3, IntentFlowReportDocument.CurrentSchemaVersion);
+            Assert.Equal(3, document.SchemaVersion);
+            Assert.Equal("TextEquals", document.Steps[0].AssertionKind);
+            Assert.Equal("$125", document.Steps[0].ExpectedValue);
+            // An unmapped outcome must surface as "None" rather than silently looking like a real check.
+            Assert.Equal("None", document.Steps[1].AssertionKind);
+            Assert.Equal("", document.Steps[1].ExpectedValue);
+        }
+
+        [Fact]
         public void FileSink_WritesJsonAndHtmlReports()
         {
             var document = IntentFlowReportDocument.FromPipelineResult(BuildPipelineResult());

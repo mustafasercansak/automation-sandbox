@@ -66,6 +66,32 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ParsesStructuredAssertion_FromModelResponse()
+        {
+            const string anthropicResponseJson = """
+            {
+              "content": [
+                { "type": "text", "text": "{\"steps\": [{\"actionType\": \"Assert\", \"targetDescription\": \"order total\", \"value\": \"\", \"testIntent\": \"verify total\", \"expectedOutcome\": \"Order total is $125\", \"locatorKey\": \"Assert.OrderTotal\", \"assertionKind\": \"TextEquals\", \"expectedValue\": \"$125\"}]}" }
+              ]
+            }
+            """;
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(anthropicResponseJson, Encoding.UTF8, "application/json"),
+            });
+            var planner = new LlmIntentPlanner(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+
+            var result = await planner.PlanAsync(BuildRequest());
+
+            Assert.Empty(result.Diagnostics);
+            Assert.Single(result.Scenario.Steps);
+            var step = result.Scenario.Steps[0];
+            Assert.Equal(IntentActionType.Assert, step.ActionType);
+            Assert.Equal(AssertionKind.TextEquals, step.AssertionKind);
+            Assert.Equal("$125", step.ExpectedValue);
+        }
+
+        [Fact]
         public async Task InvalidActionType_DegradesToDeterministicPlanner()
         {
             const string anthropicResponseJson = """

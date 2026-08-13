@@ -36,11 +36,13 @@ using only these action types: Navigate, Fill, Click, Select, Assert. Use Naviga
 if a target URL is given. Use Fill/Select for each relevant piece of test data (Select
 for a dropdown/choice-like field, Fill otherwise). Add a final Click step for whatever
 submits/saves/completes the goal, and a final Assert step describing how to verify it
-succeeded, when the goal implies a checkable outcome.
+succeeded, when the goal implies a checkable outcome. For Assert steps, also include
+""assertionKind"" (Visible, NotVisible, TextEquals, TextContains, ValueEquals, UrlEquals, UrlContains)
+and ""expectedValue"" (the expected text, value, or URL, empty for Visible/NotVisible).
 
 Respond with ONLY a single JSON object, no markdown fences, no other text, in this shape:
 {{""steps"": [
-  {{""actionType"": ""Navigate|Fill|Click|Select|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<value to enter/select, empty for Click/Assert>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""locatorKey"": ""<short stable dotted key, e.g. Field.Email or Action.PrimarySubmit>""}}
+  {{""actionType"": ""Navigate|Fill|Click|Select|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<value to enter/select, empty for Click/Assert>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""locatorKey"": ""<short stable dotted key, e.g. Field.Email or Action.PrimarySubmit>"", ""assertionKind"": ""<Visible|NotVisible|TextEquals|TextContains|ValueEquals|UrlEquals|UrlContains>"", ""expectedValue"": ""<expected value for assertion>""}}
 ]}}";
         }
 
@@ -93,15 +95,38 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 throw new FormatException($"Step {order} is missing a targetDescription.");
             }
 
+            var expectedOutcome = GetString(element, "expectedOutcome") ?? "";
+            var testIntent = GetString(element, "testIntent") ?? "";
+            var assertionKindText = GetString(element, "assertionKind");
+            var expectedValue = GetString(element, "expectedValue") ?? "";
+            var assertionKind = AssertionKind.None;
+
+            if (!string.IsNullOrWhiteSpace(assertionKindText) && Enum.TryParse<AssertionKind>(assertionKindText, ignoreCase: true, out var parsedKind))
+            {
+                assertionKind = parsedKind;
+            }
+
+            if (actionType == IntentActionType.Assert && assertionKind == AssertionKind.None)
+            {
+                var (derivedKind, derivedValue) = DeterministicIntentPlanner.DeriveAssertion(expectedOutcome, testIntent);
+                assertionKind = derivedKind != AssertionKind.None ? derivedKind : AssertionKind.Visible;
+                if (string.IsNullOrEmpty(expectedValue))
+                {
+                    expectedValue = derivedValue;
+                }
+            }
+
             return new IntentStep
             {
                 Order = order,
                 ActionType = actionType,
                 TargetDescription = targetDescription!,
                 Value = GetString(element, "value") ?? "",
-                TestIntent = GetString(element, "testIntent") ?? "",
-                ExpectedOutcome = GetString(element, "expectedOutcome") ?? "",
+                TestIntent = testIntent,
+                ExpectedOutcome = expectedOutcome,
                 LocatorKey = GetString(element, "locatorKey") ?? "",
+                AssertionKind = assertionKind,
+                ExpectedValue = expectedValue,
             };
         }
 

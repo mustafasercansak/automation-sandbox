@@ -46,6 +46,7 @@ namespace ScenarioRunner
                         ActionType = IntentActionType.Assert,
                         LocatorKey = "Assert.ResultVisible",
                         TestIntent = "Verify customer result appears",
+                        AssertionKind = AssertionKind.Visible,
                     },
                 }
             };
@@ -65,6 +66,143 @@ namespace ScenarioRunner
             Assert.Contains("await Page.GetByRole(AriaRole.Button, new() { Name = \"Save\" }).ClickAsync();", code);
             Assert.Contains("await Expect(Page.GetByTestId(\"customer-records\")).ToBeVisibleAsync();", code);
             Assert.Contains("// locator: Field.Email", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsTextEqualsAssertion_WhenAssertionKindIsTextEquals()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify order total",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Assert.OrderTotal",
+                        AssertionKind = AssertionKind.TextEquals,
+                        ExpectedValue = "$125",
+                        ExpectedOutcome = "Order total should be $125",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Assert.OrderTotal", "order-total", "page.GetByTestId(\"order-total\")")
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await Expect(Page.GetByTestId(\"order-total\")).ToHaveTextAsync(\"$125\");", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsUrlAssertion_WithoutRequiringElementLocator()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify checkout URL",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        AssertionKind = AssertionKind.UrlEquals,
+                        ExpectedValue = "https://example.test/checkout/success",
+                        ExpectedOutcome = "Navigates to https://example.test/checkout/success",
+                    }
+                }
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, new List<IntentLocatorRecordingResult>());
+
+            Assert.Contains("await Expect(Page).ToHaveURLAsync(\"https://example.test/checkout/success\");", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsInconclusive_WhenAssertionKindIsNone_InStrictMode_EvenWithoutRecordedLocator()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify strange outcome",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Assert.Outcome",
+                        AssertionKind = AssertionKind.None,
+                        ExpectedOutcome = "Complex unspecified business state",
+                    }
+                }
+            };
+
+            // No locator recorded for Assert.Outcome
+            var code = new PlaywrightCSharpTestGenerator(new PlaywrightCSharpTestGenerationOptions { AssertGenerationMode = AssertGenerationMode.Strict }).Generate(scenario, new List<IntentLocatorRecordingResult>());
+
+            Assert.Contains("Assert.Inconclusive(\"Review: Unmapped assertion outcome 'Complex unspecified business state'.\");", code);
+            Assert.DoesNotContain("No recorded locator", code);
+        }
+
+        [Fact]
+        public void Generate_EscapesNewlines_InExpectedValue()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify multiline text",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Assert.Address",
+                        AssertionKind = AssertionKind.TextEquals,
+                        ExpectedValue = "Line 1\r\nLine 2",
+                        ExpectedOutcome = "Address should be Line 1\nLine 2",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Assert.Address", "address-box", "page.GetByTestId(\"address-box\")")
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await Expect(Page.GetByTestId(\"address-box\")).ToHaveTextAsync(\"Line 1\\r\\nLine 2\");", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsReviewCommentAndVisibility_WhenAssertionKindIsNone_InLenientMode()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify strange outcome",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Assert.Outcome",
+                        AssertionKind = AssertionKind.None,
+                        ExpectedOutcome = "Complex unspecified business state",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Assert.Outcome", "outcome-box", "page.GetByTestId(\"outcome-box\")")
+            };
+
+            var code = new PlaywrightCSharpTestGenerator(new PlaywrightCSharpTestGenerationOptions { AssertGenerationMode = AssertGenerationMode.Lenient }).Generate(scenario, recordings);
+
+            Assert.Contains("// TODO: Review unmapped expected outcome: Complex unspecified business state", code);
+            Assert.Contains("await Expect(Page.GetByTestId(\"outcome-box\")).ToBeVisibleAsync();", code);
         }
 
         [Fact]

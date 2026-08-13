@@ -98,13 +98,14 @@ namespace IntentAutomation
 
             recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
             var findExpression = FindExpression(recording?.Record?.Snapshot);
-            if (string.IsNullOrWhiteSpace(findExpression))
+            var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
+            if (locatorRequired && string.IsNullOrWhiteSpace(findExpression))
             {
                 code.AppendLine($"            Assert.True(false, \"No recorded locator for {EscapeString(step.LocatorKey)}.\");");
                 return;
             }
 
-            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey))
+            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
                 code.AppendLine($"            // locator: {EscapeComment(step.LocatorKey)}");
             }
@@ -121,7 +122,7 @@ namespace IntentAutomation
                     code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");
                     break;
                 case IntentActionType.Assert:
-                    code.AppendLine($"            Assert.NotNull(window.{findExpression});");
+                    AssertionCodeEmitter.EmitFlaUiCSharp(step, findExpression, _options.AssertGenerationMode, code);
                     break;
                 default:
                     code.AppendLine($"            Assert.True(false, \"Unsupported intent action {step.ActionType}.\");");

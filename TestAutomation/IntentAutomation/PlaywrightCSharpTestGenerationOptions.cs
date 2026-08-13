@@ -6,5 +6,6 @@ namespace IntentAutomation
         public string ClassName { get; set; } = "";
         public string MethodName { get; set; } = "";
         public bool IncludeLocatorComments { get; set; } = true;
+        public AssertGenerationMode AssertGenerationMode { get; set; } = AssertGenerationMode.Strict;
     }
 }
