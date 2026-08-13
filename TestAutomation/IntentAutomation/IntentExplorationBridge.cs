@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UiModel;
 using WebDiscovery;
 
 namespace IntentAutomation
@@ -15,6 +16,18 @@ namespace IntentAutomation
             if (_options.MaxCandidatesPerStep < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(options), "MaxCandidatesPerStep must be at least one.");
+            }
+            if (_options.ReviewThreshold < 0.0 || _options.ReviewThreshold > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "ReviewThreshold must be between 0.0 and 1.0.");
+            }
+            if (_options.MinimumSemanticScore < 0.0 || _options.MinimumSemanticScore > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "MinimumSemanticScore must be between 0.0 and 1.0.");
+            }
+            if (_options.MinimumCandidateMargin < 0.0 || _options.MinimumCandidateMargin > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "MinimumCandidateMargin must be between 0.0 and 1.0.");
             }
         }
 
@@ -67,10 +80,22 @@ namespace IntentAutomation
                 result.RequiresReview = true;
                 result.Diagnostic = "No visible DOM candidate matched this intent step.";
             }
-            else if (candidates[0].Score < _options.ReviewThreshold)
+            else
             {
-                result.RequiresReview = true;
-                result.Diagnostic = $"Best candidate score {candidates[0].Score:F2} is below review threshold {_options.ReviewThreshold:F2}.";
+                var runnerUpScore = candidates.Count > 1 ? candidates[1].Score : (double?)null;
+                var review = IntentCandidateReviewEvaluator.Evaluate(
+                    bestScore: candidates[0].Score,
+                    bestSemanticScore: candidates[0].SemanticScore,
+                    runnerUpScore: runnerUpScore,
+                    reviewThreshold: _options.ReviewThreshold,
+                    minimumSemanticScore: _options.MinimumSemanticScore,
+                    minimumCandidateMargin: _options.MinimumCandidateMargin);
+
+                if (review.RequiresReview)
+                {
+                    result.RequiresReview = true;
+                    result.Diagnostic = review.Diagnostic;
+                }
             }
 
             return result;
@@ -90,10 +115,7 @@ namespace IntentAutomation
                 element.Text,
                 element.TestId,
                 element.Id,
-                element.NameAttribute,
-                element.Role,
-                element.TagName,
-                element.CssSelector);
+                element.NameAttribute);
             var semanticScore = TokenOverlap(targetText, elementText);
             var locatorSuggestions = PlaywrightLocatorEmitter.Suggest(element).ToList();
             var locatorScore = locatorSuggestions.Count == 0 ? 0.0 : locatorSuggestions[0].Confidence;
@@ -108,6 +130,7 @@ namespace IntentAutomation
                 Step = step,
                 Element = element,
                 Score = score,
+                SemanticScore = semanticScore,
                 Reason = $"action={actionScore:F2}; semantic={semanticScore:F2}; locator={locatorScore:F2}",
                 LocatorSuggestions = locatorSuggestions,
             };
@@ -138,9 +161,14 @@ namespace IntentAutomation
                         ? 0.25
                         : 0.15;
                 case IntentActionType.Assert:
-                    return !string.IsNullOrWhiteSpace(element.AccessibleName) || !string.IsNullOrWhiteSpace(element.Text) || tag == "table" || role == "status" || role == "alert"
-                        ? 1.0
-                        : 0.1;
+                    if (tag == "table" || tag == "tbody" || role == "grid" || role == "table" || role == "status" || role == "alert")
+                    {
+                        return 1.0;
+                    }
+
+                    return !string.IsNullOrWhiteSpace(element.AccessibleName) || !string.IsNullOrWhiteSpace(element.Text)
+                        ? 0.30
+                        : 0.10;
                 default:
                     return 0.0;
             }

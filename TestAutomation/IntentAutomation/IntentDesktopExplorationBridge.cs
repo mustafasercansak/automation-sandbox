@@ -21,6 +21,18 @@ namespace IntentAutomation
             {
                 throw new ArgumentOutOfRangeException(nameof(options), "MaxCandidatesPerStep must be at least one.");
             }
+            if (_options.ReviewThreshold < 0.0 || _options.ReviewThreshold > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "ReviewThreshold must be between 0.0 and 1.0.");
+            }
+            if (_options.MinimumSemanticScore < 0.0 || _options.MinimumSemanticScore > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "MinimumSemanticScore must be between 0.0 and 1.0.");
+            }
+            if (_options.MinimumCandidateMargin < 0.0 || _options.MinimumCandidateMargin > 1.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "MinimumCandidateMargin must be between 0.0 and 1.0.");
+            }
         }
 
         public IntentDesktopExplorationResult Match(IntentScenario scenario, UiElementInfo root)
@@ -73,10 +85,22 @@ namespace IntentAutomation
                 result.RequiresReview = true;
                 result.Diagnostic = "No usable desktop candidate matched this intent step.";
             }
-            else if (candidates[0].Score < _options.ReviewThreshold)
+            else
             {
-                result.RequiresReview = true;
-                result.Diagnostic = $"Best candidate score {candidates[0].Score:F2} is below review threshold {_options.ReviewThreshold:F2}.";
+                var runnerUpScore = candidates.Count > 1 ? candidates[1].Score : (double?)null;
+                var review = IntentCandidateReviewEvaluator.Evaluate(
+                    bestScore: candidates[0].Score,
+                    bestSemanticScore: candidates[0].SemanticScore,
+                    runnerUpScore: runnerUpScore,
+                    reviewThreshold: _options.ReviewThreshold,
+                    minimumSemanticScore: _options.MinimumSemanticScore,
+                    minimumCandidateMargin: _options.MinimumCandidateMargin);
+
+                if (review.RequiresReview)
+                {
+                    result.RequiresReview = true;
+                    result.Diagnostic = review.Diagnostic;
+                }
             }
 
             return result;
@@ -91,7 +115,7 @@ namespace IntentAutomation
             }
 
             var targetText = Join(step.TargetDescription, step.TestIntent, step.ExpectedOutcome, step.LocatorKey);
-            var elementText = Join(element.Name, element.AutomationId, element.ClassName, element.ControlType);
+            var elementText = Join(element.Name, element.AutomationId, element.ClassName);
             var semanticScore = TokenOverlap(targetText, elementText);
             var exactBonus = ContainsNormalized(elementText, step.TargetDescription)
                 || ContainsNormalized(elementText, step.LocatorKey)
@@ -104,6 +128,7 @@ namespace IntentAutomation
                 Step = step,
                 Element = element,
                 Score = score,
+                SemanticScore = semanticScore,
                 Reason = $"action={actionScore:F2}; semantic={semanticScore:F2}",
             };
         }
