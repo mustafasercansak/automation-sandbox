@@ -12,6 +12,11 @@ on:
         required: true
         default: true
         type: boolean
+      dry_run:
+        description: 'Validate and pack all 7 packages without publishing GitHub Release'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -60,9 +65,23 @@ jobs:
       - name: Pack IntentAutomation
         run: dotnet pack TestAutomation/IntentAutomation/IntentAutomation.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      - name: Pack PlaywrightLiveExploration
+        run: dotnet pack TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExploration.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Validate package contents
         shell: pwsh
         run: ./eng/Validate-NuGetPackages.ps1 -PackageDirectory ./nupkgs -Version $env:PACKAGE_VERSION
+
+      # always(): when validation fails, the produced packages are exactly what needs
+      # inspecting, so the artifact must survive a failed run.
+      - name: Upload packages
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-nupkgs
+          path: |
+            ./nupkgs/*.nupkg
+            ./nupkgs/*.snupkg
 
       - name: Write release notes
         shell: pwsh
@@ -86,11 +105,13 @@ jobs:
           - AutomationSandbox.Discovery
           - AutomationSandbox.WebDiscovery
           - AutomationSandbox.IntentAutomation
+          - AutomationSandbox.PlaywrightLiveExploration
 
           This release publishes package files as GitHub Release assets only. It does not push to nuget.org or GitHub Packages.
           "@ | Out-File -FilePath release-notes.md -Encoding utf8
 
       - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
