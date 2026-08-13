@@ -14,6 +14,14 @@ namespace SelfHealing
         public double PositionToleranceRadius { get; set; } = 300.0;
         public double MinimumConfidence { get; set; } = 0.5;
 
+        // Minimum fraction of the total signal weight that must be backed by non-null
+        // evidence before a heuristic match can be IsConfident. With the default weights a
+        // ControlType-only match has coverage 0.20, so 0.40 demands at least one more real
+        // signal. Estimate - the mechanism is final, the value is recalibrated against the
+        // real-world benchmark dataset (see issue #15).
+
+        public double MinimumEvidenceWeight { get; set; } = 0.4;
+
         // Separate from MinimumConfidence: an LLM's self-reported confidence isn't calibrated
         // the same way as the heuristic's structural score, so a low-confidence LLM pick
         // shouldn't silently replace a heuristic result just for having *a* pick.
@@ -37,6 +45,7 @@ namespace SelfHealing
             ValidateNonNegative(PositionWeight, nameof(PositionWeight));
             ValidateNonNegative(PositionToleranceRadius, nameof(PositionToleranceRadius));
             ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
+            ValidateRange(MinimumEvidenceWeight, nameof(MinimumEvidenceWeight), 0.0, 1.0);
             ValidateRange(MinimumLlmConfidence, nameof(MinimumLlmConfidence), 0.0, 1.0);
             ValidateRange(MinCandidateScore, nameof(MinCandidateScore), 0.0, 1.0);
 

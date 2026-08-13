@@ -97,9 +97,16 @@ namespace SelfHealing
         private static string FormatScore(HealingReportEntry entry)
         {
             var confidence = entry.LlmConfidence ?? entry.Score;
+            // Evidence coverage next to the score: a manual-review badge alone doesn't tell
+            // the reviewer whether the problem was a low score or thin evidence. Entries
+            // upgraded from v1 reports have no coverage recorded - "unknown", not 0.
+            var evidence = entry.EvidenceCoverage.HasValue
+                ? " · evidence " + entry.EvidenceCoverage.Value.ToString("0.00", CultureInfo.InvariantCulture)
+                : " · evidence unknown";
             return confidence.ToString("0.00", CultureInfo.InvariantCulture) +
                 " / " +
-                entry.ConfidenceThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+                entry.ConfidenceThreshold.ToString("0.00", CultureInfo.InvariantCulture) +
+                evidence;
         }
 
         private static string FormatSnapshot(UiElementInfo? snapshot)

@@ -125,6 +125,9 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 | **`NameScore`** | `0.20` | Normalized Levenshtein distance on control label text: $1.0 - \frac{\text{Levenshtein}(a,b)}{\max(\text{len}_a, \text{len}_b)}$. |
 | **`PositionScore`** | `0.25` | Euclidean center-point distance score within `PositionToleranceRadius` ($300\text{px}$). |
 
+> [!NOTE]
+> **Missing signals score `null`, not `1.0`:** when both sides lack a signal (empty `Name`, empty `ParentControlType`, zero sibling metadata, unusable bounding box), the signal drops out of the weighted average entirely. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$), so a ControlType-only $1.0$ (coverage $0.20$) is never accepted as confident.
+
 ---
 
 ## 🔬 Framework Case Studies
@@ -325,6 +328,9 @@ $$\text{ToplamSkor} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{burada }
 | **`SiblingPositionScore`** | `0.15` | Oransal indeks mesafesi: $1.0 - \frac{\|idx_{exp} - idx_{cand}\|}{\max(cnt_{exp}, cnt_{cand})}$. |
 | **`NameScore`** | `0.20` | Etiket metni üzerindeki normalize Levenshtein mesafesi: $1.0 - \frac{\text{Levenshtein}(a,b)}{\max(\text{len}_a, \text{len}_b)}$. |
 | **`PositionScore`** | `0.25` | `PositionToleranceRadius` ($300\text{px}$) içinde Öklid merkez noktası mesafesi. |
+
+> [!NOTE]
+> **Eksik sinyal `1.0` değil `null` döner:** her iki tarafta da sinyal yoksa (boş `Name`, boş `ParentControlType`, sıfır kardeş metadata'sı, kullanılamaz çerçeve) sinyal ağırlıklı ortalamadan tamamen çıkarılır. Bir heuristic eşleşme ancak `Skor >= MinimumConfidence` **ve** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$) ise `IsConfident` olur — bu yüzden yalnızca ControlType'a dayanan bir $1.0$ (kapsam $0.20$) asla güvenilir sayılmaz.
 
 ---
 

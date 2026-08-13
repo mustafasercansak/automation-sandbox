@@ -16,15 +16,24 @@ namespace SelfHealing
             log ??= Console.WriteLine;
             var w = weights ?? SimilarityWeights.Default;
             w.Validate();
-            var scoredCandidates = ScoreCandidates(expected, currentTreeRoot, w);
+            // The report-worthy candidate list is the UNPRUNED one: an offline threshold
+            // sweep (#15) must be able to re-score below today's MinCandidateScore, so the
+            // prune has to happen after the evidence is captured, not before.
+            var allScored = ScoreAllCandidates(expected, currentTreeRoot, w);
+            var scoredCandidates = allScored.Where(c => c.TotalScore >= w.MinCandidateScore).ToList();
             if (scoredCandidates.Count == 0)
             {
                 log($"[SelfHealing] No structurally similar candidate was found for '{expected.AutomationId}' ({expected.ControlType}).");
-                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence };
+                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence, EvidenceCoverage = 0.0, EvidenceThreshold = w.MinimumEvidenceWeight, Candidates = allScored };
             }
 
             var best = scoredCandidates[0];
-            var confidenceLabel = best.TotalScore >= w.MinimumConfidence ? "CONFIDENT" : "LOW CONFIDENCE";
+            var isConfident = best.TotalScore >= w.MinimumConfidence && best.EvidenceCoverage >= w.MinimumEvidenceWeight;
+            var confidenceLabel = isConfident
+                ? "CONFIDENT"
+                : best.EvidenceCoverage < w.MinimumEvidenceWeight
+                    ? $"LOW EVIDENCE (coverage {best.EvidenceCoverage:F2} < {w.MinimumEvidenceWeight:F2})"
+                    : "LOW CONFIDENCE";
             log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) not found. " +
                 $"Best candidate: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
                 $"Score={best.TotalScore:F2} ({confidenceLabel}), chosen among {scoredCandidates.Count} candidate(s).");
@@ -35,6 +44,9 @@ namespace SelfHealing
                 CandidateCount = scoredCandidates.Count,
                 Source = HealSource.Heuristic,
                 ConfidenceThreshold = w.MinimumConfidence,
+                EvidenceCoverage = best.EvidenceCoverage,
+                EvidenceThreshold = w.MinimumEvidenceWeight,
+                Candidates = allScored,
                 ScoreBreakdown = best.Components,
             };
         }
@@ -126,6 +138,9 @@ namespace SelfHealing
                 CandidateCount = heuristicResult.CandidateCount,
                 Source = HealSource.Llm,
                 ConfidenceThreshold = w.MinimumLlmConfidence,
+                EvidenceCoverage = matchedCandidate.EvidenceCoverage,
+                EvidenceThreshold = heuristicResult.EvidenceThreshold,
+                Candidates = heuristicResult.Candidates,
                 ScoreBreakdown = heuristicResult.ScoreBreakdown,
                 LlmProviderName = best.ProviderName,
                 LlmConfidence = best.Confidence,
@@ -145,9 +160,18 @@ namespace SelfHealing
         {
             weights ??= SimilarityWeights.Default;
             weights.Validate();
+            return ScoreAllCandidates(expected, currentTreeRoot, weights)
+                .Where(c => c.TotalScore >= weights.MinCandidateScore)
+                .ToList();
+        }
+
+        // Same pipeline without the MinCandidateScore prune. The public ScoreCandidates
+        // keeps pruning (its contract), while Resolve() reports the full list so recorded
+        // evidence survives future threshold changes.
+        private static List<CandidateScore> ScoreAllCandidates(UiElementInfo expected, UiElementInfo currentTreeRoot, SimilarityWeights weights)
+        {
             return Flatten(currentTreeRoot)
                 .Select(candidate => SimilarityScorer.ScoreCandidate(expected, candidate, weights))
-                .Where(c => c.TotalScore >= weights.MinCandidateScore)
                 .OrderByDescending(c => c.TotalScore)
                 .ThenBy(c => c.Candidate.ControlType, StringComparer.Ordinal)
                 .ThenBy(c => c.Candidate.AutomationId, StringComparer.Ordinal)

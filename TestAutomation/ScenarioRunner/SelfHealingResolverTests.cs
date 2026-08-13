@@ -396,6 +396,60 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void SimilarityWeights_Validate_RejectsOutOfRangeMinimumEvidenceWeight()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumEvidenceWeight = 1.5 }.Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SimilarityWeights { MinimumEvidenceWeight = -0.1 }.Validate());
+        }
+
+        [Fact]
+        public async Task ResolveAsync_LlmPick_OnThinEvidenceCandidate_IsNotConfident_AndReportsPickedCoverage()
+        {
+            // Expected shares everything-empty with both candidates; only candidate B adds
+            // sibling metadata, so A has coverage 0.20 and B has 0.35. A scores 1.0 on
+            // ControlType alone but fails the evidence gate, so the LLM runs - and its pick
+            // must carry the PICKED candidate's coverage, not the heuristic winner's, and
+            // must still fail the gate (0.35 < 0.40).
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "",
+                ParentControlType = "",
+                SiblingIndex = 0,
+                SiblingCount = 0,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            };
+            var root = new UiElementInfo { ControlType = "Window" };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "aaaThin",
+                Name = "",
+                ParentControlType = "",
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "zzzWider",
+                Name = "",
+                ParentControlType = "",
+                SiblingIndex = 1,
+                SiblingCount = 3,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+
+            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c1", Confidence = 0.9 });
+            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal("zzzWider", result.Matched!.AutomationId);
+            Assert.Equal(0.35, result.EvidenceCoverage, 6);
+            Assert.False(result.IsConfident, "The evidence gate applies to LLM picks too - thin evidence stays thin.");
+        }
+
+        [Fact]
         public void SimilarityWeights_Default_ReturnsFreshInstanceEachTime()
         {
             var first = SimilarityWeights.Default;
@@ -404,6 +458,121 @@ namespace ScenarioRunner
 
             Assert.NotSame(first, second);
             Assert.Equal(0.5, second.MinimumConfidence);
+        }
+
+        [Fact]
+        public void Resolve_ControlTypeOnlyMatch_HasThinEvidence_AndIsNotConfident()
+        {
+            // Issue #3's core case: expected and candidate share only ControlType=Button;
+            // everything else is missing on both sides. The score may still be 1.0, but
+            // with only 0.20 of the total weight backed by evidence it must not be confident.
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "",
+                ParentControlType = "",
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            };
+            var root = new UiElementInfo { ControlType = "Window" };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnWhatever",
+                Name = "",
+                ParentControlType = "",
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+
+            var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+
+            Assert.NotNull(result.Matched);
+            Assert.Equal(1.0, result.Score);
+            Assert.Equal(0.20, result.EvidenceCoverage, 6);
+            Assert.False(result.IsConfident, "A ControlType-only 1.0 is thin evidence, not a confident match.");
+            Assert.Equal(1.0, result.ScoreBreakdown!.ControlTypeScore);
+            Assert.Null(result.ScoreBreakdown.NameScore);
+            Assert.Null(result.ScoreBreakdown.ParentControlTypeScore);
+            Assert.Null(result.ScoreBreakdown.SiblingPositionScore);
+            Assert.Null(result.ScoreBreakdown.PositionScore);
+        }
+
+        [Fact]
+        public void Resolve_FullEvidenceMatch_ReportsHighCoverage_AndStaysConfident()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "",
+                AutomationId = "txtEmail",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainForm",
+                SiblingIndex = 2,
+                SiblingCount = 7,
+                BoundingRectangle = new BoundingRectangle(112, 70, 200, 23),
+            };
+            var currentTree = BuildCurrentMainFormTree(renamedEmailAutomationId: "textBox1");
+
+            var result = SelfHealingResolver.Resolve(expected, currentTree, log: _ => { });
+
+            // Name is empty on both sides (null signal): 0.20 + 0.20 + 0.15 + 0.25 of the
+            // weight is backed by real evidence, well above MinimumEvidenceWeight (0.40).
+            Assert.Equal(0.80, result.EvidenceCoverage, 6);
+            Assert.True(result.IsConfident, $"Expected a confident match, but the score was: {result.Score}");
+        }
+
+        [Fact]
+        public void HealingReport_PersistsEveryCandidate_WithComponentsAndEvidenceCoverage()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            };
+            var root = new UiElementInfo { ControlType = "Window", SiblingIndex = 999, SiblingCount = 1 };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "nearMatch",
+                Name = "Email",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 50, 20),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "weakerMatch",
+                Name = "Something Else",
+                ParentControlType = "Window",
+                SiblingIndex = 1,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(400, 400, 50, 20),
+            });
+
+            var result = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+            var entry = HealingReportEntry.FromHealResult("email_field", expected, result.Matched!, result);
+
+            // The report must carry every scored candidate (not just the winner) with its
+            // TotalScore, Components, and EvidenceCoverage - and the list is UNPRUNED, so
+            // even the 0-scored root Window shows up; the #15 benchmark needs this for
+            // offline threshold sweeps below today's MinCandidateScore.
+            Assert.NotNull(entry.Candidates);
+            Assert.Equal(3, entry.Candidates!.Count);
+            Assert.All(entry.Candidates, c =>
+            {
+                Assert.NotNull(c.Components);
+                Assert.InRange(c.TotalScore, 0.0, 1.0);
+                Assert.InRange(c.EvidenceCoverage, 0.0, 1.0);
+            });
+            Assert.Equal("nearMatch", entry.Candidates[0].AutomationId);
+            Assert.Equal("weakerMatch", entry.Candidates[1].AutomationId);
+            Assert.Equal(0.0, entry.Candidates[2].TotalScore); // the pruned root is still recorded
+            Assert.Equal(result.EvidenceCoverage, entry.EvidenceCoverage!.Value);
         }
 
         // A heuristic score deliberately pushed well below MinimumConfidence (0.5): mismatched

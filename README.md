@@ -144,7 +144,11 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 | **`PositionScore`** | `0.25` | Euclidean center-point distance score within `PositionToleranceRadius` ($300\text{px}$). |
 
 > [!NOTE]
-> **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null`. Its weight is dynamically excluded from the denominator so that offscreen controls are neither penalized nor erroneously awarded $1.0$ center-point matches.
+> **Missing Signal Handling:** Every signal is nullable. When *both* sides lack a signal (empty `Name`, empty `ParentControlType`, zero sibling metadata, or an unusable bounding box), that signal scores `null` — it is excluded from the weighted average entirely, never treated as a perfect $1.0$ match. Two elements sharing only `ControlType` can still reach $\text{TotalScore} = 1.0$, but with `EvidenceCoverage` of only $0.20$.
+>
+> **`EvidenceCoverage` & `MinimumEvidenceWeight`:** `EvidenceCoverage` is the fraction of the total signal weight backed by non-null evidence. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$ by default) — a ControlType-only match is therefore never confident, regardless of its score.
+>
+> **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded $1.0$ center-point matches.
 
 > [!IMPORTANT]
 > **`MinimumConfidence` vs. `MinimumLlmConfidence`:**
@@ -172,7 +176,8 @@ var result = SelfHealingResolver.Resolve(expected, liveTree);
 if (result.IsConfident)
 {
     Console.WriteLine($"[Healed] Matched '{result.Matched!.AutomationId}' with score {result.Score:F2}");
-    Console.WriteLine($"  Name Score: {result.ScoreBreakdown?.NameScore}");
+    Console.WriteLine($"  Evidence Coverage: {result.EvidenceCoverage:F2}");
+    Console.WriteLine($"  Name Score: {result.ScoreBreakdown?.NameScore}"); // null when both sides lack a Name - no evidence, not a match
     Console.WriteLine($"  Position Score: {result.ScoreBreakdown?.PositionScore}");
 }
 ```

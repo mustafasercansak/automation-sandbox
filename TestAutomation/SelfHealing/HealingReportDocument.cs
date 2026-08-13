@@ -6,10 +6,26 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
-        public const int CurrentSchemaVersion = 1;
+        // v2: entries carry EvidenceCoverage and the full scored candidate list (added for
+        // the missing-evidence gate, issue #3) - additive only, v1 reports still deserialize.
+        public const int CurrentSchemaVersion = 2;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
+    }
+
+    // Slim per-candidate record for the report: enough to re-run offline threshold sweeps
+    // (#15 benchmark) without persisting the whole UiElementInfo tree per candidate. Null
+    // signals inside Components are the "no evidence" markers.
+
+    public sealed class HealingReportCandidate
+    {
+        public string AutomationId { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string ControlType { get; set; } = "";
+        public double TotalScore { get; set; }
+        public double EvidenceCoverage { get; set; }
+        public ScoreComponents? Components { get; set; }
     }
 
     public sealed class HealingReportEntry
@@ -33,6 +49,12 @@ namespace SelfHealing
         public UiElementInfo? PreviousSnapshot { get; set; }
         public UiElementInfo? AcceptedSnapshot { get; set; }
         public ScoreComponents? ScoreBreakdown { get; set; }
+
+        // Null on entries upgraded from a v1 report: "unknown", not "no evidence" - a 0.0
+        // would be misread as thin evidence by offline threshold sweeps.
+
+        public double? EvidenceCoverage { get; set; }
+        public List<HealingReportCandidate>? Candidates { get; set; }
 
         public static HealingReportEntry FromHealResult(
             string locatorKey,
@@ -74,6 +96,18 @@ namespace SelfHealing
                 PreviousSnapshot = UiElementSnapshot.Capture(previousSnapshot),
                 AcceptedSnapshot = UiElementSnapshot.Capture(acceptedSnapshot),
                 ScoreBreakdown = result.ScoreBreakdown,
+                EvidenceCoverage = result.EvidenceCoverage,
+                Candidates = result.Candidates?
+                    .Select(c => new HealingReportCandidate
+                    {
+                        AutomationId = c.Candidate.AutomationId,
+                        Name = c.Candidate.Name,
+                        ControlType = c.Candidate.ControlType,
+                        TotalScore = c.TotalScore,
+                        EvidenceCoverage = c.EvidenceCoverage,
+                        Components = c.Components,
+                    })
+                    .ToList(),
             };
         }
 

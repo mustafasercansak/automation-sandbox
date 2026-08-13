@@ -64,10 +64,18 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_PropagatesTestIntentDuringExecution()
         {
             var engine = new SelfHealingEngine();
+            // Full structural metadata on both sides: after the #3 evidence gate, a
+            // ControlType-only 1.0 match is thin evidence (coverage 0.20) and is no longer
+            // confident. This test is about intent propagation, so the match must be solid.
             var expected = new UiElementInfo
             {
                 ControlType = "Button",
                 AutomationId = "btnSave_Old",
+                Name = "Save",
+                ParentControlType = "Window",
+                SiblingIndex = 0,
+                SiblingCount = 1,
+                BoundingRectangle = new BoundingRectangle(112, 178, 100, 30),
             };
 
             var currentTree = new UiElementInfo
@@ -79,6 +87,11 @@ namespace ScenarioRunner
                     {
                         ControlType = "Button",
                         AutomationId = "btnSave_New",
+                        Name = "Save",
+                        ParentControlType = "Window",
+                        SiblingIndex = 0,
+                        SiblingCount = 1,
+                        BoundingRectangle = new BoundingRectangle(112, 178, 100, 30),
                     }
                 }
             };
@@ -93,6 +106,8 @@ namespace ScenarioRunner
                     capturedReceivedTarget = element;
                     if (element.AutomationId == "btnSave_Old")
                     {
+                        // A locator-resolution failure: the #2 default policy heals only
+                        // this exact class of exception, anything else bubbles up.
                         throw new ElementNotFoundException("Missing!");
                     }
                     return Task.FromResult(true);
@@ -105,13 +120,11 @@ namespace ScenarioRunner
             Assert.Equal("btnSave_New", capturedReceivedTarget!.AutomationId);
         }
 
-        // Stands in for the exception a UI framework throws when a locator no longer
-        // resolves; the engine's default healing policy matches by exception type name.
+        // Named exactly after the locator-failure class the engine's default shouldHeal
+        // policy accepts (it matches by type name, staying FlaUI-free - see issue #2).
         private sealed class ElementNotFoundException : Exception
         {
-            public ElementNotFoundException(string message) : base(message)
-            {
-            }
+            public ElementNotFoundException(string message) : base(message) { }
         }
     }
 }

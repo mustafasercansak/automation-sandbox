@@ -92,13 +92,17 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
             score = Math.Round(c.TotalScore, 2),
             components = new
             {
-                controlTypeScore = Math.Round(c.Components.ControlTypeScore, 2),
-                parentControlTypeScore = Math.Round(c.Components.ParentControlTypeScore, 2),
-                siblingPositionScore = Math.Round(c.Components.SiblingPositionScore, 2),
-                nameScore = Math.Round(c.Components.NameScore, 2),
-                positionScore = c.Components.PositionScore.HasValue ? Math.Round(c.Components.PositionScore.Value, 2) : (double?)null,
+                // Missing signals stay null in the prompt - the LLM should see "no evidence"
+                // rather than a fabricated 0.0/1.0.
+                controlTypeScore = RoundOrNull(c.Components.ControlTypeScore),
+                parentControlTypeScore = RoundOrNull(c.Components.ParentControlTypeScore),
+                siblingPositionScore = RoundOrNull(c.Components.SiblingPositionScore),
+                nameScore = RoundOrNull(c.Components.NameScore),
+                positionScore = RoundOrNull(c.Components.PositionScore),
             },
         };
+
+        private static double? RoundOrNull(double? value) => value.HasValue ? Math.Round(value.Value, 2) : (double?)null;
 
         private static string? FindFirstResponseJsonObject(string rawText)
         {

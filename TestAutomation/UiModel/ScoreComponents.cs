@@ -7,10 +7,15 @@ namespace UiModel
 
     public sealed class ScoreComponents
     {
-        public double ControlTypeScore { get; set; }
-        public double ParentControlTypeScore { get; set; }
-        public double SiblingPositionScore { get; set; }
-        public double NameScore { get; set; }
+        // All signals are nullable: "missing == missing" (e.g. both elements have an empty
+        // Name, an empty ParentControlType, or no sibling metadata) is reported as null -
+        // the signal is excluded from the weighted average entirely, never treated as a
+        // perfect 1.0 match. A null means "no evidence", not "full match" and not "failed".
+
+        public double? ControlTypeScore { get; set; }
+        public double? ParentControlTypeScore { get; set; }
+        public double? SiblingPositionScore { get; set; }
+        public double? NameScore { get; set; }
 
         // Null when the bounding rectangle wasn't usable (e.g. zero width/height) - excluded
         // from the weighted average entirely rather than penalized.
