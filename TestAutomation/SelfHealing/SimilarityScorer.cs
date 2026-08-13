@@ -11,34 +11,35 @@ namespace SelfHealing
         public static CandidateScore ScoreCandidate(UiElementInfo expected, UiElementInfo candidate, SimilarityWeights? weights = null)
         {
             var w = weights ?? SimilarityWeights.Default;
-            var controlTypeScore = string.Equals(expected.ControlType, candidate.ControlType, StringComparison.Ordinal)
-                ? 1.0
-                : 0.0;
-            var parentScore = string.Equals(expected.ParentControlType, candidate.ParentControlType, StringComparison.Ordinal)
-                ? 1.0
-                : 0.0;
+            var controlTypeScore = ExactMatchScore(expected.ControlType, candidate.ControlType);
+            var parentScore = ExactMatchScore(expected.ParentControlType, candidate.ParentControlType);
             var siblingScore = SiblingPositionScore(expected, candidate);
             var nameScore = NameSimilarity(expected.Name, candidate.Name);
             var positionScore = PositionSimilarity(expected.BoundingRectangle, candidate.BoundingRectangle, w.PositionToleranceRadius);
-            var weightedScore = controlTypeScore * w.ControlTypeWeight
-                              + parentScore * w.ParentControlTypeWeight
-                              + siblingScore * w.SiblingPositionWeight
-                              + nameScore * w.NameWeight;
-            var activeWeight = w.ControlTypeWeight
-                             + w.ParentControlTypeWeight
-                             + w.SiblingPositionWeight
-                             + w.NameWeight;
-            if (positionScore.HasValue)
-            {
-                weightedScore += positionScore.Value * w.PositionWeight;
-                activeWeight += w.PositionWeight;
-            }
+
+            // Only non-null signals participate: a missing signal neither rewards nor
+            // penalizes, its weight simply drops out of the weighted average. EvidenceCoverage
+            // keeps track of how much of the total weight actually fired, so the resolver can
+            // refuse to call a thin-evidence 1.0 "confident" (see MinimumEvidenceWeight).
+            var totalWeight = w.ControlTypeWeight
+                            + w.ParentControlTypeWeight
+                            + w.SiblingPositionWeight
+                            + w.NameWeight
+                            + w.PositionWeight;
+            var weightedScore = 0.0;
+            var activeWeight = 0.0;
+            Accumulate(controlTypeScore, w.ControlTypeWeight, ref weightedScore, ref activeWeight);
+            Accumulate(parentScore, w.ParentControlTypeWeight, ref weightedScore, ref activeWeight);
+            Accumulate(siblingScore, w.SiblingPositionWeight, ref weightedScore, ref activeWeight);
+            Accumulate(nameScore, w.NameWeight, ref weightedScore, ref activeWeight);
+            Accumulate(positionScore, w.PositionWeight, ref weightedScore, ref activeWeight);
 
             var totalScore = activeWeight <= 0.0 ? 0.0 : weightedScore / activeWeight;
             return new CandidateScore
             {
                 Candidate = candidate,
                 TotalScore = totalScore,
+                EvidenceCoverage = totalWeight <= 0.0 ? 0.0 : activeWeight / totalWeight,
                 Components = new ScoreComponents
                 {
                     ControlTypeScore = controlTypeScore,
@@ -50,23 +51,45 @@ namespace SelfHealing
             };
         }
 
-        private static double SiblingPositionScore(UiElementInfo expected, UiElementInfo candidate)
+        private static void Accumulate(double? score, double weight, ref double weightedScore, ref double activeWeight)
+        {
+            if (score.HasValue)
+            {
+                weightedScore += score.Value * weight;
+                activeWeight += weight;
+            }
+        }
+
+        // "Missing == missing" is not a match: when both sides lack the signal there is no
+        // evidence either way, so the signal reports null and drops out of the average.
+
+        private static double? ExactMatchScore(string expected, string candidate)
+        {
+            if (string.IsNullOrEmpty(expected) && string.IsNullOrEmpty(candidate))
+            {
+                return null;
+            }
+
+            return string.Equals(expected, candidate, StringComparison.Ordinal) ? 1.0 : 0.0;
+        }
+
+        private static double? SiblingPositionScore(UiElementInfo expected, UiElementInfo candidate)
         {
             var maxCount = Math.Max(expected.SiblingCount, candidate.SiblingCount);
             if (maxCount <= 0)
             {
-                return 1.0;
+                return null;
             }
 
             var diff = Math.Abs(expected.SiblingIndex - candidate.SiblingIndex);
             return Math.Max(0.0, 1.0 - (double)diff / maxCount);
         }
 
-        private static double NameSimilarity(string expected, string candidate)
+        private static double? NameSimilarity(string expected, string candidate)
         {
             if (string.IsNullOrEmpty(expected) && string.IsNullOrEmpty(candidate))
             {
-                return 1.0;
+                return null;
             }
 
             if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(candidate))

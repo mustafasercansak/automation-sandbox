@@ -249,5 +249,47 @@ namespace ScenarioRunner
             Assert.Equal(HealingReportEntry.ManualReviewStatus, borderlineHeuristic.ReviewStatus);
             Assert.Equal(HealingReportEntry.AcceptedWithLlmStatus, llmMatch.ReviewStatus);
         }
+
+        [Fact]
+        public void HealingReportFileSink_LoadsAndUpgradesV1Report_InsteadOfThrowing()
+        {
+            // A v1 report left on disk by an older build must not break Record(): v2 only
+            // added fields, so the old file upgrades in place. (The sink serializes with
+            // PascalCase property names - the fixture must match.)
+            File.WriteAllText(_tempReportPath, @"{
+  ""SchemaVersion"": 1,
+  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
+  ""Events"": [
+    { ""LocatorKey"": ""old"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Score"": 0.9, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 1 }
+  ]
+}");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            sink.Record(new HealingReportEntry
+            {
+                LocatorKey = "new",
+                Source = "heuristic",
+                ReviewStatus = "accepted",
+                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 1.0 }, // other components stay null
+            });
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
+            var root = doc.RootElement;
+            Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
+            Assert.Equal(2, root.GetProperty("Events").GetArrayLength());
+            // Null components must round-trip as real JSON nulls - "no evidence" is
+            // information the report must not lose.
+            var newEvent = root.GetProperty("Events")[1];
+            Assert.Equal(JsonValueKind.Null, newEvent.GetProperty("ScoreBreakdown").GetProperty("NameScore").ValueKind);
+        }
+
+        [Fact]
+        public void HealingReportFileSink_RejectsReportFromNewerSchema()
+        {
+            File.WriteAllText(_tempReportPath, @"{ ""SchemaVersion"": 99, ""Events"": [] }");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            Assert.Throws<NotSupportedException>(() => sink.Record(new HealingReportEntry { LocatorKey = "x" }));
+        }
     }
 }
