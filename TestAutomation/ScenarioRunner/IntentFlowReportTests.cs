@@ -30,6 +30,7 @@ namespace ScenarioRunner
             Assert.Equal("Field.Email", document.Steps[0].LocatorKey);
             Assert.True(document.Steps[0].Recorded);
             Assert.Equal(0.95, document.Steps[0].BestCandidateScore);
+            Assert.Equal(0.70, document.Steps[0].RunnerUpScore);
             Assert.Contains("CSharp", document.PlaywrightCSharpTestCode);
             Assert.Contains("TypeScript", document.PlaywrightTypeScriptTestCode);
         }
@@ -49,6 +50,7 @@ namespace ScenarioRunner
             var html = File.ReadAllText(htmlPath);
             Assert.Contains("Intent Flow Report", html);
             Assert.Contains("Field.Email", html);
+            Assert.Contains("runner-up: 0.70", html);
             Assert.Contains("Playwright TypeScript", html);
         }
 
@@ -76,9 +78,21 @@ namespace ScenarioRunner
                 Step = emailStep,
                 Element = new WebElementInfo { TagName = "input", Role = "textbox", TestId = "email-input" },
                 Score = 0.95,
+                SemanticScore = 0.50,
                 LocatorSuggestions = new List<PlaywrightLocatorSuggestion>
                 {
                     new PlaywrightLocatorSuggestion { Expression = "page.GetByTestId(\"email-input\")", Confidence = 0.98 },
+                },
+            };
+            var runnerUpEmailCandidate = new IntentElementCandidate
+            {
+                Step = emailStep,
+                Element = new WebElementInfo { TagName = "input", Role = "textbox", TestId = "backup-email" },
+                Score = 0.70,
+                SemanticScore = 0.40,
+                LocatorSuggestions = new List<PlaywrightLocatorSuggestion>
+                {
+                    new PlaywrightLocatorSuggestion { Expression = "page.GetByTestId(\"backup-email\")", Confidence = 0.80 },
                 },
             };
 
@@ -90,7 +104,7 @@ namespace ScenarioRunner
                     Scenario = scenario,
                     StepResults = new List<IntentStepExplorationResult>
                     {
-                        new IntentStepExplorationResult { Step = emailStep, Candidates = new List<IntentElementCandidate> { emailCandidate } },
+                        new IntentStepExplorationResult { Step = emailStep, Candidates = new List<IntentElementCandidate> { emailCandidate, runnerUpEmailCandidate } },
                         new IntentStepExplorationResult { Step = clickStep, RequiresReview = true, Diagnostic = "No visible DOM candidate matched this intent step." },
                     },
                 },

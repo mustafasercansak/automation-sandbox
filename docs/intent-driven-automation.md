@@ -137,16 +137,28 @@ capability actually needs. This was a deliberate scope decision, not an oversigh
 literal MCP integration is wanted later (e.g. to reuse MCP-based tooling beyond Playwright),
 it should be scoped and evaluated as a separate, explicit addition.
 
-### 4. Locator Selection
+### 4. Locator Selection and Exploration Gates
 
-For each intent step, the engine can shortlist candidate elements using:
+For each intent step, the exploration bridges (`IntentExplorationBridge` for Web and `IntentDesktopExplorationBridge` for Desktop) shortlist candidate elements using:
 
-- role and tag semantics
-- accessible name / label text
+- role and tag semantics (Action Compatibility)
+- accessible name / label text / AutomationId (Semantic Overlap)
 - placeholder and test id
-- parent/sibling structure
-- `TestIntent`
-- optional LLM fallback with hallucination guard
+- `TestIntent` and `LocatorKey`
+- locator confidence suggestions
+
+#### Safety Gates and Manual Review
+
+To prevent unrelated or ambiguous element matches from silently succeeding:
+
+1. **Semantic Score Gate (`MinimumSemanticScore = 0.01`):** Action compatibility alone is not sufficient. An element (e.g. an "Export Report" button) matching an unrelated intent step (e.g. "Delete customer") receives `semanticScore = 0.00 < 0.01` and is flagged with `RequiresReview = true`, preventing unreviewed locator persistence.
+2. **Runner-Up Margin Check (`MinimumCandidateMargin = 0.05`):** If the top candidate barely beats the runner-up (`best - runnerUp < 0.05`), the match is marked ambiguous with `RequiresReview = true` rather than guessing.
+3. **Threshold Review (`ReviewThreshold = 0.35`):** Candidates whose combined score is below the review threshold require manual review.
+
+When a step requires review, candidates remain in the exploration result and report document with diagnostic explanations, but `IntentLocatorRepositoryRecorder` avoids persisting them without explicit human approval.
+
+> **Known limitation / Benchmark calibration note:**
+> `MinimumSemanticScore = 0.01` is an empirical baseline calibrated to require at least one non-zero semantic token overlap between the intent target and the element. Because `TokenOverlap` divides by the total target tokens, single-token matches (e.g. "Save" with ~0.043) clear this gate, while completely unrelated elements (0.00) are caught and flagged for review. However, coincidental single-token overlaps may still pass this minimum gate. This threshold ships as a baseline estimate and will be recalibrated against a broader real-world dataset under benchmark issue #15.
 
 ### 5. Test Generation
 
@@ -322,3 +334,8 @@ Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent ad�
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
 MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
 olarak tutar.
+
+**Güvenlik Kapıları ve Bilinen Sınır:**
+Eşleştiricilerde iki temel koruma mekanizması devrededir:
+1. **Semantik Kapı (`MinimumSemanticScore = 0.01`):** Yalnızca eylem uyumu (ör. buton olması) yeterli sayılmaz; niyet ile hedef eleman arasında en az bir anlamlı token örtüşmesi aranır. "Delete customer" niyetine karşı "Export Report" gibi alakasız eşleşmeler (`0.00`) otomatik olarak manuel incelemeye (`RequiresReview = true`) sevk edilir. *Bilinen sınır:* 0.01 eşiği "en az bir token örtüşsün" anlamına geldiğinden, tesadüfi tek token eşleşmeleri kapıyı geçebilir. Bu değer bir temel tahmindir ve #15 kıyaslama veri setiyle yeniden kalibre edilecektir.
+2. **Runner-Up Marj Kontrolü (`MinimumCandidateMargin = 0.05`):** En iyi iki aday arasındaki fark 0.05'in altındaysa sistem tahmin yürütmek yerine adımı incelemeye düşürür.

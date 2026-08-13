@@ -12,6 +12,7 @@ namespace IntentAutomation
         public IntentStep Step { get; set; } = new IntentStep();
         public UiElementInfo Element { get; set; } = new UiElementInfo();
         public double Score { get; set; }
+        public double SemanticScore { get; set; }
         public string Reason { get; set; } = "";
     }
 }

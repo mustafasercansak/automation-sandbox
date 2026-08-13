@@ -87,7 +87,13 @@ namespace IntentAutomation
                 return "";
             }
 
-            return step.BestCandidateScore.Value.ToString("0.00", CultureInfo.InvariantCulture) + " " + step.BestCandidateLocator;
+            var text = step.BestCandidateScore.Value.ToString("0.00", CultureInfo.InvariantCulture) + " " + step.BestCandidateLocator;
+            if (step.RunnerUpScore.HasValue)
+            {
+                text += " (runner-up: " + step.RunnerUpScore.Value.ToString("0.00", CultureInfo.InvariantCulture) + ")";
+            }
+
+            return text.Trim();
         }
 
         private static string FirstNonEmpty(params string[] values)

@@ -5,7 +5,10 @@ namespace IntentAutomation
 {
     public sealed class IntentFlowReportDocument
     {
-        public const int CurrentSchemaVersion = 1;
+        // Schema v2 (issue #5): added BestCandidateSemanticScore and RunnerUpScore to IntentFlowReportStep
+        // for full visibility into semantic gating and candidate runner-up margins.
+        // Schema v1: initial pipeline report with BestCandidateScore and locator expression.
+        public const int CurrentSchemaVersion = 2;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public string ScenarioName { get; set; } = "";
@@ -40,6 +43,7 @@ namespace IntentAutomation
             {
                 var recording = FindRecording(result, stepResult.Step.LocatorKey);
                 var best = stepResult.Candidates.Count == 0 ? null : stepResult.Candidates[0];
+                var runnerUp = stepResult.Candidates.Count > 1 ? stepResult.Candidates[1] : null;
                 document.Steps.Add(new IntentFlowReportStep
                 {
                     Order = stepResult.Step.Order,
@@ -51,6 +55,8 @@ namespace IntentAutomation
                     ExpectedOutcome = stepResult.Step.ExpectedOutcome,
                     CandidateCount = stepResult.Candidates.Count,
                     BestCandidateScore = best?.Score,
+                    BestCandidateSemanticScore = best?.SemanticScore,
+                    RunnerUpScore = runnerUp?.Score,
                     BestCandidateLocator = best?.LocatorSuggestions.Count > 0 ? best.LocatorSuggestions[0].Expression : "",
                     RequiresReview = stepResult.RequiresReview,
                     ExplorationDiagnostic = stepResult.Diagnostic,
@@ -87,6 +93,8 @@ namespace IntentAutomation
         public string ExpectedOutcome { get; set; } = "";
         public int CandidateCount { get; set; }
         public double? BestCandidateScore { get; set; }
+        public double? BestCandidateSemanticScore { get; set; }
+        public double? RunnerUpScore { get; set; }
         public string BestCandidateLocator { get; set; } = "";
         public bool RequiresReview { get; set; }
         public string ExplorationDiagnostic { get; set; } = "";
