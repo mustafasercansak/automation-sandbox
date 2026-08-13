@@ -552,5 +552,75 @@ namespace ScenarioRunner
 
             Assert.Throws<NotSupportedException>(() => sink.Record(new HealingReportEntry { LocatorKey = "x" }));
         }
+
+        [Fact]
+        public void HealingReportEntry_FromHealResult_CapturesDivergenceAndHeuristicSnapshot()
+        {
+            var previous = new UiElementInfo { ControlType = "Button", AutomationId = "btnSubmit" };
+            var heuristic = new UiElementInfo { ControlType = "Button", AutomationId = "btnOld", Name = "Old Submit" };
+            var accepted = new UiElementInfo { ControlType = "Edit", AutomationId = "txtSubmit", Name = "Submit Input" };
+
+            var healResult = new HealResult
+            {
+                Matched = accepted,
+                Source = HealSource.Llm,
+                Score = 0.38,
+                ConfidenceThreshold = 0.50,
+                LlmConfidence = 0.90,
+                LlmProviderName = "Claude",
+                LlmReasoning = "Matched submit input field",
+                HeuristicMatched = heuristic,
+                HeuristicScore = 0.45,
+                DivergedFromHeuristic = true,
+                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 0.0, NameScore = 0.8 },
+            };
+
+            var entry = HealingReportEntry.FromHealResult("SubmitAction", previous, accepted, healResult);
+
+            Assert.True(entry.DivergedFromHeuristic);
+            Assert.NotNull(entry.HeuristicSnapshot);
+            Assert.Equal("btnOld", entry.HeuristicSnapshot!.AutomationId);
+            Assert.Equal(0.45, entry.HeuristicScore);
+            Assert.Equal(0.38, entry.Score);
+            Assert.Equal(0.0, entry.ScoreBreakdown!.ControlTypeScore);
+
+            // Test HTML rendering contains divergence note
+            var doc = new HealingReportDocument();
+            doc.Events.Add(entry);
+            var html = HealingReportHtmlRenderer.Render(doc);
+            Assert.Contains("Diverged from heuristic", html);
+            Assert.Contains("btnOld", html);
+        }
+
+        [Fact]
+        public void LocatorHealingHistoryEntryFactory_FromHealResult_RecordsDivergenceFlag()
+        {
+            var accepted = new UiElementInfo { ControlType = "Button", AutomationId = "btnAccept" };
+
+            // Heuristic source: LLM not involved -> divergence is N/A (null)
+            var heuristicResult = new HealResult
+            {
+                Matched = accepted,
+                Source = HealSource.Heuristic,
+                Score = 0.90,
+                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 1.0 },
+            };
+            var heuristicEntry = LocatorHealingHistoryEntryFactory.FromHealResult(heuristicResult, previousSnapshot: null);
+            Assert.Null(heuristicEntry.DivergedFromHeuristic);
+
+            // LLM source: records explicit divergence flag
+            var llmResult = new HealResult
+            {
+                Matched = accepted,
+                Source = HealSource.Llm,
+                Score = 0.35,
+                DivergedFromHeuristic = true,
+                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 0.2 },
+            };
+            var llmEntry = LocatorHealingHistoryEntryFactory.FromHealResult(llmResult, previousSnapshot: null);
+            Assert.True(llmEntry.DivergedFromHeuristic);
+            Assert.Equal(0.35, llmEntry.Score);
+            Assert.Equal(0.2, llmEntry.ScoreBreakdown!.ControlTypeScore);
+        }
     }
 }

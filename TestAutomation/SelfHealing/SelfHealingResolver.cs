@@ -138,23 +138,42 @@ namespace SelfHealing
                 return heuristicResult;
             }
 
-            log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {best.ProviderName} matched '{matchedCandidate.Candidate.AutomationId}' (confidence={best.Confidence:F2}, reasoning=\"{best.Reasoning}\").");
+            // Determine if the LLM choice diverged from the heuristic winner (issue #6).
+            // ReferenceEquals is used because AutomationId may be empty or duplicated,
+            // while shortlist and Resolve operate over nodes from the exact same tree instance.
+            var isDivergent = heuristicResult.Matched != null && !ReferenceEquals(heuristicResult.Matched, matchedCandidate.Candidate);
+            if (isDivergent)
+            {
+                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {best.ProviderName} matched '{matchedCandidate.Candidate.AutomationId}' (confidence={best.Confidence:F2}, reasoning=\"{best.Reasoning}\", diverged from heuristic winner '{heuristicResult.Matched!.AutomationId}' with score {heuristicResult.Score:F2}).");
+            }
+            else
+            {
+                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {best.ProviderName} matched '{matchedCandidate.Candidate.AutomationId}' (confidence={best.Confidence:F2}, reasoning=\"{best.Reasoning}\").");
+            }
+
             return new HealResult
             {
                 Matched = matchedCandidate.Candidate,
-                Score = heuristicResult.Score,
+                // Score and ScoreBreakdown belong to the matched candidate (issue #6) so the report
+                // and locator history explain the actual chosen element's metrics.
+                Score = matchedCandidate.TotalScore,
+                ScoreBreakdown = matchedCandidate.Components,
                 CandidateCount = heuristicResult.CandidateCount,
                 Source = HealSource.Llm,
                 ConfidenceThreshold = w.MinimumLlmConfidence,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
+                // RunnerUpScore preserves the heuristic competition telemetry (c0 vs c1) that triggered
+                // fallback. The margin gate itself is not applied to LLM picks (which use MinimumLlmConfidence).
                 RunnerUpScore = heuristicResult.RunnerUpScore,
                 MarginThreshold = heuristicResult.MarginThreshold,
                 Candidates = heuristicResult.Candidates,
-                ScoreBreakdown = heuristicResult.ScoreBreakdown,
                 LlmProviderName = best.ProviderName,
                 LlmConfidence = best.Confidence,
                 LlmReasoning = best.Reasoning,
+                HeuristicMatched = heuristicResult.Matched,
+                HeuristicScore = heuristicResult.Score,
+                DivergedFromHeuristic = isDivergent,
             };
         }
 

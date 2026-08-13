@@ -6,10 +6,12 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
-        // v3: entries carry RunnerUpScore (margin gate, issue #4) - additive over v2, which
-        // added EvidenceCoverage and the full candidate list (#3). Older reports upgrade in
-        // place; only newer-than-current schemas are rejected.
-        public const int CurrentSchemaVersion = 3;
+        // v4 (issue #6): entries carry DivergedFromHeuristic, HeuristicSnapshot, HeuristicScore
+        // for full explainability when an LLM pick diverges from the heuristic winner.
+        // v3: entries carry RunnerUpScore (margin gate, issue #4).
+        // v2: added EvidenceCoverage and Candidates (#3).
+        // Older reports upgrade in place; only newer-than-current schemas are rejected.
+        public const int CurrentSchemaVersion = 4;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
@@ -64,6 +66,12 @@ namespace SelfHealing
         // the margin gate's behavior is auditable offline, not just the final verdict.
 
         public double? RunnerUpScore { get; set; }
+
+        // Heuristic winner baseline and divergence tracking (issue #6)
+        public bool DivergedFromHeuristic { get; set; }
+        public UiElementInfo? HeuristicSnapshot { get; set; }
+        public double? HeuristicScore { get; set; }
+
         public List<HealingReportCandidate>? Candidates { get; set; }
 
         public static HealingReportEntry FromHealResult(
@@ -108,6 +116,9 @@ namespace SelfHealing
                 ScoreBreakdown = result.ScoreBreakdown,
                 EvidenceCoverage = result.EvidenceCoverage,
                 RunnerUpScore = result.RunnerUpScore,
+                DivergedFromHeuristic = result.DivergedFromHeuristic,
+                HeuristicSnapshot = result.HeuristicMatched is null ? null : UiElementSnapshot.Capture(result.HeuristicMatched),
+                HeuristicScore = result.HeuristicScore,
                 Candidates = result.Candidates?
                     .Select(c => new HealingReportCandidate
                     {

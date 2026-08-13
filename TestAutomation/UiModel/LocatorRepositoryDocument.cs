@@ -2,6 +2,10 @@ namespace UiModel
 {
     public sealed class LocatorRepositoryDocument
     {
+        // SchemaVersion is deliberately kept at 1: LocatorRepositorySerializer.ValidateSchemaVersion
+        // enforces strict equality (schemaVersion != CurrentSchemaVersion throws), so additive,
+        // backward-compatible metadata (e.g. DivergedFromHeuristic on history entries) is added
+        // as nullable fields without invalidating existing on-disk locator repositories.
         public const int CurrentSchemaVersion = 1;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public string ApplicationName { get; set; } = "";
@@ -33,5 +37,9 @@ namespace UiModel
         public UiElementInfo? PreviousSnapshot { get; set; }
         public UiElementInfo? AcceptedSnapshot { get; set; }
         public ScoreComponents? ScoreBreakdown { get; set; }
+
+        // Null on entries saved before issue #6: "unknown / not recorded", not "no divergence".
+        // Allows distinguishing legacy entries from explicit agreement (false) or divergence (true).
+        public bool? DivergedFromHeuristic { get; set; }
     }
 }
