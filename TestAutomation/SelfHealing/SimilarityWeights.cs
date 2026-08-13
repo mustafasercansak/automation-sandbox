@@ -22,6 +22,16 @@ namespace SelfHealing
 
         public double MinimumEvidenceWeight { get; set; } = 0.4;
 
+        // Minimum gap between the best and runner-up candidate scores before a heuristic
+        // match can be IsConfident (issue #4). 0.880 vs 0.879 means "I don't know" - the
+        // resolver falls back to LLM/manual review instead of guessing. Default 0.05: the
+        // issue's examples (0.88/0.79 confident, 0.88/0.879 not) imply a threshold below
+        // 0.09, and the calibrated WinForms demo scenario sits at a ~0.057 margin. Estimate,
+        // like the other defaults - recalibrated against the #15 benchmark dataset, not
+        // reopened here.
+
+        public double MinimumCandidateMargin { get; set; } = 0.05;
+
         // Separate from MinimumConfidence: an LLM's self-reported confidence isn't calibrated
         // the same way as the heuristic's structural score, so a low-confidence LLM pick
         // shouldn't silently replace a heuristic result just for having *a* pick.
@@ -46,6 +56,7 @@ namespace SelfHealing
             ValidateNonNegative(PositionToleranceRadius, nameof(PositionToleranceRadius));
             ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
             ValidateRange(MinimumEvidenceWeight, nameof(MinimumEvidenceWeight), 0.0, 1.0);
+            ValidateRange(MinimumCandidateMargin, nameof(MinimumCandidateMargin), 0.0, 1.0);
             ValidateRange(MinimumLlmConfidence, nameof(MinimumLlmConfidence), 0.0, 1.0);
             ValidateRange(MinCandidateScore, nameof(MinCandidateScore), 0.0, 1.0);
 

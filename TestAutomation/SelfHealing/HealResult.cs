@@ -22,6 +22,14 @@ namespace SelfHealing
         public double EvidenceCoverage { get; set; } = 1.0;
         public double EvidenceThreshold { get; set; } = SimilarityWeights.Default.MinimumEvidenceWeight;
 
+        // Runner-up margin (issue #4): a top candidate that barely beats the second-best is
+        // ambiguous, not confident. Null when there is no runner-up (single candidate = no
+        // competition). The margin gate applies to heuristic results only - LLM picks have
+        // their own acceptance rule (MinimumLlmConfidence).
+
+        public double? RunnerUpScore { get; set; }
+        public double MarginThreshold { get; set; } = SimilarityWeights.Default.MinimumCandidateMargin;
+
         // Every scored candidate, UNPRUNED (below-MinCandidateScore nodes included) -
         // persisted into the healing report so thresholds can be re-tuned offline against
         // recorded data (#15).
@@ -40,7 +48,7 @@ namespace SelfHealing
             // match - the exact false-positive channel issue #3 closes.
             EvidenceCoverage >= EvidenceThreshold &&
             (Source == HealSource.Heuristic
-                ? Score >= ConfidenceThreshold
+                ? Score >= ConfidenceThreshold && CandidateMargin.HasSufficientMargin(Score, RunnerUpScore, MarginThreshold)
                 : (LlmConfidence ?? 0.0) >= ConfidenceThreshold);
     }
 }

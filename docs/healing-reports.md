@@ -43,7 +43,8 @@ Each event in the report contains:
   - `manual-review`: Borderline matches requiring QA engineer review.
 - **`PreviousSnapshot` & `AcceptedSnapshot`**: Full before/after element comparison.
 - **`ScoreBreakdown`**: Component breakdown (`ControlType`, `Parent`, `Sibling`, `Name`, `Position`). A component is `null` when that signal had no evidence on either side (missing == missing is never a perfect match).
-- **`EvidenceCoverage`**: Fraction of the total signal weight backed by non-null evidence (schema v2+).
+- **`EvidenceCoverage`**: Fraction of the total signal weight backed by non-null evidence (schema v2+). `null` on entries upgraded from v1 reports means "unknown", not "no evidence".
+- **`RunnerUpScore`** (schema v3+): Second-best candidate score at decision time (`null` when there was no runner-up) — the margin gate's input, persisted for offline audit.
 - **`Candidates`** (schema v2+): Every scored candidate — not just the winner — with `TotalScore`, `Components`, and `EvidenceCoverage`, so thresholds can be re-tuned offline against recorded reports.
 
 > [!WARNING]
@@ -86,7 +87,8 @@ Rapordaki her olay şu bilgileri içerir:
   - `manual-review`: Sınırda kalan ve QA mühendisi onayı gerektiren eşleşme.
 - **`PreviousSnapshot` & `AcceptedSnapshot`**: Elemanın iyileştirme öncesi ve sonrası tüm özellikleri.
 - **`ScoreBreakdown`**: Bileşen dökümü (`ControlType`, `Parent`, `Sibling`, `Name`, `Position`). Bir sinyal iki tarafta da yoksa ilgili bileşen `null` olur (eksik == eksik asla tam eşleşme sayılmaz).
-- **`EvidenceCoverage`**: Boş olmayan kanıtla desteklenen toplam sinyal ağırlığının oranı (şema v2+).
+- **`EvidenceCoverage`**: Boş olmayan kanıtla desteklenen toplam sinyal ağırlığının oranı (şema v2+). v1'den yükseltilen girdilerde `null` değeri "kanıt yok" değil "bilinmiyor" demektir.
+- **`RunnerUpScore`** (şema v3+): Karar anındaki ikinci en iyi aday skoru (ikinci aday yoksa `null`) — margin kapısının girdisi, çevrimdışı denetim için saklanır.
 - **`Candidates`** (şema v2+): Yalnızca kazanan değil, skorlanan **tüm** adaylar — `TotalScore`, `Components` ve `EvidenceCoverage` ile birlikte; eşiklerin çevrimdışı yeniden ayarlanabilmesi için.
 
 > [!WARNING]
