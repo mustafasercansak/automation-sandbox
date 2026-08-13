@@ -40,6 +40,14 @@ namespace SelfHealing
         public string? LlmProviderName { get; set; }
         public double? LlmConfidence { get; set; }
         public string? LlmReasoning { get; set; }
+
+        // Heuristic winner metadata and divergence tracking (issue #6):
+        // When Source == HealSource.Llm, HeuristicMatched and HeuristicScore preserve the
+        // baseline winner before fallback. DivergedFromHeuristic indicates whether the LLM
+        // picked a different candidate than the heuristic scorer.
+        public UiElementInfo? HeuristicMatched { get; set; }
+        public double? HeuristicScore { get; set; }
+        public bool DivergedFromHeuristic { get; set; }
         public bool IsConfident =>
             Matched is not null &&
             // The evidence gate applies to LLM picks too: otherwise a candidate the

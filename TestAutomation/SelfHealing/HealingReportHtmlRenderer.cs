@@ -80,7 +80,14 @@ namespace SelfHealing
                     html.Append("          <td>").Append(E(FormatScore(entry))).AppendLine("</td>");
                     html.Append("          <td>").Append(FormatSnapshot(entry.PreviousSnapshot)).AppendLine("</td>");
                     html.Append("          <td>").Append(FormatSnapshot(entry.AcceptedSnapshot)).AppendLine("</td>");
-                    html.Append("          <td>").Append(E(entry.LlmReasoning ?? "")).AppendLine("</td>");
+                    var reasoning = entry.LlmReasoning ?? "";
+                    if (entry.DivergedFromHeuristic)
+                    {
+                        var heuristicId = entry.HeuristicSnapshot?.AutomationId ?? "unknown";
+                        var divergenceNote = $"[Diverged from heuristic '{heuristicId}']";
+                        reasoning = string.IsNullOrEmpty(reasoning) ? divergenceNote : divergenceNote + " " + reasoning;
+                    }
+                    html.Append("          <td>").Append(E(reasoning)).AppendLine("</td>");
                     html.AppendLine("        </tr>");
                 }
 

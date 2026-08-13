@@ -452,6 +452,122 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveAsync_LlmPicksDivergentCandidate_CarriesMatchedScoreBreakdownAndDivergenceFlag()
+        {
+            // Issue #6: Heuristic winner is c0 (ControlType="Button", higher heuristic score).
+            // LLM fallback picks c1 (ControlType="Edit", lower heuristic score).
+            // HealResult must carry c1's heuristic score and breakdown (not c0's),
+            // and explicitly report DivergedFromHeuristic = true.
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Save Changes",
+                AutomationId = "btnSave",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainForm",
+                BoundingRectangle = new BoundingRectangle(100, 100, 80, 30),
+            };
+
+            var root = new UiElementInfo { ControlType = "Window", AutomationId = "MainForm" };
+            // c0: Button with ControlType matching Button -> ControlTypeScore = 1.0
+            var buttonCandidate = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnOldSave",
+                Name = "Something Else",
+                ParentControlType = "Panel",
+                BoundingRectangle = new BoundingRectangle(800, 800, 80, 30),
+            };
+            // c1: Edit with ControlType Edit != Button -> ControlTypeScore = 0.0
+            var editCandidate = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "txtSaveName",
+                Name = "Save Input",
+                ParentControlType = "Panel",
+                BoundingRectangle = new BoundingRectangle(800, 850, 80, 30),
+            };
+            root.Children.Add(buttonCandidate);
+            root.Children.Add(editCandidate);
+
+            var heuristicResult = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+            Assert.Equal("btnOldSave", heuristicResult.Matched!.AutomationId);
+            Assert.False(heuristicResult.IsConfident);
+
+            var provider = new FakeProvider("FakeLLM", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "FakeLLM", Success = true, MatchedCandidateId = "c1", Confidence = 0.92, Reasoning = "contextual match" });
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal("txtSaveName", result.Matched!.AutomationId);
+            // Score must be c1's score, NOT c0's
+            Assert.True(result.Score < heuristicResult.Score);
+            Assert.NotNull(result.ScoreBreakdown);
+            // ScoreBreakdown must reflect c1 (Edit != Button -> 0.0), NOT c0 (Button == Button -> 1.0)
+            Assert.Equal(0.0, result.ScoreBreakdown!.ControlTypeScore);
+            Assert.Equal(1.0, heuristicResult.ScoreBreakdown!.ControlTypeScore);
+            // Divergence flags
+            Assert.True(result.DivergedFromHeuristic);
+            Assert.NotNull(result.HeuristicMatched);
+            Assert.Equal("btnOldSave", result.HeuristicMatched!.AutomationId);
+            Assert.Equal(heuristicResult.Score, result.HeuristicScore);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_LlmPicksHeuristicWinner_DivergedFromHeuristicIsFalse()
+        {
+            // When a competing alternative (c1) exists but the LLM picks c0 (the heuristic winner),
+            // DivergedFromHeuristic must be false, and Score/ScoreBreakdown must match c0.
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Save Changes",
+                AutomationId = "btnSave",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainForm",
+                BoundingRectangle = new BoundingRectangle(100, 100, 80, 30),
+            };
+
+            var root = new UiElementInfo { ControlType = "Window", AutomationId = "MainForm" };
+            var buttonCandidate = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnOldSave",
+                Name = "Something Else",
+                ParentControlType = "Panel",
+                BoundingRectangle = new BoundingRectangle(800, 800, 80, 30),
+            };
+            var editCandidate = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "txtSaveName",
+                Name = "Save Input",
+                ParentControlType = "Panel",
+                BoundingRectangle = new BoundingRectangle(800, 850, 80, 30),
+            };
+            root.Children.Add(buttonCandidate);
+            root.Children.Add(editCandidate);
+
+            var heuristicResult = SelfHealingResolver.Resolve(expected, root, log: _ => { });
+            Assert.Equal("btnOldSave", heuristicResult.Matched!.AutomationId);
+            Assert.False(heuristicResult.IsConfident);
+
+            var provider = new FakeProvider("FakeLLM", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "FakeLLM", Success = true, MatchedCandidateId = "c0", Confidence = 0.92, Reasoning = "agrees with heuristic" });
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal("btnOldSave", result.Matched!.AutomationId);
+            Assert.False(result.DivergedFromHeuristic);
+            Assert.NotNull(result.HeuristicMatched);
+            Assert.Equal("btnOldSave", result.HeuristicMatched!.AutomationId);
+            Assert.Equal(heuristicResult.Score, result.Score);
+            Assert.Equal(1.0, result.ScoreBreakdown!.ControlTypeScore);
+        }
+
+        [Fact]
         public void SimilarityWeights_Default_ReturnsFreshInstanceEachTime()
         {
             var first = SimilarityWeights.Default;

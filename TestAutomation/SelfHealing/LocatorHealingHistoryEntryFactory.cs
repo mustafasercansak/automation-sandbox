@@ -28,6 +28,7 @@ namespace SelfHealing
                 PreviousSnapshot = previousSnapshot is null ? null : UiElementSnapshot.Capture(previousSnapshot),
                 AcceptedSnapshot = UiElementSnapshot.Capture(result.Matched),
                 ScoreBreakdown = result.ScoreBreakdown,
+                DivergedFromHeuristic = result.Source == HealSource.Llm ? result.DivergedFromHeuristic : (bool?)null,
             };
         }
     }
