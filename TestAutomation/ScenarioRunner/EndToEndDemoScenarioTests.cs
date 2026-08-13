@@ -125,7 +125,7 @@ namespace ScenarioRunner
                     attemptCount++;
                     if (healedElement.AutomationId == "btnRegister_V1_Old")
                     {
-                        throw new InvalidOperationException("Element not found with stale locator.");
+                        throw new ElementNotFoundException("Element not found with stale locator.");
                     }
 
                     actionExecutedSuccessfully = true;
@@ -151,6 +151,15 @@ namespace ScenarioRunner
             Assert.Equal("Click the primary button to submit account registration", savedRecord.TestIntent);
             Assert.Single(savedRecord.HealingHistory);
             Assert.Equal("heuristic", savedRecord.HealingHistory[0].Source);
+        }
+
+        // Stands in for the exception a UI framework throws when a locator no longer
+        // resolves; the engine's default healing policy matches by exception type name.
+        private sealed class ElementNotFoundException : Exception
+        {
+            public ElementNotFoundException(string message) : base(message)
+            {
+            }
         }
     }
 }
