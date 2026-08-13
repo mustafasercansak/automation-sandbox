@@ -9,5 +9,7 @@ namespace IntentAutomation
         public string Value { get; set; } = "";
         public string ExpectedOutcome { get; set; } = "";
         public string LocatorKey { get; set; } = "";
+        public AssertionKind AssertionKind { get; set; } = AssertionKind.None;
+        public string ExpectedValue { get; set; } = "";
     }
 }

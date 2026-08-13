@@ -67,13 +67,14 @@ namespace IntentAutomation
 
             recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
             var locatorExpression = LocatorExpression(recording?.Candidate, recording?.Record?.Snapshot);
-            if (string.IsNullOrWhiteSpace(locatorExpression))
+            var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
+            if (locatorRequired && string.IsNullOrWhiteSpace(locatorExpression))
             {
                 code.AppendLine($"  test.skip(true, 'No recorded locator for {EscapeSingleQuoted(step.LocatorKey)}.');");
                 return;
             }
 
-            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey))
+            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
                 code.AppendLine($"  // locator: {EscapeComment(step.LocatorKey)}");
             }
@@ -90,7 +91,7 @@ namespace IntentAutomation
                     code.AppendLine($"  await {locatorExpression}.click();");
                     break;
                 case IntentActionType.Assert:
-                    code.AppendLine($"  await expect({locatorExpression}).toBeVisible();");
+                    AssertionCodeEmitter.EmitPlaywrightTypeScript(step, locatorExpression, _options.AssertGenerationMode, code);
                     break;
                 default:
                     code.AppendLine($"  test.skip(true, 'Unsupported intent action {step.ActionType}.');");

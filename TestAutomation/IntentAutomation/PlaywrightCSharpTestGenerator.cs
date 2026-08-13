@@ -82,13 +82,14 @@ namespace IntentAutomation
 
             recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
             var locatorExpression = LocatorExpression(recording?.Candidate, recording?.Record?.Snapshot);
-            if (string.IsNullOrWhiteSpace(locatorExpression))
+            var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
+            if (locatorRequired && string.IsNullOrWhiteSpace(locatorExpression))
             {
                 code.AppendLine($"            Assert.Inconclusive(\"No recorded locator for {EscapeString(step.LocatorKey)}.\");");
                 return;
             }
 
-            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey))
+            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
                 code.AppendLine($"            // locator: {EscapeComment(step.LocatorKey)}");
             }
@@ -105,7 +106,7 @@ namespace IntentAutomation
                     code.AppendLine($"            await {locatorExpression}.ClickAsync();");
                     break;
                 case IntentActionType.Assert:
-                    code.AppendLine($"            await Expect({locatorExpression}).ToBeVisibleAsync();");
+                    AssertionCodeEmitter.EmitPlaywrightCSharp(step, locatorExpression, _options.AssertGenerationMode, code);
                     break;
                 default:
                     code.AppendLine($"            Assert.Inconclusive(\"Unsupported intent action {step.ActionType}.\");");

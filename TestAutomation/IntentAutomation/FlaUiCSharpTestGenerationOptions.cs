@@ -12,5 +12,6 @@ namespace IntentAutomation
         // ApplicationExecutablePath is set (e.g. the caller already knows it, as our own live
         // tests do via WinFormsAppRelativePath).
         public string ApplicationExecutablePath { get; set; } = "TODO: path to the compiled application executable";
+        public AssertGenerationMode AssertGenerationMode { get; set; } = AssertGenerationMode.Strict;
     }
 }
