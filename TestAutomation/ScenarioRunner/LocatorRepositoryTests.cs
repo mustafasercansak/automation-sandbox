@@ -33,7 +33,12 @@ namespace ScenarioRunner
             document.Locators.Add(new LocatorRecord
             {
                 LocatorKey = "CustomerForm.Email",
-                Snapshot = new UiElementInfo { ControlType = "Edit", AutomationId = "txtEmail" },
+                Snapshot = new UiElementInfo
+                {
+                    ControlType = "Edit",
+                    AutomationId = "txtEmail",
+                    BoundingRectangle = new BoundingRectangle(100, 200, 150, 25),
+                },
             });
 
             repository.Save(document);
@@ -42,18 +47,31 @@ namespace ScenarioRunner
             Assert.True(File.Exists(_filePath));
             Assert.Equal("DemoApp", loaded.ApplicationName);
             Assert.Equal("txtEmail", loaded.Locators.Single().Snapshot.AutomationId);
+            Assert.Equal(100, loaded.Locators.Single().Snapshot.BoundingRectangle.X);
+            Assert.Equal(200, loaded.Locators.Single().Snapshot.BoundingRectangle.Y);
+            Assert.Equal(150, loaded.Locators.Single().Snapshot.BoundingRectangle.Width);
+            Assert.Equal(25, loaded.Locators.Single().Snapshot.BoundingRectangle.Height);
         }
 
         [Fact]
         public void Upsert_WhenKeyIsNew_AddsRecordWithTimestamps()
         {
             var repository = new LocatorRepository(_filePath);
-            var snapshot = new UiElementInfo { ControlType = "Edit", AutomationId = "txtEmail" };
+            var snapshot = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "txtEmail",
+                BoundingRectangle = new BoundingRectangle(100, 200, 150, 25),
+            };
 
             var record = repository.Upsert("CustomerForm.Email", snapshot, applicationName: "DemoApp");
 
             Assert.Equal("CustomerForm.Email", record.LocatorKey);
             Assert.Equal("txtEmail", record.Snapshot.AutomationId);
+            Assert.Equal(100, record.Snapshot.BoundingRectangle.X);
+            Assert.Equal(200, record.Snapshot.BoundingRectangle.Y);
+            Assert.Equal(150, record.Snapshot.BoundingRectangle.Width);
+            Assert.Equal(25, record.Snapshot.BoundingRectangle.Height);
             Assert.Equal(record.CreatedAt, record.UpdatedAt);
             Assert.Equal("DemoApp", repository.Load().ApplicationName);
         }
