@@ -29,7 +29,7 @@ namespace WebDiscovery
                 AutomationId = automationId,
                 ClassName = ToClassName(element),
                 BoundingRectangle = element.IsHidden
-                    ? new BoundingRectangle(0, 0, 0, 0)
+                    ? BoundingRectangle.Empty
                     : element.BoundingRectangle,
                 ParentControlType = parentControlType,
                 ParentAutomationId = parentAutomationId,

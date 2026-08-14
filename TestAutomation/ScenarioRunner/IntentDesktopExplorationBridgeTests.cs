@@ -211,6 +211,53 @@ namespace ScenarioRunner
                 .Candidates[0];
         }
 
+        [Fact]
+        public void Match_ExcludesElementsWithPositionedZeroDimensionBoundingRectangle()
+        {
+            // Issue #22: Pinning test for unified BoundingRectangle.IsUsable semantics.
+            // A positioned control with 0 width/height (e.g. (100, 200, 0, 0)) has no rendered interactive
+            // surface on screen and cannot receive clicks or input.
+            // Unifying on IsUsable ensures desktop intent matching excludes collapsed 0-size elements,
+            // matching SimilarityScorer's position usability predicate.
+            var scenario = new IntentScenario
+            {
+                Goal = "Enter user email",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Fill,
+                        TargetDescription = "email",
+                        Value = "test@example.com",
+                        LocatorKey = "LoginForm.Email",
+                    }
+                }
+            };
+
+            var window = new UiElementInfo { ControlType = "Window", BoundingRectangle = new BoundingRectangle(0, 0, 800, 600) };
+            window.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                AutomationId = "txtCollapsedEmail",
+                BoundingRectangle = new BoundingRectangle(100, 200, 0, 0), // Positioned but 0x0
+            });
+            window.Children.Add(new UiElementInfo
+            {
+                ControlType = "Edit",
+                Name = "Email",
+                AutomationId = "txtRenderedEmail",
+                BoundingRectangle = new BoundingRectangle(100, 200, 200, 24), // Usable
+            });
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, window);
+            var candidates = result.StepResults[0].Candidates;
+
+            Assert.Single(candidates);
+            Assert.Equal("txtRenderedEmail", candidates[0].Element.AutomationId);
+        }
+
         private static UiElementInfo BuildCustomerWindow()
         {
             var root = new UiElementInfo
