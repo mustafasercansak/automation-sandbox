@@ -7,13 +7,13 @@
 
 An open-source **locator healing** and **intent-driven test generation** engine for Windows desktop and web.
 
-**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **LLM shortlist fallback chain**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
+**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback accepted by consensus**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
 ---
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
-> 📦 **Milestone 5 Preview Packaging:** NuGet artifact generation is available through the manual [Pack workflow](.github/workflows/pack.yml), and preview package files can be attached to GitHub Releases through [Release Preview Packages](.github/workflows/release.yml). See the [NuGet Packaging Guide](docs/nuget-packaging.md).
+> 📦 **Preview Packages:** The latest prerelease is [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2), published as GitHub Release assets — there is deliberately no push to nuget.org yet. Seven `AutomationSandbox.*` packages are produced by the manual [Release workflow](.github/workflows/release.yml) (with a `dry_run` mode) or the [Pack workflow](.github/workflows/pack.yml). See the [NuGet Packaging Guide](docs/nuget-packaging.md).
 
 > 🎤 **Project Showcase:** For a bilingual (EN/TR) architecture presentation and executive summary, see [PROJECT_SHOWCASE.md](PROJECT_SHOWCASE.md).
 
@@ -37,8 +37,8 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **Heuristic Self-Healing** | ✅ Implemented | Pure C# structural similarity scoring ($O(N)$ execution, zero-cost, deterministic). |
 | **Explainable Scoring** | ✅ Implemented | `ScoreComponents` breakdown (ControlType, Parent, Sibling, Name, Position). |
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
-| **Candidate Pruning & Shortlist** | ✅ Implemented | `MinCandidateScore` filtering and Top-N shortlist assembly (~500 token LLM prompt). |
-| **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI, and offline Ollama providers with **Hallucination Guard**. |
+| **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI, Grok, Kimi, and offline Ollama providers behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
+| **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, and nightly multi-model evaluation harness with GitHub Step Summary reporting. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only, reducing the risk that non-idempotent actions are blindly re-run). |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
@@ -123,22 +123,25 @@ sequenceDiagram
     participant Resolver as SelfHealingResolver
     participant Scorer as SimilarityScorer
     participant LLM as LlmHealingEvaluator
-    Test->>Resolver: ResolveAsync(expected, liveTree)
+    Test->>Resolver: ResolveAsync(expected, liveTree, providers)
     Resolver->>Scorer: ScoreCandidates(expected, liveTree)
     Scorer-->>Resolver: List<CandidateScore>
-    alt Score >= 0.50 (High Confidence)
+    alt Confident (score, evidence and runner-up margin all pass)
         Resolver-->>Test: HealResult (Source: Heuristic)
-    else Score < 0.50 (Low Confidence Fallback)
-        Resolver->>Resolver: Build Top-N Shortlist
-        Resolver->>LLM: EvaluateAsync(expected, Shortlist)
-        LLM-->>Resolver: LlmHealingResult
-        alt CandidateId Exists in Shortlist (Hallucination Guard)
-            Resolver-->>Test: HealResult (Source: LLM)
-        else CandidateId Not Found
+    else Not confident - LLM fallback
+        Resolver->>Resolver: Build Top-N Shortlist (c0, c1, ...)
+        Resolver->>LLM: EvaluateAsync(expected, Shortlist) - all providers in parallel
+        LLM-->>Resolver: One LlmHealingResult per provider
+        Resolver->>Resolver: Drop votes whose CandidateId is not in the shortlist (Hallucination Guard)
+        alt 2+ providers named the same candidate
+            Resolver-->>Test: HealResult (Source: LLM, AgreedProviders)
+        else Split vote, tie, or too few usable votes
             Resolver-->>Test: HealResult (Fallback: Heuristic)
         end
     end
 ```
+
+> The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers — agreement is what accepts a pick. See [Consensus Acceptance](docs/llm-providers.md#-consensus-acceptance).
 
 ---
 
@@ -480,8 +483,12 @@ full rationale.
 using LlmHealing;
 using System.Net.Http;
 
+// Option A: Auto-discover all configured providers from environment variables (recommended)
+var providers = LlmProviderFactory.CreateConfiguredProviders();
+
+// Option B: Explicit provider instantiation
 using var httpClient = new HttpClient();
-var providers = new ILlmHealingProvider[]
+var manualProviders = new ILlmHealingProvider[]
 {
     new ClaudeHealingProvider(httpClient),
     new GeminiHealingProvider(httpClient),
@@ -501,21 +508,18 @@ if (result.Source == HealSource.Llm)
 }
 ```
 
-Claude, Gemini, and OpenAI read their API key from an environment variable
-(`ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENAI_API_KEY`) and are no-ops
-(`IsAvailable == false`) without one - safe to leave configured everywhere. They
-default to their cheapest/fastest tier (`ClaudeHealingProvider`:
-`claude-haiku-4-5-20251001`; `GeminiHealingProvider`: `gemini-3.6-flash`;
-`OpenAiHealingProvider`: `gpt-4o-mini`) since this is a small structured-pick task,
-not one that benefits from a flagship model. Override via environment variable
-(`ANTHROPIC_MODEL` / `GEMINI_MODEL` / `OPENAI_MODEL`) or the constructor's `model`
-parameter if a stronger model is ever warranted.
+All cloud providers share the `HttpLlmHealingProvider` base architecture with automatic exponential backoff, per-attempt timeout (`15s`), and overall operation timeout (`35s`).
 
-`OllamaHealingProvider` is the offline/local option: it targets `llama3.2` against
-`http://localhost:11434` by default and is only available (`IsAvailable == true`)
-when `OLLAMA_HOST`, `OLLAMA_MODEL`, or `OLLAMA_ENABLED=true` is explicitly set, so it
-stays a no-op everywhere else. Override the host/model via `OLLAMA_HOST` /
-`OLLAMA_MODEL` or the constructor parameters.
+`LlmProviderFactory` auto-discovers configured models from environment variables:
+- `ANTHROPIC_API_KEY` (+ `ANTHROPIC_MODEL`) $\rightarrow$ Claude (`claude-haiku-4-5-20251001`)
+- `GEMINI_API_KEY` (+ `GEMINI_MODEL`) $\rightarrow$ Gemini (`gemini-3.6-flash`)
+- `OPENAI_API_KEY` (+ `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ OpenAI (`gpt-4o-mini`)
+- `GROK_API_KEY` (+ `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ Grok (`grok-2-latest`)
+- `KIMI_API_KEY` (+ `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ Kimi (`moonshot-v1-8k`)
+- `OLLAMA_HOST` / `OLLAMA_MODEL` / `OLLAMA_ENABLED=true` $\rightarrow$ Ollama (`llama3.2`)
+- `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.)
+
+See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and consensus details.
 
 ---
 
@@ -530,7 +534,8 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters & limits | [DiscoveryRobustnessTests](TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
 | **Locator Repository & Snapshots** | Versioned JSON persistence, file locking, `LocatorKey` stability, `UiElementSnapshot` round-tripping | [LocatorRepositoryTests](TestAutomation/ScenarioRunner/LocatorRepositoryTests.cs), [UiElementSnapshotTests](TestAutomation/ScenarioRunner/UiElementSnapshotTests.cs) |
 | **Self-Healing Engine & Intent Metadata** | Repository auto-upsert, action retry, `TestIntent`-guided healing, JSON/HTML report emission | [SelfHealingEngineTests](TestAutomation/ScenarioRunner/SelfHealingEngineTests.cs), [TestIntentHealingTests](TestAutomation/ScenarioRunner/TestIntentHealingTests.cs) |
-| **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, confidence evaluation, Hallucination Guard | [LlmHealingProviderTests](TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |
+| **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, Hallucination Guard, and provider resilience: retry on transient 429/5xx, fail-fast on 4xx, `Retry-After` quota ceiling, per-attempt and total timeout budgets, attempt telemetry | [LlmHealingProviderTests](TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |
+| **Multi-Provider Consensus** | Quorum acceptance, split votes and ties treated as disagreement, single-provider rejection, hallucinated votes dropped before counting, `AgreedProviders` ordering, `LlmProviderFactory` discovery, non-confident evaluation fixtures | [SelfHealingResolverTests](TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [ConsensusEvaluationTests](TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs), [EvaluationScenarios](TestAutomation/ScenarioRunner/EvaluationScenarios.cs) |
 | **Web Discovery** | DOM snapshot mapping, Shadow DOM / iframe traversal, hidden/offscreen handling | [WebDiscoveryTests](TestAutomation/ScenarioRunner/WebDiscoveryTests.cs) |
 | **Intent Automation (Web)** | Deterministic + LLM-backed planning (with guarded fallback), DOM candidate matching/exploration, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs), [IntentPlannerTests](TestAutomation/ScenarioRunner/IntentPlannerTests.cs), [LlmIntentPlannerTests](TestAutomation/ScenarioRunner/LlmIntentPlannerTests.cs), [IntentExplorationBridgeTests](TestAutomation/ScenarioRunner/IntentExplorationBridgeTests.cs), [IntentLocatorRepositoryRecorderTests](TestAutomation/ScenarioRunner/IntentLocatorRepositoryRecorderTests.cs), [IntentFlowReportTests](TestAutomation/ScenarioRunner/IntentFlowReportTests.cs), [PlaywrightCSharpTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightCSharpTestGeneratorTests.cs), [PlaywrightTypeScriptTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightTypeScriptTestGeneratorTests.cs) |
 | **Intent Automation (Desktop)** | `UiElementInfo` candidate matching/exploration, locator recording, xUnit + FlaUI test skeleton generation, and pipeline orchestration | [IntentDesktopExplorationBridgeTests](TestAutomation/ScenarioRunner/IntentDesktopExplorationBridgeTests.cs), [IntentDesktopLocatorRepositoryRecorderTests](TestAutomation/ScenarioRunner/IntentDesktopLocatorRepositoryRecorderTests.cs), [FlaUiCSharpTestGeneratorTests](TestAutomation/ScenarioRunner/FlaUiCSharpTestGeneratorTests.cs), [IntentDesktopAutomationPipelineTests](TestAutomation/ScenarioRunner/IntentDesktopAutomationPipelineTests.cs) |
@@ -569,11 +574,11 @@ AutomationSandbox.sln
     ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
     ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
     ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
-    ├── LlmHealing/         Claude, Gemini, OpenAI & offline Ollama providers behind ILlmHealingProvider (netstandard2.0, net8.0, net10.0)
-    ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions
+    ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI, Grok, Kimi & offline Ollama providers (netstandard2.0, net8.0, net10.0)
+    ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
     ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
     ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
-    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48)
+    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
 ```
 
 ---
@@ -613,8 +618,23 @@ graph LR
     subgraph PhaseD [Phase D: Intent-Driven Automation]
         M6[M6: Intent Planner & DOM-Snapshot Matching - Implemented]
     end
-    M3 --> M4 --> M5 --> M6
+    subgraph PhaseE [Phase E: Beta Correctness & Hardening]
+        P1[Phase 1: Beta Blockers - Closed]
+        P2[Phase 2: Beta Hardening - Closed]
+        P1 --> P2
+    end
+    subgraph PhaseF [Phase F: Post-Beta Measurement]
+        P3[Phase 3: Calibration & Multi-Model Data - In Progress]
+    end
+    M3 --> M4 --> M5 --> M6 --> P1
+    P2 --> P3
 ```
+
+Work is now tracked through GitHub milestones rather than the original M1–M6 sequence:
+
+- **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
+- **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
+- **Phase 3 — Post-Beta Measurement** *(in progress)*: the thresholds shipped so far are documented estimates, not values derived from data. This phase measures them — a real-world false-positive benchmark on an organic application, and a nightly multi-provider run that records how often independent models actually agree.
 
 ---
 

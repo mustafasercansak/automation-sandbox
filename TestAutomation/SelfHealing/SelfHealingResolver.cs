@@ -104,12 +104,26 @@ namespace SelfHealing
             {
                 llmResults = await LlmHealingEvaluator.EvaluateAsync(available, expected, shortlist, platform, cancellationToken).ConfigureAwait(false);
             }
-
             catch (Exception ex)
             {
                 log($"[SelfHealing] LLM fallback threw ({ex.Message}) - returning heuristic result.");
                 return heuristicResult;
             }
+
+            // Telemetry: record attempt counts across all evaluated providers (#11, #47).
+            // Populated on heuristicResult too so failed consensus / single-provider runs still carry telemetry.
+            var providerAttempts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            foreach (var r in llmResults)
+            {
+                if (!string.IsNullOrEmpty(r.ProviderName))
+                {
+                    providerAttempts[r.ProviderName] = Math.Max(
+                        providerAttempts.TryGetValue(r.ProviderName, out var existing) ? existing : 0,
+                        r.AttemptCount);
+                }
+            }
+
+            heuristicResult.ProviderAttempts = providerAttempts;
 
             // Consensus acceptance (#10, decided in #19). Self-reported confidences are not
             // calibrated across model architectures - Claude's 0.72 and Gemini's 0.95 do not
@@ -178,18 +192,6 @@ namespace SelfHealing
                 .Select(r => r.ProviderName)
                 .OrderBy(n => n, StringComparer.Ordinal)
                 .ToList();
-
-            // Telemetry: record attempt counts across all evaluated providers (#11)
-            var providerAttempts = new SortedDictionary<string, int>(StringComparer.Ordinal);
-            foreach (var r in llmResults)
-            {
-                if (!string.IsNullOrEmpty(r.ProviderName))
-                {
-                    providerAttempts[r.ProviderName] = Math.Max(
-                        providerAttempts.TryGetValue(r.ProviderName, out var existing) ? existing : 0,
-                        r.AttemptCount);
-                }
-            }
 
             // The report keeps one provider's reasoning verbatim; ordinal-first makes that
             // choice deterministic rather than dependent on which provider answered first.

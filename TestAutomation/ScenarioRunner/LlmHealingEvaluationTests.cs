@@ -33,15 +33,10 @@ namespace ScenarioRunner
         public async Task CompareProviders_OnLiveBrokenLocator()
         {
             using var httpClient = new HttpClient();
-            ILlmHealingProvider[] providers =
-            {
-                new ClaudeHealingProvider(httpClient),
-                new GeminiHealingProvider(httpClient),
-            };
-            var available = providers.Where(p => p.IsAvailable).ToList();
+            var available = LlmProviderFactory.CreateConfiguredProviders(httpClient);
             if (available.Count == 0)
             {
-                Console.WriteLine("[LlmHealingEvaluation] No provider API keys configured (ANTHROPIC_API_KEY / GEMINI_API_KEY) - skipping.");
+                Console.WriteLine("[LlmHealingEvaluation] No provider API keys configured - skipping.");
                 return;
             }
 
