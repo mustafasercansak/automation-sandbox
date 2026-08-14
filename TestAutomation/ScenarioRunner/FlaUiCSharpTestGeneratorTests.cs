@@ -294,6 +294,115 @@ namespace ScenarioRunner
             Assert.Contains("Assert.True(false, \"No recorded locator for Field.Email.\");", code);
         }
 
+        [Fact]
+        public void Generate_FallsBackToClassNameWithWarning_WhenControlTypeIsUnrecognized()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Toggle custom grid",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, LocatorKey = "Grid.Custom" }
+                }
+            };
+            var recordingResults = new List<IntentDesktopLocatorRecordingResult>
+            {
+                new IntentDesktopLocatorRecordingResult
+                {
+                    LocatorKey = "Grid.Custom",
+                    Recorded = true,
+                    Record = new LocatorRecord
+                    {
+                        LocatorKey = "Grid.Custom",
+                        Snapshot = new UiElementInfo
+                        {
+                            ControlType = "InvalidCustomControlWidget",
+                            ClassName = "CustomGridViewClass"
+                        }
+                    }
+                }
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordingResults);
+
+            Assert.Contains("// Warning: ControlType 'InvalidCustomControlWidget' is not a recognized FlaUI.Core.Definitions.ControlType; fell back to ByClassName.", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByClassName(\"CustomGridViewClass\"))!.AsButton().Invoke();", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsWarningAndFailure_WhenControlTypeIsUnrecognizedAndNoFallbackAvailable()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Toggle unknown control",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, LocatorKey = "Unknown.Control" }
+                }
+            };
+            var recordingResults = new List<IntentDesktopLocatorRecordingResult>
+            {
+                new IntentDesktopLocatorRecordingResult
+                {
+                    LocatorKey = "Unknown.Control",
+                    Recorded = true,
+                    Record = new LocatorRecord
+                    {
+                        LocatorKey = "Unknown.Control",
+                        Snapshot = new UiElementInfo
+                        {
+                            ControlType = "NonExistentControlType"
+                        }
+                    }
+                }
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordingResults);
+
+            Assert.Contains("// Warning: ControlType 'NonExistentControlType' is not a recognized FlaUI.Core.Definitions.ControlType; no locator could be emitted.", code);
+            Assert.Contains("Assert.True(false, \"No recorded locator for Unknown.Control.\");", code);
+        }
+
+        [Fact]
+        public void Generate_EscapesNewlinesTabsAndQuotesInValuesAndIntents()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "Multiline desktop test",
+                Goal = "Test desktop multiline values",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Fill,
+                        LocatorKey = "Field.Notes",
+                        Value = "Line 1\r\nLine 2\twith \"quotes\"",
+                        TestIntent = "Fill multi-line\r\nnotes with\ttab",
+                    },
+                    new IntentStep
+                    {
+                        Order = 2,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Field.Notes",
+                        AssertionKind = AssertionKind.ValueEquals,
+                        ExpectedValue = "Line 1\r\nLine 2",
+                        ExpectedOutcome = "Expected\r\nmultiline outcome",
+                    }
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Field.Notes", "txtNotes")
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("// Fill multi-line  notes with tab", code);
+            Assert.Contains(".Text = \"Line 1\\r\\nLine 2\\twith \\\"quotes\\\"\";", code);
+            Assert.Contains("Assert.Equal(\"Line 1\\r\\nLine 2\", window.FindFirstDescendant(cf => cf.ByAutomationId(\"txtNotes\"))!.AsTextBox().Text);", code);
+        }
+
         private static IntentDesktopLocatorRecordingResult Recorded(string locatorKey, string automationId)
         {
             return new IntentDesktopLocatorRecordingResult

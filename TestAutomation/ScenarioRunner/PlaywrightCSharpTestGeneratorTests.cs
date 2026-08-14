@@ -227,6 +227,46 @@ namespace ScenarioRunner
             Assert.Contains("Assert.Inconclusive(\"No recorded locator for Field.Email.\");", code);
         }
 
+        [Fact]
+        public void Generate_EscapesNewlinesTabsAndQuotesInValuesAndIntents()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "Multiline test",
+                Goal = "Test multiline values",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Fill,
+                        LocatorKey = "Field.Notes",
+                        Value = "Line 1\r\nLine 2\twith \"quotes\"",
+                        TestIntent = "Fill multi-line\r\nnotes with\ttab",
+                    },
+                    new IntentStep
+                    {
+                        Order = 2,
+                        ActionType = IntentActionType.Assert,
+                        LocatorKey = "Field.Notes",
+                        AssertionKind = AssertionKind.TextEquals,
+                        ExpectedValue = "Line 1\r\nLine 2",
+                        ExpectedOutcome = "Expected\r\nmultiline outcome",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Field.Notes", "txtNotes", "page.GetByTestId(\"txtNotes\")")
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("// Fill multi-line  notes with tab", code);
+            Assert.Contains(".FillAsync(\"Line 1\\r\\nLine 2\\twith \\\"quotes\\\"\");", code);
+            Assert.Contains(".ToHaveTextAsync(\"Line 1\\r\\nLine 2\");", code);
+        }
+
         private static IntentLocatorRecordingResult Recorded(string locatorKey, string automationId, string expression)
         {
             return new IntentLocatorRecordingResult
