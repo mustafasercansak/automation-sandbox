@@ -109,11 +109,24 @@ namespace ScenarioRunner
         [Fact]
         public void CanonicalFlaUiControlTypes_MatchesAllFlaUiCoreEnumMembersBidirectionally()
         {
-            var enumNames = System.Enum.GetNames(typeof(FlaUI.Core.Definitions.ControlType));
+            // ControlType.Unknown is deliberately excluded from the mirror: emitting
+            // ByControlType(ControlType.Unknown) compiles but searches for nothing useful,
+            // so a snapshot with an unknown control type is better served by the
+            // ByClassName / ByName fallback in FlaUiCSharpTestGenerator.FindExpression.
+            var enumNames = new System.Collections.Generic.List<string>();
+            foreach (var name in System.Enum.GetNames(typeof(FlaUI.Core.Definitions.ControlType)))
+            {
+                if (name != "Unknown")
+                {
+                    enumNames.Add(name);
+                }
+            }
             var knownTypes = CodeGenerationUtilities.KnownFlaUiControlTypes;
 
-            // 1. Cardinality check
-            Assert.Equal(enumNames.Length, knownTypes.Count);
+            // 1. Cardinality check - a new FlaUI ControlType must fail here, not degrade silently
+            Assert.Equal(enumNames.Count, knownTypes.Count);
+            Assert.False(CodeGenerationUtilities.TryGetCanonicalFlaUiControlType("Unknown", out _),
+                "ControlType.Unknown must stay out of the mirror so it falls back to ByClassName/ByName.");
 
             var enumSet = new System.Collections.Generic.HashSet<string>(enumNames, System.StringComparer.OrdinalIgnoreCase);
 

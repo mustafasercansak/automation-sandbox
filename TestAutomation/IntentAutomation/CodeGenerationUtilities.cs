@@ -10,6 +10,11 @@ namespace IntentAutomation
         // Explicitly mirrors FlaUI.Core.Definitions.ControlType enum members to avoid a hard dependency
         // on FlaUI.Core in IntentAutomation, keeping the library fully cross-platform (netstandard2.0;net8.0).
         // Validated against the real FlaUI.Core enum in ScenarioRunner's net48 test suite.
+        //
+        // ControlType.Unknown is deliberately NOT mirrored, which is why this holds 41 of the enum's 42
+        // members. Emitting ByControlType(ControlType.Unknown) compiles but searches for nothing useful;
+        // a snapshot whose control type is unknown is better served by FindExpression's
+        // ByClassName / ByName fallback, which at least has a chance of locating the element.
         private static readonly Dictionary<string, string> CanonicalFlaUiControlTypes =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
