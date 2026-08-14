@@ -38,7 +38,7 @@ namespace IntentAutomation
             var code = new StringBuilder();
             code.AppendLine("import { test, expect } from '@playwright/test';");
             code.AppendLine();
-            code.AppendLine($"test('{EscapeSingleQuoted(title)}', async ({{ page }}) => {{");
+            code.AppendLine($"test('{CodeGenerationUtilities.EscapeSingleQuoted(title)}', async ({{ page }}) => {{");
 
             foreach (var step in scenario.Steps.OrderBy(step => step.Order))
             {
@@ -56,12 +56,12 @@ namespace IntentAutomation
         {
             if (!string.IsNullOrWhiteSpace(step.TestIntent))
             {
-                code.AppendLine($"  // {EscapeComment(step.TestIntent)}");
+                code.AppendLine($"  // {CodeGenerationUtilities.EscapeComment(step.TestIntent)}");
             }
 
             if (step.ActionType == IntentActionType.Navigate)
             {
-                code.AppendLine($"  await page.goto('{EscapeSingleQuoted(step.Value)}');");
+                code.AppendLine($"  await page.goto('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
                 return;
             }
 
@@ -70,22 +70,22 @@ namespace IntentAutomation
             var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
             if (locatorRequired && string.IsNullOrWhiteSpace(locatorExpression))
             {
-                code.AppendLine($"  test.skip(true, 'No recorded locator for {EscapeSingleQuoted(step.LocatorKey)}.');");
+                code.AppendLine($"  test.skip(true, 'No recorded locator for {CodeGenerationUtilities.EscapeSingleQuoted(step.LocatorKey)}.');");
                 return;
             }
 
             if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
-                code.AppendLine($"  // locator: {EscapeComment(step.LocatorKey)}");
+                code.AppendLine($"  // locator: {CodeGenerationUtilities.EscapeComment(step.LocatorKey)}");
             }
 
             switch (step.ActionType)
             {
                 case IntentActionType.Fill:
-                    code.AppendLine($"  await {locatorExpression}.fill('{EscapeSingleQuoted(step.Value)}');");
+                    code.AppendLine($"  await {locatorExpression}.fill('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
                     break;
                 case IntentActionType.Select:
-                    code.AppendLine($"  await {locatorExpression}.selectOption('{EscapeSingleQuoted(step.Value)}');");
+                    code.AppendLine($"  await {locatorExpression}.selectOption('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
                     break;
                 case IntentActionType.Click:
                     code.AppendLine($"  await {locatorExpression}.click();");
@@ -110,12 +110,12 @@ namespace IntentAutomation
 
             if (!string.IsNullOrWhiteSpace(snapshot?.AutomationId))
             {
-                return $"page.getByTestId('{EscapeSingleQuoted(snapshot!.AutomationId)}')";
+                return $"page.getByTestId('{CodeGenerationUtilities.EscapeSingleQuoted(snapshot!.AutomationId)}')";
             }
 
             if (!string.IsNullOrWhiteSpace(snapshot?.Name))
             {
-                return $"page.getByText('{EscapeSingleQuoted(snapshot!.Name)}')";
+                return $"page.getByText('{CodeGenerationUtilities.EscapeSingleQuoted(snapshot!.Name)}')";
             }
 
             return "";
@@ -131,20 +131,20 @@ namespace IntentAutomation
             const string testIdPrefix = "page.GetByTestId(\"";
             if (expression!.StartsWith(testIdPrefix, StringComparison.Ordinal) && expression.EndsWith("\")", StringComparison.Ordinal))
             {
-                return "page.getByTestId('" + EscapeSingleQuoted(expression.Substring(testIdPrefix.Length, expression.Length - testIdPrefix.Length - 2)) + "')";
+                return "page.getByTestId('" + CodeGenerationUtilities.EscapeSingleQuoted(expression.Substring(testIdPrefix.Length, expression.Length - testIdPrefix.Length - 2)) + "')";
             }
 
             const string locatorPrefix = "page.Locator(\"";
             if (expression.StartsWith(locatorPrefix, StringComparison.Ordinal) && expression.EndsWith("\")", StringComparison.Ordinal))
             {
-                return "page.locator('" + EscapeSingleQuoted(expression.Substring(locatorPrefix.Length, expression.Length - locatorPrefix.Length - 2)) + "')";
+                return "page.locator('" + CodeGenerationUtilities.EscapeSingleQuoted(expression.Substring(locatorPrefix.Length, expression.Length - locatorPrefix.Length - 2)) + "')";
             }
 
             var role = ExtractBetween(expression, "page.GetByRole(AriaRole.", ", new()");
             var name = ExtractBetween(expression, "Name = \"", "\"");
             if (!string.IsNullOrWhiteSpace(role) && !string.IsNullOrWhiteSpace(name))
             {
-                return $"page.getByRole('{ToTypeScriptRole(role)}', {{ name: '{EscapeSingleQuoted(name)}' }})";
+                return $"page.getByRole('{ToTypeScriptRole(role)}', {{ name: '{CodeGenerationUtilities.EscapeSingleQuoted(name)}' }})";
             }
 
             return "";
@@ -179,16 +179,6 @@ namespace IntentAutomation
             }
 
             return "";
-        }
-
-        private static string EscapeSingleQuoted(string value)
-        {
-            return (value ?? "").Replace("\\", "\\\\").Replace("'", "\\'");
-        }
-
-        private static string EscapeComment(string value)
-        {
-            return (value ?? "").Replace("\r", " ").Replace("\n", " ");
         }
     }
 }

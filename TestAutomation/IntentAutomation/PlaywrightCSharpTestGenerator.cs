@@ -28,11 +28,11 @@ namespace IntentAutomation
             }
 
             var className = string.IsNullOrWhiteSpace(_options.ClassName)
-                ? ToIdentifier(scenario.Name, "IntentScenarioTests")
-                : ToIdentifier(_options.ClassName, "IntentScenarioTests");
+                ? CodeGenerationUtilities.ToIdentifier(scenario.Name, "IntentScenarioTests")
+                : CodeGenerationUtilities.ToIdentifier(_options.ClassName, "IntentScenarioTests");
             var methodName = string.IsNullOrWhiteSpace(_options.MethodName)
-                ? ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
-                : ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
+                ? CodeGenerationUtilities.ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
+                : CodeGenerationUtilities.ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
             var namespaceName = string.IsNullOrWhiteSpace(_options.Namespace) ? "GeneratedTests" : _options.Namespace.Trim();
             var recordingsByKey = recordingResults
                 .Where(result => result.Recorded && !string.IsNullOrWhiteSpace(result.LocatorKey))
@@ -71,12 +71,12 @@ namespace IntentAutomation
         {
             if (!string.IsNullOrWhiteSpace(step.TestIntent))
             {
-                code.AppendLine($"            // {EscapeComment(step.TestIntent)}");
+                code.AppendLine($"            // {CodeGenerationUtilities.EscapeComment(step.TestIntent)}");
             }
 
             if (step.ActionType == IntentActionType.Navigate)
             {
-                code.AppendLine($"            await Page.GotoAsync(\"{EscapeString(step.Value)}\");");
+                code.AppendLine($"            await Page.GotoAsync(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
                 return;
             }
 
@@ -85,22 +85,22 @@ namespace IntentAutomation
             var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
             if (locatorRequired && string.IsNullOrWhiteSpace(locatorExpression))
             {
-                code.AppendLine($"            Assert.Inconclusive(\"No recorded locator for {EscapeString(step.LocatorKey)}.\");");
+                code.AppendLine($"            Assert.Inconclusive(\"No recorded locator for {CodeGenerationUtilities.EscapeString(step.LocatorKey)}.\");");
                 return;
             }
 
             if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
-                code.AppendLine($"            // locator: {EscapeComment(step.LocatorKey)}");
+                code.AppendLine($"            // locator: {CodeGenerationUtilities.EscapeComment(step.LocatorKey)}");
             }
 
             switch (step.ActionType)
             {
                 case IntentActionType.Fill:
-                    code.AppendLine($"            await {locatorExpression}.FillAsync(\"{EscapeString(step.Value)}\");");
+                    code.AppendLine($"            await {locatorExpression}.FillAsync(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
                     break;
                 case IntentActionType.Select:
-                    code.AppendLine($"            await {locatorExpression}.SelectOptionAsync(new[] {{ \"{EscapeString(step.Value)}\" }});");
+                    code.AppendLine($"            await {locatorExpression}.SelectOptionAsync(new[] {{ \"{CodeGenerationUtilities.EscapeString(step.Value)}\" }});");
                     break;
                 case IntentActionType.Click:
                     code.AppendLine($"            await {locatorExpression}.ClickAsync();");
@@ -124,57 +124,15 @@ namespace IntentAutomation
 
             if (!string.IsNullOrWhiteSpace(snapshot?.AutomationId))
             {
-                return $"Page.GetByTestId(\"{EscapeString(snapshot!.AutomationId)}\")";
+                return $"Page.GetByTestId(\"{CodeGenerationUtilities.EscapeString(snapshot!.AutomationId)}\")";
             }
 
             if (!string.IsNullOrWhiteSpace(snapshot?.Name))
             {
-                return $"Page.GetByText(\"{EscapeString(snapshot!.Name)}\")";
+                return $"Page.GetByText(\"{CodeGenerationUtilities.EscapeString(snapshot!.Name)}\")";
             }
 
             return "";
-        }
-
-        private static string ToIdentifier(string value, string fallback)
-        {
-            var parts = (value ?? "")
-                .Split(new[] { ' ', '-', '_', '.', '/', '\\', ':', ';', ',', '(', ')', '[', ']', '{', '}', '\'', '"' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(CleanIdentifierPart)
-                .Where(part => part.Length > 0)
-                .ToList();
-            var identifier = string.Concat(parts);
-            if (identifier.Length == 0)
-            {
-                identifier = fallback;
-            }
-
-            if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
-            {
-                identifier = "_" + identifier;
-            }
-
-            return identifier;
-        }
-
-        private static string CleanIdentifierPart(string value)
-        {
-            var chars = value.Where(char.IsLetterOrDigit).ToArray();
-            if (chars.Length == 0)
-            {
-                return "";
-            }
-
-            return char.ToUpperInvariant(chars[0]) + new string(chars.Skip(1).ToArray());
-        }
-
-        private static string EscapeString(string value)
-        {
-            return (value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
-        }
-
-        private static string EscapeComment(string value)
-        {
-            return (value ?? "").Replace("\r", " ").Replace("\n", " ");
         }
     }
 }

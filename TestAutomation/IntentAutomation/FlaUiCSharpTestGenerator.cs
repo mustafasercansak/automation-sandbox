@@ -34,11 +34,11 @@ namespace IntentAutomation
             }
 
             var className = string.IsNullOrWhiteSpace(_options.ClassName)
-                ? ToIdentifier(scenario.Name, "IntentScenarioTests")
-                : ToIdentifier(_options.ClassName, "IntentScenarioTests");
+                ? CodeGenerationUtilities.ToIdentifier(scenario.Name, "IntentScenarioTests")
+                : CodeGenerationUtilities.ToIdentifier(_options.ClassName, "IntentScenarioTests");
             var methodName = string.IsNullOrWhiteSpace(_options.MethodName)
-                ? ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
-                : ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
+                ? CodeGenerationUtilities.ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
+                : CodeGenerationUtilities.ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
             var namespaceName = string.IsNullOrWhiteSpace(_options.Namespace) ? "GeneratedTests" : _options.Namespace.Trim();
             var recordingsByKey = recordingResults
                 .Where(result => result.Recorded && !string.IsNullOrWhiteSpace(result.LocatorKey))
@@ -59,7 +59,7 @@ namespace IntentAutomation
             code.AppendLine();
             code.AppendLine($"        public {className}()");
             code.AppendLine("        {");
-            code.AppendLine($"            _connector = ApplicationConnector.Launch(@\"{EscapeVerbatimString(_options.ApplicationExecutablePath)}\");");
+            code.AppendLine($"            _connector = ApplicationConnector.Launch(@\"{CodeGenerationUtilities.EscapeVerbatimString(_options.ApplicationExecutablePath)}\");");
             code.AppendLine("        }");
             code.AppendLine();
             code.AppendLine("        [Fact]");
@@ -87,7 +87,7 @@ namespace IntentAutomation
         {
             if (!string.IsNullOrWhiteSpace(step.TestIntent))
             {
-                code.AppendLine($"            // {EscapeComment(step.TestIntent)}");
+                code.AppendLine($"            // {CodeGenerationUtilities.EscapeComment(step.TestIntent)}");
             }
 
             if (step.ActionType == IntentActionType.Navigate)
@@ -97,26 +97,31 @@ namespace IntentAutomation
             }
 
             recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
-            var findExpression = FindExpression(recording?.Record?.Snapshot);
+            var findExpression = FindExpression(recording?.Record?.Snapshot, out var warningComment);
+            if (!string.IsNullOrWhiteSpace(warningComment))
+            {
+                code.AppendLine($"            {warningComment}");
+            }
+
             var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
             if (locatorRequired && string.IsNullOrWhiteSpace(findExpression))
             {
-                code.AppendLine($"            Assert.True(false, \"No recorded locator for {EscapeString(step.LocatorKey)}.\");");
+                code.AppendLine($"            Assert.True(false, \"No recorded locator for {CodeGenerationUtilities.EscapeString(step.LocatorKey)}.\");");
                 return;
             }
 
             if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
             {
-                code.AppendLine($"            // locator: {EscapeComment(step.LocatorKey)}");
+                code.AppendLine($"            // locator: {CodeGenerationUtilities.EscapeComment(step.LocatorKey)}");
             }
 
             switch (step.ActionType)
             {
                 case IntentActionType.Fill:
-                    code.AppendLine($"            window.{findExpression}!.AsTextBox().Text = \"{EscapeString(step.Value)}\";");
+                    code.AppendLine($"            window.{findExpression}!.AsTextBox().Text = \"{CodeGenerationUtilities.EscapeString(step.Value)}\";");
                     break;
                 case IntentActionType.Select:
-                    code.AppendLine($"            window.{findExpression}!.AsComboBox().Select(\"{EscapeString(step.Value)}\");");
+                    code.AppendLine($"            window.{findExpression}!.AsComboBox().Select(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
                     break;
                 case IntentActionType.Click:
                     code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");
@@ -134,8 +139,9 @@ namespace IntentAutomation
         // best signal (still ambiguity-prone but visible in the UI, unlike a raw ControlType
         // search). ControlType alone is a last resort: it is exactly the fallback
         // MainFormScenarioTests uses for panel1, whose AutomationId is deliberately meaningless.
-        private static string FindExpression(UiElementInfo? snapshot)
+        private static string FindExpression(UiElementInfo? snapshot, out string? warningComment)
         {
+            warningComment = null;
             if (snapshot == null)
             {
                 return "";
@@ -143,67 +149,43 @@ namespace IntentAutomation
 
             if (!string.IsNullOrWhiteSpace(snapshot.AutomationId))
             {
-                return $"FindFirstDescendant(cf => cf.ByAutomationId(\"{EscapeString(snapshot.AutomationId)}\"))";
+                return $"FindFirstDescendant(cf => cf.ByAutomationId(\"{CodeGenerationUtilities.EscapeString(snapshot.AutomationId)}\"))";
             }
 
             if (!string.IsNullOrWhiteSpace(snapshot.Name))
             {
-                return $"FindFirstDescendant(cf => cf.ByName(\"{EscapeString(snapshot.Name)}\"))";
+                return $"FindFirstDescendant(cf => cf.ByName(\"{CodeGenerationUtilities.EscapeString(snapshot.Name)}\"))";
             }
 
             if (!string.IsNullOrWhiteSpace(snapshot.ControlType))
             {
-                return $"FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.{snapshot.ControlType}))";
-            }
+                if (CodeGenerationUtilities.TryGetCanonicalFlaUiControlType(snapshot.ControlType, out var canonicalControlType))
+                {
+                    return $"FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.{canonicalControlType}))";
+                }
 
-            return "";
-        }
+                if (!string.IsNullOrWhiteSpace(snapshot.ClassName))
+                {
+                    warningComment = $"// Warning: ControlType '{CodeGenerationUtilities.EscapeComment(snapshot.ControlType)}' is not a recognized FlaUI.Core.Definitions.ControlType; fell back to ByClassName.";
+                    return $"FindFirstDescendant(cf => cf.ByClassName(\"{CodeGenerationUtilities.EscapeString(snapshot.ClassName)}\"))";
+                }
 
-        private static string ToIdentifier(string value, string fallback)
-        {
-            var parts = (value ?? "")
-                .Split(new[] { ' ', '-', '_', '.', '/', '\\', ':', ';', ',', '(', ')', '[', ']', '{', '}', '\'', '"' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(CleanIdentifierPart)
-                .Where(part => part.Length > 0)
-                .ToList();
-            var identifier = string.Concat(parts);
-            if (identifier.Length == 0)
-            {
-                identifier = fallback;
-            }
+                if (!string.IsNullOrWhiteSpace(snapshot.Name))
+                {
+                    warningComment = $"// Warning: ControlType '{CodeGenerationUtilities.EscapeComment(snapshot.ControlType)}' is not a recognized FlaUI.Core.Definitions.ControlType; fell back to ByName.";
+                    return $"FindFirstDescendant(cf => cf.ByName(\"{CodeGenerationUtilities.EscapeString(snapshot.Name)}\"))";
+                }
 
-            if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
-            {
-                identifier = "_" + identifier;
-            }
-
-            return identifier;
-        }
-
-        private static string CleanIdentifierPart(string value)
-        {
-            var chars = value.Where(char.IsLetterOrDigit).ToArray();
-            if (chars.Length == 0)
-            {
+                warningComment = $"// Warning: ControlType '{CodeGenerationUtilities.EscapeComment(snapshot.ControlType)}' is not a recognized FlaUI.Core.Definitions.ControlType; no locator could be emitted.";
                 return "";
             }
 
-            return char.ToUpperInvariant(chars[0]) + new string(chars.Skip(1).ToArray());
-        }
+            if (!string.IsNullOrWhiteSpace(snapshot.ClassName))
+            {
+                return $"FindFirstDescendant(cf => cf.ByClassName(\"{CodeGenerationUtilities.EscapeString(snapshot.ClassName)}\"))";
+            }
 
-        private static string EscapeString(string value)
-        {
-            return (value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
-        }
-
-        private static string EscapeVerbatimString(string value)
-        {
-            return (value ?? "").Replace("\"", "\"\"");
-        }
-
-        private static string EscapeComment(string value)
-        {
-            return (value ?? "").Replace("\r", " ").Replace("\n", " ");
+            return "";
         }
     }
 }
