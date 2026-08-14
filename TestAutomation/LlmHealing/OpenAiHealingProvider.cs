@@ -14,16 +14,24 @@ namespace LlmHealing
     {
         private const string ApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
+        public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
         private readonly string _model;
+        private readonly TimeSpan _timeout;
 
         public string Name => "OpenAI";
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        public TimeSpan Timeout => _timeout;
 
-        public OpenAiHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null)
+        public OpenAiHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null)
         {
+            if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
+            }
+
             _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
@@ -31,6 +39,7 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
+            _timeout = timeout ?? DefaultTimeout;
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
@@ -64,9 +73,12 @@ namespace LlmHealing
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(_timeout);
+
             try
             {
-                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using var response = await _httpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
                 var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -91,6 +103,26 @@ namespace LlmHealing
                     MatchedAutomationId = matched?.Candidate.AutomationId,
                     Confidence = confidence,
                     Reasoning = reasoning,
+                    Elapsed = stopwatch.Elapsed,
+                };
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = $"Request timed out after {_timeout.TotalSeconds:F0}s.",
+                    Elapsed = stopwatch.Elapsed,
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = "Operation was canceled.",
                     Elapsed = stopwatch.Elapsed,
                 };
             }

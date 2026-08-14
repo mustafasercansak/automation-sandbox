@@ -180,16 +180,74 @@ namespace ScenarioRunner
             Assert.Contains("web-playwright", handler.LastRequestBody);
         }
 
+        [Fact]
+        public async Task OpenAiHealingProvider_TimesOut_ReturnsTimeoutErrorMessage()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-openai-key",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task OllamaHealingProvider_TimesOut_ReturnsTimeoutErrorMessage()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+            var provider = new OllamaHealingProvider(
+                httpClient: new HttpClient(handler),
+                host: "http://localhost:11434",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void OpenAiHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+        }
+
+        [Fact]
+        public void OllamaHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
-            private readonly string _responseContent;
-            private readonly HttpStatusCode _statusCode;
+            private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responder;
             public string? LastRequestBody { get; private set; }
 
             public FakeHttpMessageHandler(string responseContent, HttpStatusCode statusCode)
             {
-                _responseContent = responseContent;
-                _statusCode = statusCode;
+                _responder = (_, _) => Task.FromResult(new HttpResponseMessage(statusCode)
+                {
+                    Content = new StringContent(responseContent, Encoding.UTF8, "application/json"),
+                });
+            }
+
+            public FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder)
+            {
+                _responder = responder;
             }
 
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -198,11 +256,7 @@ namespace ScenarioRunner
                     ? null
                     : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                var response = new HttpResponseMessage(_statusCode)
-                {
-                    Content = new StringContent(_responseContent, Encoding.UTF8, "application/json"),
-                };
-                return response;
+                return await _responder(request, cancellationToken);
             }
         }
     }

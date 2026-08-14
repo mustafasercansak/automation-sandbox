@@ -20,14 +20,23 @@ namespace LlmHealing
     {
         private const string ApiUrl = "https://generativelanguage.googleapis.com/v1beta/interactions";
         private const string DefaultModel = "gemini-3.6-flash";
+        public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
         private readonly string _model;
+        private readonly TimeSpan _timeout;
         public string Name => "Gemini";
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
-        public GeminiHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null)
+        public TimeSpan Timeout => _timeout;
+
+        public GeminiHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null)
         {
+            if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
+            }
+
             _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
 
@@ -35,6 +44,7 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (confirmed live: CI sent model: "" and Gemini 404'd on it). NullIfEmpty closes that gap.
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("GEMINI_MODEL")) ?? DefaultModel;
+            _timeout = timeout ?? DefaultTimeout;
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
@@ -58,9 +68,13 @@ namespace LlmHealing
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
             };
             request.Headers.Add("x-goog-api-key", _apiKey);
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(_timeout);
+
             try
             {
-                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using var response = await _httpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
                 var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -90,7 +104,26 @@ namespace LlmHealing
                     Elapsed = stopwatch.Elapsed,
                 };
             }
-
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = $"Request timed out after {_timeout.TotalSeconds:F0}s.",
+                    Elapsed = stopwatch.Elapsed,
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = "Operation was canceled.",
+                    Elapsed = stopwatch.Elapsed,
+                };
+            }
             catch (Exception ex)
             {
                 return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = ex.Message, Elapsed = stopwatch.Elapsed };

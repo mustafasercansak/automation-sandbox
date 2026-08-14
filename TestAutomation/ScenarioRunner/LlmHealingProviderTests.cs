@@ -445,9 +445,61 @@ namespace ScenarioRunner
             Assert.Contains("web-playwright", handler.LastRequestBody);
         }
 
+        [Fact]
+        public async Task ClaudeHealingProvider_TimesOut_ReturnsTimeoutErrorMessage()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task GeminiHealingProvider_TimesOut_ReturnsTimeoutErrorMessage()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+            var provider = new GeminiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-key",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void ClaudeHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+        }
+
+        [Fact]
+        public void GeminiHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
-            private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+            private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responder;
             public HttpRequestMessage? LastRequest { get; private set; }
 
             // Captured eagerly, while request.Content is still alive - the providers wrap
@@ -458,6 +510,11 @@ namespace ScenarioRunner
 
             public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
             {
+                _responder = (req, _) => Task.FromResult(responder(req));
+            }
+
+            public FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder)
+            {
                 _responder = responder;
             }
 
@@ -467,7 +524,7 @@ namespace ScenarioRunner
                 LastRequestBody = request.Content is null
                     ? null
                     : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return _responder(request);
+                return await _responder(request, cancellationToken);
             }
         }
 
