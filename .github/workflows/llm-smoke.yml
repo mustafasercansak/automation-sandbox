@@ -1,9 +1,17 @@
 name: LLM Models Smoke Test
 
+# The nightly schedule is deliberately disabled. On its first manual run GitHub Models answered
+# HTTP 410 github_models_retirement_brownout - a planned outage ahead of the service being retired -
+# so a nightly run would fail every night for a reason nobody can fix, and a recurring red that
+# cannot be acted on trains everyone to ignore the one that matters.
+#
+# Manual dispatch is kept: the endpoint, auth and permissions are all proven working (the 410 came
+# from GitHub Models itself, so the request reached it), and the provider takes any OpenAI-compatible
+# endpoint. Point OPENAI_ENDPOINT/OPENAI_MODEL at another provider, add its key as the OPENAI_API_KEY
+# secret, and restore the schedule below - no code change needed.
 on:
-  schedule:
-    # Run nightly at 03:00 UTC to verify live provider responses without burning daily PR quotas
-    - cron: '0 3 * * *'
+  # schedule:
+  #   - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -31,9 +39,14 @@ jobs:
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
           dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
 
-      - name: Run GitHub Models Live Smoke Test
+      # Endpoint and model come from repo variables so this can be pointed at any OpenAI-compatible
+      # provider (xAI, Azure OpenAI, OpenRouter, a local gateway) without editing the workflow; they
+      # fall back to GitHub Models. OPENAI_API_KEY takes precedence in the provider, with GITHUB_TOKEN
+      # as the fallback - so adding the secret is all it takes to switch backends.
+      - name: Run live LLM smoke test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_ENDPOINT: https://models.github.ai/inference
-          OPENAI_MODEL: gpt-4o-mini
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_ENDPOINT: ${{ vars.OPENAI_ENDPOINT || 'https://models.github.ai/inference' }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~GitHubModelsSmokeTests" --logger "console;verbosity=normal"
