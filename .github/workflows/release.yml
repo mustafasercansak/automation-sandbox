@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'SemVer package version, for example 0.2.0-beta.1'
+        description: 'SemVer package version, for example 0.2.0-beta.2'
         required: true
-        default: '0.2.0-beta.1'
+        default: '0.2.0-beta.2'
       prerelease:
         description: 'Mark the GitHub Release as a prerelease'
         required: true
@@ -95,21 +95,27 @@ jobs:
 
           Preview NuGet package artifact release.
 
+          ## Breaking Changes
+
+          Both changes are in the LLM fallback path. Consumers who never configure an LLM provider are unaffected.
+
+          - **A single LLM provider's pick is no longer accepted (#10).** Acceptance is now by consensus: at least `SimilarityWeights.MinimumConsensusVotes` (default 2) providers must independently name the same candidate. Self-reported confidence is still recorded but is never compared or thresholded, because those numbers are not calibrated across model architectures. **This fails quietly by design** - with one provider configured, healing degrades to the heuristic result instead of raising an error. If you relied on single-provider LLM healing, configure a second provider from a different model family, or expect heuristic-only behaviour. `MinimumLlmConfidence` remains on `SimilarityWeights` and is still reported, but no longer gates anything.
+          - **Worst-case provider latency rose from ~15s to ~35s (#11).** Providers now retry transient failures, so a slow or failing endpoint occupies its per-attempt timeout more than once. The new `TotalTimeout` (35s cloud, 70s Ollama) caps the whole operation including backoff. Set `maxRetries: 0` to restore single-shot behaviour.
+
           ## Highlights
 
-          - **Locator exception gating (#2):** Healing retries are strictly gated to locator-resolution failures rather than blindly retrying arbitrary exceptions.
-          - **Evidence coverage gate (#3):** Signals with missing metadata on both sides (empty names, null parents, zero bounds) are excluded from the denominator so missing data neither penalizes nor produces a false-perfect 1.00 score.
-          - **Runner-up margin gate (#4):** Top candidates with ambiguous margins over the runner-up (`best - runnerUp < 0.05`) are classified as ambiguous and flagged for manual review instead of falsely marked confident.
-          - **Intent semantic overlap gate (#5):** Desktop and web exploration bridges enforce a minimum semantic score (`MinimumSemanticScore = 0.01`) and candidate margin, routing semantically unrelated matches to review without persisting them.
-          - **LLM candidate explainability and divergence tracking (#6):** LLM healing results carry the selected candidate's own score and score breakdown, with explicit divergence tracking when the LLM overrides the heuristic winner.
-          - **Structured assertion generation (#9):** Test generators emit structured assertions (`AssertionKind`, `ExpectedValue`) with configurable `Strict` and `Lenient` modes, replacing false-green presence checks with real assertions.
-          - **Positioning, Linux CI, and packaging parity (#12, #13, #14):** Honest scope positioning in documentation, dual-OS CI matrix across Windows (`net48`) and Linux (`net8.0`), and complete packaging parity across all seven libraries.
+          - **Consensus acceptance for LLM picks (#10):** Providers are polled in parallel and a pick is accepted only on agreement. Invalid candidate ids are discarded before the vote is counted, so one hallucinating provider cannot invalidate everyone else's valid votes. A three-way split and a tie for the lead both count as disagreement and fall back to the heuristic result. `HealResult.AgreedProviders` records who agreed.
+          - **Provider resilience (#11):** Retry with exponential backoff and jitter on transient failures (429, 500, 502, 503, 504, `HttpRequestException`); immediate fail-fast on 400/401/403/404. `Retry-After` is honoured up to a 10s ceiling - a longer value is read as quota exhaustion and fails fast rather than stalling a test run. Dual timeout budgets: per attempt and per operation.
+          - **Per-provider attempt telemetry (#11):** `LlmHealingResult.AttemptCount` and `HealResult.ProviderAttempts` record how many attempts each provider needed, so a flaky provider is identifiable rather than merely producing a failed heal.
+          - **Healing report schema v6:** adds `AgreedProviders` (v5) and `ProviderAttempts` (v6). Older reports upgrade in place on the next write; the new fields stay null on upgraded entries, which means "not recorded by that build" rather than "there were none".
+          - **Configurable provider names (#10):** every provider takes a `name:` parameter. `OpenAiHealingProvider` accepts any OpenAI-compatible endpoint, so several instances (for example Groq and Cerebras) can vote alongside each other and remain distinguishable in the report.
+          - **Shared HTTP provider base (#48):** the four providers now derive from `HttpLlmHealingProvider`, which owns orchestration, validation and retry wiring. Behaviour-neutral; public constructors are unchanged.
 
           ## Known Limitations
 
-          - **Calibration:** The thresholds shipped in this release are initial estimates, not values derived from a real-world benchmark dataset: `MinimumEvidenceWeight` (0.40), `MinimumCandidateMargin` (0.05), `MinimumSemanticScore` (0.01), and default `AssertGenerationMode` (`Strict`). Each is documented with its rationale and is subject to recalibration under #15.
+          - **Calibration:** The thresholds shipped in this release are initial estimates, not values derived from a real-world benchmark dataset: `MinimumEvidenceWeight` (0.40), `MinimumCandidateMargin` (0.05), `MinimumSemanticScore` (0.01), `MinimumConsensusVotes` (2), the 10s `Retry-After` ceiling, and default `AssertGenerationMode` (`Strict`). Each is documented with its rationale and is subject to recalibration under #15.
           - **Accuracy:** Healing accuracy is 100% on the bundled WinForms and WPF demo case studies. The false-positive rate on organic, third-party applications has not been measured (#15).
-          - **LLM Providers:** Provider integrations are tested with mocked HTTP responses in CI; live request/response behavior, actual payloads, and the hallucination guard under real API conditions remain unverified in CI (#21).
+          - **LLM Providers:** Provider integrations are covered by mocked-HTTP unit tests, and the Windows CI leg additionally makes a real Gemini call on every run when `GEMINI_API_KEY` is configured (a non-gating comparison harness). What is not covered is a gating live assertion across providers, so consensus itself has never been exercised against real models; `llm-smoke.yml` runs one OpenAI-compatible endpoint on manual dispatch only, after GitHub Models began returning HTTP 410 ahead of its retirement (#21, #44). Nightly multi-provider collection is tracked in #47.
           - **Platform:** Desktop automation is Windows-only (FlaUI / UIA3). The core heuristic engine and web automation path are cross-platform and verified on Linux in CI (#13).
 
           ## Packages
