@@ -17,6 +17,7 @@ namespace WebDiscovery
         public bool IsOffscreen { get; set; }
         public string TreeScope { get; set; } = "light-dom";
         public string FrameUrl { get; set; } = "";
+        public List<string> FrameAncestry { get; set; } = new();
         public BoundingRectangle BoundingRectangle { get; set; }
         public List<WebElementInfo> Children { get; set; } = new();
     }

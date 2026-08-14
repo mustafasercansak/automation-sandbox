@@ -183,6 +183,41 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void PlaywrightLocatorEmitter_WithFrameAncestry_GeneratesFrameLocatorChain()
+        {
+            var element = new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Save Details",
+                TestId = "save-btn",
+                FrameAncestry = new List<string> { "iframe[name='details']" },
+            };
+
+            var suggestions = PlaywrightLocatorEmitter.Suggest(element);
+
+            Assert.Equal("page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"save-btn\")", suggestions[0].Expression);
+            Assert.Equal("page.FrameLocator(\"iframe[name='details']\").GetByRole(AriaRole.Button, new() { Name = \"Save Details\" })", suggestions[1].Expression);
+        }
+
+        [Fact]
+        public void PlaywrightLocatorEmitter_WithNestedFrameAncestry_GeneratesChainedFrameLocators()
+        {
+            var element = new WebElementInfo
+            {
+                TagName = "input",
+                Role = "textbox",
+                AccessibleName = "Nested Input",
+                TestId = "nested-input",
+                FrameAncestry = new List<string> { "iframe#parent", "iframe#child" },
+            };
+
+            var suggestions = PlaywrightLocatorEmitter.Suggest(element);
+
+            Assert.Equal("page.FrameLocator(\"iframe#parent\").FrameLocator(\"iframe#child\").GetByTestId(\"nested-input\")", suggestions[0].Expression);
+        }
+
+        [Fact]
         public void PlaywrightDomCaptureScript_ExposesAPlaywrightEvaluateFunction()
         {
             Assert.Contains("document.body", PlaywrightDomCaptureScript.JavaScript);
@@ -192,6 +227,8 @@ namespace ScenarioRunner
             Assert.Contains("contentDocument", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("IsHidden", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("IsOffscreen", PlaywrightDomCaptureScript.JavaScript);
+            Assert.Contains("FrameAncestry", PlaywrightDomCaptureScript.JavaScript);
+            Assert.Contains("frameSelectorOf", PlaywrightDomCaptureScript.JavaScript);
         }
 
         [Fact]
