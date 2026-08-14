@@ -160,6 +160,56 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void OpenAiHealingProvider_DefaultsToStandardEndpoint_WhenNotSpecified()
+        {
+            var provider = new OpenAiHealingProvider(apiKey: "test-key");
+            Assert.Equal("https://api.openai.com/v1/chat/completions", provider.ApiUrl);
+        }
+
+        [Fact]
+        public void OpenAiHealingProvider_NormalizesCustomEndpoint_AndAppendsChatCompletions()
+        {
+            var provider1 = new OpenAiHealingProvider(apiKey: "test-key", endpoint: "https://models.github.ai/inference");
+            Assert.Equal("https://models.github.ai/inference/chat/completions", provider1.ApiUrl);
+
+            var provider2 = new OpenAiHealingProvider(apiKey: "test-key", endpoint: "https://models.github.ai/inference/chat/completions");
+            Assert.Equal("https://models.github.ai/inference/chat/completions", provider2.ApiUrl);
+
+            var provider3 = new OpenAiHealingProvider(apiKey: "test-key", endpoint: "https://models.github.ai/inference/");
+            Assert.Equal("https://models.github.ai/inference/chat/completions", provider3.ApiUrl);
+        }
+
+        [Fact]
+        public async Task OpenAiHealingProvider_DispatchesRequestToCustomEndpoint()
+        {
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new
+                        {
+                            role = "assistant",
+                            content = "{\"candidateId\": \"c0\", \"confidence\": 0.9, \"reasoning\": \"ok\"}",
+                        },
+                    },
+                },
+            });
+
+            var handler = new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK);
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-token",
+                endpoint: "https://models.github.ai/inference");
+
+            await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.NotNull(handler.LastRequest);
+            Assert.Equal("https://models.github.ai/inference/chat/completions", handler.LastRequest!.RequestUri!.ToString());
+        }
+
+        [Fact]
         public async Task OllamaHealingProvider_PassesExplicitPlatformToPrompt()
         {
             var fakeResponse = JsonSerializer.Serialize(new
@@ -235,6 +285,7 @@ namespace ScenarioRunner
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
             private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responder;
+            public HttpRequestMessage? LastRequest { get; private set; }
             public string? LastRequestBody { get; private set; }
 
             public FakeHttpMessageHandler(string responseContent, HttpStatusCode statusCode)
@@ -252,6 +303,7 @@ namespace ScenarioRunner
 
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                LastRequest = request;
                 LastRequestBody = request.Content == null
                     ? null
                     : await request.Content.ReadAsStringAsync().ConfigureAwait(false);

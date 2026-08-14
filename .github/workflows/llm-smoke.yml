@@ -1,0 +1,39 @@
+name: LLM Models Smoke Test
+
+on:
+  schedule:
+    # Run nightly at 03:00 UTC to verify live provider responses without burning daily PR quotas
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  smoke-test:
+    name: GitHub Models Live Smoke (Linux net8.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build ScenarioRunner
+        run: |
+          dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+
+      - name: Run GitHub Models Live Smoke Test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_ENDPOINT: https://models.github.ai/inference
+          OPENAI_MODEL: gpt-4o-mini
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~GitHubModelsSmokeTests" --logger "console;verbosity=normal"
