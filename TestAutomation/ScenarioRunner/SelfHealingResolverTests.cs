@@ -761,10 +761,13 @@ namespace ScenarioRunner
         {
             var (expected, currentTree) = BuildLowConfidenceScenario();
             var handler = new FakeSlowHttpMessageHandler();
+            // delayAsync is stubbed out because a timed-out attempt is retried like any other
+            // transient failure: with the real backoff this single test waits ~800ms.
             var slowProvider = new ClaudeHealingProvider(
                 httpClient: new HttpClient(handler),
                 apiKey: "sk-test-key",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await SelfHealingResolver.ResolveAsync(
                 expected,

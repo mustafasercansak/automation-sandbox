@@ -17,5 +17,6 @@ namespace LlmHealing
         public string Reasoning { get; set; } = "";
         public string? ErrorMessage { get; set; }
         public TimeSpan Elapsed { get; set; }
+        public int AttemptCount { get; set; }
     }
 }

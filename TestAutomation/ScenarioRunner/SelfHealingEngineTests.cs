@@ -551,9 +551,8 @@ namespace ScenarioRunner
         [Fact]
         public void HealingReportFileSink_UpgradesV4Report_LeavingAgreedProvidersNull()
         {
-            // v5 (#10) only adds AgreedProviders, so a v4 file upgrades in place. The upgraded
-            // entry must keep AgreedProviders null - "this build did not record who agreed",
-            // not the empty list's claim that nobody did.
+            // v5 (#10) added AgreedProviders and v6 (#11) added ProviderAttempts. An older v4
+            // file upgrades in place leaving newly added fields null.
             File.WriteAllText(_tempReportPath, @"{
   ""SchemaVersion"": 4,
   ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
@@ -575,19 +574,66 @@ namespace ScenarioRunner
                     LlmConfidence = 0.7,
                     LlmProviderName = "AlphaLlm",
                     AgreedProviders = new[] { "AlphaLlm", "BetaLlm" },
+                    ProviderAttempts = new Dictionary<string, int> { { "AlphaLlm", 1 }, { "BetaLlm", 2 } },
                 }));
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
             var root = doc.RootElement;
-            Assert.Equal(5, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(6, HealingReportDocument.CurrentSchemaVersion);
             Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
 
             var upgraded = root.GetProperty("Events")[0];
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("AgreedProviders").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
 
             var recorded = root.GetProperty("Events")[1];
             var agreed = recorded.GetProperty("AgreedProviders").EnumerateArray().Select(e => e.GetString()).ToArray();
             Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, agreed);
+            var attempts = recorded.GetProperty("ProviderAttempts");
+            Assert.Equal(1, attempts.GetProperty("AlphaLlm").GetInt32());
+            Assert.Equal(2, attempts.GetProperty("BetaLlm").GetInt32());
+        }
+
+        [Fact]
+        public void HealingReportFileSink_UpgradesV5Report_LeavingProviderAttemptsNull()
+        {
+            // v6 (#11) adds ProviderAttempts, so a v5 file upgrades in place leaving ProviderAttempts null.
+            File.WriteAllText(_tempReportPath, @"{
+  ""SchemaVersion"": 5,
+  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
+  ""Events"": [
+    { ""LocatorKey"": ""old"", ""Source"": ""Claude"", ""ReviewStatus"": ""accepted-with-llm"", ""Score"": 0.4, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 3, ""LlmConfidence"": 0.9, ""LlmProviderName"": ""Claude"", ""AgreedProviders"": [""Claude"", ""Gemini""] }
+  ]
+}");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            sink.Record(HealingReportEntry.FromHealResult(
+                "new",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                new HealResult
+                {
+                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                    Source = HealSource.Llm,
+                    Score = 0.4,
+                    LlmConfidence = 0.7,
+                    LlmProviderName = "Claude",
+                    AgreedProviders = new[] { "Claude", "Gemini" },
+                    ProviderAttempts = new Dictionary<string, int> { { "Claude", 1 }, { "Gemini", 2 } },
+                }));
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
+            var root = doc.RootElement;
+            Assert.Equal(6, HealingReportDocument.CurrentSchemaVersion);
+
+            var upgraded = root.GetProperty("Events")[0];
+            Assert.Equal(JsonValueKind.Array, upgraded.GetProperty("AgreedProviders").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
+
+            var recorded = root.GetProperty("Events")[1];
+            var attempts = recorded.GetProperty("ProviderAttempts");
+            Assert.Equal(1, attempts.GetProperty("Claude").GetInt32());
+            Assert.Equal(2, attempts.GetProperty("Gemini").GetInt32());
         }
 
         [Fact]

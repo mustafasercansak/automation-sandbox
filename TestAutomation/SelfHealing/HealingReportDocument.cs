@@ -6,6 +6,8 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
+        // v6 (issue #11): entries carry ProviderAttempts - tracking how many attempts each
+        // evaluated provider made (resilience, retry counts, quota audits).
         // v5 (issue #10): entries carry AgreedProviders - which providers reached consensus
         // on an LLM pick, the evidence behind the acceptance decision itself.
         // v4 (issue #6): entries carry DivergedFromHeuristic, HeuristicSnapshot, HeuristicScore
@@ -13,7 +15,7 @@ namespace SelfHealing
         // v3: entries carry RunnerUpScore (margin gate, issue #4).
         // v2: added EvidenceCoverage and Candidates (#3).
         // Older reports upgrade in place; only newer-than-current schemas are rejected.
-        public const int CurrentSchemaVersion = 5;
+        public const int CurrentSchemaVersion = 6;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
@@ -62,6 +64,11 @@ namespace SelfHealing
         // makes for v1 upgrades.
 
         public List<string>? AgreedProviders { get; set; }
+
+        // Telemetry for resilience/retries (#11): how many HTTP attempts each evaluated provider made.
+        // Null on entries upgraded from a v5 report.
+        public Dictionary<string, int>? ProviderAttempts { get; set; }
+
         public UiElementInfo? PreviousSnapshot { get; set; }
         public UiElementInfo? AcceptedSnapshot { get; set; }
         public ScoreComponents? ScoreBreakdown { get; set; }
@@ -109,6 +116,17 @@ namespace SelfHealing
                 throw new ArgumentNullException(nameof(result));
             }
 
+            Dictionary<string, int>? providerAttempts = null;
+            if (result.ProviderAttempts != null && result.ProviderAttempts.Count > 0)
+            {
+                var sorted = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                foreach (var kvp in result.ProviderAttempts)
+                {
+                    sorted[kvp.Key] = kvp.Value;
+                }
+                providerAttempts = new Dictionary<string, int>(sorted);
+            }
+
             return new HealingReportEntry
             {
                 LocatorKey = locatorKey,
@@ -120,6 +138,7 @@ namespace SelfHealing
                 LlmConfidence = result.LlmConfidence,
                 LlmProviderName = result.LlmProviderName,
                 AgreedProviders = result.AgreedProviders.Count == 0 ? null : new List<string>(result.AgreedProviders),
+                ProviderAttempts = providerAttempts,
                 LlmReasoning = result.LlmReasoning,
                 PreviousSnapshot = UiElementSnapshot.Capture(previousSnapshot),
                 AcceptedSnapshot = UiElementSnapshot.Capture(acceptedSnapshot),

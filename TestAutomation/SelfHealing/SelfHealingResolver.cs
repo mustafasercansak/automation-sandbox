@@ -179,6 +179,18 @@ namespace SelfHealing
                 .OrderBy(n => n, StringComparer.Ordinal)
                 .ToList();
 
+            // Telemetry: record attempt counts across all evaluated providers (#11)
+            var providerAttempts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            foreach (var r in llmResults)
+            {
+                if (!string.IsNullOrEmpty(r.ProviderName))
+                {
+                    providerAttempts[r.ProviderName] = Math.Max(
+                        providerAttempts.TryGetValue(r.ProviderName, out var existing) ? existing : 0,
+                        r.AttemptCount);
+                }
+            }
+
             // The report keeps one provider's reasoning verbatim; ordinal-first makes that
             // choice deterministic rather than dependent on which provider answered first.
             // AgreedProviders carries the full record of who agreed.
@@ -189,7 +201,8 @@ namespace SelfHealing
             // ReferenceEquals is used because AutomationId may be empty or duplicated,
             // while shortlist and Resolve operate over nodes from the exact same tree instance.
             var isDivergent = heuristicResult.Matched != null && !ReferenceEquals(heuristicResult.Matched, matchedCandidate.Candidate);
-            var consensusSummary = $"consensus of {topGroup.Votes.Count}/{validVotes.Count} providers ({string.Join(", ", agreedProviders)}) matched '{matchedCandidate.Candidate.AutomationId}' (mean self-reported confidence={consensusConfidence:F2}, reasoning=\"{best.Reasoning}\"";
+            var agreedProvidersSummary = string.Join(", ", agreedProviders.Select(p => providerAttempts.TryGetValue(p, out var attempts) && attempts > 1 ? $"{p} [{attempts} attempts]" : p));
+            var consensusSummary = $"consensus of {topGroup.Votes.Count}/{validVotes.Count} providers ({agreedProvidersSummary}) matched '{matchedCandidate.Candidate.AutomationId}' (mean self-reported confidence={consensusConfidence:F2}, reasoning=\"{best.Reasoning}\"";
             if (isDivergent)
             {
                 log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {consensusSummary}, diverged from heuristic winner '{heuristicResult.Matched!.AutomationId}' with score {heuristicResult.Score:F2}).");
@@ -222,6 +235,7 @@ namespace SelfHealing
                 LlmConfidence = consensusConfidence,
                 LlmReasoning = best.Reasoning,
                 AgreedProviders = agreedProviders,
+                ProviderAttempts = providerAttempts,
                 HeuristicMatched = heuristicResult.Matched,
                 HeuristicScore = heuristicResult.Score,
                 DivergedFromHeuristic = isDivergent,

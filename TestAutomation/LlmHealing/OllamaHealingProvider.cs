@@ -17,13 +17,17 @@ namespace LlmHealing
         // Ollama runs locally on CPU/GPU where cold-start model loading can take longer
         // than lightweight cloud API roundtrips. 30s provides sufficient headroom.
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+        public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(70);
+        public static readonly int DefaultMaxRetries = 2;
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string _host;
         private readonly string _model;
         private readonly bool _explicitlyConfigured;
         private readonly TimeSpan _timeout;
-
+        private readonly TimeSpan _totalTimeout;
+        private readonly int _maxRetries;
+        private readonly Func<TimeSpan, CancellationToken, Task>? _delayAsync;
         private readonly string _name;
 
         public string Name => _name;
@@ -34,12 +38,32 @@ namespace LlmHealing
             string.Equals(Environment.GetEnvironmentVariable("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase);
 
         public TimeSpan Timeout => _timeout;
+        public TimeSpan TotalTimeout => _totalTimeout;
+        public int MaxRetries => _maxRetries;
 
-        public OllamaHealingProvider(HttpClient? httpClient = null, string? host = null, string? model = null, TimeSpan? timeout = null, string? name = null)
+        public OllamaHealingProvider(
+            HttpClient? httpClient = null,
+            string? host = null,
+            string? model = null,
+            TimeSpan? timeout = null,
+            TimeSpan? totalTimeout = null,
+            string? name = null,
+            int? maxRetries = null,
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
         {
             if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
             {
                 throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
+            }
+
+            if (totalTimeout.HasValue && totalTimeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(totalTimeout), "TotalTimeout must be greater than zero.");
+            }
+
+            if (maxRetries.HasValue && maxRetries.Value < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxRetries), "MaxRetries must be non-negative.");
             }
 
             _httpClient = httpClient ?? SharedHttpClient;
@@ -51,6 +75,14 @@ namespace LlmHealing
             _host = (NullIfEmpty(host) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OLLAMA_HOST")) ?? DefaultHost).TrimEnd('/');
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OLLAMA_MODEL")) ?? DefaultModel;
             _timeout = timeout ?? DefaultTimeout;
+            _totalTimeout = totalTimeout ?? (timeout.HasValue ? TimeSpan.FromSeconds(Math.Max(DefaultTotalTimeout.TotalSeconds, _timeout.TotalSeconds * 2.5)) : DefaultTotalTimeout);
+            if (_totalTimeout < _timeout)
+            {
+                throw new ArgumentException("TotalTimeout cannot be less than per-attempt Timeout.", nameof(totalTimeout));
+            }
+
+            _maxRetries = maxRetries ?? DefaultMaxRetries;
+            _delayAsync = delayAsync;
             _name = NullIfEmpty(name?.Trim()) ?? "Ollama";
         }
 
@@ -65,7 +97,7 @@ namespace LlmHealing
             var stopwatch = Stopwatch.StartNew();
             if (!IsAvailable)
             {
-                return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = "Ollama is not enabled or configured." };
+                return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = "Ollama is not enabled or configured.", AttemptCount = 0 };
             }
 
             var prompt = LlmHealingPrompt.Build(expected, candidates, platform);
@@ -80,30 +112,38 @@ namespace LlmHealing
             };
 
             var apiUrl = $"{_host}/api/chat";
-            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
+            HttpRequestMessage CreateRequest()
             {
-                Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
-            };
+                return new HttpRequestMessage(HttpMethod.Post, apiUrl)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
+                };
+            }
 
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(_timeout);
+            var httpResponse = await LlmHttpTransport.SendWithRetryAsync(
+                _httpClient,
+                CreateRequest,
+                _timeout,
+                _totalTimeout,
+                _maxRetries,
+                _delayAsync,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!httpResponse.IsSuccess)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = httpResponse.ErrorMessage,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
+                };
+            }
 
             try
             {
-                using var response = await _httpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
-                var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new LlmHealingResult
-                    {
-                        ProviderName = Name,
-                        Success = false,
-                        ErrorMessage = $"HTTP {(int)response.StatusCode}: {responseBody}",
-                        Elapsed = stopwatch.Elapsed,
-                    };
-                }
-
-                var text = ExtractText(responseBody);
+                var text = ExtractText(httpResponse.Body ?? "");
                 var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(text);
 
                 var matched = candidates.FirstOrDefault(c => c.CandidateId == candidateId);
@@ -116,31 +156,19 @@ namespace LlmHealing
                     Confidence = confidence,
                     Reasoning = reasoning,
                     Elapsed = stopwatch.Elapsed,
-                };
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                return new LlmHealingResult
-                {
-                    ProviderName = Name,
-                    Success = false,
-                    ErrorMessage = $"Request timed out after {_timeout.TotalSeconds:F0}s.",
-                    Elapsed = stopwatch.Elapsed,
-                };
-            }
-            catch (OperationCanceledException)
-            {
-                return new LlmHealingResult
-                {
-                    ProviderName = Name,
-                    Success = false,
-                    ErrorMessage = "Operation was canceled.",
-                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
                 };
             }
             catch (Exception ex)
             {
-                return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = ex.Message, Elapsed = stopwatch.Elapsed };
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
+                };
             }
         }
 

@@ -181,10 +181,13 @@ namespace ScenarioRunner
                 await Task.Delay(1000, ct);
                 return new HttpResponseMessage(HttpStatusCode.OK);
             });
+            // delayAsync is stubbed out because a timed-out attempt is retried like any other
+            // transient failure: with the real backoff this single test waits ~800ms.
             var planner = new LlmIntentPlanner(
                 httpClient: new HttpClient(handler),
                 apiKey: "sk-test-key",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await planner.PlanAsync(BuildRequest());
 
@@ -193,10 +196,54 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void LlmIntentPlanner_Throws_WhenTimeoutIsZeroOrNegative()
+        public async Task LlmIntentPlanner_RetriesOn503_AndSucceeds()
+        {
+            const string anthropicResponseJson = """
+            {
+              "content": [
+                { "type": "text", "text": "{\"steps\": [{\"actionType\": \"Click\", \"targetDescription\": \"save\", \"value\": \"\", \"testIntent\": \"submit\", \"expectedOutcome\": \"saved\", \"locatorKey\": \"Action.Save\"}]}" }
+              ]
+            }
+            """;
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler((_, _) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                    {
+                        Content = new StringContent("temporarily unavailable")
+                    });
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(anthropicResponseJson, Encoding.UTF8, "application/json")
+                });
+            });
+
+            var planner = new LlmIntentPlanner(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await planner.PlanAsync(BuildRequest());
+
+            Assert.Empty(result.Diagnostics);
+            Assert.Single(result.Scenario.Steps);
+            Assert.Equal(2, callCount);
+        }
+
+        [Fact]
+        public void LlmIntentPlanner_Throws_WhenParametersAreInvalid()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(timeout: TimeSpan.Zero));
             Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(timeout: TimeSpan.FromSeconds(-1)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(totalTimeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(maxRetries: -1));
+            Assert.Throws<ArgumentException>(() => new LlmIntentPlanner(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
         }
 
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
