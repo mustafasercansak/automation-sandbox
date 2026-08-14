@@ -172,14 +172,14 @@ namespace ScenarioRunner
         public async Task ResolveAsync_HeuristicLowConfidence_FallsBackToLlmProvider_AndReturnsLlmSourcedResult()
         {
             var (expected, currentTree) = BuildLowConfidenceScenario();
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.9, Reasoning = "structural match" });
-            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { provider }, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, currentTree, AgreeingProviders("c0", confidence: 0.9, reasoning: "structural match"), log: _ => { });
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.Equal("textBoxFar", result.Matched!.AutomationId);
-            Assert.Equal("Fake", result.LlmProviderName);
+            Assert.Equal("AlphaLlm", result.LlmProviderName);
             Assert.Equal(0.9, result.LlmConfidence);
             Assert.Equal("structural match", result.LlmReasoning);
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, result.AgreedProviders);
             Assert.True(result.IsConfident);
         }
 
@@ -234,36 +234,59 @@ namespace ScenarioRunner
 
         [Fact]
 
-        public async Task ResolveAsync_LlmConfidenceBelowMinimumLlmConfidence_FallsBackToHeuristicResult()
+        public async Task ResolveAsync_SingleProvider_IsNeverAcceptedNoMatterHowConfident()
         {
+            // Consensus (#10/#19): one provider cannot agree with itself. Even a 0.99
+            // self-report is a single uncalibrated opinion, so the pick is not accepted and
+            // Matched stays the heuristic's own candidate rather than the LLM's guess.
             var (expected, currentTree) = BuildLowConfidenceScenario();
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.1 });
+            var provider = new FakeProvider("Solo", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "Solo", Success = true, MatchedCandidateId = "c0", Confidence = 0.99 });
             var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { provider }, log: _ => { });
 
-            // A low-confidence LLM pick must not silently replace the heuristic's own result -
-            // Matched should stay the heuristic's pick, not switch to whatever the LLM guessed.
             Assert.Equal(HealSource.Heuristic, result.Source);
             Assert.Equal("textBoxFar", result.Matched!.AutomationId);
+            Assert.Empty(result.AgreedProviders);
         }
 
         [Fact]
-        public async Task ResolveAsync_LlmResult_UsesMinimumLlmConfidenceForIsConfident()
+        public async Task ResolveAsync_LlmConsensus_IsConfidentEvenWhenSelfReportedConfidenceIsLow()
         {
+            // The acceptance rule is agreement, not self-reported confidence (#19). Two
+            // providers converging at 0.2 each is stronger evidence than one at 0.99, and
+            // MinimumLlmConfidence - deliberately set high here - must not veto it.
             var (expected, currentTree) = BuildLowConfidenceScenario();
             var weights = new SimilarityWeights
             {
                 MinimumConfidence = 0.8,
-                MinimumLlmConfidence = 0.5,
+                MinimumLlmConfidence = 0.9,
             };
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.6 });
 
-            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { provider }, weights, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, currentTree, AgreeingProviders("c0", confidence: 0.2), weights, log: _ => { });
 
             Assert.Equal(HealSource.Llm, result.Source);
-            Assert.Equal(weights.MinimumLlmConfidence, result.ConfidenceThreshold);
+            Assert.Equal(0.2, result.LlmConfidence);
             Assert.True(result.IsConfident);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_LlmConfidence_ReportsMeanOfAgreeingProviders()
+        {
+            // Recorded for the report and for #15's measurement, never thresholded.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.4 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(0.6, result.LlmConfidence!.Value, 6);
         }
 
         [Fact]
@@ -293,9 +316,8 @@ namespace ScenarioRunner
                 SiblingCount = 100,
                 BoundingRectangle = new BoundingRectangle(9000, 9000, 100, 100),
             });
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.9, Reasoning = "structural match" });
-            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, root, AgreeingProviders("c0", reasoning: "structural match"), log: _ => { });
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.NotNull(result.Matched);
             Assert.Equal("", result.Matched!.AutomationId);
@@ -314,16 +336,168 @@ namespace ScenarioRunner
 
         [Fact]
 
-        public async Task ResolveAsync_MultipleProvidersDisagree_PicksHighestConfidenceResult()
+        public async Task ResolveAsync_MajorityAgrees_AcceptsAgreedCandidateAndRecordsVoters()
+        {
+            // Issue #10's worked example: two providers name c0, a third names c1. The
+            // majority pick wins and AgreedProviders records exactly who agreed - the
+            // dissenter is not listed.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.4 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.45 }),
+                // Higher self-reported confidence than either agreeing provider, and it still
+                // loses: confidence never outvotes agreement.
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "c1", Confidence = 0.99 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal("textBoxFar", result.Matched!.AutomationId);
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, result.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_AllProvidersNameDifferentCandidates_FallsBackToHeuristicResult()
+        {
+            // Three providers, three answers, every candidate on one vote. That is the LLM
+            // layer saying "we do not know", not a close call to be settled by whoever
+            // sounded most certain.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.72 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c1", Confidence = 0.95 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "c2", Confidence = 0.81 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Heuristic, result.Source);
+            Assert.Empty(result.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_VoteTiedBetweenTwoCandidates_FallsBackToHeuristicResult()
+        {
+            // 2-2. Breaking this by confidence would reinstate exactly the cross-provider
+            // comparison #19 removed, so a tie is treated as disagreement.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "c1", Confidence = 0.9 }),
+                new FakeProvider("DeltaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "DeltaLlm", Success = true, MatchedCandidateId = "c1", Confidence = 0.9 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Heuristic, result.Source);
+            Assert.Empty(result.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_OneProviderFails_RemainingTwoStillReachConsensus()
+        {
+            // A failed or timed-out provider does not cast a vote, but it must not prevent
+            // the providers that did answer from reaching quorum.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.7 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.7 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = false, ErrorMessage = "429 rate limited" }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, result.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_HallucinatedVoteIsDiscardedBeforeCounting_AndDoesNotSinkValidVotes()
+        {
+            // The hallucination guard runs before the count, not after the winner is picked.
+            // A provider naming a candidateId that was never in the shortlist must lose its
+            // own vote without taking the other providers' valid votes down with it.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.7 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.7 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "c99", Confidence = 0.99 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, result.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_TwoProvidersHallucinate_LeavingTooFewVotes_FallsBackToHeuristicResult()
         {
             var (expected, currentTree) = BuildLowConfidenceScenario();
-            var lowConfidenceProvider = new FakeProvider("Low", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Low", Success = true, MatchedCandidateId = "c0", Confidence = 0.4 });
-            var highConfidenceProvider = new FakeProvider("High", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "High", Success = true, MatchedCandidateId = "c0", Confidence = 0.85 });
-            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { lowConfidenceProvider, highConfidenceProvider }, log: _ => { });
-            Assert.Equal("High", result.LlmProviderName);
-            Assert.Equal(0.85, result.LlmConfidence);
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.7 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "nope", Confidence = 0.9 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "alsoNope", Confidence = 0.9 }),
+            };
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, log: _ => { });
+
+            Assert.Equal(HealSource.Heuristic, result.Source);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_AgreedProviders_IsOrdinallySortedRegardlessOfProviderOrder()
+        {
+            // The report must not depend on which provider happened to be listed - or to
+            // answer - first.
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            LlmHealingResult Pick(string name) =>
+                new LlmHealingResult { ProviderName = name, Success = true, MatchedCandidateId = "c0", Confidence = 0.7 };
+            var zeta = new FakeProvider("ZetaLlm", isAvailable: true, resolve: () => Pick("ZetaLlm"));
+            var alpha = new FakeProvider("AlphaLlm", isAvailable: true, resolve: () => Pick("AlphaLlm"));
+
+            var forward = await SelfHealingResolver.ResolveAsync(expected, currentTree, new ILlmHealingProvider[] { zeta, alpha }, log: _ => { });
+            var reversed = await SelfHealingResolver.ResolveAsync(expected, currentTree, new ILlmHealingProvider[] { alpha, zeta }, log: _ => { });
+
+            Assert.Equal(new[] { "AlphaLlm", "ZetaLlm" }, forward.AgreedProviders);
+            Assert.Equal(forward.AgreedProviders, reversed.AgreedProviders);
+            Assert.Equal("AlphaLlm", forward.LlmProviderName);
+            Assert.Equal("AlphaLlm", reversed.LlmProviderName);
+        }
+
+        [Fact]
+        public void Validate_RejectsMinimumConsensusVotesBelowTwo()
+        {
+            var weights = new SimilarityWeights { MinimumConsensusVotes = 1 };
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => weights.Validate());
+            Assert.Equal("MinimumConsensusVotes", ex.ParamName);
         }
 
         [Fact]
@@ -356,12 +530,14 @@ namespace ScenarioRunner
                 });
             }
 
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 });
-            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+            var observed = new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 });
+            var second = new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 });
+            var result = await SelfHealingResolver.ResolveAsync(expected, root, new ILlmHealingProvider[] { observed, second }, log: _ => { });
             Assert.Equal(HealSource.Llm, result.Source);
-            Assert.NotNull(provider.LastCandidates);
-            Assert.Equal(SimilarityWeights.Default.MaxCandidatesForLlm, provider.LastCandidates!.Count);
+            Assert.NotNull(observed.LastCandidates);
+            Assert.Equal(SimilarityWeights.Default.MaxCandidatesForLlm, observed.LastCandidates!.Count);
         }
 
         [Fact]
@@ -460,9 +636,7 @@ namespace ScenarioRunner
                 BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
             });
 
-            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c1", Confidence = 0.9 });
-            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(expected, root, AgreeingProviders("c1"), log: _ => { });
 
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.Equal("zzzWider", result.Matched!.AutomationId);
@@ -513,10 +687,8 @@ namespace ScenarioRunner
             Assert.Equal("btnOldSave", heuristicResult.Matched!.AutomationId);
             Assert.False(heuristicResult.IsConfident);
 
-            var provider = new FakeProvider("FakeLLM", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "FakeLLM", Success = true, MatchedCandidateId = "c1", Confidence = 0.92, Reasoning = "contextual match" });
-
-            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, root, AgreeingProviders("c1", confidence: 0.92, reasoning: "contextual match"), log: _ => { });
 
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.Equal("txtSaveName", result.Matched!.AutomationId);
@@ -572,10 +744,8 @@ namespace ScenarioRunner
             Assert.Equal("btnOldSave", heuristicResult.Matched!.AutomationId);
             Assert.False(heuristicResult.IsConfident);
 
-            var provider = new FakeProvider("FakeLLM", isAvailable: true, resolve: () =>
-                new LlmHealingResult { ProviderName = "FakeLLM", Success = true, MatchedCandidateId = "c0", Confidence = 0.92, Reasoning = "agrees with heuristic" });
-
-            var result = await SelfHealingResolver.ResolveAsync(expected, root, new[] { provider }, log: _ => { });
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, root, AgreeingProviders("c0", confidence: 0.92, reasoning: "agrees with heuristic"), log: _ => { });
 
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.Equal("btnOldSave", result.Matched!.AutomationId);
@@ -938,6 +1108,21 @@ namespace ScenarioRunner
                 BoundingRectangle = new BoundingRectangle(900, 900, 200, 23),
             });
             return (expected, root);
+        }
+
+        // Consensus acceptance (#10) needs at least two independent providers naming the same
+        // candidate, so every test that expects an LLM pick to be accepted supplies a pair.
+        // The names are deliberately ordinal-ordered: LlmProviderName and LlmReasoning take
+        // the ordinal-first agreeing provider, so "AlphaLlm" is the deterministic winner.
+        private static ILlmHealingProvider[] AgreeingProviders(string candidateId, double confidence = 0.9, string reasoning = "")
+        {
+            return new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = candidateId, Confidence = confidence, Reasoning = reasoning }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = candidateId, Confidence = confidence, Reasoning = reasoning }),
+            };
         }
 
         private sealed class FakeProvider : ILlmHealingProvider

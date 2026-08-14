@@ -27,11 +27,12 @@ namespace LlmHealing
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly TimeSpan _timeout;
-        public string Name => "Claude";
+        private readonly string _name;
+        public string Name => _name;
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         public TimeSpan Timeout => _timeout;
 
-        public ClaudeHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null)
+        public ClaudeHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null, string? name = null)
         {
             if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
             {
@@ -46,6 +47,7 @@ namespace LlmHealing
             // (confirmed live: CI sent model: "" and the API 404'd). NullIfEmpty closes that gap.
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")) ?? DefaultModel;
             _timeout = timeout ?? DefaultTimeout;
+            _name = NullIfEmpty(name?.Trim()) ?? "Claude";
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;

@@ -24,7 +24,9 @@ namespace LlmHealing
         private readonly bool _explicitlyConfigured;
         private readonly TimeSpan _timeout;
 
-        public string Name => "Ollama";
+        private readonly string _name;
+
+        public string Name => _name;
 
         public bool IsAvailable => _explicitlyConfigured ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OLLAMA_HOST")) ||
@@ -33,7 +35,7 @@ namespace LlmHealing
 
         public TimeSpan Timeout => _timeout;
 
-        public OllamaHealingProvider(HttpClient? httpClient = null, string? host = null, string? model = null, TimeSpan? timeout = null)
+        public OllamaHealingProvider(HttpClient? httpClient = null, string? host = null, string? model = null, TimeSpan? timeout = null, string? name = null)
         {
             if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
             {
@@ -49,6 +51,7 @@ namespace LlmHealing
             _host = (NullIfEmpty(host) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OLLAMA_HOST")) ?? DefaultHost).TrimEnd('/');
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OLLAMA_MODEL")) ?? DefaultModel;
             _timeout = timeout ?? DefaultTimeout;
+            _name = NullIfEmpty(name?.Trim()) ?? "Ollama";
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;

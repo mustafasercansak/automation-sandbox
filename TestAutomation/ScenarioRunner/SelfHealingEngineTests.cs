@@ -504,7 +504,10 @@ namespace ScenarioRunner
                     Score = 0.35,
                     ConfidenceThreshold = 0.50,
                     LlmConfidence = 0.86,
-                    LlmProviderName = "FakeLlm"
+                    LlmProviderName = "AlphaLlm",
+                    // An accepted LLM pick is one two providers agreed on (#10); without
+                    // AgreedProviders this would classify as manual-review, not accepted-with-llm.
+                    AgreedProviders = new[] { "AlphaLlm", "BetaLlm" },
                 });
 
             Assert.Equal(HealingReportEntry.AcceptedStatus, strongHeuristic.ReviewStatus);
@@ -543,6 +546,97 @@ namespace ScenarioRunner
             // information the report must not lose.
             var newEvent = root.GetProperty("Events")[1];
             Assert.Equal(JsonValueKind.Null, newEvent.GetProperty("ScoreBreakdown").GetProperty("NameScore").ValueKind);
+        }
+
+        [Fact]
+        public void HealingReportFileSink_UpgradesV4Report_LeavingAgreedProvidersNull()
+        {
+            // v5 (#10) only adds AgreedProviders, so a v4 file upgrades in place. The upgraded
+            // entry must keep AgreedProviders null - "this build did not record who agreed",
+            // not the empty list's claim that nobody did.
+            File.WriteAllText(_tempReportPath, @"{
+  ""SchemaVersion"": 4,
+  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
+  ""Events"": [
+    { ""LocatorKey"": ""old"", ""Source"": ""Claude"", ""ReviewStatus"": ""accepted-with-llm"", ""Score"": 0.4, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 3, ""LlmConfidence"": 0.9, ""LlmProviderName"": ""Claude"" }
+  ]
+}");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            sink.Record(HealingReportEntry.FromHealResult(
+                "new",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                new HealResult
+                {
+                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                    Source = HealSource.Llm,
+                    Score = 0.4,
+                    LlmConfidence = 0.7,
+                    LlmProviderName = "AlphaLlm",
+                    AgreedProviders = new[] { "AlphaLlm", "BetaLlm" },
+                }));
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
+            var root = doc.RootElement;
+            Assert.Equal(5, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
+
+            var upgraded = root.GetProperty("Events")[0];
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("AgreedProviders").ValueKind);
+
+            var recorded = root.GetProperty("Events")[1];
+            var agreed = recorded.GetProperty("AgreedProviders").EnumerateArray().Select(e => e.GetString()).ToArray();
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, agreed);
+        }
+
+        [Fact]
+        public void HealingReportHtmlRenderer_ShowsWhoAgreed_OnConsensusEntries()
+        {
+            var accepted = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" };
+            var entry = HealingReportEntry.FromHealResult(
+                "LoginPage.Email",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Llm,
+                    Score = 0.4,
+                    LlmConfidence = 0.7,
+                    LlmProviderName = "Claude",
+                    LlmReasoning = "same field, renamed",
+                    AgreedProviders = new[] { "Claude", "Gemini" },
+                });
+
+            var doc = new HealingReportDocument();
+            doc.Events.Add(entry);
+            var html = HealingReportHtmlRenderer.Render(doc);
+
+            Assert.Contains("Consensus: Claude + Gemini", html);
+            Assert.Contains("same field, renamed", html);
+
+            // A v4-era entry has no record of who agreed; the renderer must not invent one.
+            var legacy = new HealingReportDocument();
+            legacy.Events.Add(new HealingReportEntry { LocatorKey = "old", Source = "Claude", ReviewStatus = "accepted-with-llm", LlmReasoning = "legacy" });
+            Assert.DoesNotContain("Consensus:", HealingReportHtmlRenderer.Render(legacy));
+        }
+
+        [Fact]
+        public void HealingReportEntry_FromHealResult_LeavesAgreedProvidersNullOnHeuristicResults()
+        {
+            var entry = HealingReportEntry.FromHealResult(
+                "HeuristicOnly",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                new HealResult
+                {
+                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                    Source = HealSource.Heuristic,
+                    Score = 0.9,
+                });
+
+            Assert.Null(entry.AgreedProviders);
         }
 
         [Fact]
@@ -628,10 +722,14 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ResolveAndRecordAsync_PropagatesPlatformParameterToLlmProviderAndRepository()
         {
             var repository = new LocatorRepository(_tempRepoPath);
+            // Consensus (#10) needs two agreeing providers before an LLM pick is accepted;
+            // `provider` is the one whose LastPlatform this test inspects.
             var provider = new FakeEngineLlmProvider("FakeEngine", isAvailable: true, resolve: () =>
                 new LlmHealingResult { ProviderName = "FakeEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.92, Reasoning = "matched" });
+            var seconder = new FakeEngineLlmProvider("SecondEngine", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "SecondEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.88, Reasoning = "matched" });
 
-            var engine = new SelfHealingEngine(repository, llmProviders: new[] { provider });
+            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder });
 
             // Stale expected that triggers low heuristic confidence so LLM fallback is used
             var expected = new UiElementInfo
@@ -676,8 +774,10 @@ namespace ScenarioRunner
             var repository = new LocatorRepository(_tempRepoPath);
             var provider = new FakeEngineLlmProvider("FakeEngine", isAvailable: true, resolve: () =>
                 new LlmHealingResult { ProviderName = "FakeEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.95, Reasoning = "matched" });
+            var seconder = new FakeEngineLlmProvider("SecondEngine", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "SecondEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.9, Reasoning = "matched" });
 
-            var engine = new SelfHealingEngine(repository, llmProviders: new[] { provider });
+            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder });
 
             var expected = new UiElementInfo
             {

@@ -44,6 +44,50 @@ All LLM providers support configurable timeouts via their constructors (`TimeSpa
 var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
 ```
 
+### 🤝 Consensus Acceptance
+
+An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale, so treating the larger number as the better answer just rewards whichever model is most optimistic.
+
+What follows from that rule:
+
+| Situation | Outcome |
+| :--- | :--- |
+| Two or more providers name the same candidate | Accepted; the voters are recorded in `HealResult.AgreedProviders` |
+| Only one provider is configured | **Never accepted** — one provider cannot agree with itself, no matter how confident it claims to be |
+| Every provider names a different candidate | Not accepted — this is the LLM layer reporting "we do not know" |
+| Two candidates tie for the most votes | Not accepted — a tie is disagreement; breaking it by confidence would reinstate the comparison this rule removes |
+| A provider fails, times out, or names a candidate that was not on its shortlist | That vote is discarded before counting; the remaining valid votes still stand on their own |
+
+When a pick is not accepted the resolver returns the heuristic result unchanged, exactly as it does when no provider is configured at all.
+
+```csharp
+// Consensus needs at least two independent providers.
+var result = await SelfHealingResolver.ResolveAsync(
+    expected,
+    currentTreeRoot,
+    new ILlmHealingProvider[] { new ClaudeHealingProvider(), new GeminiHealingProvider() });
+
+// result.AgreedProviders => ["Claude", "Gemini"] when they converged.
+```
+
+The quorum is tunable through `SimilarityWeights.MinimumConsensusVotes` (default `2`); values below 2 are rejected by `Validate()`.
+
+> **Independence is the point.** Two `OpenAiHealingProvider` instances pointed at the same endpoint and model are the same model voting twice, not a consensus. Prefer providers backed by genuinely different models.
+
+#### Naming providers
+
+`HealResult.AgreedProviders` identifies voters by `ILlmHealingProvider.Name`, so names must be unique within a run. Because `OpenAiHealingProvider` speaks to any OpenAI-compatible endpoint, several instances of it can legitimately be configured at once — give each one a `name`:
+
+```csharp
+var providers = new ILlmHealingProvider[]
+{
+    new OpenAiHealingProvider(name: "Groq",     endpoint: "https://api.groq.com/openai/v1",  apiKey: groqKey),
+    new OpenAiHealingProvider(name: "Cerebras", endpoint: "https://api.cerebras.ai/v1",      apiKey: cerebrasKey),
+};
+```
+
+Without `name`, both would report `"OpenAI"` and their votes would be indistinguishable in the report.
+
 ### 🌐 Free Cloud AI via GitHub Models & Custom Endpoints
 `OpenAiHealingProvider` supports custom OpenAI-compatible endpoints (such as GitHub Models, Azure OpenAI, vLLM, LM Studio).
 
@@ -82,6 +126,50 @@ Tüm LLM sağlayıcıları kurucuları üzerinden yapılandırılabilir zaman a�
 // Örnek: Hızlı bulut çözümlemesi için 5 saniyelik özel zaman aşımı
 var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
 ```
+
+### 🤝 Mutabakatla Kabul (Consensus)
+
+Bir LLM seçimi, ancak **en az iki sağlayıcı birbirinden bağımsız olarak aynı adayı işaret ederse** kabul edilir. Modellerin kendi bildirdiği güven skoru kaydedilir ama asla karşılaştırılmaz veya bir eşiğe sokulmaz: Claude'un `0.72`'si ile Gemini'nin `0.95`'i aynı ölçekte değildir; büyük sayıyı doğru cevap saymak yalnızca en iyimser modeli ödüllendirir.
+
+Bu kuralın sonuçları:
+
+| Durum | Sonuç |
+| :--- | :--- |
+| İki veya daha fazla sağlayıcı aynı adayı seçer | Kabul edilir; oy verenler `HealResult.AgreedProviders` içine yazılır |
+| Yalnızca tek sağlayıcı yapılandırılmış | **Asla kabul edilmez** — bir sağlayıcı kendisiyle mutabık olamaz, ne kadar emin olduğunu söylerse söylesin |
+| Her sağlayıcı farklı bir aday seçer | Kabul edilmez — bu, LLM katmanının "bilmiyoruz" demesidir |
+| İki aday en yüksek oyda berabere kalır | Kabul edilmez — beraberlik anlaşmazlıktır; güvene göre çözmek, kaldırılan karşılaştırmayı geri getirir |
+| Bir sağlayıcı hata verir, zaman aşımına uğrar veya kısa listede olmayan bir aday söyler | O oy sayımdan önce elenir; kalan geçerli oylar kendi başına geçerliliğini korur |
+
+Seçim kabul edilmediğinde çözümleyici, hiç sağlayıcı yapılandırılmamış gibi sezgisel (heuristic) sonucu değiştirmeden döndürür.
+
+```csharp
+// Mutabakat için en az iki bağımsız sağlayıcı gerekir.
+var result = await SelfHealingResolver.ResolveAsync(
+    expected,
+    currentTreeRoot,
+    new ILlmHealingProvider[] { new ClaudeHealingProvider(), new GeminiHealingProvider() });
+
+// Anlaştıklarında result.AgreedProviders => ["Claude", "Gemini"]
+```
+
+Yeter sayı `SimilarityWeights.MinimumConsensusVotes` ile ayarlanabilir (varsayılan `2`); 2'nin altındaki değerler `Validate()` tarafından reddedilir.
+
+> **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, mutabakat değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin.
+
+#### Sağlayıcılara isim verme
+
+`HealResult.AgreedProviders` oy verenleri `ILlmHealingProvider.Name` ile tanımlar; bu yüzden isimler bir çalıştırma içinde benzersiz olmalıdır. `OpenAiHealingProvider` OpenAI uyumlu her uç noktayla konuştuğu için aynı anda birden çok örneği meşru biçimde yapılandırılabilir — her birine `name` verin:
+
+```csharp
+var providers = new ILlmHealingProvider[]
+{
+    new OpenAiHealingProvider(name: "Groq",     endpoint: "https://api.groq.com/openai/v1",  apiKey: groqKey),
+    new OpenAiHealingProvider(name: "Cerebras", endpoint: "https://api.cerebras.ai/v1",      apiKey: cerebrasKey),
+};
+```
+
+`name` verilmezse ikisi de `"OpenAI"` olarak raporlanır ve oyları raporda birbirinden ayırt edilemez.
 
 ### 0 TL Maliyetli Çevrimdışı Yapay Zeka (Ollama) Kurulumu
 1. [Ollama Resmi Sitesinden](https://ollama.com) Ollama'yı indirip kurun.

@@ -249,7 +249,13 @@ namespace ScenarioRunner
             staleExpected.Name = "Unrelated Label Text";
             staleExpected.ParentControlType = "UnrelatedParentType";
             staleExpected.BoundingRectangle = new BoundingRectangle(99999, 99999, 50, 20);
-            ILlmHealingProvider[] providers = { new DeterministicProvider("FakeLlm", "txtEmail", 0.85) };
+            // Two providers, because consensus (#10) is what accepts an LLM pick - a single
+            // provider is never acted on, however confident it claims to be.
+            ILlmHealingProvider[] providers =
+            {
+                new DeterministicProvider("FakeLlmA", "txtEmail", 0.85),
+                new DeterministicProvider("FakeLlmB", "txtEmail", 0.80),
+            };
             var healResult = await SelfHealingResolver.ResolveAsync(staleExpected, currentTree, providers);
             Assert.NotNull(healResult.Matched);
             Assert.Equal("txtEmail", healResult.Matched!.AutomationId);

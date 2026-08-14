@@ -57,7 +57,17 @@ namespace ScenarioRunner
             // Confidence is only checked for being a parsed, in-range number - not for being high.
             Assert.InRange(directResult.Confidence, 0.0, 1.0);
 
-            // 2. Verify end-to-end integration through SelfHealingResolver
+            // 2. Verify the resolver integrates with the provider and applies consensus (#10).
+            // One provider cannot form a consensus, so the correct outcome here is a clean
+            // fall back to the heuristic result - the resolver still called the provider (the
+            // direct check above proves the wire works), it just refuses to act on a single
+            // uncalibrated opinion.
+            //
+            // Consensus itself is not exercised here on purpose. Faking it with two instances
+            // pointed at the same endpoint would be the same model voting twice - not the
+            // independent agreement the rule is about - while doubling the live API cost of
+            // every smoke run. Consensus behaviour is covered by SelfHealingResolverTests
+            // against mocked providers, which is where this issue's test strategy puts it.
             var weights = new SimilarityWeights { MinimumConfidence = 0.99 }; // Force LLM fallback
             var healResult = await SelfHealingResolver.ResolveAsync(
                 expected,
@@ -66,17 +76,16 @@ namespace ScenarioRunner
                 weights: weights,
                 log: msg => Console.WriteLine($"[GitHubModelsSmoke] {msg}"));
 
-            // The resolver reached the LLM branch and returned an element that actually exists in the tree.
-            // Whether that element is txtEmail, and whether IsConfident ends up true, depend on the model's
-            // answer plus MinimumLlmConfidence and the evidence gate - none of which this test is about.
-            Assert.Equal(HealSource.Llm, healResult.Source);
+            Assert.Equal(HealSource.Heuristic, healResult.Source);
+            Assert.Empty(healResult.AgreedProviders);
             Assert.NotNull(healResult.Matched);
             Assert.Contains(healResult.Matched!.AutomationId, root.Children.ConvertAll(c => c.AutomationId));
 
             Console.WriteLine(
-                $"[GitHubModelsSmoke] {provider.Name} ({model}) picked '{directResult.MatchedCandidateId}' -> " +
-                $"'{healResult.Matched.AutomationId}' with confidence {directResult.Confidence:F2} " +
-                $"in {directResult.Elapsed.TotalMilliseconds:F0}ms. Reasoning: {directResult.Reasoning}");
+                $"[GitHubModelsSmoke] {provider.Name} ({model}) picked '{directResult.MatchedCandidateId}' " +
+                $"with confidence {directResult.Confidence:F2} in {directResult.Elapsed.TotalMilliseconds:F0}ms; " +
+                $"single provider so the resolver fell back to '{healResult.Matched.AutomationId}'. " +
+                $"Reasoning: {directResult.Reasoning}");
         }
 
         private static (UiElementInfo Expected, UiElementInfo Root, List<CandidateScore> Candidates) BuildTestScenario()

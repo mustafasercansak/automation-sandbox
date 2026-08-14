@@ -5,6 +5,11 @@ namespace LlmHealing
 {
     public interface ILlmHealingProvider
     {
+        // Must be unique among the providers configured for a single run. Consensus
+        // acceptance (#10) records the agreeing providers by this name, so two providers
+        // sharing one would make a HealResult's AgreedProviders ambiguous - "OpenAI, OpenAI"
+        // cannot be read as two independent votes. Every built-in provider takes a name
+        // constructor parameter for exactly this case.
         string Name { get; }
 
         // True when the provider has everything it needs to run (an API key
