@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'SemVer package version, for example 0.1.0-preview.1'
+        description: 'SemVer package version, for example 0.2.0-beta.1'
         required: true
-        default: '0.1.0-preview.1'
+        default: '0.2.0-beta.1'
       prerelease:
         description: 'Mark the GitHub Release as a prerelease'
         required: true
@@ -86,16 +86,31 @@ jobs:
       - name: Write release notes
         shell: pwsh
         run: |
-          @"
-          # Automation Sandbox $env:TAG_NAME
+          # Literal here-string (@'...'@): PowerShell treats the backtick as an escape
+          # character inside an expandable here-string (@"..."@), so `n / `b in markdown
+          # code spans would become a newline / backspace and every other backtick would
+          # silently vanish. Nothing is expanded here; __TAG__ is substituted afterwards.
+          $notes = @'
+          # Automation Sandbox __TAG__
 
           Preview NuGet package artifact release.
 
           ## Highlights
 
-          - Intent automation pipeline: plan, match, record, and generate tests from a single API.
-          - Playwright C# and TypeScript test skeleton generation from recorded intent locators.
-          - Intent flow JSON/HTML reports for reviewable candidate and locator decisions.
+          - **Locator exception gating (#2):** Healing retries are strictly gated to locator-resolution failures rather than blindly retrying arbitrary exceptions.
+          - **Evidence coverage gate (#3):** Signals with missing metadata on both sides (empty names, null parents, zero bounds) are excluded from the denominator so missing data neither penalizes nor produces a false-perfect 1.00 score.
+          - **Runner-up margin gate (#4):** Top candidates with ambiguous margins over the runner-up (`best - runnerUp < 0.05`) are classified as ambiguous and flagged for manual review instead of falsely marked confident.
+          - **Intent semantic overlap gate (#5):** Desktop and web exploration bridges enforce a minimum semantic score (`MinimumSemanticScore = 0.01`) and candidate margin, routing semantically unrelated matches to review without persisting them.
+          - **LLM candidate explainability and divergence tracking (#6):** LLM healing results carry the selected candidate's own score and score breakdown, with explicit divergence tracking when the LLM overrides the heuristic winner.
+          - **Structured assertion generation (#9):** Test generators emit structured assertions (`AssertionKind`, `ExpectedValue`) with configurable `Strict` and `Lenient` modes, replacing false-green presence checks with real assertions.
+          - **Positioning, Linux CI, and packaging parity (#12, #13, #14):** Honest scope positioning in documentation, dual-OS CI matrix across Windows (`net48`) and Linux (`net8.0`), and complete packaging parity across all seven libraries.
+
+          ## Known Limitations
+
+          - **Calibration:** The thresholds shipped in this release are initial estimates, not values derived from a real-world benchmark dataset: `MinimumEvidenceWeight` (0.40), `MinimumCandidateMargin` (0.05), `MinimumSemanticScore` (0.01), and default `AssertGenerationMode` (`Strict`). Each is documented with its rationale and is subject to recalibration under #15.
+          - **Accuracy:** Healing accuracy is 100% on the bundled WinForms and WPF demo case studies. The false-positive rate on organic, third-party applications has not been measured (#15).
+          - **LLM Providers:** Provider integrations are tested with mocked HTTP responses in CI; live request/response behavior, actual payloads, and the hallucination guard under real API conditions remain unverified in CI (#21).
+          - **Platform:** Desktop automation is Windows-only (FlaUI / UIA3). The core heuristic engine and web automation path are cross-platform and verified on Linux in CI (#13).
 
           ## Packages
 
@@ -108,7 +123,9 @@ jobs:
           - AutomationSandbox.PlaywrightLiveExploration
 
           This release publishes package files as GitHub Release assets only. It does not push to nuget.org or GitHub Packages.
-          "@ | Out-File -FilePath release-notes.md -Encoding utf8
+          '@
+
+          $notes.Replace('__TAG__', $env:TAG_NAME) | Out-File -FilePath release-notes.md -Encoding utf8
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
