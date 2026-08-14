@@ -14,6 +14,10 @@ namespace LlmHealing
         // provider keys happen to be configured in the current environment.
         bool IsAvailable { get; }
 
-        Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default);
+        Task<LlmHealingResult> ResolveAsync(
+            UiElementInfo expected,
+            IReadOnlyList<CandidateScore> candidates,
+            string? platform = null,
+            CancellationToken cancellationToken = default);
     }
 }

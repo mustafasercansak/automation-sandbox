@@ -132,10 +132,59 @@ namespace ScenarioRunner
             Assert.Equal(0.88, result.Confidence);
         }
 
+        [Fact]
+        public async Task OpenAiHealingProvider_PassesExplicitPlatformToPrompt()
+        {
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new
+                        {
+                            role = "assistant",
+                            content = "{\"candidateId\": \"c0\", \"confidence\": 0.9, \"reasoning\": \"ok\"}",
+                        },
+                    },
+                },
+            });
+
+            var handler = new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK);
+            var provider = new OpenAiHealingProvider(new HttpClient(handler), apiKey: "test-openai-key");
+
+            await provider.ResolveAsync(Expected, BuildShortlist(), platform: "web-playwright");
+
+            Assert.NotNull(handler.LastRequestBody);
+            Assert.Contains("web-playwright", handler.LastRequestBody);
+        }
+
+        [Fact]
+        public async Task OllamaHealingProvider_PassesExplicitPlatformToPrompt()
+        {
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                message = new
+                {
+                    role = "assistant",
+                    content = "{\"candidateId\": \"c0\", \"confidence\": 0.9, \"reasoning\": \"ok\"}",
+                },
+            });
+
+            var handler = new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK);
+            var provider = new OllamaHealingProvider(new HttpClient(handler), host: "http://localhost:11434");
+
+            await provider.ResolveAsync(Expected, BuildShortlist(), platform: "web-playwright");
+
+            Assert.NotNull(handler.LastRequestBody);
+            Assert.Contains("web-playwright", handler.LastRequestBody);
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
             private readonly string _responseContent;
             private readonly HttpStatusCode _statusCode;
+            public string? LastRequestBody { get; private set; }
 
             public FakeHttpMessageHandler(string responseContent, HttpStatusCode statusCode)
             {
@@ -143,13 +192,17 @@ namespace ScenarioRunner
                 _statusCode = statusCode;
             }
 
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                LastRequestBody = request.Content == null
+                    ? null
+                    : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
+
                 var response = new HttpResponseMessage(_statusCode)
                 {
                     Content = new StringContent(_responseContent, Encoding.UTF8, "application/json"),
                 };
-                return Task.FromResult(response);
+                return response;
             }
         }
     }

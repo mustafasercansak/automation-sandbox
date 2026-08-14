@@ -91,6 +91,53 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Build_RespectsExplicitPlatform_WhenSpecified()
+        {
+            var prompt = LlmHealingPrompt.Build(Expected, BuildShortlist(), platform: "web-playwright");
+            Assert.Contains("You are diagnosing a broken UI test locator for a web-playwright application.", prompt);
+        }
+
+        [Fact]
+        public void Build_DefaultsToWindowsUia_WhenPlatformNotSpecified()
+        {
+            var prompt = LlmHealingPrompt.Build(Expected, BuildShortlist());
+            Assert.Contains("You are diagnosing a broken UI test locator for a windows-uia application.", prompt);
+        }
+
+        [Fact]
+        public void Build_InfersWebPlaywright_WhenElementHasShadowDomOrIframeScope()
+        {
+            var shadowExpected = new UiElementInfo
+            {
+                ControlType = "Button",
+                ClassName = "custom-btn [shadow-dom]",
+            };
+            var prompt = LlmHealingPrompt.Build(shadowExpected, BuildShortlist());
+            Assert.Contains("You are diagnosing a broken UI test locator for a web-playwright application.", prompt);
+        }
+
+        [Fact]
+        public void Build_PinningTest_StandardLightDomWebButtonCannotBeInferredWithoutExplicitPlatform()
+        {
+            // Pinning test: light-DOM web buttons (<button class="btn btn-primary">) mapped through
+            // WebElementMapper produce ControlType="Button" and ClassName="btn btn-primary" with NO
+            // scope annotation. Without an explicit platform parameter, the heuristic fallback
+            // defaults to "windows-uia", demonstrating why callers that know the UI context
+            // must pass platform: "web-playwright" explicitly.
+            var lightDomWebButton = new UiElementInfo
+            {
+                ControlType = "Button",
+                ClassName = "btn btn-primary",
+            };
+
+            var defaultPrompt = LlmHealingPrompt.Build(lightDomWebButton, BuildShortlist());
+            Assert.Contains("You are diagnosing a broken UI test locator for a windows-uia application.", defaultPrompt);
+
+            var explicitPrompt = LlmHealingPrompt.Build(lightDomWebButton, BuildShortlist(), platform: "web-playwright");
+            Assert.Contains("You are diagnosing a broken UI test locator for a web-playwright application.", explicitPrompt);
+        }
+
+        [Fact]
 
         public void ParseResponse_HandlesPlainJson()
         {
@@ -370,6 +417,34 @@ namespace ScenarioRunner
             Assert.Equal(1, availableCalls);
         }
 
+        [Fact]
+        public async Task ClaudeHealingProvider_PassesExplicitPlatformToPrompt()
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json"),
+            });
+            var provider = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+            await provider.ResolveAsync(Expected, BuildShortlist(), platform: "web-playwright");
+
+            Assert.NotNull(handler.LastRequestBody);
+            Assert.Contains("web-playwright", handler.LastRequestBody);
+        }
+
+        [Fact]
+        public async Task GeminiHealingProvider_PassesExplicitPlatformToPrompt()
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(GeminiSuccessResponse, Encoding.UTF8, "application/json"),
+            });
+            var provider = new GeminiHealingProvider(httpClient: new HttpClient(handler), apiKey: "test-key");
+            await provider.ResolveAsync(Expected, BuildShortlist(), platform: "web-playwright");
+
+            Assert.NotNull(handler.LastRequestBody);
+            Assert.Contains("web-playwright", handler.LastRequestBody);
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
             private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
@@ -409,7 +484,11 @@ namespace ScenarioRunner
 
             public string Name { get; }
             public bool IsAvailable { get; }
-            public Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
             {
                 _onResolve();
                 return Task.FromResult(new LlmHealingResult { ProviderName = Name, Success = true });

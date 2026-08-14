@@ -70,6 +70,7 @@ namespace SelfHealing
             IEnumerable<ILlmHealingProvider>? llmProviders = null,
             SimilarityWeights? weights = null,
             Action<string>? log = null,
+            string? platform = null,
             CancellationToken cancellationToken = default)
         {
             log ??= Console.WriteLine;
@@ -101,7 +102,7 @@ namespace SelfHealing
             IReadOnlyList<LlmHealingResult> llmResults;
             try
             {
-                llmResults = await LlmHealingEvaluator.EvaluateAsync(available, expected, shortlist, cancellationToken).ConfigureAwait(false);
+                llmResults = await LlmHealingEvaluator.EvaluateAsync(available, expected, shortlist, platform, cancellationToken).ConfigureAwait(false);
             }
 
             catch (Exception ex)

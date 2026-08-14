@@ -488,8 +488,9 @@ var providers = new ILlmHealingProvider[]
     new OllamaHealingProvider(httpClient)
 };
 
-// Falls back to LLM only if heuristic score < MinimumConfidence (0.50)
-var result = await SelfHealingResolver.ResolveAsync(expected, liveTree, providers);
+// Falls back to LLM only if heuristic score < MinimumConfidence (0.50).
+// Optional platform ("windows-uia", "web-playwright", etc.) tailors the prompt to the target environment.
+var result = await SelfHealingResolver.ResolveAsync(expected, liveTree, providers, platform: "web-playwright");
 
 if (result.Source == HealSource.Llm)
 {
