@@ -108,6 +108,7 @@ namespace WebDiscovery
       childItems.push(...shadowChildren.map(child => ({ element: child, ancestry: currentAncestry })));
     }
 
+    let crossOriginFrame = false;
     if (element.tagName === 'IFRAME') {
       try {
         const doc = element.contentDocument;
@@ -115,10 +116,15 @@ namespace WebDiscovery
           const iframeSelector = frameSelectorOf(element);
           const nestedAncestry = [...currentAncestry, iframeSelector];
           childItems.push({ element: doc.body, ancestry: nestedAncestry });
+        } else {
+          // contentDocument reads as null across an origin boundary instead of throwing.
+          crossOriginFrame = true;
         }
       } catch {
         // Cross-origin iframes cannot be inspected from the parent page. Playwright can still
-        // capture them by evaluating this script inside the frame context directly.
+        // capture them by evaluating this script inside the frame context directly. Flagged so
+        // the snapshot distinguishes a frame we were not allowed to read from an empty one.
+        crossOriginFrame = true;
       }
     }
 
@@ -135,6 +141,7 @@ namespace WebDiscovery
       CssSelector: cssSelectorOf(element),
       IsHidden: visibility.IsHidden,
       IsOffscreen: visibility.IsOffscreen,
+      IsCrossOriginFrame: crossOriginFrame,
       TreeScope: currentScope,
       FrameUrl: frameUrlOf(element),
       FrameAncestry: currentAncestry,

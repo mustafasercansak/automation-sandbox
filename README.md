@@ -335,9 +335,11 @@ if (result.IsConfident)
 ```
 
 The capture script walks regular DOM children, open Shadow DOM roots, and same-origin
-iframe documents. Hidden or offscreen web elements are marked and mapped with a zero
-bounding rectangle, which makes the existing position scorer exclude that signal instead
-of treating invisible layout data as reliable.
+iframe documents (capturing hierarchical `FrameAncestry` and emitting chained `Page.FrameLocator`
+locators). Offscreen elements retain their geometry, while hidden elements are mapped with a zero
+bounding rectangle. For cross-origin iframes (where browser Same-Origin Policy blocks parent
+DOM inspection), evaluate `PlaywrightDomCaptureScript.JavaScript` directly inside the target
+`IFrame` context via `frame.EvaluateAsync` — see [Web Automation Guide](docs/web-automation.md) for details.
 
 ### 7. Intent Automation Pipeline
 `IntentAutomationPipeline` ties the M6 flow together: plan intent steps, match them

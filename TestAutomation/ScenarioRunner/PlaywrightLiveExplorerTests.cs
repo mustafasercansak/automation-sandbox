@@ -119,6 +119,49 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task CaptureAsync_FlagsCrossOriginIframe_WithoutSilentlyDroppingTheBoundary()
+        {
+            // Two separate file:// documents are distinct origins to Chromium, so this exercises the
+            // real cross-origin path: the parent page cannot read the child's contentDocument.
+            var tempDir = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_CrossOrigin_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                File.WriteAllText(Path.Combine(tempDir, "inner.html"),
+                    "<!doctype html><html><body><button data-testid=\"secret-pay\">Pay</button></body></html>");
+                var mainHtmlPath = Path.Combine(tempDir, "main.html");
+                File.WriteAllText(mainHtmlPath,
+                    "<!doctype html><html><body><h1>Main</h1><iframe name=\"payment\" src=\"inner.html\"></iframe></body></html>");
+
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(new Uri(mainHtmlPath).AbsoluteUri);
+                var flattened = Flatten(dom).ToList();
+
+                // The frame's contents are genuinely unreachable from the parent page.
+                Assert.DoesNotContain(flattened, e => e.TestId == "secret-pay");
+
+                // The iframe element itself is still captured, and is flagged so a caller can tell
+                // "blocked by same-origin policy" apart from "this frame is simply empty".
+                var frame = Assert.Single(flattened, e => e.TagName == "iframe");
+                Assert.True(frame.IsCrossOriginFrame, "A frame the script could not read must be flagged as cross-origin.");
+                Assert.Empty(frame.Children);
+
+                // The suggestions emitted for it locate the iframe element, which is valid - no
+                // broken locator is produced for content that was never captured.
+                var suggestions = PlaywrightLocatorEmitter.Suggest(frame).ToList();
+                Assert.NotEmpty(suggestions);
+                Assert.All(suggestions, s => Assert.DoesNotContain("FrameLocator", s.Expression));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CaptureAsync_CapturesIframeElements_GeneratesFrameLocatorsAndPreservesInGenerators()
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_Iframes_" + Guid.NewGuid().ToString("N"));
