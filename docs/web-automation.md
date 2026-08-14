@@ -90,6 +90,67 @@ class WebTest
 
 ---
 
+### Iframe Support: Same-Origin vs. Cross-Origin
+
+Web applications frequently embed iframes for isolated widgets, forms, payment gateways, or authentication providers. AutomationSandbox provides distinct handling depending on iframe origin security:
+
+#### 1. Same-Origin Iframes (Automatic Traversal)
+
+When an `<iframe>` shares the same origin (protocol, domain, and port) as the parent page:
+- `PlaywrightDomCaptureScript` running in `page.EvaluateAsync` automatically traverses into `iframe.contentDocument.body`.
+- `WebElementInfo.FrameAncestry` tracks the ordered hierarchy of parent iframe selectors (e.g. `["iframe[name='details']", "iframe#nestedFrame"]`).
+- `PlaywrightLocatorEmitter` suggests iframe-aware locators:
+  ```csharp
+  // Single iframe
+  page.FrameLocator("iframe[name='details']").GetByRole(AriaRole.Button, new() { Name = "Save" })
+
+  // Nested iframes
+  page.FrameLocator("iframe[name='details']").FrameLocator("iframe#nestedFrame").GetByTestId("submit-btn")
+  ```
+- Test generators (`PlaywrightCSharpTestGenerator` and `PlaywrightTypeScriptTestGenerator`) automatically preserve and emit correct `Page.FrameLocator(...)` (C#) and `page.frameLocator(...)` (TypeScript) code.
+
+#### 2. Cross-Origin Iframes (Direct Frame Evaluation)
+
+When an `<iframe>` is hosted on a different origin (e.g. `https://checkout.stripe.com`, `https://accounts.google.com`, third-party reCAPTCHA):
+- **Browser Security Restriction**: The browser's Same-Origin Policy (SOP) blocks JavaScript running in the parent page from reading `iframe.contentDocument`. The capture script safely skips inaccessible frame documents without failing the capture.
+- **The boundary is recorded, not silent**: the `<iframe>` element itself is still captured, with `WebElementInfo.IsCrossOriginFrame = true` and no children. Without that flag a blocked frame would be indistinguishable from an empty same-origin one — both are an iframe node with zero children — so a caller could not tell "this frame is empty" from "I was not allowed to look inside". Elements *inside* the frame never reach the snapshot, so `PlaywrightLocatorEmitter` never emits a locator for content it could not see; the suggestions it produces for the iframe node locate the iframe element itself, which is valid.
+- **Playwright Solution**: Playwright operates out-of-process and has direct access to all frames via `page.Frames`, `page.FrameByUrl()`, or `page.FrameByName()`.
+- **Cross-Origin Capture Workflow**: Evaluate `PlaywrightDomCaptureScript.JavaScript` directly inside the frame's execution context:
+
+```csharp
+using System.Linq;
+using System.Text.Json;
+using Microsoft.Playwright;
+using WebDiscovery;
+using UiModel;
+using SelfHealing;
+
+// 1. Locate the cross-origin frame via Playwright
+IFrame? paymentFrame = page.Frames.FirstOrDefault(f => f.Url.Contains("checkout.stripe.com"))
+    ?? page.FrameByName("stripe-frame");
+
+if (paymentFrame != null)
+{
+    // 2. Evaluate capture script inside the frame context directly
+    string frameDomJson = await paymentFrame.EvaluateAsync<string>(
+        $"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
+
+    // 3. Deserialize and map to UiElementInfo tree
+    var frameDom = JsonSerializer.Deserialize<WebElementInfo>(
+        frameDomJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    UiElementInfo frameTree = WebElementMapper.ToUiElementTree(frameDom!);
+
+    // 4. Resolve / heal target element inside the cross-origin frame
+    var healResult = SelfHealingResolver.Resolve(expectedCardInputSnapshot, frameTree);
+
+    // 5. In test scripts, target cross-origin elements via FrameLocator or frame instance:
+    // C#: await Page.FrameLocator("iframe[src*='checkout.stripe.com']").GetByTestId("card-number").FillAsync("4242...");
+    // TS: await page.frameLocator('iframe[src*=\'checkout.stripe.com\']').getByTestId('card-number').fill('4242...');
+}
+```
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### Web Playwright Tarama Akışı
@@ -163,5 +224,63 @@ class WebTest
             Console.WriteLine($"[{suggestion.Strategy}] ({suggestion.Confidence * 100}% Confidence): {suggestion.Expression}");
         }
     }
+}
+```
+
+### Iframe Desteği: Same-Origin ve Cross-Origin
+
+Web uygulamaları bağımsız bileşenler, formlar, ödeme sistemleri veya kimlik doğrulama sağlayıcıları için sıklıkla iframe kullanır. AutomationSandbox, iframe'in origin güvenliğine göre iki farklı yaklaşım sunar:
+
+#### 1. Same-Origin Iframe'ler (Otomatik Ağaç Gezintisi)
+
+Bir `<iframe>` ana sayfa ile aynı origin'i (protokol, alan adı, port) paylaştığında:
+- `page.EvaluateAsync` içinde çalışan `PlaywrightDomCaptureScript`, otomatik olarak `iframe.contentDocument.body` içerisine iner.
+- `WebElementInfo.FrameAncestry`, üst iframe seçicilerinin hiyerarşik sırasını (`["iframe[name='details']", "iframe#nestedFrame"]`) saklar.
+- `PlaywrightLocatorEmitter`, iframe'e duyarlı zincirleme locator'lar önerir:
+  ```csharp
+  // Tekli iframe
+  page.FrameLocator("iframe[name='details']").GetByRole(AriaRole.Button, new() { Name = "Save" })
+
+  // İç içe (nested) iframe'ler
+  page.FrameLocator("iframe[name='details']").FrameLocator("iframe#nestedFrame").GetByTestId("submit-btn")
+  ```
+- Test üreticileri (`PlaywrightCSharpTestGenerator` ve `PlaywrightTypeScriptTestGenerator`), üretilen C# (`Page.FrameLocator(...)`) ve TypeScript (`page.frameLocator(...)`) kodlarında bu zincirleri korur.
+
+#### 2. Cross-Origin Iframe'ler (Doğrudan Frame Değerlendirmesi)
+
+Bir `<iframe>` farklı bir origin'den yüklendiğinde (örn. `https://checkout.stripe.com`, `https://accounts.google.com`, üçüncü parti reCAPTCHA):
+- **Tarayıcı Güvenlik Kısıtlaması**: Tarayıcının Same-Origin Policy (SOP) kuralı gereği ana sayfada koşan JavaScript, `iframe.contentDocument` içeriğine erişemez (SecurityError fırlatır veya null döner). Tarama betiği erişilemeyen frame'leri güvenle atlar ve ana sayfa taramasını kesintiye uğratmaz.
+- **Playwright Çözümü**: Playwright tarayıcı sürecinin dışından çalıştığı için `page.Frames`, `page.FrameByUrl()` veya `page.FrameByName()` üzerinden tüm frame'lere doğrudan erişebilir.
+- **Cross-Origin Tarama Akışı**: `PlaywrightDomCaptureScript.JavaScript` betiğini doğrudan hedef frame'in bağlamında çalıştırın:
+
+```csharp
+using System.Linq;
+using System.Text.Json;
+using Microsoft.Playwright;
+using WebDiscovery;
+using UiModel;
+using SelfHealing;
+
+// 1. Playwright üzerinden cross-origin frame'i bulun
+IFrame? paymentFrame = page.Frames.FirstOrDefault(f => f.Url.Contains("checkout.stripe.com"))
+    ?? page.FrameByName("stripe-frame");
+
+if (paymentFrame != null)
+{
+    // 2. Tarama betiğini doğrudan frame bağlamında çalıştırın
+    string frameDomJson = await paymentFrame.EvaluateAsync<string>(
+        $"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
+
+    // 3. JSON'ı deserialize edip UiElementInfo ağacına dönüştürün
+    var frameDom = JsonSerializer.Deserialize<WebElementInfo>(
+        frameDomJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    UiElementInfo frameTree = WebElementMapper.ToUiElementTree(frameDom!);
+
+    // 4. Cross-origin frame içerisindeki hedef elemanı iyileştirin / bulun
+    var healResult = SelfHealingResolver.Resolve(expectedCardInputSnapshot, frameTree);
+
+    // 5. Test kodlarında FrameLocator veya frame nesnesi ile hedefleyin:
+    // C#: await Page.FrameLocator("iframe[src*='checkout.stripe.com']").GetByTestId("card-number").FillAsync("4242...");
+    // TS: await page.frameLocator('iframe[src*=\'checkout.stripe.com\']').getByTestId('card-number').fill('4242...');
 }
 ```
