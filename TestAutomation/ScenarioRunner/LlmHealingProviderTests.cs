@@ -453,10 +453,13 @@ namespace ScenarioRunner
                 await Task.Delay(1000, ct);
                 return new HttpResponseMessage(HttpStatusCode.OK);
             });
+            // delayAsync is stubbed out because a timed-out attempt is retried like any other
+            // transient failure: with the real backoff this single test waits ~800ms.
             var provider = new ClaudeHealingProvider(
                 httpClient: new HttpClient(handler),
                 apiKey: "sk-test-key",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
 
@@ -475,7 +478,8 @@ namespace ScenarioRunner
             var provider = new GeminiHealingProvider(
                 httpClient: new HttpClient(handler),
                 apiKey: "test-key",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
 
@@ -484,17 +488,216 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void ClaudeHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        public async Task ClaudeHealingProvider_RetriesOnTransient503_SucceedsOnSecondAttempt()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.Zero));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(req =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                    {
+                        Content = new StringContent("temporarily unavailable")
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(AnthropicSuccessResponse, Encoding.UTF8, "application/json")
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success);
+            Assert.Equal("c0", result.MatchedCandidateId);
+            Assert.Equal(2, result.AttemptCount);
+            Assert.Equal(2, callCount);
         }
 
         [Fact]
-        public void GeminiHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        public async Task ClaudeHealingProvider_RetriesExhausted_ReturnsFailureWithAttemptCount()
+        {
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(req =>
+            {
+                callCount++;
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("server error")
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Equal(3, result.AttemptCount);
+            Assert.Equal(3, callCount);
+            Assert.Contains("500", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task ClaudeHealingProvider_NonTransient401_FailsFastWithoutRetry()
+        {
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(req =>
+            {
+                callCount++;
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                {
+                    Content = new StringContent("invalid api key")
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Equal(1, result.AttemptCount);
+            Assert.Equal(1, callCount);
+            Assert.Contains("401", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task ClaudeHealingProvider_RetryAfterExceedsCeiling_FailsFastWithoutRetry()
+        {
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(req =>
+            {
+                callCount++;
+                var response = new HttpResponseMessage((HttpStatusCode)429)
+                {
+                    Content = new StringContent("rate limited")
+                };
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(3600));
+                return response;
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Equal(1, result.AttemptCount);
+            Assert.Equal(1, callCount);
+            Assert.Contains("exceeds maximum delay threshold", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task ClaudeHealingProvider_TotalTimeoutCeiling_TerminatesOperation()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50),
+                totalTimeout: TimeSpan.FromMilliseconds(80),
+                maxRetries: 3,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out after", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task ClaudeHealingProvider_CallerCancellation_TakesPrecedence()
+        {
+            var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key");
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist(), cancellationToken: cts.Token);
+
+            Assert.False(result.Success);
+            Assert.Equal("Operation was canceled.", result.ErrorMessage);
+        }
+
+        [Fact]
+        public void ClaudeHealingProvider_Throws_WhenParametersAreInvalid()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(totalTimeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ClaudeHealingProvider(maxRetries: -1));
+            Assert.Throws<ArgumentException>(() => new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
+        }
+
+        [Fact]
+        public async Task GeminiHealingProvider_RetriesOn429_AndSucceeds()
+        {
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(req =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return new HttpResponseMessage((HttpStatusCode)429)
+                    {
+                        Content = new StringContent("rate limit exceeded")
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(GeminiSuccessResponse, Encoding.UTF8, "application/json")
+                };
+            });
+
+            var provider = new GeminiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success);
+            Assert.Equal("c0", result.MatchedCandidateId);
+            Assert.Equal(2, result.AttemptCount);
+            Assert.Equal(2, callCount);
+        }
+
+        [Fact]
+        public void GeminiHealingProvider_Throws_WhenParametersAreInvalid()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(timeout: TimeSpan.Zero));
             Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(totalTimeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GeminiHealingProvider(maxRetries: -1));
+            Assert.Throws<ArgumentException>(() => new GeminiHealingProvider(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
         }
 
         private sealed class FakeHttpMessageHandler : HttpMessageHandler

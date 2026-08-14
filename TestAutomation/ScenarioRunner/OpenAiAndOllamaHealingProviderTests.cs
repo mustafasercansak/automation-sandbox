@@ -238,10 +238,13 @@ namespace ScenarioRunner
                 await Task.Delay(1000, ct);
                 return new HttpResponseMessage(HttpStatusCode.OK);
             });
+            // delayAsync is stubbed out because a timed-out attempt is retried like any other
+            // transient failure: with the real backoff this single test waits ~800ms.
             var provider = new OpenAiHealingProvider(
                 httpClient: new HttpClient(handler),
                 apiKey: "test-openai-key",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
 
@@ -260,7 +263,8 @@ namespace ScenarioRunner
             var provider = new OllamaHealingProvider(
                 httpClient: new HttpClient(handler),
                 host: "http://localhost:11434",
-                timeout: TimeSpan.FromMilliseconds(50));
+                timeout: TimeSpan.FromMilliseconds(50),
+                delayAsync: (_, _) => Task.CompletedTask);
 
             var result = await provider.ResolveAsync(Expected, BuildShortlist());
 
@@ -269,17 +273,127 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void OpenAiHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        public async Task OpenAiHealingProvider_RetriesOn500_AndSucceeds()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.Zero));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            var callCount = 0;
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new
+                        {
+                            role = "assistant",
+                            content = JsonSerializer.Serialize(new
+                            {
+                                candidateId = "c0",
+                                confidence = 0.95,
+                                reasoning = "Recovered after retry.",
+                            }),
+                        },
+                    },
+                },
+            });
+
+            var handler = new FakeHttpMessageHandler((_, _) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent("transient internal error")
+                    });
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(fakeResponse, Encoding.UTF8, "application/json")
+                });
+            });
+
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-openai-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success);
+            Assert.Equal("c0", result.MatchedCandidateId);
+            Assert.Equal(2, result.AttemptCount);
+            Assert.Equal(2, callCount);
         }
 
         [Fact]
-        public void OllamaHealingProvider_Throws_WhenTimeoutIsZeroOrNegative()
+        public void OpenAiHealingProvider_Throws_WhenParametersAreInvalid()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(totalTimeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OpenAiHealingProvider(maxRetries: -1));
+            Assert.Throws<ArgumentException>(() => new OpenAiHealingProvider(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
+        }
+
+        [Fact]
+        public async Task OllamaHealingProvider_RetriesOn503_AndSucceeds()
+        {
+            var callCount = 0;
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                message = new
+                {
+                    role = "assistant",
+                    content = JsonSerializer.Serialize(new
+                    {
+                        candidateId = "c0",
+                        confidence = 0.88,
+                        reasoning = "Recovered after retry.",
+                    }),
+                },
+            });
+
+            var handler = new FakeHttpMessageHandler((_, _) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                    {
+                        Content = new StringContent("model loading")
+                    });
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(fakeResponse, Encoding.UTF8, "application/json")
+                });
+            });
+
+            var provider = new OllamaHealingProvider(
+                httpClient: new HttpClient(handler),
+                host: "http://localhost:11434",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success);
+            Assert.Equal("c0", result.MatchedCandidateId);
+            Assert.Equal(2, result.AttemptCount);
+            Assert.Equal(2, callCount);
+        }
+
+        [Fact]
+        public void OllamaHealingProvider_Throws_WhenParametersAreInvalid()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(timeout: TimeSpan.Zero));
             Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(timeout: TimeSpan.FromSeconds(-1)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(totalTimeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new OllamaHealingProvider(maxRetries: -1));
+            Assert.Throws<ArgumentException>(() => new OllamaHealingProvider(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
         }
 
         private sealed class FakeHttpMessageHandler : HttpMessageHandler

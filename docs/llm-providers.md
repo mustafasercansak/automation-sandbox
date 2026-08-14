@@ -30,18 +30,27 @@ Automation Sandbox includes 4 built-in AI providers for low-confidence healing f
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
 
-### ⏱️ Timeouts & Fallback Behavior
+### ⏱️ Timeouts & Resilience Patterns
 
-All LLM providers support configurable timeouts via their constructors (`TimeSpan? timeout = null`). When a timeout expires, the provider fails fast without throwing unhandled exceptions, enabling `SelfHealingResolver` to safely fall back to the heuristic match or other providers.
+All LLM providers support configurable per-attempt timeouts, overall total operation timeouts, and automatic retry with exponential backoff:
 
-| Provider | Default Timeout | Rationale |
-| :--- | :---: | :--- |
-| **Claude / Gemini / OpenAI** | `15s` | Cloud APIs process small structured pick prompts (~500 tokens) in 1–4s; 15s is ample buffer while preventing test runner stalls. |
-| **Ollama** | `30s` | Local models running on CPU/GPU may encounter cold-start model load latency. |
+| Setting | Default (Cloud) | Default (Ollama) | Description |
+| :--- | :---: | :---: | :--- |
+| **`Timeout`** | `15s` | `30s` | Per-attempt HTTP timeout. Prevents any single hanging request from blocking the pipeline. |
+| **`TotalTimeout`** | `35s` | `70s` | Overall operation ceiling across all retries + backoffs. |
+| **`MaxRetries`** | `2` | `2` | Number of retry attempts on transient errors (total up to 3 attempts). |
+
+#### Retry Rules:
+- **Transient Errors Retried**: HTTP 429 (Rate Limited), HTTP 500, 502, 503, 504, and `HttpRequestException` (transient network drops) are automatically retried with exponential backoff and jitter.
+- **Fail-Fast on Permanent Errors**: HTTP 400, 401, 403, and 404 fail immediately without wasting retry attempts.
+- **`Retry-After` Header & Quota Guard**: If a response includes a `Retry-After` header $\le 10\text{s}$, the transport pauses for the requested delay. If `Retry-After` $> 10\text{s}$ (e.g. daily quota exhaustion), the provider fails fast immediately.
 
 ```csharp
-// Example: Custom 5-second timeout for fast cloud resolution
-var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
+// Example: Custom timeouts and retries
+var provider = new ClaudeHealingProvider(
+    timeout: TimeSpan.FromSeconds(10),
+    totalTimeout: TimeSpan.FromSeconds(25),
+    maxRetries: 1);
 ```
 
 ### 🤝 Consensus Acceptance
@@ -113,18 +122,26 @@ var provider = new OpenAiHealingProvider(
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Ücretsiz ($0)** | **100% Yerel (Offline)** |
 
-### ⏱️ Zaman Aşımı (Timeout) ve Fallback Davranışı
+### ⏱️ Zaman Aşımı (Timeout) ve Dayanıklılık (Resilience)
+Tüm LLM sağlayıcıları yapılandırılabilir deneme başına zaman aşımı, toplam tavan süresi ve üstel geri çekilmeli otomatik yeniden deneme (retry) desteğine sahiptir:
 
-Tüm LLM sağlayıcıları kurucuları üzerinden yapılandırılabilir zaman aşımı desteği sunar (`TimeSpan? timeout = null`). Bir sağlayıcı zaman aşımına uğradığında test yürütmesini kilitlemeden hızlıca başarısızlık döner (`Success = false`) ve `SelfHealingResolver`'ın güvenle sezgisel (heuristic) sonuca düşmesini sağlar.
+| Ayar | Varsayılan (Bulut) | Varsayılan (Ollama) | Açıklama |
+| :--- | :---: | :---: | :--- |
+| **`Timeout`** | `15s` | `30s` | İstek başına HTTP zaman aşımı. Asılı kalan tek bir isteğin boru hattını kilitlemesini önler. |
+| **`TotalTimeout`** | `35s` | `70s` | Tüm denemeler ve geri çekilmeler dahil genel işlem tavanı. |
+| **`MaxRetries`** | `2` | `2` | Geçici hatalarda yeniden deneme sayısı (toplam en fazla 3 istek). |
 
-| Sağlayıcı | Varsayılan Timeout | Gerekçe |
-| :--- | :---: | :--- |
-| **Claude / Gemini / OpenAI** | `15s` | Bulut API'leri ~500 token'lık küçük pick prompt'larını 1-4 saniyede tamamlar; 15s test kilitlenmelerini önlemek için idealdir. |
-| **Ollama** | `30s` | Yerel CPU/GPU üzerinde çalışan modeller soğuk başlangıç (cold start) model yükleme gecikmesi yaşayabilir. |
+#### Yeniden Deneme (Retry) Kuralları:
+- **Yeniden Denenen Geçici Hatalar**: HTTP 429 (Rate Limited), HTTP 500, 502, 503, 504 ve `HttpRequestException` (geçici bağlantı kopmaları) üstel geri çekilme ve jitter ile otomatik olarak yeniden denenir.
+- **Kalıcı Hatalarda Hızlı Başarısızlık (Fail-Fast)**: HTTP 400, 401, 403 ve 404 hatalarında yeniden deneme yapılmaz, hemen başarısızlık dönülür.
+- **`Retry-After` Başlığı ve Kota Koruması**: Yanıtta `Retry-After` başlığı $\le 10\text{s}$ ise belirtilen süre kadar beklenir. Eğer $> 10\text{s}$ ise (ör. günlük kota tükenmesi) boşuna beklenmez ve doğrudan fail-fast yapılır.
 
 ```csharp
-// Örnek: Hızlı bulut çözümlemesi için 5 saniyelik özel zaman aşımı
-var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
+// Örnek: Özel zaman aşımı ve deneme ayarları
+var provider = new ClaudeHealingProvider(
+    timeout: TimeSpan.FromSeconds(10),
+    totalTimeout: TimeSpan.FromSeconds(25),
+    maxRetries: 1);
 ```
 
 ### 🤝 Mutabakatla Kabul (Consensus)

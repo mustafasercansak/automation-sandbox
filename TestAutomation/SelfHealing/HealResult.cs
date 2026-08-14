@@ -50,6 +50,9 @@ namespace SelfHealing
         // provider answered first. Empty on heuristic results.
         public IReadOnlyList<string> AgreedProviders { get; set; } = Array.Empty<string>();
 
+        // Provider attempt telemetry (#11): records how many attempts each evaluated provider made.
+        public IReadOnlyDictionary<string, int>? ProviderAttempts { get; set; }
+
         // Heuristic winner metadata and divergence tracking (issue #6):
         // When Source == HealSource.Llm, HeuristicMatched and HeuristicScore preserve the
         // baseline winner before fallback. DivergedFromHeuristic indicates whether the LLM
