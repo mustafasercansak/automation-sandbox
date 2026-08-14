@@ -36,6 +36,7 @@ namespace SelfHealing
             UiElementInfo expected,
             UiElementInfo currentTreeRoot,
             Action<string>? log = null,
+            string? platform = null,
             CancellationToken cancellationToken = default)
         {
             var healResult = await SelfHealingResolver.ResolveAsync(
@@ -44,6 +45,7 @@ namespace SelfHealing
                 _llmProviders,
                 _weights,
                 log,
+                platform,
                 cancellationToken).ConfigureAwait(false);
 
             if (healResult.IsConfident && healResult.Matched != null)
@@ -57,7 +59,7 @@ namespace SelfHealing
                 if (_repository != null)
                 {
                     var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
-                    _repository.Upsert(locatorKey, matchedSnapshot, entry);
+                    _repository.Upsert(locatorKey, matchedSnapshot, entry, platform: platform);
                 }
 
                 _reportSink?.Record(HealingReportEntry.FromHealResult(locatorKey, expected, matchedSnapshot, healResult));
@@ -99,6 +101,7 @@ namespace SelfHealing
             Func<UiElementInfo> captureTreeRoot,
             string? testIntent = null,
             Action<string>? log = null,
+            string? platform = null,
             CancellationToken cancellationToken = default,
             Func<Exception, bool>? shouldHeal = null)
         {
@@ -146,7 +149,7 @@ namespace SelfHealing
                 }
 
                 var currentTree = captureTreeRoot();
-                var healResult = await ResolveAndRecordAsync(locatorKey, target, currentTree, log, cancellationToken).ConfigureAwait(false);
+                var healResult = await ResolveAndRecordAsync(locatorKey, target, currentTree, log, platform, cancellationToken).ConfigureAwait(false);
 
                 if (!healResult.IsConfident || healResult.Matched == null)
                 {

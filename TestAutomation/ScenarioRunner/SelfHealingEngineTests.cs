@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using LlmHealing;
 using SelfHealing;
 using UiModel;
 using Xunit;
@@ -621,6 +622,132 @@ namespace ScenarioRunner
             Assert.True(llmEntry.DivergedFromHeuristic);
             Assert.Equal(0.35, llmEntry.Score);
             Assert.Equal(0.2, llmEntry.ScoreBreakdown!.ControlTypeScore);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_PropagatesPlatformParameterToLlmProviderAndRepository()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var provider = new FakeEngineLlmProvider("FakeEngine", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "FakeEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.92, Reasoning = "matched" });
+
+            var engine = new SelfHealingEngine(repository, llmProviders: new[] { provider });
+
+            // Stale expected that triggers low heuristic confidence so LLM fallback is used
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "old_stale_id",
+                Name = "Email Address",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "healed_email",
+                        Name = "Different Label",
+                        BoundingRectangle = new BoundingRectangle(500, 500, 100, 30),
+                    }
+                }
+            };
+
+            var result = await engine.ResolveAndRecordAsync(
+                "LoginPage.Email",
+                expected,
+                currentTree,
+                platform: "web-playwright");
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal("web-playwright", provider.LastPlatform);
+
+            var doc = repository.Load();
+            Assert.Equal("web-playwright", doc.Platform);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_PropagatesPlatformParameter()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var provider = new FakeEngineLlmProvider("FakeEngine", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "FakeEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.95, Reasoning = "matched" });
+
+            var engine = new SelfHealingEngine(repository, llmProviders: new[] { provider });
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "old_stale_id",
+                Name = "Email Address",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "healed_email",
+                        Name = "Different Label",
+                        BoundingRectangle = new BoundingRectangle(500, 500, 100, 30),
+                    }
+                }
+            };
+
+            var attempts = 0;
+            var executed = await engine.ExecuteWithHealingAsync(
+                "LoginPage.Email",
+                expected,
+                action: el =>
+                {
+                    attempts++;
+                    if (attempts == 1)
+                    {
+                        throw new ElementNotFoundException("Element was not found at runtime");
+                    }
+
+                    return Task.FromResult(el.AutomationId);
+                },
+                captureTreeRoot: () => currentTree,
+                platform: "web-playwright");
+
+            Assert.Equal("healed_email", executed);
+            Assert.Equal(2, attempts);
+            Assert.Equal("web-playwright", provider.LastPlatform);
+        }
+
+        private sealed class FakeEngineLlmProvider : ILlmHealingProvider
+        {
+            private readonly Func<LlmHealingResult> _resolve;
+
+            public FakeEngineLlmProvider(string name, bool isAvailable, Func<LlmHealingResult> resolve)
+            {
+                Name = name;
+                IsAvailable = isAvailable;
+                _resolve = resolve;
+            }
+
+            public string Name { get; }
+            public bool IsAvailable { get; }
+            public string? LastPlatform { get; private set; }
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                LastPlatform = platform;
+                return Task.FromResult(_resolve());
+            }
         }
     }
 }

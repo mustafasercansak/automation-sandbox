@@ -182,6 +182,23 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveAsync_PropagatesPlatformParameterToLlmProvider()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var provider = new FakeProvider("Fake", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "Fake", Success = true, MatchedCandidateId = "c0", Confidence = 0.9, Reasoning = "match" });
+
+            await SelfHealingResolver.ResolveAsync(
+                expected,
+                currentTree,
+                new[] { provider },
+                platform: "web-playwright",
+                log: _ => { });
+
+            Assert.Equal("web-playwright", provider.LastPlatform);
+        }
+
+        [Fact]
 
         public async Task ResolveAsync_NoProvidersConfigured_FallsBackToHeuristicResult()
         {
@@ -904,9 +921,15 @@ namespace ScenarioRunner
             public string Name { get; }
             public bool IsAvailable { get; }
             public IReadOnlyList<CandidateScore>? LastCandidates { get; private set; }
-            public Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
+            public string? LastPlatform { get; private set; }
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
             {
                 LastCandidates = candidates;
+                LastPlatform = platform;
                 return Task.FromResult(_resolve());
             }
         }

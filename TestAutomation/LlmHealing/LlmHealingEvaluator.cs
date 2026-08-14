@@ -15,10 +15,11 @@ namespace LlmHealing
             IEnumerable<ILlmHealingProvider> providers,
             UiElementInfo expected,
             IReadOnlyList<CandidateScore> candidates,
+            string? platform = null,
             CancellationToken cancellationToken = default)
         {
             var available = providers.Where(p => p.IsAvailable).ToList();
-            var tasks = available.Select(p => p.ResolveAsync(expected, candidates, cancellationToken));
+            var tasks = available.Select(p => p.ResolveAsync(expected, candidates, platform, cancellationToken));
             return await Task.WhenAll(tasks).ConfigureAwait(false);
         }
     }

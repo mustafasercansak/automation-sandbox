@@ -14,8 +14,12 @@ namespace LlmHealing
 
     public static class LlmHealingPrompt
     {
-        public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string platform = "windows-uia")
+        public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null)
         {
+            var effectivePlatform = !string.IsNullOrWhiteSpace(platform)
+                ? platform!
+                : InferPlatformFallback(expected);
+
             // The stale AutomationId is never shown to the model, not just discouraged in the
             // instructions: telling a model to "ignore" a field doesn't reliably stop it from
             // being semantically anchored by it (e.g. "txtEmailAddress" nudging it toward any
@@ -45,7 +49,7 @@ namespace LlmHealing
                 : $"\nTEST INTENT (Goal of this test step):\n\"{expected.TestIntent}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n";
 
             return
-$@"You are diagnosing a broken UI test locator for a {platform} application.
+$@"You are diagnosing a broken UI test locator for a {effectivePlatform} application.
 A locator that used to work no longer finds its element - most likely because the
 element's AutomationId changed (e.g. after a refactor). Its old AutomationId is
 deliberately omitted below since it's stale and irrelevant to matching. Below is the
@@ -65,6 +69,32 @@ parent/sibling context, similar screen position, similar Name. Respond with the
 candidateId of your pick, not its AutomationId.
 Respond with ONLY a single JSON object, no markdown fences, no other text:
 {{""candidateId"": ""<candidateId of your best match, or empty string if none fits>"", ""confidence"": <number 0.0-1.0>, ""reasoning"": ""<one sentence>""}}";
+        }
+
+        // Fallback platform inference for callers that do not explicitly pass a platform.
+        // As documented in issue #24, light-DOM web elements (<button>, <input>) are indistinguishable
+        // from desktop controls by ControlType/ClassName alone because WebElementMapper normalizes them
+        // to desktop ControlTypes (Button, Edit) without adding a scope tag. Therefore, callers should
+        // always pass the platform explicitly whenever known.
+        public static string InferPlatformFallback(UiElementInfo? expected)
+        {
+            if (expected == null)
+            {
+                return "windows-uia";
+            }
+
+            var className = expected.ClassName ?? "";
+            if (className.Contains("[shadow-dom]") || className.Contains("[iframe]"))
+            {
+                return "web-playwright";
+            }
+
+            if (!string.IsNullOrWhiteSpace(expected.ControlType) && char.IsLower(expected.ControlType[0]))
+            {
+                return "web-playwright";
+            }
+
+            return "windows-uia";
         }
 
         public static (string? CandidateId, double Confidence, string Reasoning) ParseResponse(string rawText)

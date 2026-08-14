@@ -40,7 +40,11 @@ namespace LlmHealing
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
-        public async Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
+        public async Task<LlmHealingResult> ResolveAsync(
+            UiElementInfo expected,
+            IReadOnlyList<CandidateScore> candidates,
+            string? platform = null,
+            CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
             if (!IsAvailable)
@@ -48,7 +52,7 @@ namespace LlmHealing
                 return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = "Ollama is not enabled or configured." };
             }
 
-            var prompt = LlmHealingPrompt.Build(expected, candidates);
+            var prompt = LlmHealingPrompt.Build(expected, candidates, platform);
             var requestBody = new
             {
                 model = _model,
