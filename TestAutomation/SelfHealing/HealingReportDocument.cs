@@ -6,12 +6,14 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
+        // v5 (issue #10): entries carry AgreedProviders - which providers reached consensus
+        // on an LLM pick, the evidence behind the acceptance decision itself.
         // v4 (issue #6): entries carry DivergedFromHeuristic, HeuristicSnapshot, HeuristicScore
         // for full explainability when an LLM pick diverges from the heuristic winner.
         // v3: entries carry RunnerUpScore (margin gate, issue #4).
         // v2: added EvidenceCoverage and Candidates (#3).
         // Older reports upgrade in place; only newer-than-current schemas are rejected.
-        public const int CurrentSchemaVersion = 4;
+        public const int CurrentSchemaVersion = 5;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
@@ -53,6 +55,13 @@ namespace SelfHealing
         public double? LlmConfidence { get; set; }
         public string? LlmProviderName { get; set; }
         public string? LlmReasoning { get; set; }
+
+        // Providers that agreed on this pick (issue #10). Null - not an empty list - on
+        // entries upgraded from a v4 report: "this build did not record it", as opposed to
+        // "nobody agreed", which an empty list would claim. Same distinction EvidenceCoverage
+        // makes for v1 upgrades.
+
+        public List<string>? AgreedProviders { get; set; }
         public UiElementInfo? PreviousSnapshot { get; set; }
         public UiElementInfo? AcceptedSnapshot { get; set; }
         public ScoreComponents? ScoreBreakdown { get; set; }
@@ -110,6 +119,7 @@ namespace SelfHealing
                 CandidateCount = result.CandidateCount,
                 LlmConfidence = result.LlmConfidence,
                 LlmProviderName = result.LlmProviderName,
+                AgreedProviders = result.AgreedProviders.Count == 0 ? null : new List<string>(result.AgreedProviders),
                 LlmReasoning = result.LlmReasoning,
                 PreviousSnapshot = UiElementSnapshot.Capture(previousSnapshot),
                 AcceptedSnapshot = UiElementSnapshot.Capture(acceptedSnapshot),

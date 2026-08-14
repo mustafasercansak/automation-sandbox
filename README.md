@@ -161,14 +161,15 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 >
 > **`EvidenceCoverage` & `MinimumEvidenceWeight`:** `EvidenceCoverage` is the fraction of the total signal weight backed by non-null evidence. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$ by default) — a ControlType-only match is therefore never confident, regardless of its score.
 >
-> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires $best - runnerUp \ge$ `MinimumCandidateMargin` ($0.05$ by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they answer to `MinimumLlmConfidence`).
+> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires $best - runnerUp \ge$ `MinimumCandidateMargin` ($0.05$ by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they answer to consensus).
 >
 > **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded $1.0$ center-point matches.
 
 > [!IMPORTANT]
-> **`MinimumConfidence` vs. `MinimumLlmConfidence`:**
+> **How a heuristic match is accepted vs. how an LLM pick is accepted:**
 > - `MinimumConfidence` ($0.50$): Threshold for accepting a heuristic match before falling back to LLM.
-> - `MinimumLlmConfidence` ($0.50$): Threshold for accepting an LLM's self-reported confidence. Because an LLM's confidence rating is not calibrated identically to structural scores, a low-confidence LLM pick (e.g. $0.3$) is rejected and degrades safely back to the top heuristic candidate.
+> - **LLM picks are accepted by consensus, not by confidence.** At least `MinimumConsensusVotes` providers ($2$ by default) must independently name the same candidate. Self-reported confidence is recorded but never compared or thresholded — one model's $0.72$ and another's $0.95$ are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) degrades safely back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-consensus-acceptance).
+> - `MinimumLlmConfidence` ($0.50$) remains on `SimilarityWeights` and is still recorded on results, but since consensus replaced confidence-based acceptance it no longer gates anything.
 
 ---
 
@@ -244,7 +245,7 @@ var customWeights = new SimilarityWeights
     PositionWeight = 0.10,            // Reduce sensitivity to layout shifts
     PositionToleranceRadius = 500.0,  // Expand distance radius for high-res displays
     MinimumConfidence = 0.60,         // Raise heuristic confidence bar before LLM fallback
-    MinimumLlmConfidence = 0.50,      // Minimum LLM self-reported confidence accepted
+    MinimumConsensusVotes = 2,        // Providers that must agree before an LLM pick is accepted
     MinCandidateScore = 0.10,         // Aggressively prune low-scoring candidates
     MaxCandidatesForLlm = 10,         // Limit shortlist size
 };
@@ -303,7 +304,7 @@ Each report event includes:
 - `ReviewStatus` (`accepted`, `accepted-with-llm`, or `manual-review`)
 - `Score`, `ConfidenceThreshold`, `CandidateCount`
 - `PreviousSnapshot` and `AcceptedSnapshot`
-- LLM fields such as `LlmConfidence`, `LlmProviderName`, and `LlmReasoning` when applicable
+- LLM fields such as `LlmConfidence`, `LlmProviderName`, `LlmReasoning`, and `AgreedProviders` (which providers reached consensus) when applicable
 
 GitHub Actions uploads both `healing-report.json` and `healing-report.html` as the
 `self-healing-report` artifact when healing events occur during CI.
@@ -488,13 +489,14 @@ var providers = new ILlmHealingProvider[]
     new OllamaHealingProvider(httpClient)
 };
 
-// Falls back to LLM only if heuristic score < MinimumConfidence (0.50).
+// Falls back to LLM only if heuristic score < MinimumConfidence (0.50), and accepts the
+// LLM's answer only if at least two providers independently pick the same candidate.
 // Optional platform ("windows-uia", "web-playwright", etc.) tailors the prompt to the target environment.
 var result = await SelfHealingResolver.ResolveAsync(expected, liveTree, providers, platform: "web-playwright");
 
 if (result.Source == HealSource.Llm)
 {
-    Console.WriteLine($"[LLM Healed] {result.LlmProviderName} matched '{result.Matched!.AutomationId}'");
+    Console.WriteLine($"[LLM Healed] {string.Join(" + ", result.AgreedProviders)} agreed on '{result.Matched!.AutomationId}'");
     Console.WriteLine($"  Reasoning: {result.LlmReasoning}");
 }
 ```

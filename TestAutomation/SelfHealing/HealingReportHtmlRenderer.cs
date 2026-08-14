@@ -81,6 +81,15 @@ namespace SelfHealing
                     html.Append("          <td>").Append(FormatSnapshot(entry.PreviousSnapshot)).AppendLine("</td>");
                     html.Append("          <td>").Append(FormatSnapshot(entry.AcceptedSnapshot)).AppendLine("</td>");
                     var reasoning = entry.LlmReasoning ?? "";
+                    // Who agreed is the evidence behind an LLM acceptance (#10), so it belongs
+                    // in the human-readable report and not only in the JSON. Null means the
+                    // entry predates v5, which is not the same as nobody agreeing.
+                    if (entry.AgreedProviders != null && entry.AgreedProviders.Count > 0)
+                    {
+                        var consensusNote = $"[Consensus: {string.Join(" + ", entry.AgreedProviders)}]";
+                        reasoning = string.IsNullOrEmpty(reasoning) ? consensusNote : consensusNote + " " + reasoning;
+                    }
+
                     if (entry.DivergedFromHeuristic)
                     {
                         var heuristicId = entry.HeuristicSnapshot?.AutomationId ?? "unknown";

@@ -38,8 +38,17 @@ namespace SelfHealing
 
         public ScoreComponents? ScoreBreakdown { get; set; }
         public string? LlmProviderName { get; set; }
+
+        // Mean of the agreeing providers' self-reported confidences. Informational only:
+        // it is recorded and reported, never thresholded, because those numbers are not
+        // calibrated against each other (#19). Consensus is what accepts a pick.
         public double? LlmConfidence { get; set; }
         public string? LlmReasoning { get; set; }
+
+        // Consensus acceptance (#10): the providers that independently named the accepted
+        // candidate, sorted ordinally so a report is stable across runs regardless of which
+        // provider answered first. Empty on heuristic results.
+        public IReadOnlyList<string> AgreedProviders { get; set; } = Array.Empty<string>();
 
         // Heuristic winner metadata and divergence tracking (issue #6):
         // When Source == HealSource.Llm, HeuristicMatched and HeuristicScore preserve the
@@ -57,6 +66,9 @@ namespace SelfHealing
             EvidenceCoverage >= EvidenceThreshold &&
             (Source == HealSource.Heuristic
                 ? Score >= ConfidenceThreshold && CandidateMargin.HasSufficientMargin(Score, RunnerUpScore, MarginThreshold)
-                : (LlmConfidence ?? 0.0) >= ConfidenceThreshold);
+                // Consensus, not confidence (#10/#19): an LLM pick is confident when
+                // independent providers agreed on it. A single provider - however sure it
+                // says it is - is one uncalibrated opinion, which is what this replaces.
+                : AgreedProviders.Count >= 2);
     }
 }

@@ -22,17 +22,24 @@ namespace LlmHealing
         private readonly string _apiUrl;
         private readonly TimeSpan _timeout;
 
-        public string Name => "OpenAI";
+        private readonly string _name;
+
+        public string Name => _name;
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         public TimeSpan Timeout => _timeout;
         public string ApiUrl => _apiUrl;
 
+        // name matters more here than on the other providers: this one talks to any
+        // OpenAI-compatible endpoint, so a consensus run can legitimately hold several
+        // instances of it (Groq, Cerebras, OpenRouter). Leaving them all called "OpenAI"
+        // would make the votes in HealResult.AgreedProviders indistinguishable.
         public OpenAiHealingProvider(
             HttpClient? httpClient = null,
             string? apiKey = null,
             string? model = null,
             TimeSpan? timeout = null,
-            string? endpoint = null)
+            string? endpoint = null,
+            string? name = null)
         {
             if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
             {
@@ -55,6 +62,7 @@ namespace LlmHealing
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_BASE_URL"))
                 ?? DefaultApiUrl;
             _apiUrl = NormalizeEndpoint(rawEndpoint);
+            _name = NullIfEmpty(name?.Trim()) ?? "OpenAI";
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;

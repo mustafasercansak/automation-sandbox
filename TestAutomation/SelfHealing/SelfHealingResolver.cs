@@ -111,45 +111,92 @@ namespace SelfHealing
                 return heuristicResult;
             }
 
-            var best = llmResults
-                .Where(r => r.Success && !string.IsNullOrEmpty(r.MatchedCandidateId))
-                .OrderByDescending(r => r.Confidence)
-                .FirstOrDefault();
-            if (best is null)
+            // Consensus acceptance (#10, decided in #19). Self-reported confidences are not
+            // calibrated across model architectures - Claude's 0.72 and Gemini's 0.95 do not
+            // live on one scale - so they are never compared or thresholded here. What is
+            // accepted instead is agreement: independent providers naming the same candidate.
+            //
+            // Step 1: the hallucination guard runs BEFORE the vote is counted, not after the
+            // winner is chosen. A provider naming a candidateId that was never in the shortlist
+            // it was sent must not be able to cast a vote, win with it, and take every other
+            // provider's valid vote down with it.
+            var shortlistIds = new HashSet<string>(shortlist.Select(c => c.CandidateId), StringComparer.Ordinal);
+            var answered = llmResults.Where(r => r.Success && !string.IsNullOrEmpty(r.MatchedCandidateId)).ToList();
+            var validVotes = new List<LlmHealingResult>();
+            foreach (var vote in answered)
             {
-                log("[SelfHealing] No LLM provider returned a usable match - returning heuristic result.");
+                if (shortlistIds.Contains(vote.MatchedCandidateId!))
+                {
+                    validVotes.Add(vote);
+                }
+                else
+                {
+                    log($"[SelfHealing] {vote.ProviderName} returned candidateId '{vote.MatchedCandidateId}', which is not in the shortlist it was sent - its vote is discarded.");
+                }
+            }
+
+            // Step 2: quorum. Providers that failed, timed out or hallucinated are simply not
+            // here, so this covers "not enough providers configured" and "not enough survived"
+            // with one check.
+            if (validVotes.Count < w.MinimumConsensusVotes)
+            {
+                log($"[SelfHealing] {validVotes.Count} usable LLM vote(s), consensus requires {w.MinimumConsensusVotes} - returning heuristic result.");
                 return heuristicResult;
             }
 
-            if (best.Confidence < w.MinimumLlmConfidence)
+            var voteGroups = validVotes
+                .GroupBy(r => r.MatchedCandidateId!, StringComparer.Ordinal)
+                .Select(g => new { CandidateId = g.Key, Votes = g.ToList() })
+                .OrderByDescending(g => g.Votes.Count)
+                .ThenBy(g => g.CandidateId, StringComparer.Ordinal)
+                .ToList();
+            var tally = string.Join(", ", voteGroups.Select(g => $"{g.CandidateId}={g.Votes.Count}"));
+            var topGroup = voteGroups[0];
+
+            // Step 3: no candidate reached quorum - e.g. three providers naming three different
+            // candidates. That is the resolver being told "we do not know", not a close call to
+            // be settled by whoever sounded most sure.
+            if (topGroup.Votes.Count < w.MinimumConsensusVotes)
             {
-                log($"[SelfHealing] {best.ProviderName}'s pick had confidence {best.Confidence:F2}, below MinimumLlmConfidence ({w.MinimumLlmConfidence:F2}) - returning heuristic result rather than a low-confidence override.");
+                log($"[SelfHealing] LLM providers did not converge (votes: {tally}); no candidate reached {w.MinimumConsensusVotes} - returning heuristic result.");
                 return heuristicResult;
             }
 
-            // Look the pick up by CandidateId in the exact shortlist we sent - not by
-            // AutomationId in the whole tree. AutomationId can be empty/duplicated (the exact
-            // scenario this framework exists to heal), so it's not a safe lookup key; CandidateId
-            // is unique within the shortlist and this also doubles as the hallucination guard,
-            // now an exact membership check against a bounded, explicit list.
-            var matchedCandidate = shortlist.FirstOrDefault(c => c.CandidateId == best.MatchedCandidateId);
-            if (matchedCandidate is null)
+            // Step 4: a tie for the lead is disagreement too. Breaking it by confidence would
+            // quietly reinstate the cross-provider confidence comparison #19 removed.
+            if (voteGroups.Count > 1 && voteGroups[1].Votes.Count == topGroup.Votes.Count)
             {
-                log($"[SelfHealing] {best.ProviderName} returned candidateId '{best.MatchedCandidateId}', which is not in the shortlist it was sent - returning heuristic result.");
+                log($"[SelfHealing] LLM vote tied (votes: {tally}) - a tie is disagreement, not consensus - returning heuristic result.");
                 return heuristicResult;
             }
+
+            // CandidateId, not AutomationId, is the lookup key throughout: AutomationId can be
+            // empty or duplicated (the exact scenario this framework exists to heal), while
+            // CandidateId is unique within the shortlist we sent.
+            var matchedCandidate = shortlist.First(c => c.CandidateId == topGroup.CandidateId);
+            var agreedProviders = topGroup.Votes
+                .Select(r => r.ProviderName)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToList();
+
+            // The report keeps one provider's reasoning verbatim; ordinal-first makes that
+            // choice deterministic rather than dependent on which provider answered first.
+            // AgreedProviders carries the full record of who agreed.
+            var best = topGroup.Votes.OrderBy(r => r.ProviderName, StringComparer.Ordinal).First();
+            var consensusConfidence = topGroup.Votes.Average(r => r.Confidence);
 
             // Determine if the LLM choice diverged from the heuristic winner (issue #6).
             // ReferenceEquals is used because AutomationId may be empty or duplicated,
             // while shortlist and Resolve operate over nodes from the exact same tree instance.
             var isDivergent = heuristicResult.Matched != null && !ReferenceEquals(heuristicResult.Matched, matchedCandidate.Candidate);
+            var consensusSummary = $"consensus of {topGroup.Votes.Count}/{validVotes.Count} providers ({string.Join(", ", agreedProviders)}) matched '{matchedCandidate.Candidate.AutomationId}' (mean self-reported confidence={consensusConfidence:F2}, reasoning=\"{best.Reasoning}\"";
             if (isDivergent)
             {
-                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {best.ProviderName} matched '{matchedCandidate.Candidate.AutomationId}' (confidence={best.Confidence:F2}, reasoning=\"{best.Reasoning}\", diverged from heuristic winner '{heuristicResult.Matched!.AutomationId}' with score {heuristicResult.Score:F2}).");
+                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {consensusSummary}, diverged from heuristic winner '{heuristicResult.Matched!.AutomationId}' with score {heuristicResult.Score:F2}).");
             }
             else
             {
-                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {best.ProviderName} matched '{matchedCandidate.Candidate.AutomationId}' (confidence={best.Confidence:F2}, reasoning=\"{best.Reasoning}\").");
+                log($"[SelfHealing] '{expected.AutomationId}' resolved via LLM fallback: {consensusSummary}).");
             }
 
             return new HealResult
@@ -161,6 +208,8 @@ namespace SelfHealing
                 ScoreBreakdown = matchedCandidate.Components,
                 CandidateCount = heuristicResult.CandidateCount,
                 Source = HealSource.Llm,
+                // Recorded for report continuity only - since #10 the acceptance rule is
+                // AgreedProviders.Count, not this threshold (see SimilarityWeights).
                 ConfidenceThreshold = w.MinimumLlmConfidence,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
@@ -170,8 +219,9 @@ namespace SelfHealing
                 MarginThreshold = heuristicResult.MarginThreshold,
                 Candidates = heuristicResult.Candidates,
                 LlmProviderName = best.ProviderName,
-                LlmConfidence = best.Confidence,
+                LlmConfidence = consensusConfidence,
                 LlmReasoning = best.Reasoning,
+                AgreedProviders = agreedProviders,
                 HeuristicMatched = heuristicResult.Matched,
                 HeuristicScore = heuristicResult.Score,
                 DivergedFromHeuristic = isDivergent,

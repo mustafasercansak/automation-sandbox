@@ -35,8 +35,20 @@ namespace SelfHealing
         // Separate from MinimumConfidence: an LLM's self-reported confidence isn't calibrated
         // the same way as the heuristic's structural score, so a low-confidence LLM pick
         // shouldn't silently replace a heuristic result just for having *a* pick.
+        //
+        // NOTE: since #10/#19 this no longer gates LLM acceptance - consensus does. Confidence
+        // is uncalibrated across model architectures, so comparing or thresholding it was the
+        // problem those issues removed. Kept because it is part of the shipped public surface
+        // and still describes a provider's self-report; it is recorded, never acted on.
 
         public double MinimumLlmConfidence { get; set; } = 0.5;
+
+        // Consensus acceptance (#10, decided in #19): an LLM pick is accepted only when at
+        // least this many providers independently name the same candidateId. Below 2 there is
+        // no consensus to speak of - a single provider's uncalibrated confidence would be
+        // deciding again, which is exactly what #19 ruled out.
+
+        public int MinimumConsensusVotes { get; set; } = 2;
 
         // Candidate pruning: candidates below MinCandidateScore are dropped before ranking,
         // and at most MaxCandidatesForLlm survive into the LLM fallback's shortlist prompt -
@@ -63,6 +75,11 @@ namespace SelfHealing
             if (MaxCandidatesForLlm < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(MaxCandidatesForLlm), "MaxCandidatesForLlm must be at least one.");
+            }
+
+            if (MinimumConsensusVotes < 2)
+            {
+                throw new ArgumentOutOfRangeException(nameof(MinimumConsensusVotes), "MinimumConsensusVotes must be at least two - one provider agreeing with itself is not consensus.");
             }
 
             var totalWeight = ControlTypeWeight
