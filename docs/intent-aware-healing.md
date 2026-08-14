@@ -10,7 +10,7 @@ This guide explains **Intent-Aware Healing** (`TestIntent`), BDD/Gherkin scenari
 > - [🇬🇧 English Guide](#-english-guide)
 > - [🇹🇷 Türkçe Kılavuz](#-türkçe-kılavuz)
 
-> 💡 **Zero Token Cost Guarantee:** If your AI API tokens run out or you have no internet access, the engine's deterministic heuristic scorer (`SimilarityScorer`) resolves broken locators in $12\text{ms}$ at **$0 cost and 0 API tokens**!
+> 💡 **Zero Token Cost:** If your AI API tokens run out or you have no internet access, the engine's deterministic heuristic scorer (`SimilarityScorer`) still resolves broken locators at **$0 cost and 0 API tokens** — roughly $12\text{ms}$ for 3,000 controls on developer hardware (see `SyntheticTreeBenchmarkTests`).
 
 ---
 

@@ -12,12 +12,12 @@
 
 | Metric | Value | Notes |
 | :--- | :---: | :--- |
-| **Heuristic Speed** | **$12\text{ms}$** | For 3,000+ UI controls ($O(N)$ complexity, 0 cost). |
+| **Heuristic Speed** | **~$12\text{ms}$** | For 3,000+ UI controls ($O(N)$ complexity, 0 cost), measured on developer hardware — see `SyntheticTreeBenchmarkTests`. |
 | **Target Frameworks** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Cross-platform core + Windows UIA FlaUI connectors. |
-| **Healing Accuracy** | **100%** | Tested across WinForms & WPF live applications. |
+| **Healing Accuracy** | **100% on the bundled demo suite** | WinForms & WPF case studies shipped with this repo. The false-positive rate on organic, third-party applications is **not yet measured** — tracked in [#15](https://github.com/mustafasercansak/automation-sandbox/issues/15). |
 | **LLM Guard Safety** | **Hallucination Guard** | Verifies candidate IDs against shortlist before applying match. |
 
-Commercial test automation suites (such as Ranorex or Tosca) keep object repositories and locator self-healing algorithms inside proprietary black boxes. **Automation Sandbox** breaks this dependency by offering an enterprise-grade, open-source C# engine. It combines deterministic structural similarity scoring with an opt-in LLM fallback chain, guaranteeing high performance ($12\text{ms}$ for 3,000+ controls) without incurring AI API costs for standard layout changes.
+Commercial test automation suites (such as Ranorex or Tosca) keep object repositories and locator self-healing algorithms inside proprietary black boxes. **Automation Sandbox** is an open alternative to the black-box locator recovery in those tools. It combines deterministic structural similarity scoring with an opt-in LLM fallback chain, resolving standard layout changes in ~$12\text{ms}$ for 3,000+ controls (developer hardware) without incurring AI API costs.
 
 ---
 
@@ -217,12 +217,12 @@ graph LR
 
 | Metrik | Değer | Notlar |
 | :--- | :---: | :--- |
-| **Sezgisel Hız** | **$12\text{ms}$** | 3.000+ UI kontrolü için ($O(N)$ karmaşıklık, 0 maliyet). |
+| **Sezgisel Hız** | **~$12\text{ms}$** | 3.000+ UI kontrolü için ($O(N)$ karmaşıklık, 0 maliyet); geliştirici donanımında ölçüldü — bkz. `SyntheticTreeBenchmarkTests`. |
 | **Hedef Platformlar** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Çapraz platform çekirdek + Windows UIA FlaUI bağlayıcıları. |
-| **İyileştirme Doğruluğu** | **%100** | WinForms ve WPF canlı uygulamalarında test edildi. |
+| **İyileştirme Doğruluğu** | **Depodaki demo takımında %100** | Bu depoyla gelen WinForms ve WPF vaka çalışmaları. Üçüncü taraf, organik uygulamalardaki yanlış-pozitif oranı **henüz ölçülmedi** — [#15](https://github.com/mustafasercansak/automation-sandbox/issues/15) ile takip ediliyor. |
 | **LLM Güvenlik Koruması** | **Hallucination Guard** | Eşleşmeyi uygulamadan önce aday kimliğini kısa listede doğrular. |
 
-Ranorex ve Tosca gibi ticari otomasyon araçları, nesne depolarını ve kendi kendini iyileştirme (self-healing) algoritmalarını kapalı kutu (black box) olarak sunarlar. **Automation Sandbox**, bu bağımlılığı kıran açık kaynaklı bir C# motorudur. Deterministik yapısal benzerlik skorlamasını isteğe bağlı LLM (Claude/Gemini) zinciriyle birleştirir. Standart arayüz değişikliklerinde API maliyeti yaratmadan $12\text{ms}$ hızında %100 kararlı iyileştirme sağlar.
+Ranorex ve Tosca gibi ticari otomasyon araçları, nesne depolarını ve kendi kendini iyileştirme (self-healing) algoritmalarını kapalı kutu (black box) olarak sunarlar. **Automation Sandbox**, bu araçlardaki kapalı kutu locator kurtarmaya açık kaynaklı bir alternatiftir. Deterministik yapısal benzerlik skorlamasını isteğe bağlı LLM (Claude/Gemini) zinciriyle birleştirir; standart arayüz değişikliklerini API maliyeti yaratmadan, 3.000+ kontrol için ~$12\text{ms}$ içinde (geliştirici donanımı) çözer.
 
 ---
 

@@ -16,7 +16,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 **Automation Sandbox is like a smart GPS for your software tests:**
 1. It remembers what the button looked like (size, location, parent window, role).
 2. When the ID or name breaks, it calculates a **similarity score** ($0\% - 100\%$) across all elements on the screen.
-3. If it is confident ($\ge 50\%$), it automatically picks the right element and heals your test **without any cost or delay** ($12\text{ms}$).
+3. If it is confident ($\ge 50\%$), it automatically picks the right element and heals your test **without any AI cost** (pure heuristic, ~$12\text{ms}$ for 3,000 controls on developer hardware).
 4. If it is unsure, it asks an AI model (Gemini, Claude, OpenAI, or local Ollama) to pick the element safely.
 
 ---
@@ -45,7 +45,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 **Automation Sandbox, testleriniz için akıllı bir navigasyon (GPS) gibidir:**
 1. Butonun eski halini (boyutunu, ekrandaki yerini, penceresini, türünü) hafızasına kaydeder.
 2. Adı veya ID'si değiştiğinde, ekrandaki tüm elemanları inceleyerek bir **benzerlik skoru** ($\%0 - \%100$) hesaplar.
-3. Eminse ($\ge \%50$), doğru butonu otomatik bulur ve testinizi **ücretsiz ve 12 milisaniyede** iyileştirir (heal eder).
+3. Eminse ($\ge \%50$), doğru butonu otomatik bulur ve testinizi **yapay zeka maliyeti olmadan** iyileştirir (heal eder) — saf sezgisel; geliştirici donanımında 3.000 kontrol için ~12 milisaniye.
 4. Kararsız kalırsa, yapay zekaya (Gemini, Claude, OpenAI veya bilgisayarınızdaki yerel Ollama'ya) danışarak doğru elemanı güvenle seçer.
 
 ---
@@ -75,7 +75,7 @@ flowchart TB
         A2["Web Page (Playwright DOM)"]
     end
 
-    subgraph ENGINE ["2. Heuristic Engine / Sezgisel Motor (12ms)"]
+    subgraph ENGINE ["2. Heuristic Engine / Sezgisel Motor (Pure Heuristic)"]
         B1["SimilarityScorer (5 Mathematical Components)"]
         B2{"Score ≥ 50%?"}
         B3["✅ Auto-Heal (Free / 0 Cost)"]
