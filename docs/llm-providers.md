@@ -30,6 +30,20 @@ Automation Sandbox includes 4 built-in AI providers for low-confidence healing f
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
 
+### ⏱️ Timeouts & Fallback Behavior
+
+All LLM providers support configurable timeouts via their constructors (`TimeSpan? timeout = null`). When a timeout expires, the provider fails fast without throwing unhandled exceptions, enabling `SelfHealingResolver` to safely fall back to the heuristic match or other providers.
+
+| Provider | Default Timeout | Rationale |
+| :--- | :---: | :--- |
+| **Claude / Gemini / OpenAI** | `15s` | Cloud APIs process small structured pick prompts (~500 tokens) in 1–4s; 15s is ample buffer while preventing test runner stalls. |
+| **Ollama** | `30s` | Local models running on CPU/GPU may encounter cold-start model load latency. |
+
+```csharp
+// Example: Custom 5-second timeout for fast cloud resolution
+var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
+```
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -43,6 +57,20 @@ Automation Sandbox includes 4 built-in AI providers for low-confidence healing f
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Ücretsiz ($0)** | **100% Yerel (Offline)** |
 
+### ⏱️ Zaman Aşımı (Timeout) ve Fallback Davranışı
+
+Tüm LLM sağlayıcıları kurucuları üzerinden yapılandırılabilir zaman aşımı desteği sunar (`TimeSpan? timeout = null`). Bir sağlayıcı zaman aşımına uğradığında test yürütmesini kilitlemeden hızlıca başarısızlık döner (`Success = false`) ve `SelfHealingResolver`'ın güvenle sezgisel (heuristic) sonuca düşmesini sağlar.
+
+| Sağlayıcı | Varsayılan Timeout | Gerekçe |
+| :--- | :---: | :--- |
+| **Claude / Gemini / OpenAI** | `15s` | Bulut API'leri ~500 token'lık küçük pick prompt'larını 1-4 saniyede tamamlar; 15s test kilitlenmelerini önlemek için idealdir. |
+| **Ollama** | `30s` | Yerel CPU/GPU üzerinde çalışan modeller soğuk başlangıç (cold start) model yükleme gecikmesi yaşayabilir. |
+
+```csharp
+// Örnek: Hızlı bulut çözümlemesi için 5 saniyelik özel zaman aşımı
+var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
+```
+
 ### 0 TL Maliyetli Çevrimdışı Yapay Zeka (Ollama) Kurulumu
 1. [Ollama Resmi Sitesinden](https://ollama.com) Ollama'yı indirip kurun.
 2. Terminal açıp hafif Llama modelini indirin:
@@ -53,3 +81,4 @@ Automation Sandbox includes 4 built-in AI providers for low-confidence healing f
    ```csharp
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
+

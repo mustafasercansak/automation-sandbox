@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using UiModel;
 using SelfHealing;
 using LlmHealing;
@@ -582,6 +584,37 @@ namespace ScenarioRunner
             Assert.Equal("btnOldSave", result.HeuristicMatched!.AutomationId);
             Assert.Equal(heuristicResult.Score, result.Score);
             Assert.Equal(1.0, result.ScoreBreakdown!.ControlTypeScore);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_WhenProviderTimesOut_FallsBackToHeuristicResult()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var handler = new FakeSlowHttpMessageHandler();
+            var slowProvider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected,
+                currentTree,
+                new[] { slowProvider },
+                log: _ => { });
+
+            Assert.NotNull(result.Matched);
+            Assert.Equal("textBoxFar", result.Matched!.AutomationId);
+            Assert.Equal(HealSource.Heuristic, result.Source);
+            Assert.False(result.IsConfident);
+        }
+
+        private sealed class FakeSlowHttpMessageHandler : HttpMessageHandler
+        {
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                await Task.Delay(1000, cancellationToken);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            }
         }
 
         [Fact]

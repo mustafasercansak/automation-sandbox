@@ -173,18 +173,49 @@ namespace ScenarioRunner
             Assert.Equal(0, callCount);
         }
 
+        [Fact]
+        public async Task LlmIntentPlanner_TimesOut_DegradesToDeterministicPlanner()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+            var planner = new LlmIntentPlanner(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50));
+
+            var result = await planner.PlanAsync(BuildRequest());
+
+            Assert.NotEmpty(result.Scenario.Steps);
+            Assert.Contains(result.Diagnostics, d => d.Contains("timed out", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void LlmIntentPlanner_Throws_WhenTimeoutIsZeroOrNegative()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(timeout: TimeSpan.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LlmIntentPlanner(timeout: TimeSpan.FromSeconds(-1)));
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
-            private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+            private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responder;
 
             public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
+            {
+                _responder = (req, _) => Task.FromResult(responder(req));
+            }
+
+            public FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder)
             {
                 _responder = responder;
             }
 
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                return Task.FromResult(_responder(request));
+                return await _responder(request, cancellationToken);
             }
         }
     }

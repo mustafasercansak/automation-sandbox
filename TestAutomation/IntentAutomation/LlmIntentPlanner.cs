@@ -24,20 +24,29 @@ namespace IntentAutomation
         // Same cheapest/fastest tier as ClaudeHealingProvider - this is a small
         // structured-planning task, not one that benefits from a flagship model.
         private const string DefaultModel = "claude-haiku-4-5-20251001";
+        public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly IIntentPlanner _fallback;
+        private readonly TimeSpan _timeout;
 
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        public TimeSpan Timeout => _timeout;
 
-        public LlmIntentPlanner(HttpClient? httpClient = null, string? apiKey = null, string? model = null, IIntentPlanner? fallback = null)
+        public LlmIntentPlanner(HttpClient? httpClient = null, string? apiKey = null, string? model = null, IIntentPlanner? fallback = null, TimeSpan? timeout = null)
         {
+            if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
+            }
+
             _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")) ?? DefaultModel;
             _fallback = fallback ?? new DeterministicIntentPlanner();
+            _timeout = timeout ?? DefaultTimeout;
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
@@ -80,9 +89,12 @@ namespace IntentAutomation
             httpRequest.Headers.Add("x-api-key", _apiKey);
             httpRequest.Headers.Add("anthropic-version", "2023-06-01");
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(_timeout);
+
             try
             {
-                using var response = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+                using var response = await _httpClient.SendAsync(httpRequest, timeoutCts.Token).ConfigureAwait(false);
                 var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -93,7 +105,14 @@ namespace IntentAutomation
                 var scenario = LlmIntentPlanningPrompt.ParseScenario(text, request);
                 return new IntentPlanningResult { Scenario = scenario };
             }
-
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return Degrade(request, $"LLM planning timed out after {_timeout.TotalSeconds:F0}s; degraded to DeterministicIntentPlanner.");
+            }
+            catch (OperationCanceledException)
+            {
+                return Degrade(request, "LLM planning operation was canceled; degraded to DeterministicIntentPlanner.");
+            }
             catch (Exception ex)
             {
                 return Degrade(request, $"LLM planning failed ({ex.Message}); degraded to DeterministicIntentPlanner.");
