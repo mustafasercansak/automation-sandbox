@@ -8,8 +8,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    runs-on: windows-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            framework: net48
+            name: Windows (Full Suite + FlaUI Live Tests)
+            run-flaui: true
+          - os: ubuntu-latest
+            framework: net8.0
+            name: Linux (Cross-Platform Core & Web Suite)
+            run-flaui: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
 
     steps:
       - name: Checkout
@@ -22,18 +35,27 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Restore
-        run: dotnet restore AutomationSandbox.sln
+      # On Windows, build the full solution (which produces WinFormsApp.exe needed by live FlaUI tests).
+      - name: Build Solution (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          dotnet restore AutomationSandbox.sln
+          dotnet build AutomationSandbox.sln --configuration Debug --no-restore
 
-      - name: Build (Debug - WinFormsApp.exe path used by ScenarioRunner tests)
-        run: dotnet build AutomationSandbox.sln --configuration Debug --no-restore
+      # On Linux, build ScenarioRunner.csproj directly (only restores and builds cross-platform libraries).
+      - name: Build Test Project (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
 
       # PlaywrightLiveExplorerTests launch real headless Chromium; a clean runner has no
       # browsers cached, so download them once (the script ships in the build output).
       - name: Install Playwright Chromium (one-time browser download for live web tests)
-        run: pwsh TestAutomation/ScenarioRunner/bin/Debug/net48/playwright.ps1 install chromium
+        shell: pwsh
+        run: pwsh ./TestAutomation/ScenarioRunner/bin/Debug/${{ matrix.framework }}/playwright.ps1 install chromium
 
-      - name: Run tests with Code Coverage (Discovery + SelfHealing + live FlaUI/UIA scenarios + LLM comparison)
+      - name: Run tests with Code Coverage
         env:
           # Optional: if these repo secrets are unset, GitHub substitutes an empty
           # string and LlmHealingEvaluationTests skips itself - no error either way.
@@ -46,26 +68,26 @@ jobs:
           # back to each provider's own default.
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
-          SELF_HEALING_REPORT_PATH: ${{ github.workspace }}\TestAutomation\ScenarioRunner\TestResults\healing-report.json
-          SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}\TestAutomation\ScenarioRunner\TestResults\healing-report.html
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
+          SELF_HEALING_REPORT_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.json
+          SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.html
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results
-          path: TestAutomation/ScenarioRunner/TestResults/test-results.trx
+          name: test-results-${{ matrix.os }}
+          path: TestAutomation/ScenarioRunner/TestResults/test-results-*.trx
 
       - name: Upload code coverage
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: code-coverage
+          name: code-coverage-${{ matrix.os }}
           path: TestAutomation/ScenarioRunner/TestResults/**/coverage.cobertura.xml
 
       - name: Upload self-healing report
-        if: always()
+        if: always() && matrix.run-flaui
         uses: actions/upload-artifact@v7
         with:
           name: self-healing-report
@@ -73,3 +95,18 @@ jobs:
             TestAutomation/ScenarioRunner/TestResults/healing-report.json
             TestAutomation/ScenarioRunner/TestResults/healing-report.html
           if-no-files-found: ignore
+
+  build-and-test:
+    name: build-and-test
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify matrix results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Matrix test execution failed: ${{ needs.test.result }}"
+            exit 1
+          fi
+          echo "All matrix test jobs passed."
+

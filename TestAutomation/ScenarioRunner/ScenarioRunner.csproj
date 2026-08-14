@@ -1,55 +1,41 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-
-    <TargetFramework>net48</TargetFramework>
-
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net48;net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-
     <ImplicitUsings>enable</ImplicitUsings>
-
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
-
     <IsTestProject>true</IsTestProject>
-
   </PropertyGroup>
 
   <ItemGroup>
-
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
-
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-
     <PackageReference Include="xunit" Version="2.5.3" />
-
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
-
   </ItemGroup>
 
   <ItemGroup>
-
     <Using Include="Xunit" />
-
   </ItemGroup>
 
   <ItemGroup>
-
-    <ProjectReference Include="..\Discovery\Discovery.csproj" />
-
     <ProjectReference Include="..\SelfHealing\SelfHealing.csproj" />
-
     <ProjectReference Include="..\UiModel\UiModel.csproj" />
-
     <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
-
     <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
-
     <ProjectReference Include="..\IntentAutomation\IntentAutomation.csproj" />
-
     <ProjectReference Include="..\PlaywrightLiveExploration\PlaywrightLiveExploration.csproj" />
+    <ProjectReference Include="..\Discovery\Discovery.csproj" Condition="'$(TargetFramework)' == 'net48'" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <Compile Remove="MainFormScenarioTests.cs" />
+    <Compile Remove="WpfMainWindowScenarioTests.cs" />
+    <Compile Remove="DiscoveryRobustnessTests.cs" />
+    <Compile Remove="LlmHealingEvaluationTests.cs" />
   </ItemGroup>
 
 </Project>
