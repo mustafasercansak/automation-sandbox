@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using PlaywrightLiveExploration;
+using UiModel;
 using WebDiscovery;
 
 namespace ScenarioRunner
@@ -113,6 +114,98 @@ namespace ScenarioRunner
                 if (File.Exists(longHtmlPath))
                 {
                     File.Delete(longHtmlPath);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CaptureAsync_CapturesIframeElements_GeneratesFrameLocatorsAndPreservesInGenerators()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_Iframes_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var mainHtmlPath = Path.Combine(tempDir, "main.html");
+                File.WriteAllText(mainHtmlPath, """
+                    <!doctype html>
+                    <html>
+                    <body>
+                        <h1>Main Page</h1>
+                        <iframe name="details" srcdoc="
+                            <input data-testid='inner-email' name='innerEmail' placeholder='Inner Email' />
+                            <iframe id='nestedFrame' srcdoc='&lt;button data-testid=&quot;nested-save&quot;&gt;Nested Save&lt;/button&gt;'></iframe>
+                        "></iframe>
+                    </body>
+                    </html>
+                    """);
+
+                // The iframes here use srcdoc, which inherits the parent document's origin, so the
+                // walker crosses the frame boundary without any relaxed browser flag - no
+                // --allow-file-access-from-files needed even though the page is served from file://.
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(new Uri(mainHtmlPath).AbsoluteUri);
+
+                var flattened = Flatten(dom).ToList();
+                var innerEmail = flattened.Single(e => e.TestId == "inner-email");
+                var nestedSave = flattened.Single(e => e.TestId == "nested-save");
+
+                // Verify FrameAncestry capture
+                Assert.Equal(new[] { "iframe[name='details']" }, innerEmail.FrameAncestry);
+                Assert.Equal(new[] { "iframe[name='details']", "iframe#nestedFrame" }, nestedSave.FrameAncestry);
+
+                // Verify locator emitter produces FrameLocator chains
+                var emailSuggestions = PlaywrightLocatorEmitter.Suggest(innerEmail);
+                Assert.Equal("page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"inner-email\")", emailSuggestions[0].Expression);
+
+                var saveSuggestions = PlaywrightLocatorEmitter.Suggest(nestedSave);
+                Assert.Equal("page.FrameLocator(\"iframe[name='details']\").FrameLocator(\"iframe#nestedFrame\").GetByTestId(\"nested-save\")", saveSuggestions[0].Expression);
+
+                // Verify C# and TypeScript generators emit correct FrameLocator code
+                var scenario = new IntentAutomation.IntentScenario
+                {
+                    Name = "Iframe interaction flow",
+                    Goal = "Interact with elements inside nested iframes",
+                    Steps = new System.Collections.Generic.List<IntentAutomation.IntentStep>
+                    {
+                        new IntentAutomation.IntentStep
+                        {
+                            Order = 1,
+                            ActionType = IntentAutomation.IntentActionType.Fill,
+                            TargetDescription = "inner email",
+                            TestIntent = "Fill inner email",
+                            Value = "inner@example.com",
+                            LocatorKey = "Field.InnerEmail",
+                        },
+                        new IntentAutomation.IntentStep
+                        {
+                            Order = 2,
+                            ActionType = IntentAutomation.IntentActionType.Click,
+                            TargetDescription = "nested save",
+                            TestIntent = "Click nested save button",
+                            LocatorKey = "Action.NestedSave",
+                        },
+                    }
+                };
+
+                var repoPath = Path.Combine(tempDir, "locators.json");
+                var repository = new LocatorRepository(repoPath);
+                var exploration = new IntentAutomation.IntentExplorationBridge().Match(scenario, dom);
+                var recordingResults = new IntentAutomation.IntentLocatorRepositoryRecorder().Record(exploration, repository);
+
+                var csharpCode = new IntentAutomation.PlaywrightCSharpTestGenerator().Generate(scenario, recordingResults);
+                var typeScriptCode = new IntentAutomation.PlaywrightTypeScriptTestGenerator().Generate(scenario, recordingResults);
+
+                Assert.Contains("Page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"inner-email\")", csharpCode);
+                Assert.Contains("Page.FrameLocator(\"iframe[name='details']\").FrameLocator(\"iframe#nestedFrame\").GetByTestId(\"nested-save\")", csharpCode);
+
+                Assert.Contains("page.frameLocator('iframe[name=\\'details\\']').getByTestId('inner-email')", typeScriptCode);
+                Assert.Contains("page.frameLocator('iframe[name=\\'details\\']').frameLocator('iframe#nestedFrame').getByTestId('nested-save')", typeScriptCode);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
                 }
             }
         }

@@ -128,31 +128,73 @@ namespace IntentAutomation
                 return "";
             }
 
-            const string testIdPrefix = "page.GetByTestId(\"";
-            if (expression!.StartsWith(testIdPrefix, StringComparison.Ordinal) && expression.EndsWith("\")", StringComparison.Ordinal))
+            var trimmed = expression!.Trim();
+            if (!trimmed.StartsWith("page.", StringComparison.OrdinalIgnoreCase))
             {
-                return "page.getByTestId('" + CodeGenerationUtilities.EscapeSingleQuoted(expression.Substring(testIdPrefix.Length, expression.Length - testIdPrefix.Length - 2)) + "')";
+                return "";
             }
 
-            const string locatorPrefix = "page.Locator(\"";
-            if (expression.StartsWith(locatorPrefix, StringComparison.Ordinal) && expression.EndsWith("\")", StringComparison.Ordinal))
+            var remaining = trimmed.Substring(5);
+            var tsBuilder = new StringBuilder("page");
+
+            const string framePrefix = "FrameLocator(\"";
+            while (remaining.StartsWith(framePrefix, StringComparison.Ordinal))
             {
-                return "page.locator('" + CodeGenerationUtilities.EscapeSingleQuoted(expression.Substring(locatorPrefix.Length, expression.Length - locatorPrefix.Length - 2)) + "')";
+                var quoteEnd = remaining.IndexOf("\")", framePrefix.Length, StringComparison.Ordinal);
+                if (quoteEnd < 0)
+                {
+                    return "";
+                }
+
+                var rawSelector = remaining.Substring(framePrefix.Length, quoteEnd - framePrefix.Length);
+                var unescaped = UnescapeCSharpString(rawSelector);
+                tsBuilder.Append($".frameLocator('{CodeGenerationUtilities.EscapeSingleQuoted(unescaped)}')");
+
+                remaining = remaining.Substring(quoteEnd + 2);
+                if (remaining.StartsWith(".", StringComparison.Ordinal))
+                {
+                    remaining = remaining.Substring(1);
+                }
             }
 
-            var role = ExtractBetween(expression, "page.GetByRole(AriaRole.", ", new()");
-            var name = ExtractBetween(expression, "Name = \"", "\"");
+            const string testIdPrefix = "GetByTestId(\"";
+            if (remaining.StartsWith(testIdPrefix, StringComparison.Ordinal) && remaining.EndsWith("\")", StringComparison.Ordinal))
+            {
+                var testId = remaining.Substring(testIdPrefix.Length, remaining.Length - testIdPrefix.Length - 2);
+                tsBuilder.Append($".getByTestId('{CodeGenerationUtilities.EscapeSingleQuoted(UnescapeCSharpString(testId))}')");
+                return tsBuilder.ToString();
+            }
+
+            const string locatorPrefix = "Locator(\"";
+            if (remaining.StartsWith(locatorPrefix, StringComparison.Ordinal) && remaining.EndsWith("\")", StringComparison.Ordinal))
+            {
+                var selector = remaining.Substring(locatorPrefix.Length, remaining.Length - locatorPrefix.Length - 2);
+                tsBuilder.Append($".locator('{CodeGenerationUtilities.EscapeSingleQuoted(UnescapeCSharpString(selector))}')");
+                return tsBuilder.ToString();
+            }
+
+            var role = ExtractBetween(remaining, "GetByRole(AriaRole.", ", new()");
+            var name = ExtractBetween(remaining, "Name = \"", "\"");
             if (!string.IsNullOrWhiteSpace(role) && !string.IsNullOrWhiteSpace(name))
             {
-                return $"page.getByRole('{ToTypeScriptRole(role)}', {{ name: '{CodeGenerationUtilities.EscapeSingleQuoted(name)}' }})";
+                tsBuilder.Append($".getByRole('{ToTypeScriptRole(role)}', {{ name: '{CodeGenerationUtilities.EscapeSingleQuoted(UnescapeCSharpString(name))}' }})");
+                return tsBuilder.ToString();
             }
 
             return "";
         }
 
+        private static string UnescapeCSharpString(string value)
+        {
+            return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+        }
+
         private static string ToTypeScriptRole(string role)
         {
-            return string.Concat(role.Select((ch, index) => index == 0 ? char.ToLowerInvariant(ch) : ch));
+            var normalized = role.Replace("-", "").Replace("_", "");
+            return normalized.Equals("textbox", StringComparison.OrdinalIgnoreCase)
+                ? "textbox"
+                : char.ToLowerInvariant(normalized[0]) + normalized.Substring(1).ToLowerInvariant();
         }
 
         private static string ExtractBetween(string value, string prefix, string suffix)

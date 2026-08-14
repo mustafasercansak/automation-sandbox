@@ -54,35 +54,28 @@ namespace WebDiscovery
   }
 
   function visibilityOf(element) {
-    const style = window.getComputedStyle(element);
+    const win = (element.ownerDocument && element.ownerDocument.defaultView) || window;
+    const style = win.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     const hiddenByAttribute = element.hidden || element.getAttribute('aria-hidden') === 'true';
     const hiddenByStyle = style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' || Number(style.opacity) === 0;
     const hasNoBox = rect.width <= 0 || rect.height <= 0;
-    const offscreen = rect.bottom < 0 || rect.right < 0 || rect.top > window.innerHeight || rect.left > window.innerWidth;
+    const offscreen = rect.bottom < 0 || rect.right < 0 || rect.top > win.innerHeight || rect.left > win.innerWidth;
     return {
       IsHidden: hiddenByAttribute || hiddenByStyle || hasNoBox,
       IsOffscreen: offscreen
     };
   }
 
-  function childElementsOf(element) {
-    const children = Array.from(element.children).filter(child => child instanceof HTMLElement);
-    if (element.shadowRoot) {
-      children.push(...Array.from(element.shadowRoot.children).filter(child => child instanceof HTMLElement));
-    }
-
-    if (element.tagName === 'IFRAME') {
-      try {
-        const doc = element.contentDocument;
-        if (doc && doc.body) children.push(doc.body);
-      } catch {
-        // Cross-origin iframes cannot be inspected from the parent page. Playwright can still
-        // capture them by evaluating this script inside the frame context directly.
-      }
-    }
-
-    return children;
+  function frameSelectorOf(element) {
+    const name = element.getAttribute('name');
+    if (name) return `iframe[name='${name.replace(/'/g, '\\\'')}']`;
+    const testId = element.getAttribute('data-testid') || element.getAttribute('data-test');
+    if (testId) return `iframe[data-testid='${testId.replace(/'/g, '\\\'')}']`;
+    if (element.id) return `iframe#${CSS.escape(element.id)}`;
+    const src = element.getAttribute('src');
+    if (src) return `iframe[src='${src.replace(/'/g, '\\\'')}']`;
+    return 'iframe';
   }
 
   function scopeOf(element, parentScope) {
@@ -101,10 +94,35 @@ namespace WebDiscovery
     return '';
   }
 
-  function walk(element, parentScope) {
+  function walk(element, parentScope, frameAncestry) {
     const currentScope = scopeOf(element, parentScope);
     const visibility = visibilityOf(element);
-    const children = childElementsOf(element).map(child => walk(child, currentScope));
+    const currentAncestry = frameAncestry || [];
+
+    const childItems = [];
+    const directChildren = Array.from(element.children).filter(child => child && child.nodeType === 1);
+    childItems.push(...directChildren.map(child => ({ element: child, ancestry: currentAncestry })));
+
+    if (element.shadowRoot) {
+      const shadowChildren = Array.from(element.shadowRoot.children).filter(child => child && child.nodeType === 1);
+      childItems.push(...shadowChildren.map(child => ({ element: child, ancestry: currentAncestry })));
+    }
+
+    if (element.tagName === 'IFRAME') {
+      try {
+        const doc = element.contentDocument;
+        if (doc && doc.body) {
+          const iframeSelector = frameSelectorOf(element);
+          const nestedAncestry = [...currentAncestry, iframeSelector];
+          childItems.push({ element: doc.body, ancestry: nestedAncestry });
+        }
+      } catch {
+        // Cross-origin iframes cannot be inspected from the parent page. Playwright can still
+        // capture them by evaluating this script inside the frame context directly.
+      }
+    }
+
+    const children = childItems.map(item => walk(item.element, currentScope, item.ancestry));
     return {
       TagName: element.tagName.toLowerCase(),
       Role: roleOf(element),
@@ -119,12 +137,13 @@ namespace WebDiscovery
       IsOffscreen: visibility.IsOffscreen,
       TreeScope: currentScope,
       FrameUrl: frameUrlOf(element),
+      FrameAncestry: currentAncestry,
       BoundingRectangle: rectOf(element),
       Children: children
     };
   }
 
-  return walk(document.body, 'light-dom');
+  return walk(document.body, 'light-dom', []);
 }";
     }
 }

@@ -119,7 +119,13 @@ namespace IntentAutomation
             var suggestion = candidate?.LocatorSuggestions.FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(suggestion?.Expression))
             {
-                return suggestion!.Expression.Replace("page.", "Page.");
+                var expr = suggestion!.Expression;
+                if (expr.StartsWith("page.", StringComparison.Ordinal))
+                {
+                    return "Page." + expr.Substring("page.".Length);
+                }
+
+                return expr;
             }
 
             if (!string.IsNullOrWhiteSpace(snapshot?.AutomationId))

@@ -69,6 +69,44 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsFrameLocatorChain_WhenCandidateHasIframeExpression()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "Iframe interaction",
+                Goal = "Interact with elements inside iframes",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Fill,
+                        LocatorKey = "Field.IframeEmail",
+                        Value = "jane@example.com",
+                        TestIntent = "Fill email inside iframe",
+                    },
+                    new IntentStep
+                    {
+                        Order = 2,
+                        ActionType = IntentActionType.Click,
+                        LocatorKey = "Action.NestedSave",
+                        TestIntent = "Click save in nested iframe",
+                    },
+                }
+            };
+            var recordingResults = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Field.IframeEmail", "email-input", "page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"email-input\")"),
+                Recorded("Action.NestedSave", "save-btn", "page.FrameLocator(\"iframe#parent\").FrameLocator(\"iframe#child\").GetByRole(AriaRole.Button, new() { Name = \"Save\" })"),
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordingResults);
+
+            Assert.Contains("await Page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"email-input\").FillAsync(\"jane@example.com\");", code);
+            Assert.Contains("await Page.FrameLocator(\"iframe#parent\").FrameLocator(\"iframe#child\").GetByRole(AriaRole.Button, new() { Name = \"Save\" }).ClickAsync();", code);
+        }
+
+        [Fact]
         public void Generate_EmitsTextEqualsAssertion_WhenAssertionKindIsTextEquals()
         {
             var scenario = new IntentScenario
