@@ -1,38 +1,27 @@
 using System;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using UiModel;
 
 namespace LlmHealing
 {
-    public sealed class OpenAiHealingProvider : ILlmHealingProvider
+    public sealed class OpenAiHealingProvider : HttpLlmHealingProvider
     {
         private const string DefaultApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
         public static readonly int DefaultMaxRetries = 2;
-        private static readonly HttpClient SharedHttpClient = new();
-        private readonly HttpClient _httpClient;
+
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly string _apiUrl;
-        private readonly TimeSpan _timeout;
-        private readonly TimeSpan _totalTimeout;
-        private readonly int _maxRetries;
-        private readonly Func<TimeSpan, CancellationToken, Task>? _delayAsync;
-        private readonly string _name;
 
-        public string Name => _name;
-        public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
-        public TimeSpan Timeout => _timeout;
-        public TimeSpan TotalTimeout => _totalTimeout;
-        public int MaxRetries => _maxRetries;
+        public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
         public string ApiUrl => _apiUrl;
 
         // name matters more here than on the other providers: this one talks to any
@@ -49,23 +38,18 @@ namespace LlmHealing
             string? name = null,
             int? maxRetries = null,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+            : base(
+                defaultName: "OpenAI",
+                defaultTimeout: DefaultTimeout,
+                defaultTotalTimeout: DefaultTotalTimeout,
+                defaultMaxRetries: DefaultMaxRetries,
+                httpClient: httpClient,
+                timeout: timeout,
+                totalTimeout: totalTimeout,
+                name: name,
+                maxRetries: maxRetries,
+                delayAsync: delayAsync)
         {
-            if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
-            }
-
-            if (totalTimeout.HasValue && totalTimeout.Value <= TimeSpan.Zero)
-            {
-                throw new ArgumentOutOfRangeException(nameof(totalTimeout), "TotalTimeout must be greater than zero.");
-            }
-
-            if (maxRetries.HasValue && maxRetries.Value < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(maxRetries), "MaxRetries must be non-negative.");
-            }
-
-            _httpClient = httpClient ?? SharedHttpClient;
             _apiKey = apiKey
                 ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
                 ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
@@ -74,25 +58,13 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
-            _timeout = timeout ?? DefaultTimeout;
-            _totalTimeout = totalTimeout ?? (timeout.HasValue ? TimeSpan.FromSeconds(Math.Max(DefaultTotalTimeout.TotalSeconds, _timeout.TotalSeconds * 2.5)) : DefaultTotalTimeout);
-            if (_totalTimeout < _timeout)
-            {
-                throw new ArgumentException("TotalTimeout cannot be less than per-attempt Timeout.", nameof(totalTimeout));
-            }
-
-            _maxRetries = maxRetries ?? DefaultMaxRetries;
-            _delayAsync = delayAsync;
 
             var rawEndpoint = NullIfEmpty(endpoint)
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_BASE_URL"))
                 ?? DefaultApiUrl;
             _apiUrl = NormalizeEndpoint(rawEndpoint);
-            _name = NullIfEmpty(name?.Trim()) ?? "OpenAI";
         }
-
-        private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
         private static string NormalizeEndpoint(string endpoint)
         {
@@ -105,19 +77,8 @@ namespace LlmHealing
             return $"{trimmed}/chat/completions";
         }
 
-        public async Task<LlmHealingResult> ResolveAsync(
-            UiElementInfo expected,
-            IReadOnlyList<CandidateScore> candidates,
-            string? platform = null,
-            CancellationToken cancellationToken = default)
+        protected override HttpRequestMessage CreateRequest(string prompt)
         {
-            var stopwatch = Stopwatch.StartNew();
-            if (!IsAvailable)
-            {
-                return new LlmHealingResult { ProviderName = Name, Success = false, ErrorMessage = "OPENAI_API_KEY is not set.", AttemptCount = 0 };
-            }
-
-            var prompt = LlmHealingPrompt.Build(expected, candidates, platform);
             var requestBody = new
             {
                 model = _model,
@@ -128,69 +89,15 @@ namespace LlmHealing
                 temperature = 0.0,
             };
 
-            HttpRequestMessage CreateRequest()
+            var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
-                {
-                    Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
-                };
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-                return request;
-            }
-
-            var httpResponse = await LlmHttpTransport.SendWithRetryAsync(
-                _httpClient,
-                CreateRequest,
-                _timeout,
-                _totalTimeout,
-                _maxRetries,
-                _delayAsync,
-                cancellationToken).ConfigureAwait(false);
-
-            if (!httpResponse.IsSuccess)
-            {
-                return new LlmHealingResult
-                {
-                    ProviderName = Name,
-                    Success = false,
-                    ErrorMessage = httpResponse.ErrorMessage,
-                    Elapsed = stopwatch.Elapsed,
-                    AttemptCount = httpResponse.AttemptsMade,
-                };
-            }
-
-            try
-            {
-                var text = ExtractText(httpResponse.Body ?? "");
-                var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(text);
-
-                var matched = candidates.FirstOrDefault(c => c.CandidateId == candidateId);
-                return new LlmHealingResult
-                {
-                    ProviderName = Name,
-                    Success = true,
-                    MatchedCandidateId = candidateId,
-                    MatchedAutomationId = matched?.Candidate.AutomationId,
-                    Confidence = confidence,
-                    Reasoning = reasoning,
-                    Elapsed = stopwatch.Elapsed,
-                    AttemptCount = httpResponse.AttemptsMade,
-                };
-            }
-            catch (Exception ex)
-            {
-                return new LlmHealingResult
-                {
-                    ProviderName = Name,
-                    Success = false,
-                    ErrorMessage = ex.Message,
-                    Elapsed = stopwatch.Elapsed,
-                    AttemptCount = httpResponse.AttemptsMade,
-                };
-            }
+                Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            return request;
         }
 
-        private static string ExtractText(string responseBody)
+        protected override string ExtractText(string responseBody)
         {
             using var doc = JsonDocument.Parse(responseBody);
             var choices = doc.RootElement.GetProperty("choices");

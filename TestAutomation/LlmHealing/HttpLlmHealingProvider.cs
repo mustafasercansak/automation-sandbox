@@ -1,0 +1,155 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using UiModel;
+
+namespace LlmHealing
+{
+    // Abstract base class for HTTP-based LLM healing providers.
+    // Encapsulates shared fields, constructor validations, retry/timeout orchestration,
+    // and candidate matching, while keeping vendor-specific request building and response
+    // parsing in derived classes.
+    public abstract class HttpLlmHealingProvider : ILlmHealingProvider
+    {
+        private static readonly HttpClient SharedHttpClient = new();
+        private readonly HttpClient _httpClient;
+        private readonly TimeSpan _timeout;
+        private readonly TimeSpan _totalTimeout;
+        private readonly int _maxRetries;
+        private readonly Func<TimeSpan, CancellationToken, Task>? _delayAsync;
+        private readonly string _name;
+
+        public string Name => _name;
+        public abstract bool IsAvailable { get; }
+        public TimeSpan Timeout => _timeout;
+        public TimeSpan TotalTimeout => _totalTimeout;
+        public int MaxRetries => _maxRetries;
+
+        protected HttpLlmHealingProvider(
+            string defaultName,
+            TimeSpan defaultTimeout,
+            TimeSpan defaultTotalTimeout,
+            int defaultMaxRetries = 2,
+            HttpClient? httpClient = null,
+            TimeSpan? timeout = null,
+            TimeSpan? totalTimeout = null,
+            string? name = null,
+            int? maxRetries = null,
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+        {
+            if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be greater than zero.");
+            }
+
+            if (totalTimeout.HasValue && totalTimeout.Value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(totalTimeout), "TotalTimeout must be greater than zero.");
+            }
+
+            if (maxRetries.HasValue && maxRetries.Value < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxRetries), "MaxRetries must be non-negative.");
+            }
+
+            _httpClient = httpClient ?? SharedHttpClient;
+            _timeout = timeout ?? defaultTimeout;
+            _totalTimeout = totalTimeout ?? (timeout.HasValue ? TimeSpan.FromSeconds(Math.Max(defaultTotalTimeout.TotalSeconds, _timeout.TotalSeconds * 2.5)) : defaultTotalTimeout);
+            if (_totalTimeout < _timeout)
+            {
+                throw new ArgumentException("TotalTimeout cannot be less than per-attempt Timeout.", nameof(totalTimeout));
+            }
+
+            _maxRetries = maxRetries ?? defaultMaxRetries;
+            _delayAsync = delayAsync;
+            _name = NullIfEmpty(name?.Trim()) ?? defaultName;
+        }
+
+        protected static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
+
+        protected abstract string UnavailableErrorMessage { get; }
+
+        protected abstract HttpRequestMessage CreateRequest(string prompt);
+
+        protected abstract string ExtractText(string responseBody);
+
+        public async Task<LlmHealingResult> ResolveAsync(
+            UiElementInfo expected,
+            IReadOnlyList<CandidateScore> candidates,
+            string? platform = null,
+            CancellationToken cancellationToken = default)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            if (!IsAvailable)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = UnavailableErrorMessage,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = 0,
+                };
+            }
+
+            var prompt = LlmHealingPrompt.Build(expected, candidates, platform);
+
+            var httpResponse = await LlmHttpTransport.SendWithRetryAsync(
+                _httpClient,
+                () => CreateRequest(prompt),
+                _timeout,
+                _totalTimeout,
+                _maxRetries,
+                _delayAsync,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!httpResponse.IsSuccess)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = httpResponse.ErrorMessage,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
+                };
+            }
+
+            try
+            {
+                var text = ExtractText(httpResponse.Body ?? "");
+                var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(text);
+
+                // MatchedAutomationId is informational only (may be null/empty even on a
+                // legitimate match) - the resolver looks the candidate up by MatchedCandidateId.
+                var matched = candidates.FirstOrDefault(c => c.CandidateId == candidateId);
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = candidateId,
+                    MatchedAutomationId = matched?.Candidate.AutomationId,
+                    Confidence = confidence,
+                    Reasoning = reasoning,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    Elapsed = stopwatch.Elapsed,
+                    AttemptCount = httpResponse.AttemptsMade,
+                };
+            }
+        }
+    }
+}
