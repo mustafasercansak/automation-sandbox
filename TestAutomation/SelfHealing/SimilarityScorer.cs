@@ -109,7 +109,7 @@ namespace SelfHealing
 
         private static double? PositionSimilarity(BoundingRectangle expected, BoundingRectangle candidate, double positionToleranceRadius)
         {
-            if (positionToleranceRadius <= 0.0 || !IsUsableRectangle(expected) || !IsUsableRectangle(candidate))
+            if (positionToleranceRadius <= 0.0 || !expected.IsUsable || !candidate.IsUsable)
             {
                 return null;
             }
@@ -122,11 +122,6 @@ namespace SelfHealing
                 Math.Pow(expectedCenterX - candidateCenterX, 2) +
                 Math.Pow(expectedCenterY - candidateCenterY, 2));
             return Math.Max(0.0, 1.0 - distance / positionToleranceRadius);
-        }
-
-        private static bool IsUsableRectangle(BoundingRectangle rectangle)
-        {
-            return rectangle.Width > 0.0 || rectangle.Height > 0.0;
         }
 
         private static int LevenshteinDistance(string a, string b)

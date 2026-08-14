@@ -47,12 +47,12 @@ namespace IntentAutomation
                 throw new ArgumentNullException(nameof(root));
             }
 
-            // A (0,0,0,0) bounding rectangle marks an offscreen/collapsed control - the same
+            // Controls with zero width and height mark offscreen/collapsed controls - the same
             // convention SimilarityScorer.PositionScore uses to exclude unusable position data.
             // Unlike web (where Playwright auto-scrolls below-the-fold elements), desktop UIA controls
-            // with a zero rectangle are genuinely collapsed or inaccessible.
+            // with no usable geometry are genuinely collapsed or inaccessible.
             var elements = Flatten(root)
-                .Where(element => !IsUnusableRectangle(element.BoundingRectangle))
+                .Where(element => element.BoundingRectangle.IsUsable)
                 .ToList();
 
             var result = new IntentDesktopExplorationResult { Scenario = scenario };
@@ -166,10 +166,6 @@ namespace IntentAutomation
             return candidates.Any(candidate => string.Equals(value, candidate, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static bool IsUnusableRectangle(BoundingRectangle rectangle)
-        {
-            return rectangle.X == 0 && rectangle.Y == 0 && rectangle.Width == 0 && rectangle.Height == 0;
-        }
 
         private static IEnumerable<UiElementInfo> Flatten(UiElementInfo root)
         {
