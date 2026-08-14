@@ -199,6 +199,61 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_MatchesBelowTheFoldOffscreenElements_WhenNotHidden()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Complete purchase on long page",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Click,
+                        TargetDescription = "checkout",
+                        TestIntent = "Click the checkout button",
+                        ExpectedOutcome = "Order is submitted",
+                        LocatorKey = "Action.Checkout",
+                    }
+                }
+            };
+
+            var dom = new WebElementInfo { TagName = "body" };
+            // Below-the-fold element (IsOffscreen = true, IsHidden = false, Y = 3000)
+            dom.Children.Add(new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Checkout",
+                TestId = "btn-checkout",
+                IsOffscreen = true,
+                IsHidden = false,
+                BoundingRectangle = new BoundingRectangle(100, 3000, 120, 36),
+            });
+            // Truly hidden checkout button (IsHidden = true)
+            dom.Children.Add(new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Hidden Checkout",
+                TestId = "hidden-checkout",
+                IsHidden = true,
+                BoundingRectangle = new BoundingRectangle(0, 0, 0, 0),
+            });
+
+            var bridge = new IntentExplorationBridge();
+            var result = bridge.Match(scenario, dom);
+
+            var stepResult = result.StepResults[0];
+            Assert.False(stepResult.RequiresReview);
+            Assert.NotEmpty(stepResult.Candidates);
+            Assert.Equal("btn-checkout", stepResult.Candidates[0].Element.TestId);
+            Assert.True(stepResult.Candidates[0].Element.IsOffscreen);
+            Assert.False(stepResult.Candidates[0].Element.IsHidden);
+            Assert.DoesNotContain(stepResult.Candidates, c => c.Element.TestId == "hidden-checkout");
+        }
+
+        [Fact]
         public void Constructor_ValidatesOptionsRanges()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new IntentExplorationBridge(new IntentExplorationOptions { MaxCandidatesPerStep = 0 }));

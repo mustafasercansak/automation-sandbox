@@ -49,6 +49,8 @@ namespace IntentAutomation
 
             // A (0,0,0,0) bounding rectangle marks an offscreen/collapsed control - the same
             // convention SimilarityScorer.PositionScore uses to exclude unusable position data.
+            // Unlike web (where Playwright auto-scrolls below-the-fold elements), desktop UIA controls
+            // with a zero rectangle are genuinely collapsed or inaccessible.
             var elements = Flatten(root)
                 .Where(element => !IsUnusableRectangle(element.BoundingRectangle))
                 .ToList();

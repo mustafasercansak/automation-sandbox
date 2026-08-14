@@ -26,6 +26,7 @@ namespace UiModel
         public double Width { get; }
         public double Height { get; }
 
+        [System.Text.Json.Serialization.JsonConstructor]
         public BoundingRectangle(double x, double y, double width, double height)
         {
             X = x;

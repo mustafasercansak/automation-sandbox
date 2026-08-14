@@ -43,8 +43,11 @@ namespace IntentAutomation
                 throw new ArgumentNullException(nameof(root));
             }
 
+            // Web elements below the fold (IsOffscreen = true) are included because Playwright
+            // automatically scrolls elements into view during actionability checks. Only truly hidden
+            // elements (display:none, visibility:hidden, opacity:0, collapsed 0x0 box) are excluded.
             var elements = Flatten(root)
-                .Where(element => !element.IsHidden && !element.IsOffscreen)
+                .Where(element => !element.IsHidden)
                 .ToList();
 
             var result = new IntentExplorationResult { Scenario = scenario };

@@ -50,7 +50,7 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void WebElementMapper_HiddenOrOffscreenElementsUseZeroRectangle()
+        public void WebElementMapper_HiddenElementsUseZeroRectangle_OffscreenElementsRetainRectangle()
         {
             var root = new WebElementInfo { TagName = "body" };
             root.Children.Add(new WebElementInfo
@@ -69,15 +69,58 @@ namespace ScenarioRunner
                 AccessibleName = "Email",
                 TestId = "email-input",
                 IsOffscreen = true,
-                BoundingRectangle = new BoundingRectangle(-2000, 80, 220, 32),
+                BoundingRectangle = new BoundingRectangle(100, 3000, 220, 32),
             });
 
             var tree = WebElementMapper.ToUiElementTree(root);
 
+            // Hidden element loses geometry
             Assert.Equal(0, tree.Children[0].BoundingRectangle.Width);
             Assert.Equal(0, tree.Children[0].BoundingRectangle.Height);
-            Assert.Equal(0, tree.Children[1].BoundingRectangle.Width);
-            Assert.Equal(0, tree.Children[1].BoundingRectangle.Height);
+
+            // Offscreen / below-the-fold element retains geometry
+            Assert.Equal(220, tree.Children[1].BoundingRectangle.Width);
+            Assert.Equal(32, tree.Children[1].BoundingRectangle.Height);
+            Assert.Equal(100, tree.Children[1].BoundingRectangle.X);
+            Assert.Equal(3000, tree.Children[1].BoundingRectangle.Y);
+        }
+
+        [Fact]
+        public void WebElementMapper_OffscreenElementRetainsGeometry_ParticipatesInPositionScoring()
+        {
+            // Issue #7 side-effect pin: retaining bounding box on offscreen elements ensures
+            // SimilarityScorer computes a non-null PositionScore and contributes evidence coverage.
+            var offscreenElement = new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Checkout",
+                TestId = "btn-checkout",
+                IsOffscreen = true,
+                IsHidden = false,
+                BoundingRectangle = new BoundingRectangle(100, 3000, 120, 36),
+            };
+
+            var tree = WebElementMapper.ToUiElementTree(new WebElementInfo
+            {
+                TagName = "body",
+                Children = new List<WebElementInfo> { offscreenElement }
+            });
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Checkout",
+                AutomationId = "btn-checkout",
+                BoundingRectangle = new BoundingRectangle(100, 3000, 120, 36),
+            };
+
+            var healResult = SelfHealing.SelfHealingResolver.Resolve(expected, tree);
+
+            Assert.NotNull(healResult.ScoreBreakdown);
+            Assert.NotNull(healResult.ScoreBreakdown!.PositionScore);
+            Assert.Equal(1.0, healResult.ScoreBreakdown!.PositionScore!.Value);
+            Assert.True(healResult.EvidenceCoverage >= 0.80);
         }
 
         [Fact]

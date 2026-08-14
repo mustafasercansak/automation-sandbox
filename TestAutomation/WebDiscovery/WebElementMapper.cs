@@ -28,7 +28,7 @@ namespace WebDiscovery
                 Name = FirstNonEmpty(element.AccessibleName, element.Text),
                 AutomationId = automationId,
                 ClassName = ToClassName(element),
-                BoundingRectangle = element.IsHidden || element.IsOffscreen
+                BoundingRectangle = element.IsHidden
                     ? new BoundingRectangle(0, 0, 0, 0)
                     : element.BoundingRectangle,
                 ParentControlType = parentControlType,
