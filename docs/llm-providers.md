@@ -44,6 +44,18 @@ All LLM providers support configurable timeouts via their constructors (`TimeSpa
 var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
 ```
 
+### 🌐 Free Cloud AI via GitHub Models & Custom Endpoints
+`OpenAiHealingProvider` supports custom OpenAI-compatible endpoints (such as GitHub Models, Azure OpenAI, vLLM, LM Studio).
+
+In GitHub Actions, you can use **GitHub Models** (`https://models.github.ai/inference`) with the built-in `GITHUB_TOKEN` and `permissions: models: read`:
+
+```csharp
+// Example: Connect to GitHub Models using GITHUB_TOKEN
+var provider = new OpenAiHealingProvider(
+    endpoint: "https://models.github.ai/inference",
+    model: "gpt-4o-mini");
+```
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -81,4 +93,17 @@ var provider = new ClaudeHealingProvider(timeout: TimeSpan.FromSeconds(5));
    ```csharp
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
+
+### 🌐 GitHub Models ve Özel OpenAI Uç Noktaları
+`OpenAiHealingProvider` özel OpenAI uyumlu uç noktaları (GitHub Models, Azure OpenAI, vLLM, LM Studio) destekler.
+
+GitHub Actions içerisinde dahili `GITHUB_TOKEN` ve `permissions: models: read` izni ile **GitHub Models** (`https://models.github.ai/inference`) kullanılabilir:
+
+```csharp
+// Örnek: GITHUB_TOKEN ile GitHub Models'e bağlanma
+var provider = new OpenAiHealingProvider(
+    endpoint: "https://models.github.ai/inference",
+    model: "gpt-4o-mini");
+```
+
 

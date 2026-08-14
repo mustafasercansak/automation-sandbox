@@ -12,20 +12,27 @@ namespace LlmHealing
 {
     public sealed class OpenAiHealingProvider : ILlmHealingProvider
     {
-        private const string ApiUrl = "https://api.openai.com/v1/chat/completions";
+        private const string DefaultApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         private static readonly HttpClient SharedHttpClient = new();
         private readonly HttpClient _httpClient;
         private readonly string? _apiKey;
         private readonly string _model;
+        private readonly string _apiUrl;
         private readonly TimeSpan _timeout;
 
         public string Name => "OpenAI";
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         public TimeSpan Timeout => _timeout;
+        public string ApiUrl => _apiUrl;
 
-        public OpenAiHealingProvider(HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null)
+        public OpenAiHealingProvider(
+            HttpClient? httpClient = null,
+            string? apiKey = null,
+            string? model = null,
+            TimeSpan? timeout = null,
+            string? endpoint = null)
         {
             if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
             {
@@ -33,16 +40,35 @@ namespace LlmHealing
             }
 
             _httpClient = httpClient ?? SharedHttpClient;
-            _apiKey = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            _apiKey = apiKey
+                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
             // GitHub Actions substitutes an unset repo Variable with an empty string, not a
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
             _timeout = timeout ?? DefaultTimeout;
+
+            var rawEndpoint = NullIfEmpty(endpoint)
+                ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
+                ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_BASE_URL"))
+                ?? DefaultApiUrl;
+            _apiUrl = NormalizeEndpoint(rawEndpoint);
         }
 
         private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
+
+        private static string NormalizeEndpoint(string endpoint)
+        {
+            var trimmed = endpoint.Trim().TrimEnd('/');
+            if (trimmed.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed;
+            }
+
+            return $"{trimmed}/chat/completions";
+        }
 
         public async Task<LlmHealingResult> ResolveAsync(
             UiElementInfo expected,
@@ -67,7 +93,7 @@ namespace LlmHealing
                 temperature = 0.0,
             };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
             {
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json"),
             };
