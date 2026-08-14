@@ -170,7 +170,11 @@ namespace ScenarioRunner
             public string Name { get; }
             public bool IsAvailable => true;
 
-            public Task<LlmHealingResult> ResolveAsync(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, CancellationToken cancellationToken = default)
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
             {
                 var matched = candidates.FirstOrDefault(c => c.Candidate.AutomationId == _automationId);
                 return Task.FromResult(new LlmHealingResult
