@@ -31,7 +31,7 @@ Dependency direction: `UiModel` ← `LlmHealing` ← `SelfHealing` ← `Scenario
   - `Discovery`, `ScenarioRunner`, `WinFormsApp`: `net48` (Windows-only; FlaUI UIA3 needs Windows UIA COM APIs).
   - `WpfApp`: `net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting`.
 - Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 8.0.5, xunit 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet.collector 6.0.0.
-- `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, version `0.1.0-preview`, `Deterministic` builds). Packable by default; demo apps and the test project opt out with `IsPackable=false`.
+- `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, version `0.2.0-beta.1`, `Deterministic` builds). Packable by default; demo apps and the test project opt out with `IsPackable=false`.
 
 ### Healing pipeline (how the pieces interact)
 
