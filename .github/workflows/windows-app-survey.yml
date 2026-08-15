@@ -1,0 +1,98 @@
+name: Windows Application Benchmark Survey
+
+# Surveys real Windows applications on pinned windows-2022 and windows-2025 runner images
+# to find organic UI tree drift candidates for locator healing benchmarks (#15 / #64).
+#
+# Pinned images rather than windows-latest are deliberate: the point is comparing two fixed
+# runner images without latest rolling forward under the comparison.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  survey:
+    name: Survey (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+          - windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build Solution
+        run: |
+          dotnet restore AutomationSandbox.sln
+          dotnet build AutomationSandbox.sln --configuration Debug --no-restore
+
+      - name: Run Windows Application Survey
+        env:
+          RUN_WINDOWS_APP_SURVEY: "1"
+          IMAGE_NAME: ${{ matrix.os }}
+          SURVEY_OUTPUT_DIR: ${{ github.workspace }}/TestResults/survey-trees/${{ matrix.os }}
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net48 --no-build --filter "FullyQualifiedName~WindowsAppSurveyLiveTests.RunLiveWindowsAppSurvey" --logger "console;verbosity=normal"
+
+      - name: Upload Survey Trees and Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: survey-trees-${{ matrix.os }}
+          path: TestResults/survey-trees/${{ matrix.os }}/**
+          retention-days: 90
+          if-no-files-found: error
+
+  compare:
+    name: Compare Runner Images Drift Signal
+    needs: survey
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Download windows-2022 Survey Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: survey-trees-windows-2022
+          path: TestResults/survey-trees/windows-2022
+
+      - name: Download windows-2025 Survey Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: survey-trees-windows-2025
+          path: TestResults/survey-trees/windows-2025
+
+      - name: Build ScenarioRunner (Linux net8.0)
+        run: |
+          dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+
+      - name: Run Cross-Image Survey Comparison
+        env:
+          COMPARE_SURVEY_REPORTS: "1"
+          SURVEY_REPORT_2022: ${{ github.workspace }}/TestResults/survey-trees/windows-2022/survey-report-windows-2022.json
+          SURVEY_REPORT_2025: ${{ github.workspace }}/TestResults/survey-trees/windows-2025/survey-report-windows-2025.json
+          TREES_DIR_2022: ${{ github.workspace }}/TestResults/survey-trees/windows-2022
+          TREES_DIR_2025: ${{ github.workspace }}/TestResults/survey-trees/windows-2025
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ApplicationSurveyTests.RunLiveSurveyComparison" --logger "console;verbosity=normal"
