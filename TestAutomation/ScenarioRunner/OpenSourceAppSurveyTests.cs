@@ -427,5 +427,141 @@ namespace ScenarioRunner
             Assert.Equal("1.8.2", roundtripped.Chains[0].Versions[0].Version);
             Assert.Equal(1, roundtripped.Chains[0].TotalDistinctBrokenLocatorsCount);
         }
+
+        [Fact]
+        public void AppChainSurvey_ExcludesIdsFromSuspectHops_FromDistinctAndCumulativeTotals()
+        {
+            // Reproduces run 31883560197: HandBrake 1.8.2 (149 nodes) was a real capture, while 1.9.2
+            // captured a 7-node update dialog. The ids "removed" across that hop describe the difference
+            // between a window and a dialog, so they must not enter the benchmark dataset.
+            var real = new AppVersionSurveyRecord
+            {
+                Version = "1.8.2",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "HandBrake",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 149,
+                    EmptyAutomationIdCount = 106,
+                    EmptyAutomationIdFraction = 0.711,
+                },
+            };
+
+            var dialog = new AppVersionSurveyRecord
+            {
+                Version = "1.9.2",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                HydrationTimedOut = true,
+                WindowTitle = "Check for updates?",
+                RootClassName = "#32770",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 7,
+                    EmptyAutomationIdCount = 1,
+                    EmptyAutomationIdFraction = 0.143,
+                },
+            };
+
+            var later = new AppVersionSurveyRecord
+            {
+                Version = "1.11.2",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "HandBrake",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 160,
+                    EmptyAutomationIdCount = 112,
+                    EmptyAutomationIdFraction = 0.70,
+                },
+            };
+
+            var suspectDiff = new ApplicationTreeDiffResult
+            {
+                HasStructuralDrift = true,
+                DriftSignal = "⚡ Drift (-142 nodes)",
+                Details = new List<string>
+                {
+                    "AutomationIds removed in 1.9.2: shellView, SystemMenuBar, MainViewModel",
+                },
+            };
+
+            var realDiff = new ApplicationTreeDiffResult
+            {
+                HasStructuralDrift = true,
+                DriftSignal = "⚡ Drift (+11 nodes)",
+                Details = new List<string>
+                {
+                    "AutomationIds removed in 1.11.2: btnQueueLegacy",
+                },
+            };
+
+            var suspectHop = OpenSourceAppViabilityEvaluator.EvaluateHop(real, dialog, suspectDiff);
+            var viableHop = OpenSourceAppViabilityEvaluator.EvaluateHop(dialog, later, realDiff);
+
+            Assert.True(suspectHop.IsSuspectCapture);
+            Assert.False(suspectHop.IsViableHop);
+            Assert.Equal(3, suspectHop.RemovedAutomationIds.Count);
+            Assert.True(viableHop.IsViableHop);
+
+            var chain = new AppChainSurveyRecord
+            {
+                AppName = "HandBrake",
+                Toolkit = "WPF",
+                Versions = new List<AppVersionSurveyRecord> { real, dialog, later },
+                Hops = new List<AppHopSurveyRecord> { suspectHop, viableHop },
+            };
+
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            Assert.Equal(new[] { "btnQueueLegacy" }, chain.DistinctRemovedAutomationIds);
+            Assert.Equal(1, chain.TotalDistinctBrokenLocatorsCount);
+            Assert.Equal(1, chain.TotalCumulativeBrokenLocatorsCount);
+            Assert.DoesNotContain("shellView", chain.DistinctRemovedAutomationIds);
+        }
+
+        [Fact]
+        public void MarkdownSummary_RendersLaunchDiagnostics_InReadinessTable()
+        {
+            var report = new OpenSourceAppSurveyReport
+            {
+                Chains =
+                {
+                    new AppChainSurveyRecord
+                    {
+                        AppName = "HandBrake",
+                        Toolkit = "WPF",
+                        Versions =
+                        {
+                            new AppVersionSurveyRecord
+                            {
+                                Version = "1.9.2",
+                                Launched = true,
+                                Settled = true,
+                                SettlePassCount = 2,
+                                WindowTitle = "HandBrake",
+                                WindowSelectionReason = "Selected window 'HandBrake'",
+                                LaunchDiagnostics =
+                                {
+                                    "DOTNET_ROLL_FORWARD=LatestMajor applied",
+                                    "🪟 Dismissed startup dialog 'Check for updates?' via 'No'",
+                                },
+                                Metrics = new ApplicationTreeMetrics { TotalNodes = 149 },
+                            },
+                        },
+                    },
+                },
+            };
+
+            var md = report.ToMarkdownSummary();
+
+            Assert.Contains("DOTNET_ROLL_FORWARD=LatestMajor applied", md);
+            Assert.Contains("Dismissed startup dialog 'Check for updates?' via 'No'", md);
+        }
     }
 }

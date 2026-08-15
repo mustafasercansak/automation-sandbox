@@ -24,6 +24,11 @@ namespace ScenarioRunner
         public string? RootClassName { get; set; }
         public string? RootControlType { get; set; }
         public string? WindowSelectionReason { get; set; }
+
+        // Launch-time observations that change how a capture should be read: runtime roll-forward,
+        // dismissed startup dialogs, missing frameworks. Rendered in the readiness table.
+        public List<string> LaunchDiagnostics { get; set; } = new();
+
         public string? Error { get; set; }
         public TimeSpan DiscoveryElapsed { get; set; }
         public ApplicationTreeMetrics? Metrics { get; set; }
@@ -53,7 +58,11 @@ namespace ScenarioRunner
         public List<AppHopSurveyRecord> Hops { get; set; } = new();
         public List<string> DistinctRemovedAutomationIds { get; set; } = new();
         public int TotalDistinctBrokenLocatorsCount => DistinctRemovedAutomationIds.Count;
-        public int TotalCumulativeBrokenLocatorsCount => Hops.Sum(h => h.RemovedAutomationIds.Count);
+
+        // Only viable hops count. A suspect or failed hop reports ids that are the difference between
+        // two different windows rather than between two releases, and must not inflate the dataset size.
+        public int TotalCumulativeBrokenLocatorsCount =>
+            Hops.Where(h => h.IsViableHop).Sum(h => h.RemovedAutomationIds.Count);
         public bool IsViableBenchmarkTarget { get; set; }
         public string BenchmarkRecommendation { get; set; } = "";
     }
@@ -154,6 +163,12 @@ namespace ScenarioRunner
             var distinctRemovedIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var hop in chain.Hops)
             {
+                // Ids from a non-viable hop describe a bad capture, not maintainer-driven locator drift.
+                if (!hop.IsViableHop)
+                {
+                    continue;
+                }
+
                 foreach (var id in hop.RemovedAutomationIds)
                 {
                     distinctRemovedIds.Add(id);
@@ -301,6 +316,10 @@ namespace ScenarioRunner
                     var settled = v.Settled ? $"✅ ({v.SettlePassCount}p)" : "❌ No";
                     var hyd = v.HydrationTimedOut ? "⚠️ Timed Out" : "✅ Ready";
                     var reason = v.WindowSelectionReason ?? "–";
+                    if (v.LaunchDiagnostics.Count > 0)
+                    {
+                        reason += " | " + string.Join(" | ", v.LaunchDiagnostics);
+                    }
 
                     sb.AppendLine($"| `{v.Version}` | {title} | {cls} | {nodes} | {settled} | {hyd} | {reason} |");
                 }

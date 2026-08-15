@@ -24,6 +24,11 @@ jobs:
             8.0.x
             10.0.x
 
+      # Older releases in a chain need runtimes that are out of support. The survey launches them with
+      # DOTNET_ROLL_FORWARD=LatestMajor, which only works if a WindowsDesktop runtime is actually present.
+      - name: Report installed .NET runtimes
+        run: dotnet --list-runtimes
+
       - name: Build Solution
         run: |
           dotnet restore AutomationSandbox.sln

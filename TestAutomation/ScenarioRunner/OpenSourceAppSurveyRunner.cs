@@ -292,6 +292,13 @@ namespace ScenarioRunner
                     UseShellExecute = false,
                 };
 
+                // Older releases in a chain target runtimes that are long out of support and absent from
+                // CI images (HandBrake 1.6.1/1.7.3 ask for .NET 6). Rolling forward to the newest installed
+                // major lets them start instead of showing a host error dialog. Recorded, not hidden: a
+                // capture made under a different runtime major is still a fact about the capture.
+                psi.Environment["DOTNET_ROLL_FORWARD"] = "LatestMajor";
+                record.LaunchDiagnostics.Add("DOTNET_ROLL_FORWARD=LatestMajor applied");
+
                 try
                 {
                     process = Process.Start(psi);
@@ -341,7 +348,9 @@ namespace ScenarioRunner
                 log($"[OpenSourceSurvey] Acquiring main window and polling visual tree hydration for {appName} {candidate.Version}...");
                 Window? chosenWindow = null;
                 var hydrationSw = Stopwatch.StartNew();
-                const int hydrationMaxWaitSeconds = 15;
+                var hydrationMaxWaitSeconds = 15.0;
+                var dismissedDialogTitles = new HashSet<string>(StringComparer.Ordinal);
+                const int maxDialogDismissals = 3;
                 var discoveryOptions = new DiscoveryOptions
                 {
                     MaxDepth = 25,
@@ -355,7 +364,7 @@ namespace ScenarioRunner
                 while (hydrationSw.Elapsed.TotalSeconds < hydrationMaxWaitSeconds)
                 {
                     var topLevelWindows = app.GetAllTopLevelWindows(automation);
-                    var viableWindows = new List<(Window Win, int NodeCount, string Title)>();
+                    var viableWindows = new List<(Window Win, int NodeCount, string Title, UiElementInfo? Root)>();
 
                     foreach (var win in topLevelWindows)
                     {
@@ -371,7 +380,7 @@ namespace ScenarioRunner
                                 Timeout = TimeSpan.FromSeconds(5),
                             });
 
-                            viableWindows.Add((win, probeResult.CapturedCount, win.Title));
+                            viableWindows.Add((win, probeResult.CapturedCount, win.Title, probeResult.Root));
                         }
                         catch { }
                     }
@@ -391,6 +400,48 @@ namespace ScenarioRunner
                         if (best.NodeCount > 15)
                         {
                             break;
+                        }
+
+                        // A small #32770 window is a modal startup dialog standing in front of the app,
+                        // not the app. Capturing it yields a 7-node tree whose diff against a real window
+                        // fabricates removed AutomationIds. Diagnose it, then get it out of the way.
+                        var dialogRoot = best.Root;
+                        if (dialogRoot != null && WindowReadinessHeuristics.IsBlockingDialog(dialogRoot.ClassName, best.NodeCount))
+                        {
+                            var dialogTexts = CollectDescendantValues(dialogRoot, e => e.Name);
+
+                            if (WindowReadinessHeuristics.TryDetectMissingRuntime(dialogTexts, out var missingRuntime))
+                            {
+                                record.Launched = false;
+                                record.Error = $"Missing runtime: application requires {missingRuntime}, which is not installed and could not be rolled forward.";
+                                record.LaunchDiagnostics.Add($"❌ Host error dialog '{best.Title}' reported missing {missingRuntime}");
+                                log($"[OpenSourceSurvey] ❌ {appName} {candidate.Version}: {record.Error}");
+                                return record;
+                            }
+
+                            var dialogKey = best.Title ?? "";
+                            if (!dismissedDialogTitles.Contains(dialogKey) && dismissedDialogTitles.Count < maxDialogDismissals)
+                            {
+                                var buttonNames = CollectDescendantValues(
+                                    dialogRoot,
+                                    e => string.Equals(e.ControlType, "Button", StringComparison.OrdinalIgnoreCase) ? e.Name : null);
+                                var dismissButton = WindowReadinessHeuristics.SelectDismissButtonName(buttonNames);
+
+                                if (dismissButton != null && TryInvokeButton(best.Win, dismissButton))
+                                {
+                                    dismissedDialogTitles.Add(dialogKey);
+                                    record.LaunchDiagnostics.Add($"🪟 Dismissed startup dialog '{dialogKey}' via '{dismissButton}'");
+                                    log($"[OpenSourceSurvey] 🪟 Dismissed startup dialog '{dialogKey}' for {appName} {candidate.Version} via '{dismissButton}' button.");
+
+                                    // The real main window has not been created yet; give it its own budget.
+                                    chosenWindow = null;
+                                    hydrationMaxWaitSeconds = hydrationSw.Elapsed.TotalSeconds + 15.0;
+                                    Thread.Sleep(1500);
+                                    continue;
+                                }
+
+                                record.LaunchDiagnostics.Add($"⚠️ Blocking dialog '{dialogKey}' has no recognised dismiss button");
+                            }
                         }
                     }
 
@@ -531,6 +582,61 @@ namespace ScenarioRunner
             }
 
             return record;
+        }
+
+        // Flattens a probed dialog tree into the values a heuristic needs (all names, or button names only).
+        private static List<string?> CollectDescendantValues(UiElementInfo root, Func<UiElementInfo, string?> selector)
+        {
+            var values = new List<string?>();
+            var stack = new Stack<UiElementInfo>();
+            stack.Push(root);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+                var value = selector(current);
+                if (!string.IsNullOrEmpty(value))
+                {
+                    values.Add(value);
+                }
+
+                foreach (var child in current.Children)
+                {
+                    stack.Push(child);
+                }
+            }
+
+            return values;
+        }
+
+        private static bool TryInvokeButton(Window window, string buttonName)
+        {
+            try
+            {
+                var button = window.FindFirstDescendant(cf =>
+                    cf.ByName(buttonName).And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button)));
+
+                if (button == null)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    button.AsButton().Invoke();
+                }
+                catch
+                {
+                    // Win32 buttons that do not expose InvokePattern still respond to a synthetic click.
+                    button.AsButton().Click();
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static UiElementInfo? LoadTree(string dir, string? fileName)
