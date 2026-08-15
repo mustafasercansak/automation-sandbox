@@ -52,6 +52,50 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void LlmProviderFactory_SkipsGroqAndOpenRouter_WhenTheirModelIsNotConfigured()
+        {
+            // A key alone is not enough for these two. Without an explicit model,
+            // OpenAiHealingProvider would fall back to OPENAI_MODEL - set here for a different
+            // vendor entirely - and then to "gpt-4o-mini", quietly asking Groq for an OpenAI
+            // model. Being absent from the report is the honest outcome; being present and
+            // wrong is how "grok-2-latest" failed silently every night.
+            var env = new Dictionary<string, string>
+            {
+                ["GROQ_API_KEY"] = "groq-test-key",
+                ["OPENROUTER_API_KEY"] = "openrouter-test-key",
+                ["OPENAI_MODEL"] = "gpt-4o-mini",
+            };
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+
+            Assert.DoesNotContain(providers, p => p.Name == "Groq");
+            Assert.DoesNotContain(providers, p => p.Name == "OpenRouter");
+        }
+
+        [Fact]
+        public void LlmProviderFactory_ConfiguresGroqAndOpenRouter_WhenModelsAreSet()
+        {
+            var env = new Dictionary<string, string>
+            {
+                ["GROQ_API_KEY"] = "groq-test-key",
+                ["GROQ_MODEL"] = "llama-3.3-70b-versatile",
+                ["OPENROUTER_API_KEY"] = "openrouter-test-key",
+                ["OPENROUTER_MODEL"] = "qwen/qwen3-32b:free",
+            };
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+
+            Assert.Equal(2, providers.Count);
+
+            // Groq and Grok are different companies whose names differ by one letter. Their votes
+            // must stay distinguishable, which is what the Name uniqueness contract is for.
+            var groq = Assert.Single(providers, p => p.Name == "Groq");
+            var openRouter = Assert.Single(providers, p => p.Name == "OpenRouter");
+            Assert.Equal("https://api.groq.com/openai/v1/chat/completions", ((OpenAiHealingProvider)groq).ApiUrl);
+            Assert.Equal("https://openrouter.ai/api/v1/chat/completions", ((OpenAiHealingProvider)openRouter).ApiUrl);
+        }
+
+        [Fact]
         public void LlmProviderFactory_ThrowsOnDuplicateProviderNames()
         {
             var env = new Dictionary<string, string>

@@ -81,7 +81,46 @@ namespace LlmHealing
                     name: "Kimi"));
             }
 
-            // 6. Ollama
+            // 6. Groq - deliberately listed next to Grok because the names collide by one letter
+            // and they are unrelated companies. Separate keys, separate endpoints, separate
+            // provider names; ILlmHealingProvider.Name uniqueness is what keeps their votes
+            // distinguishable when both are configured.
+            // Both of these require their model to be configured explicitly, and are skipped
+            // otherwise. There is no safe default to fall back on: a guessed id is worse than
+            // none - "grok-2-latest" was a guess and was never once valid - and leaving it null
+            // is worse still, because OpenAiHealingProvider would then fall back to OPENAI_MODEL
+            // (set for a different vendor in the same run) and finally to "gpt-4o-mini", sending
+            // an OpenAI model name to Groq. Skipping is the loud failure: the provider is simply
+            // absent from ConfiguredProviders in the report, rather than present and wrong.
+            var groqKey = Env("GROQ_API_KEY");
+            var groqModel = Env("GROQ_MODEL");
+            if (groqKey != null && groqModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: groqKey,
+                    model: groqModel,
+                    endpoint: Env("GROQ_ENDPOINT") ?? "https://api.groq.com/openai/v1",
+                    name: "Groq"));
+            }
+
+            // 7. OpenRouter - a router rather than a model vendor, so the model id decides which
+            // model actually answers. Choose it from a different family than the other configured
+            // providers: two providers proxying the same model are one voter with two names, and
+            // consensus between them is meaningless (#19).
+            var openRouterKey = Env("OPENROUTER_API_KEY");
+            var openRouterModel = Env("OPENROUTER_MODEL");
+            if (openRouterKey != null && openRouterModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: openRouterKey,
+                    model: openRouterModel,
+                    endpoint: Env("OPENROUTER_ENDPOINT") ?? "https://openrouter.ai/api/v1",
+                    name: "OpenRouter"));
+            }
+
+            // 8. Ollama
             var ollamaEnabled = string.Equals(Env("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase)
                 || Env("OLLAMA_HOST") != null
                 || Env("OLLAMA_MODEL") != null;
