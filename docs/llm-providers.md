@@ -19,7 +19,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Very Low | Cloud |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
-| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free ($0)** | **100% Local (Offline)** |
+| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free (\$0)** | **100% Local (Offline)** |
 
 ### 🏭 Dynamic Environment Provider Factory (`LlmProviderFactory`)
 
@@ -139,7 +139,7 @@ var provider = new OpenAiHealingProvider(
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
-| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz ($0)** | **%100 Yerel (Çevrimdışı)** |
+| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz (\$0)** | **%100 Yerel (Çevrimdışı)** |
 
 ### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
 

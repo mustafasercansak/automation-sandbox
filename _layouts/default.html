@@ -70,6 +70,14 @@
       background: #f7f9fb;
     }
 
+    blockquote {
+      margin: 16px 0;
+      padding: 8px 16px;
+      color: #5f6b7a;
+      border-left: 4px solid #d9e1ea;
+      background: #f7f9fb;
+    }
+
     .mermaid {
       margin: 20px 0;
       padding: 16px;
@@ -79,6 +87,21 @@
       overflow-x: auto;
     }
   </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'annotation', 'annotation-xml'],
+        ignoreHtmlClass: 'tex2jax_ignore|language-.*|mermaid'
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
   <main>
