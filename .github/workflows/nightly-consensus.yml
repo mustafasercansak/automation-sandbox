@@ -37,7 +37,7 @@ jobs:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
 
       - name: Upload Consensus Evaluation Report
         if: always()
