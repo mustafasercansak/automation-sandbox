@@ -24,7 +24,7 @@ namespace SelfHealing
             if (scoredCandidates.Count == 0)
             {
                 log($"[SelfHealing] No structurally similar candidate was found for '{expected.AutomationId}' ({expected.ControlType}).");
-                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence, EvidenceCoverage = 0.0, EvidenceThreshold = w.MinimumEvidenceWeight, Candidates = allScored };
+                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence, EvidenceCoverage = 0.0, EvidenceThreshold = w.MinimumEvidenceWeight, Candidates = allScored, ResolutionStatus = HealResolutionStatus.NoCandidates };
             }
 
             var best = scoredCandidates[0];
@@ -49,6 +49,13 @@ namespace SelfHealing
                 Score = best.TotalScore,
                 CandidateCount = scoredCandidates.Count,
                 Source = HealSource.Heuristic,
+                ResolutionStatus = isConfident
+                    ? HealResolutionStatus.Confident
+                    : best.EvidenceCoverage < w.MinimumEvidenceWeight
+                        ? HealResolutionStatus.LowEvidence
+                        : !marginSufficient
+                            ? HealResolutionStatus.Ambiguous
+                            : HealResolutionStatus.LowConfidence,
                 ConfidenceThreshold = w.MinimumConfidence,
                 EvidenceCoverage = best.EvidenceCoverage,
                 EvidenceThreshold = w.MinimumEvidenceWeight,
@@ -99,16 +106,7 @@ namespace SelfHealing
                 shortlist[i].CandidateId = "c" + i;
             }
 
-            IReadOnlyList<LlmHealingResult> llmResults;
-            try
-            {
-                llmResults = await LlmHealingEvaluator.EvaluateAsync(available, expected, shortlist, platform, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                log($"[SelfHealing] LLM fallback threw ({ex.Message}) - returning heuristic result.");
-                return heuristicResult;
-            }
+            var llmResults = await LlmHealingEvaluator.EvaluateAsync(available, expected, shortlist, platform, cancellationToken).ConfigureAwait(false);
 
             // Telemetry: record attempt counts across all evaluated providers (#11, #47).
             // Populated on heuristicResult too so failed consensus / single-provider runs still carry telemetry.
@@ -124,6 +122,19 @@ namespace SelfHealing
             }
 
             heuristicResult.ProviderAttempts = providerAttempts;
+
+            var providerErrors = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (var r in llmResults)
+            {
+                if (!r.Success && !string.IsNullOrEmpty(r.ProviderName))
+                {
+                    providerErrors[r.ProviderName] = string.IsNullOrWhiteSpace(r.ErrorMessage)
+                        ? "Provider returned an unsuccessful result."
+                        : r.ErrorMessage!;
+                }
+            }
+
+            heuristicResult.ProviderErrors = providerErrors;
 
             // Consensus acceptance (#10, decided in #19). Self-reported confidences are not
             // calibrated across model architectures - Claude's 0.72 and Gemini's 0.95 do not
@@ -154,6 +165,9 @@ namespace SelfHealing
             // with one check.
             if (validVotes.Count < w.MinimumConsensusVotes)
             {
+                heuristicResult.ResolutionStatus = validVotes.Count == 0 && providerErrors.Count == llmResults.Count
+                    ? HealResolutionStatus.ProviderError
+                    : HealResolutionStatus.NoConsensus;
                 log($"[SelfHealing] {validVotes.Count} usable LLM vote(s), consensus requires {w.MinimumConsensusVotes} - returning heuristic result.");
                 return heuristicResult;
             }
@@ -172,6 +186,7 @@ namespace SelfHealing
             // be settled by whoever sounded most sure.
             if (topGroup.Votes.Count < w.MinimumConsensusVotes)
             {
+                heuristicResult.ResolutionStatus = HealResolutionStatus.NoConsensus;
                 log($"[SelfHealing] LLM providers did not converge (votes: {tally}); no candidate reached {w.MinimumConsensusVotes} - returning heuristic result.");
                 return heuristicResult;
             }
@@ -180,6 +195,7 @@ namespace SelfHealing
             // quietly reinstate the cross-provider confidence comparison #19 removed.
             if (voteGroups.Count > 1 && voteGroups[1].Votes.Count == topGroup.Votes.Count)
             {
+                heuristicResult.ResolutionStatus = HealResolutionStatus.NoConsensus;
                 log($"[SelfHealing] LLM vote tied (votes: {tally}) - a tie is disagreement, not consensus - returning heuristic result.");
                 return heuristicResult;
             }
@@ -223,6 +239,9 @@ namespace SelfHealing
                 ScoreBreakdown = matchedCandidate.Components,
                 CandidateCount = heuristicResult.CandidateCount,
                 Source = HealSource.Llm,
+                ResolutionStatus = matchedCandidate.EvidenceCoverage >= heuristicResult.EvidenceThreshold
+                    ? HealResolutionStatus.Confident
+                    : HealResolutionStatus.LowEvidence,
                 // Recorded for report continuity only - since #10 the acceptance rule is
                 // AgreedProviders.Count, not this threshold (see SimilarityWeights).
                 ConfidenceThreshold = w.MinimumLlmConfidence,
@@ -238,6 +257,7 @@ namespace SelfHealing
                 LlmReasoning = best.Reasoning,
                 AgreedProviders = agreedProviders,
                 ProviderAttempts = providerAttempts,
+                ProviderErrors = providerErrors,
                 HeuristicMatched = heuristicResult.Matched,
                 HeuristicScore = heuristicResult.Score,
                 DivergedFromHeuristic = isDivergent,

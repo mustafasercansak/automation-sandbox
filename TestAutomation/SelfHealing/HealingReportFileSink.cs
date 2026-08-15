@@ -75,10 +75,9 @@ namespace SelfHealing
             var document = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(FilePath), Options)
                 ?? throw new JsonException("Failed to deserialize healing report JSON.");
 
-            // v2 only added fields (EvidenceCoverage, Candidates), so a v1 report
-            // deserializes cleanly with the new fields at their defaults and is upgraded
-            // in place on the next save. Only a NEWER schema is rejected - its semantics
-            // are unknown to this build.
+            // Every schema revision through v7 only added nullable/defaulted fields, so an
+            // older report deserializes cleanly and upgrades in place on the next save. Only
+            // a NEWER schema is rejected because its semantics are unknown to this build.
             if (document.SchemaVersion > HealingReportDocument.CurrentSchemaVersion)
             {
                 throw new NotSupportedException(

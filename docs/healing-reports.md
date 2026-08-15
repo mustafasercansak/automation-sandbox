@@ -1,6 +1,6 @@
 # 📊 Self-Healing Reports & Dashboard / İyileştirme Raporları ve Görsel Panel
 
-This guide explains how **Automation Sandbox** generates JSON and HTML visual report artifacts whenever locator healing events occur.
+This guide explains how **Automation Sandbox** generates JSON and HTML visual report artifacts whenever locator resolution is attempted.
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
@@ -13,7 +13,7 @@ This guide explains how **Automation Sandbox** generates JSON and HTML visual re
 ### 💡 Overview
 When running automated tests in CI/CD pipelines (e.g. GitHub Actions, Azure DevOps, Jenkins), knowing **which locators healed**, **what changed**, and **whether AI was used** is essential for test maintenance.
 
-`SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically!
+`SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically. Schema v7 records accepted heals and declined or failed attempts, so the report no longer implies a 100% success rate by construction.
 
 For `ExecuteWithHealingAsync`, an accepted event is written only after the action retry with the proposed element succeeds. If that retry fails, the proposal is not reported as accepted and the locator repository remains unchanged.
 
@@ -39,15 +39,21 @@ By default, an interactive **HTML Dashboard** (`healing-report.html`) is written
 
 Each event in the report contains:
 - **`LocatorKey`**: The test locator key (e.g. `RegistrationPage.SubmitButton`).
+- **`Outcome`** (schema v7+): The resolution result: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error`, or `unspecified`. `unspecified` exposes a missing decision classification without miscounting it as measured low confidence. `null` on upgraded legacy entries means the older build did not record an outcome; pre-v7 reports contained accepted heals only.
+- **`Platform`** (schema v7+): The caller-provided platform identifier, such as `web-playwright` or `windows-uia`.
 - **`ReviewStatus`**:
   - `accepted`: High-confidence heuristic match ($\ge 50\%$).
   - `accepted-with-llm`: Matches resolved via Gemini, Claude, OpenAI, or Ollama.
   - `manual-review`: Borderline matches requiring QA engineer review.
-- **`PreviousSnapshot` & `AcceptedSnapshot`**: Full before/after element comparison.
+- **`PreviousSnapshot`, `AcceptedSnapshot` & `ProposedSnapshot`**: The previous locator, an accepted replacement, or the unaccepted candidate involved in a decline/failed retry.
+- **`ProviderErrors`** (schema v7+): Provider names and failure details. It remains available even when other providers reach consensus successfully.
+- **`ProviderAttempts`** (schema v6+): Attempt count for every evaluated provider.
 - **`ScoreBreakdown`**: Component breakdown (`ControlType`, `Parent`, `Sibling`, `Name`, `Position`). A component is `null` when that signal had no evidence on either side (missing == missing is never a perfect match).
 - **`EvidenceCoverage`**: Fraction of the total signal weight backed by non-null evidence (schema v2+). `null` on entries upgraded from v1 reports means "unknown", not "no evidence".
 - **`RunnerUpScore`** (schema v3+): Second-best candidate score at decision time (`null` when there was no runner-up) — the margin gate's input, persisted for offline audit.
 - **`Candidates`** (schema v2+): Every scored candidate — not just the winner — with `TotalScore`, `Components`, and `EvidenceCoverage`, so thresholds can be re-tuned offline against recorded reports.
+
+`HealingReportDocument.Events` contains every attempt. Consumers that need the pre-v7 accepted-only view can use `HealingReportDocument.AcceptedEvents`; it includes `accepted`, `accepted-unverified`, and all legacy entries without requiring hand-written filtering.
 
 > [!WARNING]
 > **Report size:** the candidate list is intentionally **unpruned**. On very large UI trees a single event can add ~1 MB of JSON (≈1.3 MB measured on a 3,001-node tree), and each `Record()` call rewrites the whole file — cost grows quadratically with event count. Enable file reports (`SELF_HEALING_REPORT_PATH`) on CI/diagnostic runs, not on every local run.
@@ -59,7 +65,7 @@ Each event in the report contains:
 ### 💡 Genel Bakış
 CI/CD süreçlerinde (GitHub Actions, Azure DevOps vb.) testleriniz çalışırken **hangi elemanların iyileştirildiği**, **neye dönüştüğü** ve **yapay zekanın devreye girip girmediği** raporlanmalıdır.
 
-`SelfHealingEngine` motoru kabul edilen tüm iyileştirme olaylarını anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder!
+`SelfHealingEngine` motoru çözüm denemelerini anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder. Şema v7 hem kabul edilen iyileştirmeleri hem de reddedilen veya başarısız denemeleri kaydeder; böylece rapor yapısı gereği %100 başarı izlenimi vermez.
 
 `ExecuteWithHealingAsync` kullanıldığında kabul edilmiş bir olay, yalnızca önerilen elemanla yapılan eylem tekrarı başarılı olduktan sonra yazılır. Bu tekrar başarısız olursa öneri kabul edilmiş olarak raporlanmaz ve locator repository değişmeden kalır.
 
@@ -85,15 +91,21 @@ JSON dosyası oluştuğunda yanında **etkileşimli HTML Rapor Paneli** (`healin
 
 Rapordaki her olay şu bilgileri içerir:
 - **`LocatorKey`**: Test elemanının anahtarı (örn: `KayitFormu.GonderButonu`).
+- **`Outcome`** (şema v7+): Çözüm sonucu: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error` veya `unspecified`. `unspecified`, eksik karar sınıflandırmasını ölçülmüş `low-confidence` verisi gibi saymadan görünür kılar. Eski raporlardan yükseltilen girdilerde `null`, önceki build'in sonucu kaydetmediği anlamına gelir; v7 öncesi raporlar yalnızca kabul edilen iyileştirmeleri içeriyordu.
+- **`Platform`** (şema v7+): Çağıranın verdiği `web-playwright` veya `windows-uia` gibi platform kimliği.
 - **`ReviewStatus` (İnceleme Durumu):**
   - `accepted`: Yüksek güvenli sezgisel eşleşme ($\ge \%50$).
   - `accepted-with-llm`: Yapay zeka (Gemini, Claude, OpenAI, Ollama) ile çözülen eşleşme.
   - `manual-review`: Sınırda kalan ve QA mühendisi onayı gerektiren eşleşme.
-- **`PreviousSnapshot` & `AcceptedSnapshot`**: Elemanın iyileştirme öncesi ve sonrası tüm özellikleri.
+- **`PreviousSnapshot`, `AcceptedSnapshot` & `ProposedSnapshot`**: Önceki locator, kabul edilen yeni locator veya reddedilen/başarısız retry'daki önerilen aday.
+- **`ProviderErrors`** (şema v7+): Sağlayıcı adları ve hata ayrıntıları. Diğer sağlayıcılar başarıyla uzlaşsa bile bu bilgi korunur.
+- **`ProviderAttempts`** (şema v6+): Değerlendirilen her sağlayıcının deneme sayısı.
 - **`ScoreBreakdown`**: Bileşen dökümü (`ControlType`, `Parent`, `Sibling`, `Name`, `Position`). Bir sinyal iki tarafta da yoksa ilgili bileşen `null` olur (eksik == eksik asla tam eşleşme sayılmaz).
 - **`EvidenceCoverage`**: Boş olmayan kanıtla desteklenen toplam sinyal ağırlığının oranı (şema v2+). v1'den yükseltilen girdilerde `null` değeri "kanıt yok" değil "bilinmiyor" demektir.
 - **`RunnerUpScore`** (şema v3+): Karar anındaki ikinci en iyi aday skoru (ikinci aday yoksa `null`) — margin kapısının girdisi, çevrimdışı denetim için saklanır.
 - **`Candidates`** (şema v2+): Yalnızca kazanan değil, skorlanan **tüm** adaylar — `TotalScore`, `Components` ve `EvidenceCoverage` ile birlikte; eşiklerin çevrimdışı yeniden ayarlanabilmesi için.
+
+`HealingReportDocument.Events` tüm denemeleri içerir. v7 öncesindeki yalnızca-kabul-edilen görünümüne ihtiyaç duyan tüketiciler elle filtre yazmadan `HealingReportDocument.AcceptedEvents` kullanabilir; bu görünüm `accepted`, `accepted-unverified` ve tüm eski girdileri kapsar.
 
 > [!WARNING]
 > **Rapor boyutu:** aday listesi bilinçli olarak **budanmamıştır**. Çok büyük UI ağaçlarında tek bir olay ~1 MB JSON ekleyebilir (3.001 düğümlü ağaçta ≈1,3 MB ölçüldü) ve her `Record()` çağrısı dosyanın tamamını yeniden yazar — maliyet olay sayısıyla karesel büyür. Dosya raporlarını (`SELF_HEALING_REPORT_PATH`) her yerel çalıştırmada değil, CI/teşhis çalıştırmalarında açın.

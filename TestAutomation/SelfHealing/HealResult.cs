@@ -7,12 +7,25 @@ namespace SelfHealing
         Llm,
     }
 
+    public enum HealResolutionStatus
+    {
+        Unspecified,
+        Confident,
+        NoCandidates,
+        LowConfidence,
+        LowEvidence,
+        Ambiguous,
+        NoConsensus,
+        ProviderError,
+    }
+
     public sealed class HealResult
     {
         public UiElementInfo? Matched { get; set; }
         public double Score { get; set; }
         public int CandidateCount { get; set; }
         public HealSource Source { get; set; } = HealSource.Heuristic;
+        public HealResolutionStatus ResolutionStatus { get; set; }
         public double ConfidenceThreshold { get; set; } = SimilarityWeights.Default.MinimumConfidence;
 
         // Fraction of the total signal weight backed by non-null evidence (see
@@ -52,6 +65,10 @@ namespace SelfHealing
 
         // Provider attempt telemetry (#11): records how many attempts each evaluated provider made.
         public IReadOnlyDictionary<string, int>? ProviderAttempts { get; set; }
+
+        // Provider failures observed during fallback. Null means this build did not record
+        // provider errors; an empty dictionary means providers were evaluated and none failed.
+        public IReadOnlyDictionary<string, string>? ProviderErrors { get; set; }
 
         // Heuristic winner metadata and divergence tracking (issue #6):
         // When Source == HealSource.Llm, HeuristicMatched and HeuristicScore preserve the

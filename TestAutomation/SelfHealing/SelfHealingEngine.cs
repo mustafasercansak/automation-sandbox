@@ -59,8 +59,17 @@ namespace SelfHealing
 
             if (healResult.IsConfident && healResult.Matched != null)
             {
-                CommitAcceptedHeal(locatorKey, expected, healResult, platform);
+                PersistAcceptedHeal(locatorKey, expected, healResult, platform);
             }
+
+            RecordResolutionAttempt(
+                locatorKey,
+                expected,
+                healResult,
+                healResult.IsConfident && healResult.Matched != null
+                    ? HealingReportEntry.AcceptedUnverifiedOutcome
+                    : HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
+                platform);
 
             return healResult;
         }
@@ -82,7 +91,7 @@ namespace SelfHealing
                 cancellationToken);
         }
 
-        private void CommitAcceptedHeal(
+        private void PersistAcceptedHeal(
             string locatorKey,
             UiElementInfo expected,
             HealResult healResult,
@@ -104,8 +113,16 @@ namespace SelfHealing
                 var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
                 _repository.Upsert(locatorKey, matchedSnapshot, entry, platform: platform);
             }
+        }
 
-            _reportSink?.Record(HealingReportEntry.FromHealResult(locatorKey, expected, matchedSnapshot, healResult));
+        private void RecordResolutionAttempt(
+            string locatorKey,
+            UiElementInfo expected,
+            HealResult healResult,
+            string outcome,
+            string? platform)
+        {
+            _reportSink?.Record(HealingReportEntry.FromResolutionAttempt(locatorKey, expected, healResult, outcome, platform));
         }
 
         // Exact type names that mark an exception as a locator/element-resolution failure.
@@ -204,6 +221,12 @@ namespace SelfHealing
 
                 if (!healResult.IsConfident || healResult.Matched == null)
                 {
+                    RecordResolutionAttempt(
+                        locatorKey,
+                        target,
+                        healResult,
+                        HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
+                        platform);
                     throw new InvalidOperationException(
                         $"Self-healing failed to find a confident match for locator '{locatorKey}'. Best score: {healResult.Score:F2}", ex);
                 }
@@ -217,6 +240,12 @@ namespace SelfHealing
                 catch (Exception retryException)
                 {
                     log?.Invoke($"[SelfHealingEngine] Retried action for locator '{locatorKey}' threw {retryException.GetType().Name} ('{retryException.Message}'). The proposed heal was not persisted.");
+                    RecordResolutionAttempt(
+                        locatorKey,
+                        target,
+                        healResult,
+                        HealingReportEntry.RetryFailedOutcome,
+                        platform);
                     var failure = new InvalidOperationException(
                         $"Self-healing matched locator '{locatorKey}', but the retried action failed with {retryException.GetType().Name}: {retryException.Message}",
                         ex);
@@ -227,7 +256,13 @@ namespace SelfHealing
                 // The action is the proof that the proposed element works. Persisting before this
                 // point would turn a failed retry into the repository's new baseline and report an
                 // unproven match as accepted on every later run.
-                CommitAcceptedHeal(locatorKey, target, healResult, platform);
+                PersistAcceptedHeal(locatorKey, target, healResult, platform);
+                RecordResolutionAttempt(
+                    locatorKey,
+                    target,
+                    healResult,
+                    HealingReportEntry.AcceptedOutcome,
+                    platform);
                 return result;
             }
         }

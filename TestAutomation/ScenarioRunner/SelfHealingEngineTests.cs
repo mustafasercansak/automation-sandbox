@@ -153,6 +153,8 @@ namespace ScenarioRunner
             Assert.NotNull(report);
             Assert.Single(report!.Events);
             Assert.Equal("submit_btn", report.Events[0].LocatorKey);
+            Assert.Equal(HealingReportEntry.AcceptedOutcome, report.Events[0].Outcome);
+            Assert.Single(report.AcceptedEvents);
         }
 
         [Fact]
@@ -214,7 +216,14 @@ namespace ScenarioRunner
             Assert.NotNull(record);
             Assert.Equal("btnSubmit_Old", record!.Snapshot.AutomationId);
             Assert.Empty(record.HealingHistory);
-            Assert.False(File.Exists(_tempReportPath));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal(HealingReportEntry.RetryFailedOutcome, entry.Outcome);
+            Assert.Null(entry.AcceptedSnapshot);
+            Assert.Equal("btnSubmit_Renamed", entry.ProposedSnapshot!.AutomationId);
+            Assert.Empty(report.AcceptedEvents);
         }
 
         [Fact]
@@ -518,6 +527,7 @@ namespace ScenarioRunner
             Assert.Equal("CustomerForm.Email", entry.LocatorKey);
             Assert.Equal("heuristic", entry.Source);
             Assert.Equal("accepted", entry.ReviewStatus);
+            Assert.Equal(HealingReportEntry.AcceptedUnverifiedOutcome, entry.Outcome);
             Assert.Equal("legacy_email", entry.PreviousSnapshot!.AutomationId);
             Assert.Equal("email", entry.AcceptedSnapshot!.AutomationId);
             Assert.Equal("Enter the customer email address", entry.AcceptedSnapshot.TestIntent);
@@ -531,6 +541,94 @@ namespace ScenarioRunner
             Assert.Contains("legacy_email", html);
             Assert.Contains("email", html);
             Assert.Contains("accepted", html);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_ReportsAmbiguousWithoutUpdatingRepository()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+            BuildAmbiguousResolutionScenario(out var expected, out var currentTree);
+
+            var result = await engine.ResolveAndRecordAsync(
+                "CustomerForm.Email",
+                expected,
+                currentTree,
+                platform: "web-playwright");
+
+            Assert.False(result.IsConfident);
+            Assert.Equal(HealResolutionStatus.Ambiguous, result.ResolutionStatus);
+            Assert.Null(repository.Find("CustomerForm.Email"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal(HealingReportEntry.AmbiguousOutcome, entry.Outcome);
+            Assert.Equal("web-playwright", entry.Platform);
+            Assert.Null(entry.AcceptedSnapshot);
+            Assert.NotNull(entry.ProposedSnapshot);
+            Assert.NotNull(entry.ScoreBreakdown);
+            Assert.NotEmpty(entry.Candidates!);
+            Assert.Empty(report.AcceptedEvents);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_ReportsNoConsensusExactlyOnce()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            BuildAmbiguousResolutionScenario(out var expected, out var currentTree);
+            var providers = new ILlmHealingProvider[]
+            {
+                SuccessfulProvider("AlphaLlm", "c0"),
+                SuccessfulProvider("BetaLlm", "c1"),
+                SuccessfulProvider("GammaLlm", "c2"),
+            };
+            var engine = new SelfHealingEngine(repository, llmProviders: providers, reportSink: new HealingReportFileSink(_tempReportPath));
+
+            var result = await engine.ResolveAndRecordAsync("CustomerForm.Email", expected, currentTree);
+
+            Assert.False(result.IsConfident);
+            Assert.Equal(HealResolutionStatus.NoConsensus, result.ResolutionStatus);
+            Assert.Null(repository.Find("CustomerForm.Email"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal(HealingReportEntry.NoConsensusOutcome, entry.Outcome);
+            Assert.Equal(3, entry.ProviderAttempts!.Count);
+            Assert.Empty(entry.ProviderErrors!);
+            Assert.NotEmpty(entry.Candidates!);
+            Assert.Empty(report.AcceptedEvents);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_ReportsProviderErrorWithProviderNames()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            BuildAmbiguousResolutionScenario(out var expected, out var currentTree);
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeEngineLlmProvider("AlphaLlm", isAvailable: true, resolve: () => throw new InvalidOperationException("quota exhausted")),
+                new FakeEngineLlmProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { Success = false, ErrorMessage = "provider timed out", AttemptCount = 2 }),
+            };
+            var engine = new SelfHealingEngine(repository, llmProviders: providers, reportSink: new HealingReportFileSink(_tempReportPath));
+
+            var result = await engine.ResolveAndRecordAsync("CustomerForm.Email", expected, currentTree);
+
+            Assert.False(result.IsConfident);
+            Assert.Equal(HealResolutionStatus.ProviderError, result.ResolutionStatus);
+            Assert.Null(repository.Find("CustomerForm.Email"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal(HealingReportEntry.ProviderErrorOutcome, entry.Outcome);
+            Assert.Contains("quota exhausted", entry.ProviderErrors!["AlphaLlm"]);
+            Assert.Contains("provider timed out", entry.ProviderErrors["BetaLlm"]);
+            Assert.Equal(2, entry.ProviderAttempts!["BetaLlm"]);
+            Assert.NotEmpty(entry.Candidates!);
+            Assert.Empty(report.AcceptedEvents);
         }
 
         [Fact]
@@ -619,10 +717,30 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HealingReportDocument_AcceptedEvents_IncludesLegacyAndAcceptedOutcomesOnly()
+        {
+            var report = new HealingReportDocument();
+            report.Events.Add(new HealingReportEntry { LocatorKey = "legacy", Outcome = null });
+            report.Events.Add(new HealingReportEntry { LocatorKey = "accepted", Outcome = HealingReportEntry.AcceptedOutcome });
+            report.Events.Add(new HealingReportEntry { LocatorKey = "unverified", Outcome = HealingReportEntry.AcceptedUnverifiedOutcome });
+            report.Events.Add(new HealingReportEntry { LocatorKey = "declined", Outcome = HealingReportEntry.AmbiguousOutcome });
+
+            Assert.Equal(new[] { "legacy", "accepted", "unverified" }, report.AcceptedEvents.Select(e => e.LocatorKey));
+        }
+
+        [Fact]
+        public void HealingReportEntry_OutcomeFromResolutionStatus_DoesNotMisclassifyUnspecifiedAsLowConfidence()
+        {
+            Assert.Equal(
+                HealingReportEntry.UnspecifiedOutcome,
+                HealingReportEntry.OutcomeFromResolutionStatus(HealResolutionStatus.Unspecified));
+        }
+
+        [Fact]
         public void HealingReportFileSink_UpgradesV4Report_LeavingAgreedProvidersNull()
         {
-            // v5 (#10) added AgreedProviders and v6 (#11) added ProviderAttempts. An older v4
-            // file upgrades in place leaving newly added fields null.
+            // v5 (#10) added AgreedProviders, v6 (#11) added ProviderAttempts and v7 (#82)
+            // added outcome telemetry. An older v4 file upgrades with new fields left null.
             File.WriteAllText(_tempReportPath, @"{
   ""SchemaVersion"": 4,
   ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
@@ -649,12 +767,16 @@ namespace ScenarioRunner
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
             var root = doc.RootElement;
-            Assert.Equal(6, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(7, HealingReportDocument.CurrentSchemaVersion);
             Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
 
             var upgraded = root.GetProperty("Events")[0];
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("AgreedProviders").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Outcome").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Platform").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProposedSnapshot").ValueKind);
 
             var recorded = root.GetProperty("Events")[1];
             var agreed = recorded.GetProperty("AgreedProviders").EnumerateArray().Select(e => e.GetString()).ToArray();
@@ -667,7 +789,8 @@ namespace ScenarioRunner
         [Fact]
         public void HealingReportFileSink_UpgradesV5Report_LeavingProviderAttemptsNull()
         {
-            // v6 (#11) adds ProviderAttempts, so a v5 file upgrades in place leaving ProviderAttempts null.
+            // v6 (#11) adds ProviderAttempts and v7 (#82) adds outcome telemetry, so a v5
+            // file upgrades in place leaving fields that build never recorded null.
             File.WriteAllText(_tempReportPath, @"{
   ""SchemaVersion"": 5,
   ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
@@ -694,11 +817,13 @@ namespace ScenarioRunner
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
             var root = doc.RootElement;
-            Assert.Equal(6, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(7, HealingReportDocument.CurrentSchemaVersion);
 
             var upgraded = root.GetProperty("Events")[0];
             Assert.Equal(JsonValueKind.Array, upgraded.GetProperty("AgreedProviders").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Outcome").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
 
             var recorded = root.GetProperty("Events")[1];
             var attempts = recorded.GetProperty("ProviderAttempts");
@@ -964,6 +1089,53 @@ namespace ScenarioRunner
                 LastPlatform = platform;
                 return Task.FromResult(_resolve());
             }
+        }
+
+        private static FakeEngineLlmProvider SuccessfulProvider(string name, string candidateId)
+        {
+            return new FakeEngineLlmProvider(
+                name,
+                isAvailable: true,
+                resolve: () => new LlmHealingResult
+                {
+                    ProviderName = name,
+                    Success = true,
+                    MatchedCandidateId = candidateId,
+                    Confidence = 0.9,
+                    AttemptCount = 1,
+                });
+        }
+
+        private static void BuildAmbiguousResolutionScenario(out UiElementInfo expected, out UiElementInfo currentTree)
+        {
+            expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "legacy_email",
+                Name = "Email",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+            };
+            currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "email_primary",
+                        Name = "Email",
+                        BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+                    },
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "email_secondary",
+                        Name = "Email",
+                        BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+                    },
+                }
+            };
         }
     }
 }
