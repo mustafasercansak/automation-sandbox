@@ -71,6 +71,22 @@ All tests live in `TestAutomation/ScenarioRunner/` (xUnit; multi-targeted for `n
 
 When changing scoring, discovery, or resolver behavior, add or update tests here — the project convention is that every documented behavior in the README has a corresponding test.
 
+**Tests must assert behavior, not implementation.** This is what makes refactoring possible: #48 rewrote all four providers onto a shared base with "every existing test passes unchanged" as its acceptance criterion, and that criterion only worked because the tests asserted what the resolver *does*. Tests that pin internals would have had to be rewritten alongside the code, and the safety net would have evaporated exactly when it was needed.
+
+**Match the verification to the failure mode; a unit test is not always it.** Of roughly ten real defects found across #10, #11, #47, #48 and the `0.2.0-beta.2` release, exactly one was caught by a test — the suite was green for all the others:
+
+| Failure mode | What catches it |
+| :--- | :--- |
+| Behavior change | A test asserting that behavior |
+| Platform-specific language or API use | Compiling for `net48` — see the cross-platform notes above |
+| Resource leaks (an undisposed `HttpResponseMessage`) | Code review; the lines are covered and the tests pass |
+| A field silently never populated | An end-to-end run, then a test locking it in |
+| Documentation drift or lost sections | Diffing the removed headings |
+| Package metadata | Opening the dry-run artifact before publishing |
+| Suite slowdown | Measuring the duration |
+
+Coverage is blind to most of this by construction, because it counts execution rather than verification (see #54). The `ProviderAttempts` bug lived on fully covered lines: the paths ran, nothing asserted the result.
+
 ## Code style guidelines
 
 - Follow the existing file's conventions: file-scoped vs. block namespaces (existing code uses block-scoped `namespace X { }` with 4-space indentation), `Nullable`/`ImplicitUsings` settings differ per project — don't "fix" them globally.
@@ -90,6 +106,33 @@ When changing scoring, discovery, or resolver behavior, add or update tests here
   So: either build on Windows, or check your diff against the list above and then treat the Windows CI leg as the actual gate — do not merge on a green Linux leg alone. This class of failure has now broken CI four times (#23, #24, and twice on #47).
 - Scoring must remain deterministic and allocation-conscious (O(N) flattening, no per-call provider requirements). `SimilarityWeights.Default` values are tuned against exactly the two demo scenarios — treat changes to defaults as behavior changes needing test updates.
 - Public API shape is part of the product (`Resolve`, `ResolveAsync`, `ScoreCandidates`, `DiscoveryOptions`/`DiscoveryResult` are documented in the README with examples). If you change them, update `README.md` (and `PROJECT_SHOWCASE.md` if it describes the same behavior).
+
+## Every change is tied to an issue
+
+`main` is protected, so all work arrives through a PR. Open (or reuse) an issue first and link the PR to it: the issue carries **why**, the PR carries **what changed**. A PR with no issue loses the reasoning the moment it is merged.
+
+This is not bookkeeping. Recording the reasoning up front is what has kept decisions from being relitigated: #48 opened with the duplication measured in lines, so the design discussion started from the number instead of from opinion; #47 recorded that it was blocked by #11, and that ordering held on its own weeks later; #10 recorded which alternatives #19 had rejected, which stopped a later plan from quietly reintroducing them.
+
+When something is discovered mid-change that is real but out of scope, file it rather than widening the PR — #48, #54 and #56 all came out of work on other issues.
+
+## Design principles
+
+**Duplicated code is a defect, not a style preference.** Extract it. The judgement is *how*, and the deciding question is whether the duplicated parts share state:
+
+- Shared behaviour only → compose. `LlmHttpTransport` is a static helper because retry/backoff needs no per-provider state.
+- Shared behaviour **and** shared fields → inherit. `HttpLlmHealingProvider` (#48) exists because the four providers repeated ~45 lines of orchestration *plus* six fields and their validation; a static helper would have left the fields duplicated and needed seven arguments at every call site. Removing it was net −375 lines with zero test edits.
+
+Keep the template method non-virtual and put only the genuinely vendor-specific parts behind abstract hooks. If a subclass has to fight the template, the template is wrong.
+
+**But do not abstract speculatively.** Three deliberate non-abstractions in this codebase would all be "fixed" by a naive reading of SOLID, and all three are correct:
+
+- `LlmIntentPlanner` duplicates the retry semantics instead of sharing `HttpLlmHealingProvider`, because `IntentAutomation` must not depend on `LlmHealing` (#11). A clean package boundary outranks removing one copy.
+- `ClaudeHealingProvider` and `GeminiHealingProvider` are not collapsed into `OpenAiHealingProvider` even though both vendors offer OpenAI-compatible endpoints, because Claude's `thinking = disabled` / `output_config.effort = low` have no equivalent in that wire format and exist to avoid paying for reasoning tokens. Tidiness does not outrank a per-call cost.
+- `SimilarityScorer` and `SelfHealingResolver` are static and procedural on purpose. Scoring must stay deterministic and allocation-conscious; injecting interfaces there adds indirection and buys nothing.
+
+So: the SOLID ideas worth applying here are the ones about **substitutability and stable contracts** — an `ILlmHealingProvider` implementation must behave like every other one (its `Name` unique, its failures returned rather than thrown), and a public abstraction's shape is part of the product. Interface-per-class, constructor injection everywhere, and layers of indirection are not goals; each abstraction has to pay for the indirection it introduces.
+
+**On TypeScript:** there is no TypeScript source in this repository. TypeScript appears only as *output* from `PlaywrightTypeScriptTestGenerator`. Rules about idiomatic TypeScript therefore apply to the emitted test code — it must be code a TypeScript developer would accept in review — not to anything under `TestAutomation/`.
 
 ## Documentation is part of every change
 

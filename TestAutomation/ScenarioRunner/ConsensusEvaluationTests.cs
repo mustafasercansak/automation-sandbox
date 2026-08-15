@@ -113,8 +113,10 @@ namespace ScenarioRunner
                     ConsensusCount = 1,
                     CorrectCount = 1,
                     TotalProviderAttempts = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
-                    TotalProviderSuccesses = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
-                    TotalProviderFailures = new Dictionary<string, int> { ["Gemini"] = 0, ["Grok"] = 0, ["Kimi"] = 0 },
+                    TotalProviderAnswered = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
+                    TotalProviderFailed = new Dictionary<string, int> { ["Gemini"] = 0, ["Grok"] = 0, ["Kimi"] = 0 },
+                    // Kimi answered but was outvoted: healthy provider, no consensus credit.
+                    TotalProviderInConsensus = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 0 },
                     AgreementMatrix = new Dictionary<string, Dictionary<string, int>>
                     {
                         ["Gemini"] = new() { ["Grok"] = 1, ["Kimi"] = 0 },
@@ -158,153 +160,7 @@ namespace ScenarioRunner
 
             Console.WriteLine($"[ConsensusEvaluation] Running nightly consensus evaluation with {providers.Count} providers: {string.Join(", ", providers.Select(p => p.Name))}");
 
-            var scenarios = EvaluationScenarios.All;
-            var doc = new ConsensusEvaluationDocument
-            {
-                Timestamp = DateTimeOffset.UtcNow,
-                ConfiguredProviders = providers.Select(p => p.Name).ToList(),
-            };
-
-            var pairAgreement = new Dictionary<string, Dictionary<string, int>>();
-            foreach (var p1 in doc.ConfiguredProviders)
-            {
-                pairAgreement[p1] = new Dictionary<string, int>();
-                foreach (var p2 in doc.ConfiguredProviders)
-                {
-                    pairAgreement[p1][p2] = 0;
-                }
-            }
-
-            var totalAttempts = new Dictionary<string, int>();
-            var totalSuccesses = new Dictionary<string, int>();
-            var totalFailures = new Dictionary<string, int>();
-            foreach (var p in doc.ConfiguredProviders)
-            {
-                totalAttempts[p] = 0;
-                totalSuccesses[p] = 0;
-                totalFailures[p] = 0;
-            }
-
-            var consensusCount = 0;
-            var correctCount = 0;
-            var splitVoteCount = 0;
-            var insufficientCount = 0;
-
-            foreach (var s in scenarios)
-            {
-                Console.WriteLine($"[ConsensusEvaluation] Evaluating scenario: {s.Name} ({s.Platform})");
-
-                var healResult = await SelfHealingResolver.ResolveAsync(
-                    expected: s.Expected,
-                    currentTreeRoot: s.CurrentTreeRoot,
-                    llmProviders: providers,
-                    platform: s.Platform);
-
-                var isConsensus = healResult.Source == HealSource.Llm && healResult.AgreedProviders.Count >= 2;
-                var consensusWinner = isConsensus ? healResult.Matched?.AutomationId : null;
-                var heuristicCandidate = healResult.HeuristicMatched?.AutomationId ?? (healResult.Source == HealSource.Heuristic ? healResult.Matched?.AutomationId : null);
-                var isCorrect = isConsensus && !string.IsNullOrEmpty(consensusWinner)
-                    ? string.Equals(consensusWinner, s.GroundTruthAutomationId, StringComparison.OrdinalIgnoreCase)
-                    : (bool?)null;
-
-                if (isConsensus)
-                {
-                    consensusCount++;
-                    if (isCorrect == true) correctCount++;
-                }
-                else
-                {
-                    if (healResult.ProviderAttempts == null || healResult.ProviderAttempts.Count(p => p.Value > 0) < 2)
-                    {
-                        insufficientCount++;
-                    }
-                    else
-                    {
-                        splitVoteCount++;
-                    }
-                }
-
-                // Update agreement matrix for pairs of agreed providers
-                if (healResult.AgreedProviders.Count >= 2)
-                {
-                    for (var i = 0; i < healResult.AgreedProviders.Count; i++)
-                    {
-                        for (var j = 0; j < healResult.AgreedProviders.Count; j++)
-                        {
-                            if (i != j)
-                            {
-                                var p1 = healResult.AgreedProviders[i];
-                                var p2 = healResult.AgreedProviders[j];
-                                if (pairAgreement.TryGetValue(p1, out var sub) && sub.ContainsKey(p2))
-                                {
-                                    sub[p2]++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (healResult.ProviderAttempts != null)
-                {
-                    // Indexed rather than deconstructed: KeyValuePair.Deconstruct arrived in
-                    // .NET Core 2.0, so `foreach (var (k, v) in dict)` does not compile for the
-                    // net48 leg this project also targets.
-                    foreach (var kvp in healResult.ProviderAttempts)
-                    {
-                        var providerName = kvp.Key;
-                        var attempts = kvp.Value;
-                        if (totalAttempts.ContainsKey(providerName))
-                        {
-                            totalAttempts[providerName] += attempts;
-                        }
-
-                        if (healResult.AgreedProviders.Contains(providerName))
-                        {
-                            if (totalSuccesses.ContainsKey(providerName))
-                                totalSuccesses[providerName]++;
-                        }
-                        else if (attempts > 0)
-                        {
-                            if (totalFailures.ContainsKey(providerName))
-                                totalFailures[providerName]++;
-                        }
-                    }
-                }
-
-                var record = new ScenarioEvaluationRecord
-                {
-                    ScenarioName = s.Name,
-                    Platform = s.Platform,
-                    GroundTruthAutomationId = s.GroundTruthAutomationId,
-                    ConsensusWinnerAutomationId = consensusWinner,
-                    HeuristicCandidateAutomationId = heuristicCandidate,
-                    ConsensusReached = isConsensus,
-                    IsCorrect = isCorrect,
-                    AgreedProviders = healResult.AgreedProviders.ToList(),
-                    // ToDictionary rather than the copy constructor: Dictionary's
-                    // IEnumerable<KeyValuePair<,>> overload arrived in .NET Core 2.0, so on the
-                    // net48 leg an IReadOnlyDictionary argument binds to Dictionary(int capacity)
-                    // instead and fails with CS1503.
-                    ProviderAttempts = healResult.ProviderAttempts != null
-                        ? healResult.ProviderAttempts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-                        : new Dictionary<string, int>(),
-                };
-
-                doc.Scenarios.Add(record);
-            }
-
-            doc.Summary = new ConsensusEvaluationSummary
-            {
-                TotalScenarios = scenarios.Count,
-                ConsensusCount = consensusCount,
-                CorrectCount = correctCount,
-                SplitVoteCount = splitVoteCount,
-                InsufficientProvidersCount = insufficientCount,
-                TotalProviderAttempts = totalAttempts,
-                TotalProviderSuccesses = totalSuccesses,
-                TotalProviderFailures = totalFailures,
-                AgreementMatrix = pairAgreement,
-            };
+            var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: true);
 
             // Write output JSON into AppContext.BaseDirectory/TestResults
             var json = ConsensusEvaluationSerializer.ToJson(doc);
@@ -395,31 +251,193 @@ namespace ScenarioRunner
 
             Assert.Equal(3, providers.Count);
 
-            var scenarios = EvaluationScenarios.All;
+            var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: false);
+
+            Assert.Equal(4, doc.Scenarios.Count);
+            Assert.Equal(4, doc.Summary.ConsensusCount);
+
+            var markdown = doc.ToMarkdownStepSummary();
+            Assert.Contains("Multi-Provider Consensus Evaluation Summary", markdown);
+            Assert.Contains("**Consensus Rate:** 4/4 (100%)", markdown);
+
+            // Per-provider outcomes are recorded even on the happy path, so the mocked run
+            // exercises the same classification the nightly depends on rather than a parallel
+            // implementation of it.
+            Assert.All(doc.Scenarios, s =>
+            {
+                Assert.Equal(3, s.ProviderResults.Count);
+                Assert.All(s.ProviderResults, r => Assert.Equal(ProviderOutcome.Answered, r.Outcome));
+                Assert.Equal(ConsensusOutcome.ConsensusReached, s.Outcome);
+            });
+            Assert.All(doc.ConfiguredProviders, p => Assert.Equal(4, doc.Summary.TotalProviderAnswered[p]));
+            Assert.All(doc.ConfiguredProviders, p => Assert.Equal(0, doc.Summary.TotalProviderFailed[p]));
+        }
+
+        // Shared by the live nightly run and the mocked test on purpose: the mocked test is only
+        // a meaningful check of the nightly if it exercises the same evaluation and classification
+        // code, not a second copy of it.
+        private static async Task<ConsensusEvaluationDocument> EvaluateScenariosAsync(
+            IReadOnlyList<ILlmHealingProvider> providers,
+            IReadOnlyList<EvaluationScenario> scenarios,
+            bool verbose)
+        {
             var doc = new ConsensusEvaluationDocument
             {
+                Timestamp = DateTimeOffset.UtcNow,
                 ConfiguredProviders = providers.Select(p => p.Name).ToList(),
             };
 
+            var pairAgreement = new Dictionary<string, Dictionary<string, int>>();
+            var totalAttempts = new Dictionary<string, int>();
+            var totalAnswered = new Dictionary<string, int>();
+            var totalFailed = new Dictionary<string, int>();
+            var totalDiscarded = new Dictionary<string, int>();
+            var totalInConsensus = new Dictionary<string, int>();
+            foreach (var p1 in doc.ConfiguredProviders)
+            {
+                pairAgreement[p1] = new Dictionary<string, int>();
+                foreach (var p2 in doc.ConfiguredProviders)
+                {
+                    pairAgreement[p1][p2] = 0;
+                }
+
+                totalAttempts[p1] = 0;
+                totalAnswered[p1] = 0;
+                totalFailed[p1] = 0;
+                totalDiscarded[p1] = 0;
+                totalInConsensus[p1] = 0;
+            }
+
+            var consensusCount = 0;
+            var correctCount = 0;
+            var disagreementCount = 0;
+            var tooFewVotesCount = 0;
+            var noneAnsweredCount = 0;
+
             foreach (var s in scenarios)
             {
+                if (verbose)
+                {
+                    Console.WriteLine($"[ConsensusEvaluation] Evaluating scenario: {s.Name} ({s.Platform})");
+                }
+
+                // Each provider is wrapped so its raw LlmHealingResult can be observed while the
+                // resolver drives it. Calling LlmHealingEvaluator separately would double the API
+                // calls and burn the free-tier quota this nightly depends on; decorating costs
+                // nothing extra and still measures the canonical ResolveAsync path.
+                var recorders = providers.Select(p => new RecordingProvider(p)).ToList();
+
                 var healResult = await SelfHealingResolver.ResolveAsync(
                     expected: s.Expected,
                     currentTreeRoot: s.CurrentTreeRoot,
-                    llmProviders: providers,
+                    llmProviders: recorders,
                     platform: s.Platform);
 
+                var shortlistIds = new HashSet<string>(
+                    SelfHealingResolver
+                        .ScoreCandidates(s.Expected, s.CurrentTreeRoot)
+                        .Take(SimilarityWeights.Default.MaxCandidatesForLlm)
+                        .Select((_, i) => "c" + i),
+                    StringComparer.Ordinal);
+
                 var isConsensus = healResult.Source == HealSource.Llm && healResult.AgreedProviders.Count >= 2;
+                var consensusWinner = isConsensus ? healResult.Matched?.AutomationId : null;
+                var heuristicCandidate = healResult.HeuristicMatched?.AutomationId
+                    ?? (healResult.Source == HealSource.Heuristic ? healResult.Matched?.AutomationId : null);
+                var isCorrect = isConsensus && !string.IsNullOrEmpty(consensusWinner)
+                    ? string.Equals(consensusWinner, s.GroundTruthAutomationId, StringComparison.OrdinalIgnoreCase)
+                    : (bool?)null;
+
+                var providerResults = new List<ProviderOutcomeRecord>();
+                foreach (var recorder in recorders)
+                {
+                    var r = recorder.LastResult;
+                    string outcome;
+                    if (r == null || !r.Success || string.IsNullOrEmpty(r.MatchedCandidateId))
+                    {
+                        outcome = ProviderOutcome.Failed;
+                    }
+                    else if (!shortlistIds.Contains(r.MatchedCandidateId!))
+                    {
+                        outcome = ProviderOutcome.Discarded;
+                    }
+                    else
+                    {
+                        outcome = ProviderOutcome.Answered;
+                    }
+
+                    var agreed = healResult.AgreedProviders.Contains(recorder.Name);
+                    providerResults.Add(new ProviderOutcomeRecord
+                    {
+                        ProviderName = recorder.Name,
+                        Outcome = outcome,
+                        MatchedCandidateId = r?.MatchedCandidateId,
+                        Confidence = outcome == ProviderOutcome.Answered ? r!.Confidence : (double?)null,
+                        ElapsedMs = r?.Elapsed.TotalMilliseconds ?? 0,
+                        AttemptCount = r?.AttemptCount ?? 0,
+                        AgreedWithConsensus = agreed,
+                        Error = r?.ErrorMessage,
+                    });
+
+                    totalAttempts[recorder.Name] += r?.AttemptCount ?? 0;
+                    if (outcome == ProviderOutcome.Answered) totalAnswered[recorder.Name]++;
+                    else if (outcome == ProviderOutcome.Discarded) totalDiscarded[recorder.Name]++;
+                    else totalFailed[recorder.Name]++;
+                    if (agreed) totalInConsensus[recorder.Name]++;
+                }
+
+                var answered = providerResults.Count(r => r.Outcome == ProviderOutcome.Answered);
+                string outcomeClass;
+                if (isConsensus)
+                {
+                    outcomeClass = ConsensusOutcome.ConsensusReached;
+                    consensusCount++;
+                    if (isCorrect == true) correctCount++;
+                }
+                else if (answered == 0)
+                {
+                    // Nobody voted. Reporting this as disagreement - which the first version did -
+                    // claims the models were split when in fact none of them answered.
+                    outcomeClass = ConsensusOutcome.NoProviderAnswered;
+                    noneAnsweredCount++;
+                }
+                else if (answered < SimilarityWeights.Default.MinimumConsensusVotes)
+                {
+                    outcomeClass = ConsensusOutcome.TooFewUsableVotes;
+                    tooFewVotesCount++;
+                }
+                else
+                {
+                    outcomeClass = ConsensusOutcome.Disagreement;
+                    disagreementCount++;
+                }
+
+                for (var i = 0; i < healResult.AgreedProviders.Count; i++)
+                {
+                    for (var j = 0; j < healResult.AgreedProviders.Count; j++)
+                    {
+                        if (i == j) continue;
+                        var p1 = healResult.AgreedProviders[i];
+                        var p2 = healResult.AgreedProviders[j];
+                        if (pairAgreement.TryGetValue(p1, out var sub) && sub.ContainsKey(p2))
+                        {
+                            sub[p2]++;
+                        }
+                    }
+                }
+
                 doc.Scenarios.Add(new ScenarioEvaluationRecord
                 {
                     ScenarioName = s.Name,
                     Platform = s.Platform,
                     GroundTruthAutomationId = s.GroundTruthAutomationId,
-                    ConsensusWinnerAutomationId = isConsensus ? healResult.Matched?.AutomationId : null,
-                    HeuristicCandidateAutomationId = healResult.HeuristicMatched?.AutomationId ?? healResult.Matched?.AutomationId,
+                    ConsensusWinnerAutomationId = consensusWinner,
+                    HeuristicCandidateAutomationId = heuristicCandidate,
                     ConsensusReached = isConsensus,
-                    IsCorrect = isConsensus,
+                    IsCorrect = isCorrect,
+                    Outcome = outcomeClass,
                     AgreedProviders = healResult.AgreedProviders.ToList(),
+                    ProviderResults = providerResults,
                     // ToDictionary rather than the copy constructor: Dictionary's
                     // IEnumerable<KeyValuePair<,>> overload arrived in .NET Core 2.0, so on the
                     // net48 leg an IReadOnlyDictionary argument binds to Dictionary(int capacity)
@@ -433,15 +451,44 @@ namespace ScenarioRunner
             doc.Summary = new ConsensusEvaluationSummary
             {
                 TotalScenarios = scenarios.Count,
-                ConsensusCount = doc.Scenarios.Count(s => s.ConsensusReached),
+                ConsensusCount = consensusCount,
+                CorrectCount = correctCount,
+                SplitVoteCount = disagreementCount,
+                InsufficientProvidersCount = tooFewVotesCount,
+                NoProviderAnsweredCount = noneAnsweredCount,
+                TotalProviderAttempts = totalAttempts,
+                TotalProviderAnswered = totalAnswered,
+                TotalProviderFailed = totalFailed,
+                TotalProviderDiscarded = totalDiscarded,
+                TotalProviderInConsensus = totalInConsensus,
+                AgreementMatrix = pairAgreement,
             };
 
-            Assert.Equal(4, doc.Scenarios.Count);
-            Assert.Equal(4, doc.Summary.ConsensusCount);
+            return doc;
+        }
 
-            var markdown = doc.ToMarkdownStepSummary();
-            Assert.Contains("Multi-Provider Consensus Evaluation Summary", markdown);
-            Assert.Contains("**Consensus Rate:** 4/4 (100%)", markdown);
+        // Forwards to the real provider and keeps the result it returned. The resolver stays the
+        // sole caller, so nothing extra is sent to any API.
+        private sealed class RecordingProvider : ILlmHealingProvider
+        {
+            private readonly ILlmHealingProvider _inner;
+
+            public RecordingProvider(ILlmHealingProvider inner) => _inner = inner;
+
+            public string Name => _inner.Name;
+            public bool IsAvailable => _inner.IsAvailable;
+            public LlmHealingResult? LastResult { get; private set; }
+
+            public async Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                var result = await _inner.ResolveAsync(expected, candidates, platform, cancellationToken).ConfigureAwait(false);
+                LastResult = result;
+                return result;
+            }
         }
 
         private sealed class FakeHandler : HttpMessageHandler
