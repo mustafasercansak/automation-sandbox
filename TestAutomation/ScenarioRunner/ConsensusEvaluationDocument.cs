@@ -21,11 +21,11 @@ namespace ScenarioRunner
             sb.AppendLine();
             sb.AppendLine($"- **Timestamp (UTC):** `{Timestamp:yyyy-MM-dd HH:mm:ss} UTC`");
             sb.AppendLine($"- **Configured Providers ({ConfiguredProviders.Count}):** {string.Join(", ", ConfiguredProviders.Select(p => $"`{p}`"))}");
-            sb.AppendLine($"- **Consensus Rate:** {Summary.ConsensusCount}/{Summary.TotalScenarios} ({((double)Summary.ConsensusCount / Math.Max(1, Summary.TotalScenarios) * 100):F0}%)");
+            sb.AppendLine($"- **Consensus Rate:** {Summary.ConsensusCount}/{Summary.TotalScenarios} ({ReportFormatting.PercentOfTotal(Summary.ConsensusCount, Math.Max(1, Summary.TotalScenarios))})");
 
             if (Summary.DecidableConsensusCount > 0)
             {
-                sb.AppendLine($"- **Accuracy (on Decidable Consensus):** {Summary.CorrectCount}/{Summary.DecidableConsensusCount} ({((double)Summary.CorrectCount / Summary.DecidableConsensusCount * 100):F0}%)");
+                sb.AppendLine($"- **Accuracy (on Decidable Consensus):** {Summary.CorrectCount}/{Summary.DecidableConsensusCount} ({ReportFormatting.PercentOfTotal(Summary.CorrectCount, Summary.DecidableConsensusCount)})");
             }
 
             if (Summary.UndecidableScenariosCount > 0)

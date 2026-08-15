@@ -142,7 +142,7 @@ namespace ScenarioRunner
                     .Select(kvp => $"{kvp.Key}:{kvp.Value}"));
 
                 sb.AppendLine(
-                    $"| `{app.AppName}` | ✅ Captured | {m.TotalNodes} | {m.MaxDepth} | {m.EmptyAutomationIdFraction:P1} ({m.EmptyAutomationIdCount}) | {m.EmptyNameFraction:P1} ({m.EmptyNameCount}) | {m.NeitherIdNorNameFraction:P1} ({m.NeitherIdNorNameCount}) | {m.UnusableBoundingRectangleFraction:P1} ({m.UnusableBoundingRectangleCount}) | {topTypes} | {app.DiscoveryElapsed.TotalSeconds:F2}s |");
+                    $"| `{app.AppName}` | ✅ Captured | {m.TotalNodes} | {m.MaxDepth} | {ReportFormatting.Percent(m.EmptyAutomationIdFraction)} ({m.EmptyAutomationIdCount}) | {ReportFormatting.Percent(m.EmptyNameFraction)} ({m.EmptyNameCount}) | {ReportFormatting.Percent(m.NeitherIdNorNameFraction)} ({m.NeitherIdNorNameCount}) | {ReportFormatting.Percent(m.UnusableBoundingRectangleFraction)} ({m.UnusableBoundingRectangleCount}) | {topTypes} | {ReportFormatting.Number(app.DiscoveryElapsed.TotalSeconds)}s |");
             }
 
             return sb.ToString();
@@ -217,7 +217,7 @@ namespace ScenarioRunner
             if (emptyIdDiff != 0)
             {
                 var sign = emptyIdDiff > 0 ? "+" : "";
-                structuralDifferences.Add($"Empty AutomationId count changed: {m2022.EmptyAutomationIdCount} ({m2022.EmptyAutomationIdFraction:P1}) → {m2025.EmptyAutomationIdCount} ({m2025.EmptyAutomationIdFraction:P1}) ({sign}{emptyIdDiff})");
+                structuralDifferences.Add($"Empty AutomationId count changed: {m2022.EmptyAutomationIdCount} ({ReportFormatting.Percent(m2022.EmptyAutomationIdFraction)}) → {m2025.EmptyAutomationIdCount} ({ReportFormatting.Percent(m2025.EmptyAutomationIdFraction)}) ({sign}{emptyIdDiff})");
             }
 
             // Compare ControlType distributions
@@ -343,11 +343,11 @@ namespace ScenarioRunner
                 candidateDriftList.Add((appName, diff.DriftSignal, diff));
 
                 var col2022 = r2022?.Launched == true && r2022.Metrics != null
-                    ? $"{r2022.Metrics.TotalNodes} nodes | {r2022.Metrics.EmptyAutomationIdFraction:P0} empty ID | depth {r2022.Metrics.MaxDepth}"
+                    ? $"{r2022.Metrics.TotalNodes} nodes | {ReportFormatting.Percent(r2022.Metrics.EmptyAutomationIdFraction, 0)} empty ID | depth {r2022.Metrics.MaxDepth}"
                     : $"❌ {r2022?.LaunchError ?? "Not launched"}";
 
                 var col2025 = r2025?.Launched == true && r2025.Metrics != null
-                    ? $"{r2025.Metrics.TotalNodes} nodes | {r2025.Metrics.EmptyAutomationIdFraction:P0} empty ID | depth {r2025.Metrics.MaxDepth}"
+                    ? $"{r2025.Metrics.TotalNodes} nodes | {ReportFormatting.Percent(r2025.Metrics.EmptyAutomationIdFraction, 0)} empty ID | depth {r2025.Metrics.MaxDepth}"
                     : $"❌ {r2025?.LaunchError ?? "Not launched"}";
 
                 var detailsSummary = diff.Details.Count > 0 ? string.Join("; ", diff.Details) : "–";

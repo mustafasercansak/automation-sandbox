@@ -234,7 +234,7 @@ namespace ScenarioRunner
                 File.WriteAllText(treePath, treeJson);
                 record.TreeJsonFileName = treeFileName;
 
-                log($"[WindowsAppSurvey] ✅ Captured '{candidate.Name}': {metrics.TotalNodes} nodes, max depth {metrics.MaxDepth}, {metrics.EmptyAutomationIdFraction:P1} empty ID in {discoveryResult.Elapsed.TotalSeconds:F2}s");
+                log($"[WindowsAppSurvey] ✅ Captured '{candidate.Name}': {metrics.TotalNodes} nodes, max depth {metrics.MaxDepth}, {ReportFormatting.Percent(metrics.EmptyAutomationIdFraction)} empty ID in {ReportFormatting.Number(discoveryResult.Elapsed.TotalSeconds)}s");
             }
             catch (Exception ex)
             {
