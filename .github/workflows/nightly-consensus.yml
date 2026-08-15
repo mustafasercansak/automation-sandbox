@@ -29,6 +29,11 @@ jobs:
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
           dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
 
+      # Keys are secrets; model and endpoint overrides are repository variables. Both have to be
+      # exported or LlmProviderFactory silently falls back to its compiled-in defaults - which is
+      # how `grok-2-latest` reached the API long after a variable had been set to correct it (#58).
+      # An unset variable arrives as an empty string rather than being absent, which the providers
+      # already handle via NullIfEmpty before falling back.
       - name: Run multi-provider consensus evaluation
         env:
           CONSENSUS_EVALUATION: "1"
@@ -37,6 +42,14 @@ jobs:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_ENDPOINT: ${{ vars.OPENAI_ENDPOINT }}
+          GROK_MODEL: ${{ vars.GROK_MODEL }}
+          GROK_ENDPOINT: ${{ vars.GROK_ENDPOINT }}
+          KIMI_MODEL: ${{ vars.KIMI_MODEL }}
+          KIMI_ENDPOINT: ${{ vars.KIMI_ENDPOINT }}
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
 
       - name: Upload Consensus Evaluation Report
