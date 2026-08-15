@@ -46,7 +46,7 @@ repository's **Releases** page without publishing to nuget.org:
 For the `0.2.0-beta.2` preview release, the package assets carry the Phase 2 hardening work
 on top of `0.2.0-beta.1`: consensus-based acceptance for LLM picks (at least two providers
 must agree), provider resilience (retry with exponential backoff, dual timeout budgets, a
-`Retry-After` quota ceiling), per-provider attempt telemetry, and healing report schema v6.
+`Retry-After` quota ceiling), per-provider attempt telemetry, and healing report schema v7 with explicit accepted, declined, provider-error, and retry-failed outcomes.
 Note that consensus is a behaviour change: a single configured LLM provider no longer has
 its pick accepted.
 

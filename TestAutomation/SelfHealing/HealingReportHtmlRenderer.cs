@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Text;
 using UiModel;
@@ -34,8 +35,9 @@ namespace SelfHealing
             html.AppendLine("    th { background: #eef3f8; font-weight: 650; color: #293747; }");
             html.AppendLine("    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 650; }");
             html.AppendLine("    .accepted { color: var(--ok); background: #e8f5ee; }");
+            html.AppendLine("    .accepted-unverified { color: var(--llm); background: #e8f1fb; }");
             html.AppendLine("    .accepted-with-llm { color: var(--llm); background: #e8f1fb; }");
-            html.AppendLine("    .manual-review { color: var(--review); background: #fff4d6; }");
+            html.AppendLine("    .manual-review, .retry-failed, .ambiguous, .low-evidence, .low-confidence, .no-candidates, .no-consensus, .provider-error, .unspecified { color: var(--review); background: #fff4d6; }");
             html.AppendLine("    .empty { padding: 24px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); }");
             html.AppendLine("    code { font-family: Consolas, monospace; font-size: 12px; }");
             html.AppendLine("  </style>");
@@ -62,10 +64,13 @@ namespace SelfHealing
                 html.AppendLine("        <tr>");
                 html.AppendLine("          <th>Locator Key</th>");
                 html.AppendLine("          <th>Source</th>");
-                html.AppendLine("          <th>Status</th>");
+                html.AppendLine("          <th>Platform</th>");
+                html.AppendLine("          <th>Outcome</th>");
+                html.AppendLine("          <th>Review</th>");
                 html.AppendLine("          <th>Score</th>");
                 html.AppendLine("          <th>Previous</th>");
                 html.AppendLine("          <th>Accepted</th>");
+                html.AppendLine("          <th>Proposed</th>");
                 html.AppendLine("          <th>Reasoning</th>");
                 html.AppendLine("        </tr>");
                 html.AppendLine("      </thead>");
@@ -76,10 +81,14 @@ namespace SelfHealing
                     html.AppendLine("        <tr>");
                     html.Append("          <td><code>").Append(E(entry.LocatorKey)).AppendLine("</code></td>");
                     html.Append("          <td>").Append(E(entry.Source)).AppendLine("</td>");
+                    html.Append("          <td>").Append(E(entry.Platform ?? "unknown")).AppendLine("</td>");
+                    var outcome = entry.Outcome ?? entry.ReviewStatus;
+                    html.Append("          <td><span class=\"badge ").Append(E(outcome)).Append("\">").Append(E(outcome)).AppendLine("</span></td>");
                     html.Append("          <td><span class=\"badge ").Append(E(entry.ReviewStatus)).Append("\">").Append(E(entry.ReviewStatus)).AppendLine("</span></td>");
                     html.Append("          <td>").Append(E(FormatScore(entry))).AppendLine("</td>");
                     html.Append("          <td>").Append(FormatSnapshot(entry.PreviousSnapshot)).AppendLine("</td>");
                     html.Append("          <td>").Append(FormatSnapshot(entry.AcceptedSnapshot)).AppendLine("</td>");
+                    html.Append("          <td>").Append(FormatSnapshot(entry.ProposedSnapshot)).AppendLine("</td>");
                     var reasoning = entry.LlmReasoning ?? "";
                     // Who agreed is the evidence behind an LLM acceptance (#10), so it belongs
                     // in the human-readable report and not only in the JSON. Null means the
@@ -95,6 +104,13 @@ namespace SelfHealing
                         var heuristicId = entry.HeuristicSnapshot?.AutomationId ?? "unknown";
                         var divergenceNote = $"[Diverged from heuristic '{heuristicId}']";
                         reasoning = string.IsNullOrEmpty(reasoning) ? divergenceNote : divergenceNote + " " + reasoning;
+                    }
+                    if (entry.ProviderErrors != null && entry.ProviderErrors.Count > 0)
+                    {
+                        var providerErrorNote = "[Provider errors: " + string.Join("; ", entry.ProviderErrors
+                            .OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
+                            .Select(kvp => kvp.Key + ": " + kvp.Value)) + "]";
+                        reasoning = string.IsNullOrEmpty(reasoning) ? providerErrorNote : providerErrorNote + " " + reasoning;
                     }
                     html.Append("          <td>").Append(E(reasoning)).AppendLine("</td>");
                     html.AppendLine("        </tr>");
