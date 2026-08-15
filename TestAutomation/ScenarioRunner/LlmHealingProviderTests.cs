@@ -256,7 +256,19 @@ namespace ScenarioRunner
 
             Assert.NotNull(handler.LastRequestBody);
             using var doc = JsonDocument.Parse(handler.LastRequestBody);
-            Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
+            Assert.Equal(ExpectedModel("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"), doc.RootElement.GetProperty("model").GetString());
+        }
+
+        // "No model configured" is only true when the ambient environment supplies none, and CI
+        // passes ANTHROPIC_MODEL/GEMINI_MODEL through from repository variables. Hardcoding the
+        // compiled-in default made these tests depend on that being unset: the Gemini one passed
+        // only while GEMINI_MODEL was stored as a secret (invisible to `vars.`) and failed the day
+        // it became a real variable. Resolving the expectation the same way the provider does
+        // keeps the fallback chain pinned without depending on how the runner is configured.
+        private static string ExpectedModel(string environmentVariable, string compiledDefault)
+        {
+            var configured = Environment.GetEnvironmentVariable(environmentVariable);
+            return string.IsNullOrEmpty(configured) ? compiledDefault : configured;
         }
 
         [Fact]
@@ -280,7 +292,13 @@ namespace ScenarioRunner
 
             Assert.NotNull(handler.LastRequestBody);
             using var doc = JsonDocument.Parse(handler.LastRequestBody);
-            Assert.Equal("claude-haiku-4-5-20251001", doc.RootElement.GetProperty("model").GetString());
+
+            // The empty string must not reach the API - it continues down the chain to
+            // ANTHROPIC_MODEL and then the compiled default. See ExpectedModel above for why the
+            // expectation is resolved rather than hardcoded.
+            var sentModel = doc.RootElement.GetProperty("model").GetString();
+            Assert.False(string.IsNullOrEmpty(sentModel), "An empty model must never be sent as \"\" - the API answered \"Model '' not found\".");
+            Assert.Equal(ExpectedModel("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"), sentModel);
         }
 
         [Fact]
@@ -401,7 +419,13 @@ namespace ScenarioRunner
 
             Assert.NotNull(handler.LastRequestBody);
             using var doc = JsonDocument.Parse(handler.LastRequestBody);
-            Assert.Equal("gemini-3.6-flash", doc.RootElement.GetProperty("model").GetString());
+
+            // The empty string must not reach the API - it continues down the chain to
+            // GEMINI_MODEL and then the compiled default. See ExpectedModel above for why the
+            // expectation is resolved rather than hardcoded.
+            var sentModel = doc.RootElement.GetProperty("model").GetString();
+            Assert.False(string.IsNullOrEmpty(sentModel), "An empty model must never be sent as \"\" - the API answered \"Model '' not found\".");
+            Assert.Equal(ExpectedModel("GEMINI_MODEL", "gemini-3.6-flash"), sentModel);
         }
 
         [Fact]
