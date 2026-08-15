@@ -337,12 +337,12 @@ yazar, sistem sayfayı keşfeder, aday elementleri bulur, locator deposuna kayde
 M6.1-M6.10 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
 planlayabilir, DOM adaylarıyla eşleştirebilir, review gerekmeyen locator'ları
 repository'ye kaydedebilir, Playwright C#/TypeScript test iskeleti üretebilir ve
-intent flow raporunu JSON/HTML olarak dışa verebilir. `LlmIntentPlanner` ile hedef
+intent flow raporunu JSON/HTML olarak dışa verebilir (flow raporu üretimi şimdilik yalnızca web hattı içindir). `LlmIntentPlanner` ile hedef
 metni sabit bir anahtar kelime kümesine bağlı kalmadan, doğal dilden doğrudan
 planlanabilir; API anahtarı yoksa veya model çıktısı bozuksa sistem otomatik olarak
 `DeterministicIntentPlanner`'a düşer. `IntentDesktopAutomationPipeline` ile aynı akış
 Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent adımları canlı bir
-`UiElementInfo` ağacıyla eşleştirilir ve xUnit + FlaUI test iskeleti üretilir.
+`UiElementInfo` ağacıyla eşleştirilir ve xUnit + FlaUI test iskeleti üretilir (masaüstü hattı henüz `IntentFlowReportDocument` üretmez).
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
 MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
 olarak tutar.

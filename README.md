@@ -24,7 +24,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | What it is | What it isn't |
 | :--- | :--- |
 | A **locator healing engine**: when an `AutomationId` or DOM locator breaks, it re-resolves the element from structural evidence and explains the decision component by component. | **Not a monolithic test suite.** There is no IDE, visual recorder, execution grid, or scheduler — Ranorex Studio and Tricentis Tosca solve a much wider problem. |
-| An **intent-driven test generation pipeline**: plan steps from a goal, match them to a live page or window, record locators, and emit Playwright or FlaUI test skeletons. | **Not a closed runtime or proprietary object repository.** Locators live in readable JSON you own; every healing decision is reproducible from the recorded report. |
+| An **intent-driven test generation pipeline**: plan steps from a goal, match them to a live page or window, record locators, and emit Playwright or FlaUI test skeletons. | **Not a closed runtime or proprietary object repository.** Locators live in readable JSON you own; every healing decision is auditable from the recorded report. |
 | A **modular .NET library set** that plugs into the runners you already use (xUnit, NUnit, Playwright, FlaUI). | **Not a test framework replacement.** It does not run your tests, assert for you, or own your test lifecycle. |
 | A **deterministic-first** design: a zero-token heuristic scorer decides on its own, with an opt-in LLM fallback that is guarded against hallucinated picks. | **Not a blind AI wrapper.** No screenshots or full DOM dumps are shipped to a model on every step; the LLM sees a bounded top-N shortlist, only when the heuristic is not confident. |
 
@@ -93,18 +93,17 @@ flowchart TB
     subgraph STAGE4 ["4. LLM Fallback Chain (Opt-in)"]
         direction TB
         Eval["LlmHealingEvaluator"]
-        Claude["Claude Provider"]
-        Gemini["Gemini Provider"]
-        Guard{"Hallucination Guard (CandidateId in Shortlist?)"}
+        Providers["Configured Providers (Gemini, Claude, OpenAI, Ollama, ...)"]
+        Guard["Hallucination Guard (Filter Votes: CandidateId in Shortlist?)"]
+        Consensus{"Consensus Check (>= 2 Providers Agree?)"}
         LLMRes["LLM Sourced Match"]
         HeuristicFallback["Degrade to Best Heuristic Match"]
         Shortlist -->|Prompt ~500 Tokens| Eval
-        Eval --> Claude
-        Eval --> Gemini
-        Claude --> Guard
-        Gemini --> Guard
-        Guard -->|Verified| LLMRes
-        Guard -->|Unverified| HeuristicFallback
+        Eval --> Providers
+        Providers --> Guard
+        Guard --> Consensus
+        Consensus -->|Yes (Agreed)| LLMRes
+        Consensus -->|No (Split / Tie / < 2 Votes)| HeuristicFallback
     end
     ConfidentRes --> Output["Final HealResult"]
     LLMRes --> Output
@@ -445,6 +444,8 @@ var result = pipeline.Run(request, window, repository);
 File.WriteAllText("GeneratedCustomerDesktopTest.cs", result.FlaUiCSharpTestCode);
 ```
 
+> **Note on Report Parity:** `IntentDesktopAutomationPipelineResult` produces `FlaUiCSharpTestCode`, but does not currently emit an `IntentFlowReportDocument` — intent flow report rendering is web-pipeline only for now (unlike the unified healing reports which cover both desktop and web).
+
 Matching favors `AutomationId` when the recorded snapshot has one, falling back to `Name`
 and then bare `ControlType` - the same tiering `MainFormScenarioTests` uses by hand for
 `panel1`, whose `AutomationId` is deliberately meaningless. The generated code uses direct
@@ -590,10 +591,10 @@ The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-mem
 `SyntheticTreeBenchmarkTests` exercises the heuristic engine against a synthetic UI tree containing **3,000+ candidate controls**:
 
 ```powershell
-[Benchmark] 3000 candidates scored in 12ms - best score=0.98, candidateCount=1.
+[Benchmark] 3000 candidates scored in 23ms - best score=1.00, candidateCount=3031.
 ```
 
-- **Time Complexity:** $O(N)$ tree traversal and candidate scoring.
+- **Execution Scaling:** $O(N)$ tree traversal and candidate scoring (indicative ~23ms on developer hardware; execution time is hardware-dependent while candidate counts and score outputs are deterministic).
 - **Memory Footprint:** Allocation-optimized `Flatten` enumeration and fast Levenshtein matrix.
 - **Cross-Platform:** Benchmark unit tests run natively on Linux, macOS, and Windows.
 
