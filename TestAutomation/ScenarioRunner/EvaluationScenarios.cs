@@ -3,13 +3,37 @@ using UiModel;
 
 namespace ScenarioRunner
 {
-    public record EvaluationScenario(
-        string Name,
-        string Platform,
-        UiElementInfo Expected,
-        UiElementInfo CurrentTreeRoot,
-        string GroundTruthAutomationId,
-        string Description);
+    // A plain class rather than a positional record on purpose: ScenarioRunner also targets
+    // net48, where a record's generated `init` accessors need
+    // System.Runtime.CompilerServices.IsExternalInit - a type that only exists from .NET 5
+    // onwards. Using a record here compiles cleanly on net8.0 (so it passes on the Linux CI
+    // leg) and fails the Windows leg with six CS0518 errors. Every other DTO in this codebase
+    // is a plain class for the same cross-platform reason.
+    public sealed class EvaluationScenario
+    {
+        public EvaluationScenario(
+            string Name,
+            string Platform,
+            UiElementInfo Expected,
+            UiElementInfo CurrentTreeRoot,
+            string GroundTruthAutomationId,
+            string Description)
+        {
+            this.Name = Name;
+            this.Platform = Platform;
+            this.Expected = Expected;
+            this.CurrentTreeRoot = CurrentTreeRoot;
+            this.GroundTruthAutomationId = GroundTruthAutomationId;
+            this.Description = Description;
+        }
+
+        public string Name { get; }
+        public string Platform { get; }
+        public UiElementInfo Expected { get; }
+        public UiElementInfo CurrentTreeRoot { get; }
+        public string GroundTruthAutomationId { get; }
+        public string Description { get; }
+    }
 
     public static class EvaluationScenarios
     {
