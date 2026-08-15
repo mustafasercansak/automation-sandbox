@@ -103,6 +103,28 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void OpenAiHealingProvider_TreatsEmptyApiKey_AsUnsetRatherThanShortCircuitingTheFallbackChain()
+        {
+            // Regression: the key chain is `apiKey ?? OPENAI_API_KEY ?? GITHUB_TOKEN`, and `??`
+            // only continues on null. GitHub Actions substitutes an unset secret with an empty
+            // string rather than omitting the variable, so `llm-smoke.yml` - which declares an
+            // unset OPENAI_API_KEY alongside a real GITHUB_TOKEN - produced an empty key and
+            // never reached the GITHUB_TOKEN it was written to use. The workflow failed with
+            // "Provider must be available when token is configured."
+            //
+            // An empty key must therefore behave exactly like an absent one at every link.
+            // This asserts equivalence rather than a fixed value so it does not depend on
+            // whichever provider variables happen to be set on the machine running it, and it
+            // deliberately does not mutate process-wide environment variables: GitHubModelsSmokeTests
+            // wakes up when GITHUB_TOKEN appears and would start making real API calls if a test
+            // running in parallel set it. End-to-end proof of the chain belongs to `llm-smoke.yml`.
+            var fromEmpty = new OpenAiHealingProvider(apiKey: "");
+            var fromNull = new OpenAiHealingProvider(apiKey: null);
+
+            Assert.Equal(fromNull.IsAvailable, fromEmpty.IsAvailable);
+        }
+
+        [Fact]
         public async Task OllamaHealingProvider_ParsesValidResponse_AndMatchesShortlistCandidate()
         {
             var fakeResponse = JsonSerializer.Serialize(new

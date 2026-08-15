@@ -50,9 +50,15 @@ namespace LlmHealing
                 maxRetries: maxRetries,
                 delayAsync: delayAsync)
         {
-            _apiKey = apiKey
-                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-                ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            // NullIfEmpty on every link, not just the last: GitHub Actions substitutes an unset
+            // secret with an empty string rather than omitting the variable, and a plain ?? only
+            // falls through on null. `llm-smoke.yml` declares OPENAI_API_KEY (unset, so "") and
+            // GITHUB_TOKEN (set), which left _apiKey = "" and made IsAvailable false - the
+            // GITHUB_TOKEN fallback was unreachable in exactly the workflow written to use it.
+            // The same trap is handled below for the model; the key chain had been missed.
+            _apiKey = NullIfEmpty(apiKey)
+                ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_API_KEY"))
+                ?? NullIfEmpty(Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
 
             // GitHub Actions substitutes an unset repo Variable with an empty string, not a
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
