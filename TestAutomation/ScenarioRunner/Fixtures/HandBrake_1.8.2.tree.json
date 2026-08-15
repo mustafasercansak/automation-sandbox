@@ -1,0 +1,3037 @@
+{
+  "ControlType": "Window",
+  "Name": "HandBrake",
+  "AutomationId": "shellView",
+  "ClassName": "Window",
+  "BoundingRectangle": {
+    "X": 3,
+    "Y": 15,
+    "Width": 1018,
+    "Height": 690,
+    "IsUsable": true,
+    "IsEmpty": false
+  },
+  "ParentControlType": "",
+  "ParentAutomationId": "",
+  "SiblingIndex": 0,
+  "SiblingCount": 1,
+  "TestIntent": "",
+  "Children": [
+    {
+      "ControlType": "TitleBar",
+      "Name": "",
+      "AutomationId": "TitleBar",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 27,
+        "Y": 18,
+        "Width": 986,
+        "Height": 28,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "shellView",
+      "SiblingIndex": 0,
+      "SiblingCount": 2,
+      "TestIntent": "",
+      "Children": [
+        {
+          "ControlType": "MenuBar",
+          "Name": "System",
+          "AutomationId": "SystemMenuBar",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 11,
+            "Y": 23,
+            "Width": 22,
+            "Height": 22,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 0,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "MenuItem",
+              "Name": "System",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 11,
+                "Y": 23,
+                "Width": 22,
+                "Height": 22,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "MenuBar",
+              "ParentAutomationId": "SystemMenuBar",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Minimize",
+          "AutomationId": "Minimize-Restore",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 874,
+            "Y": 16,
+            "Width": 47,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 1,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Maximize",
+          "AutomationId": "Maximize-Restore",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 921,
+            "Y": 16,
+            "Width": 46,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 2,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Close",
+          "AutomationId": "Close",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 967,
+            "Y": 16,
+            "Width": 47,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 3,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        }
+      ]
+    },
+    {
+      "ControlType": "Custom",
+      "Name": "",
+      "AutomationId": "MainViewModel",
+      "ClassName": "MainView",
+      "BoundingRectangle": {
+        "X": 11,
+        "Y": 46,
+        "Width": 1002,
+        "Height": 651,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "shellView",
+      "SiblingIndex": 1,
+      "SiblingCount": 2,
+      "TestIntent": "",
+      "Children": [
+        {
+          "ControlType": "Menu",
+          "Name": "",
+          "AutomationId": "mainAppMenu",
+          "ClassName": "Menu",
+          "BoundingRectangle": {
+            "X": 11,
+            "Y": 46,
+            "Width": 1002,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 0,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "MenuItem",
+              "Name": "File",
+              "AutomationId": "",
+              "ClassName": "MenuItem",
+              "BoundingRectangle": {
+                "X": 11,
+                "Y": 46,
+                "Width": 32,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Menu",
+              "ParentAutomationId": "mainAppMenu",
+              "SiblingIndex": 0,
+              "SiblingCount": 5,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "_File",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 18,
+                    "Y": 50,
+                    "Width": 18,
+                    "Height": 15,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "MenuItem",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "MenuItem",
+              "Name": "Tools",
+              "AutomationId": "",
+              "ClassName": "MenuItem",
+              "BoundingRectangle": {
+                "X": 43,
+                "Y": 46,
+                "Width": 42,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Menu",
+              "ParentAutomationId": "mainAppMenu",
+              "SiblingIndex": 1,
+              "SiblingCount": 5,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "_Tools",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 50,
+                    "Y": 50,
+                    "Width": 28,
+                    "Height": 15,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "MenuItem",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "MenuItem",
+              "Name": "Presets",
+              "AutomationId": "presetMenu",
+              "ClassName": "MenuItem",
+              "BoundingRectangle": {
+                "X": 85,
+                "Y": 46,
+                "Width": 51,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Menu",
+              "ParentAutomationId": "mainAppMenu",
+              "SiblingIndex": 2,
+              "SiblingCount": 5,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "_Presets",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 92,
+                    "Y": 50,
+                    "Width": 37,
+                    "Height": 15,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "MenuItem",
+                  "ParentAutomationId": "presetMenu",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "MenuItem",
+              "Name": "Queue",
+              "AutomationId": "queueMenu",
+              "ClassName": "MenuItem",
+              "BoundingRectangle": {
+                "X": 136,
+                "Y": 46,
+                "Width": 49,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Menu",
+              "ParentAutomationId": "mainAppMenu",
+              "SiblingIndex": 3,
+              "SiblingCount": 5,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "_Queue",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 143,
+                    "Y": 50,
+                    "Width": 35,
+                    "Height": 15,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "MenuItem",
+                  "ParentAutomationId": "queueMenu",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "MenuItem",
+              "Name": "Help",
+              "AutomationId": "",
+              "ClassName": "MenuItem",
+              "BoundingRectangle": {
+                "X": 185,
+                "Y": 46,
+                "Width": 39,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Menu",
+              "ParentAutomationId": "mainAppMenu",
+              "SiblingIndex": 4,
+              "SiblingCount": 5,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "_Help",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 192,
+                    "Y": 50,
+                    "Width": 25,
+                    "Height": 15,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "MenuItem",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ControlType": "ToolBar",
+          "Name": "",
+          "AutomationId": "",
+          "ClassName": "ToolBar",
+          "BoundingRectangle": {
+            "X": 11,
+            "Y": 69,
+            "Width": 1002,
+            "Height": 42,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 1,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Button",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 0,
+                "Y": 0,
+                "Width": 0,
+                "Height": 0,
+                "IsUsable": false,
+                "IsEmpty": true
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 0,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Open Source",
+              "AutomationId": "Choose Source",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 15,
+                "Y": 70,
+                "Width": 123,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 1,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 18,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Choose Source",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Open Source",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 58,
+                    "Y": 77,
+                    "Width": 77,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Choose Source",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Open Source",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 63,
+                        "Y": 82,
+                        "Width": 67,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "Separator",
+              "BoundingRectangle": {
+                "X": 140,
+                "Y": 72,
+                "Width": 1,
+                "Height": 34,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 2,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Add to Queue",
+              "AutomationId": "",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 143,
+                "Y": 70,
+                "Width": 142,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 3,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 146,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Add to Queue",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 186,
+                    "Y": 77,
+                    "Width": 82,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Add to Queue",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 191,
+                        "Y": 82,
+                        "Width": 72,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Start Encode",
+              "AutomationId": "Start",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 285,
+                "Y": 70,
+                "Width": 121,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 4,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 288,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Start",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Start Encode",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 328,
+                    "Y": 77,
+                    "Width": 75,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Start",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Start Encode",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 333,
+                        "Y": 82,
+                        "Width": 65,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "Separator",
+              "BoundingRectangle": {
+                "X": 408,
+                "Y": 72,
+                "Width": 1,
+                "Height": 34,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 5,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Queue",
+              "AutomationId": "ShowQueue",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 411,
+                "Y": 70,
+                "Width": 90,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 6,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 414,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "ShowQueue",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Queue",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 454,
+                    "Y": 77,
+                    "Width": 44,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "ShowQueue",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Queue",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 459,
+                        "Y": 82,
+                        "Width": 34,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Preview",
+              "AutomationId": "Preview",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 501,
+                "Y": 70,
+                "Width": 95,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 7,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 504,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Preview",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Preview",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 544,
+                    "Y": 77,
+                    "Width": 49,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "Preview",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Preview",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 549,
+                        "Y": 82,
+                        "Width": 39,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Activity Window",
+              "AutomationId": "ActivityWindow",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 596,
+                "Y": 70,
+                "Width": 114,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 8,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 599,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "ActivityWindow",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Activity Log",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 639,
+                    "Y": 77,
+                    "Width": 68,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "ActivityWindow",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Activity Log",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 644,
+                        "Y": 82,
+                        "Width": 58,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Presets",
+              "AutomationId": "presetbtn",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 710,
+                "Y": 70,
+                "Width": 106,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "",
+              "SiblingIndex": 9,
+              "SiblingCount": 10,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 713,
+                    "Y": 73,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "presetbtn",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Presets",
+                  "AutomationId": "",
+                  "ClassName": "Text",
+                  "BoundingRectangle": {
+                    "X": 753,
+                    "Y": 77,
+                    "Width": 46,
+                    "Height": 23,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "presetbtn",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Presets",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 758,
+                        "Y": 82,
+                        "Width": 36,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Text",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Source:",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 26,
+            "Y": 121,
+            "Width": 42,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 2,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Select \u0027Source\u0027 to continue",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 75,
+            "Y": 122,
+            "Width": 137,
+            "Height": 13,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 3,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 0,
+            "Y": 0,
+            "Width": 0,
+            "Height": 0,
+            "IsUsable": false,
+            "IsEmpty": true
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 4,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Title: ",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 26,
+            "Y": 150,
+            "Width": 32,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 5,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "ComboBox",
+          "Name": "",
+          "AutomationId": "Titles",
+          "ClassName": "ComboBox",
+          "BoundingRectangle": {
+            "X": 74,
+            "Y": 146,
+            "Width": 255,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 6,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Angle: ",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 339,
+            "Y": 150,
+            "Width": 38,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 7,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "ComboBox",
+          "Name": "",
+          "AutomationId": "Angles",
+          "ClassName": "ComboBox",
+          "BoundingRectangle": {
+            "X": 379,
+            "Y": 146,
+            "Width": 60,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 8,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Range:",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 449,
+            "Y": 150,
+            "Width": 38,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 9,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "ComboBox",
+          "Name": "",
+          "AutomationId": "PointToPointMode",
+          "ClassName": "ComboBox",
+          "BoundingRectangle": {
+            "X": 492,
+            "Y": 146,
+            "Width": 80,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 10,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "ComboBox",
+          "Name": "",
+          "AutomationId": "StartPoint",
+          "ClassName": "ComboBox",
+          "BoundingRectangle": {
+            "X": 577,
+            "Y": 146,
+            "Width": 60,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 11,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": " - ",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 641,
+            "Y": 151,
+            "Width": 10,
+            "Height": 13,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 12,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "ComboBox",
+          "Name": "",
+          "AutomationId": "EndPoint",
+          "ClassName": "ComboBox",
+          "BoundingRectangle": {
+            "X": 655,
+            "Y": 146,
+            "Width": 60,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 13,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Duration: ",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 725,
+            "Y": 150,
+            "Width": 55,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 14,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "--:--:--",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 785,
+            "Y": 151,
+            "Width": 30,
+            "Height": 13,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 15,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Preset:",
+          "AutomationId": "",
+          "ClassName": "TextBlock",
+          "BoundingRectangle": {
+            "X": 26,
+            "Y": 188,
+            "Width": 39,
+            "Height": 15,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 16,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "",
+          "AutomationId": "SelectPresetsButton",
+          "ClassName": "Button",
+          "BoundingRectangle": {
+            "X": 75,
+            "Y": 184,
+            "Width": 255,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 17,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Fast 1080p30",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 85,
+                "Y": 189,
+                "Width": 67,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Button",
+              "ParentAutomationId": "SelectPresetsButton",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Reload",
+          "AutomationId": "",
+          "ClassName": "Button",
+          "BoundingRectangle": {
+            "X": 345,
+            "Y": 184,
+            "Width": 54,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 18,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Reload",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 354,
+                "Y": 189,
+                "Width": 36,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Button",
+              "ParentAutomationId": "",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Save New Preset",
+          "AutomationId": "",
+          "ClassName": "Button",
+          "BoundingRectangle": {
+            "X": 404,
+            "Y": 184,
+            "Width": 101,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 19,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Save New Preset",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 413,
+                "Y": 189,
+                "Width": 83,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Button",
+              "ParentAutomationId": "",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Tab",
+          "Name": "",
+          "AutomationId": "tabControl",
+          "ClassName": "TabControl",
+          "BoundingRectangle": {
+            "X": 26,
+            "Y": 222,
+            "Width": 977,
+            "Height": 392,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 20,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "TabItem",
+              "Name": "Summary",
+              "AutomationId": "summaryTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 26,
+                "Y": 222,
+                "Width": 62,
+                "Height": 19,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 0,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Summary",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 34,
+                    "Y": 225,
+                    "Width": 46,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "summaryTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Custom",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "SummaryView",
+                  "BoundingRectangle": {
+                    "X": 29,
+                    "Y": 244,
+                    "Width": 971,
+                    "Height": 367,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "summaryTab",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 2,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Format:",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 39,
+                        "Y": 255,
+                        "Width": 80,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "ComboBox",
+                      "Name": "Format:",
+                      "AutomationId": "Container",
+                      "ClassName": "ComboBox",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 251,
+                        "Width": 100,
+                        "Height": 23,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "CheckBox",
+                      "Name": "Web Optimized",
+                      "AutomationId": "WebOptimized",
+                      "ClassName": "CheckBox",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 278,
+                        "Width": 104,
+                        "Height": 18,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": [
+                        {
+                          "ControlType": "Text",
+                          "Name": "Web Optimized",
+                          "AutomationId": "",
+                          "ClassName": "TextBlock",
+                          "BoundingRectangle": {
+                            "X": 143,
+                            "Y": 280,
+                            "Width": 80,
+                            "Height": 13,
+                            "IsUsable": true,
+                            "IsEmpty": false
+                          },
+                          "ParentControlType": "CheckBox",
+                          "ParentAutomationId": "WebOptimized",
+                          "SiblingIndex": 0,
+                          "SiblingCount": 1,
+                          "TestIntent": "",
+                          "Children": []
+                        }
+                      ]
+                    },
+                    {
+                      "ControlType": "CheckBox",
+                      "Name": "Align A/V Start",
+                      "AutomationId": "AlignAVStart",
+                      "ClassName": "CheckBox",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 300,
+                        "Width": 99,
+                        "Height": 18,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 3,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": [
+                        {
+                          "ControlType": "Text",
+                          "Name": "Align A/V Start",
+                          "AutomationId": "",
+                          "ClassName": "TextBlock",
+                          "BoundingRectangle": {
+                            "X": 143,
+                            "Y": 302,
+                            "Width": 75,
+                            "Height": 13,
+                            "IsUsable": true,
+                            "IsEmpty": false
+                          },
+                          "ParentControlType": "CheckBox",
+                          "ParentAutomationId": "AlignAVStart",
+                          "SiblingIndex": 0,
+                          "SiblingCount": 1,
+                          "TestIntent": "",
+                          "Children": []
+                        }
+                      ]
+                    },
+                    {
+                      "ControlType": "CheckBox",
+                      "Name": "iPod 5G Support",
+                      "AutomationId": "iPod5G",
+                      "ClassName": "CheckBox",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 322,
+                        "Width": 109,
+                        "Height": 18,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 4,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": [
+                        {
+                          "ControlType": "Text",
+                          "Name": "iPod 5G Support",
+                          "AutomationId": "",
+                          "ClassName": "TextBlock",
+                          "BoundingRectangle": {
+                            "X": 143,
+                            "Y": 324,
+                            "Width": 85,
+                            "Height": 13,
+                            "IsUsable": true,
+                            "IsEmpty": false
+                          },
+                          "ParentControlType": "CheckBox",
+                          "ParentAutomationId": "iPod5G",
+                          "SiblingIndex": 0,
+                          "SiblingCount": 1,
+                          "TestIntent": "",
+                          "Children": []
+                        }
+                      ]
+                    },
+                    {
+                      "ControlType": "CheckBox",
+                      "Name": "Passthru Common Metadata",
+                      "AutomationId": "Metadata",
+                      "ClassName": "CheckBox",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 344,
+                        "Width": 169,
+                        "Height": 18,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 5,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": [
+                        {
+                          "ControlType": "Text",
+                          "Name": "Passthru Common Metadata",
+                          "AutomationId": "",
+                          "ClassName": "TextBlock",
+                          "BoundingRectangle": {
+                            "X": 143,
+                            "Y": 346,
+                            "Width": 145,
+                            "Height": 13,
+                            "IsUsable": true,
+                            "IsEmpty": false
+                          },
+                          "ParentControlType": "CheckBox",
+                          "ParentAutomationId": "Metadata",
+                          "SiblingIndex": 0,
+                          "SiblingCount": 1,
+                          "TestIntent": "",
+                          "Children": []
+                        }
+                      ]
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "Tracks:",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 39,
+                        "Y": 376,
+                        "Width": 80,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 6,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "No Tracks",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 377,
+                        "Width": 245,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 7,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 396,
+                        "Width": 245,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 8,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 415,
+                        "Width": 245,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 9,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 434,
+                        "Width": 245,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 10,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "Filters:",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 39,
+                        "Y": 462,
+                        "Width": 80,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 11,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "No Filters",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 463,
+                        "Width": 245,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 12,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "Size:",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 39,
+                        "Y": 491,
+                        "Width": 80,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 13,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "No Source",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 119,
+                        "Y": 492,
+                        "Width": 53,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Custom",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 14,
+                      "SiblingCount": 15,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Dimensions",
+              "AutomationId": "pictureTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 86,
+                "Y": 224,
+                "Width": 72,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 1,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Dimensions",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 92,
+                    "Y": 226,
+                    "Width": 60,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "pictureTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Filters",
+              "AutomationId": "filtersTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 158,
+                "Y": 224,
+                "Width": 43,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 2,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Filters",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 164,
+                    "Y": 226,
+                    "Width": 31,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "filtersTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Video",
+              "AutomationId": "videoTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 201,
+                "Y": 224,
+                "Width": 42,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 3,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Video",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 207,
+                    "Y": 226,
+                    "Width": 30,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "videoTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Audio",
+              "AutomationId": "audioTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 243,
+                "Y": 224,
+                "Width": 43,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 4,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Audio",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 249,
+                    "Y": 226,
+                    "Width": 31,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "audioTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Subtitles",
+              "AutomationId": "subtitlesTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 286,
+                "Y": 224,
+                "Width": 57,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 5,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Subtitles",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 226,
+                    "Width": 45,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "subtitlesTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "TabItem",
+              "Name": "Chapters",
+              "AutomationId": "chaptersTab",
+              "ClassName": "TabItem",
+              "BoundingRectangle": {
+                "X": 343,
+                "Y": 224,
+                "Width": 58,
+                "Height": 17,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Tab",
+              "ParentAutomationId": "tabControl",
+              "SiblingIndex": 6,
+              "SiblingCount": 7,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Chapters",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 349,
+                    "Y": 226,
+                    "Width": 46,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "TabItem",
+                  "ParentAutomationId": "chaptersTab",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ControlType": "Text",
+          "Name": "Save As:",
+          "AutomationId": "",
+          "ClassName": "Text",
+          "BoundingRectangle": {
+            "X": 21,
+            "Y": 625,
+            "Width": 53,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 21,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Save As:",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 26,
+                "Y": 630,
+                "Width": 43,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Text",
+              "ParentAutomationId": "",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Edit",
+          "Name": "",
+          "AutomationId": "Destination",
+          "ClassName": "TextBox",
+          "BoundingRectangle": {
+            "X": 79,
+            "Y": 625,
+            "Width": 858,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 22,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Browse",
+          "AutomationId": "DestinationBrowser",
+          "ClassName": "Button",
+          "BoundingRectangle": {
+            "X": 947,
+            "Y": 625,
+            "Width": 56,
+            "Height": 23,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 23,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Browse",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 956,
+                "Y": 630,
+                "Width": 38,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Button",
+              "ParentAutomationId": "DestinationBrowser",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "StatusBar",
+          "Name": "",
+          "AutomationId": "statusBar",
+          "ClassName": "StatusBar",
+          "BoundingRectangle": {
+            "X": 11,
+            "Y": 663,
+            "Width": 1002,
+            "Height": 34,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 24,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Ready",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 20,
+                "Y": 673,
+                "Width": 32,
+                "Height": 15,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "StatusBar",
+              "ParentAutomationId": "statusBar",
+              "SiblingIndex": 0,
+              "SiblingCount": 2,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Menu",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "Menu",
+              "BoundingRectangle": {
+                "X": 847,
+                "Y": 666,
+                "Width": 163,
+                "Height": 28,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "StatusBar",
+              "ParentAutomationId": "statusBar",
+              "SiblingIndex": 1,
+              "SiblingCount": 2,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "MenuItem",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "MenuItem",
+                  "BoundingRectangle": {
+                    "X": 847,
+                    "Y": 666,
+                    "Width": 163,
+                    "Height": 28,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Menu",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "When Done:",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 854,
+                        "Y": 673,
+                        "Width": 69,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "MenuItem",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 2,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Text",
+                      "Name": "Do nothing",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 931,
+                        "Y": 673,
+                        "Width": 60,
+                        "Height": 15,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "MenuItem",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 2,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ControlType": "Custom",
+          "Name": "",
+          "AutomationId": "sourceSelection",
+          "ClassName": "SourceSelection",
+          "BoundingRectangle": {
+            "X": 11,
+            "Y": 46,
+            "Width": 1002,
+            "Height": 651,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Custom",
+          "ParentAutomationId": "MainViewModel",
+          "SiblingIndex": 25,
+          "SiblingCount": 26,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Text",
+              "Name": "Source Selection",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 31,
+                "Y": 54,
+                "Width": 161,
+                "Height": 30,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 0,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Text",
+              "Name": "Optionally choose a specific title: ",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 31,
+                "Y": 105,
+                "Width": 173,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 1,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Custom",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "NumberBox",
+              "BoundingRectangle": {
+                "X": 214,
+                "Y": 99,
+                "Width": 60,
+                "Height": 24,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 2,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Edit",
+                  "Name": "",
+                  "AutomationId": "numberBox",
+                  "ClassName": "TextBox",
+                  "BoundingRectangle": {
+                    "X": 214,
+                    "Y": 99,
+                    "Width": 44,
+                    "Height": 24,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Custom",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Button",
+                  "Name": "Increase Number",
+                  "AutomationId": "",
+                  "ClassName": "Button",
+                  "BoundingRectangle": {
+                    "X": 258,
+                    "Y": 99,
+                    "Width": 16,
+                    "Height": 12,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Custom",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Button",
+                  "Name": "Decrease Number",
+                  "AutomationId": "",
+                  "ClassName": "Button",
+                  "BoundingRectangle": {
+                    "X": 258,
+                    "Y": 111,
+                    "Width": 16,
+                    "Height": 12,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Custom",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 2,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "Text",
+              "Name": "Then choose the video(s) you\u0027d like to encode: ",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 31,
+                "Y": 133,
+                "Width": 243,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 3,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Choose Folder to Scan",
+              "AutomationId": "",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 31,
+                "Y": 151,
+                "Width": 246,
+                "Height": 42,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 4,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 34,
+                    "Y": 156,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Folder (Batch Scan)",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 76,
+                    "Y": 159,
+                    "Width": 193,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Open a folder with one or more files.",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 76,
+                    "Y": 172,
+                    "Width": 193,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 2,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Choose File to Scan",
+              "AutomationId": "",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 31,
+                "Y": 198,
+                "Width": 246,
+                "Height": 38,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 5,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Image",
+                  "Name": "",
+                  "AutomationId": "",
+                  "ClassName": "Image",
+                  "BoundingRectangle": {
+                    "X": 34,
+                    "Y": 201,
+                    "Width": 32,
+                    "Height": 32,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "File",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 71,
+                    "Y": 201,
+                    "Width": 203,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                },
+                {
+                  "ControlType": "Text",
+                  "Name": "Open video file(s).",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 71,
+                    "Y": 214,
+                    "Width": 203,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 2,
+                  "SiblingCount": 3,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "List",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "ListBox",
+              "BoundingRectangle": {
+                "X": 27,
+                "Y": 261,
+                "Width": 254,
+                "Height": 360,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 6,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Cancel",
+              "AutomationId": "",
+              "ClassName": "Button",
+              "BoundingRectangle": {
+                "X": 227,
+                "Y": 631,
+                "Width": 52,
+                "Height": 23,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 7,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Text",
+                  "Name": "Cancel",
+                  "AutomationId": "",
+                  "ClassName": "TextBlock",
+                  "BoundingRectangle": {
+                    "X": 236,
+                    "Y": 636,
+                    "Width": 34,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Button",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            },
+            {
+              "ControlType": "Text",
+              "Name": " ",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 78,
+                "Y": 674,
+                "Width": 59,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 8,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Hyperlink",
+                  "Name": " ",
+                  "AutomationId": "Preferences",
+                  "ClassName": "Hyperlink",
+                  "BoundingRectangle": {
+                    "X": 78,
+                    "Y": 674,
+                    "Width": 59,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Text",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Preferences",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 78,
+                        "Y": 674,
+                        "Width": 59,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Hyperlink",
+                      "ParentAutomationId": "Preferences",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Text",
+              "Name": "|",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 142,
+                "Y": 674,
+                "Width": 3,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 9,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Text",
+              "Name": " ",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 150,
+                "Y": 674,
+                "Width": 24,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 10,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Hyperlink",
+                  "Name": " ",
+                  "AutomationId": "help",
+                  "ClassName": "Hyperlink",
+                  "BoundingRectangle": {
+                    "X": 150,
+                    "Y": 674,
+                    "Width": 24,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Text",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "Help",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 150,
+                        "Y": 674,
+                        "Width": 24,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Hyperlink",
+                      "ParentAutomationId": "help",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Text",
+              "Name": "|",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 179,
+                "Y": 674,
+                "Width": 3,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 11,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Text",
+              "Name": " ",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 187,
+                "Y": 674,
+                "Width": 92,
+                "Height": 13,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 12,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Hyperlink",
+                  "Name": " ",
+                  "AutomationId": "AboutHandBrake",
+                  "ClassName": "Hyperlink",
+                  "BoundingRectangle": {
+                    "X": 187,
+                    "Y": 674,
+                    "Width": 92,
+                    "Height": 13,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Text",
+                  "ParentAutomationId": "",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Text",
+                      "Name": "About HandBrake",
+                      "AutomationId": "",
+                      "ClassName": "TextBlock",
+                      "BoundingRectangle": {
+                        "X": 187,
+                        "Y": 674,
+                        "Width": 92,
+                        "Height": 13,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Hyperlink",
+                      "ParentAutomationId": "AboutHandBrake",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 1,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ControlType": "Text",
+              "Name": "Or drop a file, set of files or folder here ...",
+              "AutomationId": "",
+              "ClassName": "TextBlock",
+              "BoundingRectangle": {
+                "X": 461,
+                "Y": 356,
+                "Width": 401,
+                "Height": 30,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Custom",
+              "ParentAutomationId": "sourceSelection",
+              "SiblingIndex": 13,
+              "SiblingCount": 14,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
