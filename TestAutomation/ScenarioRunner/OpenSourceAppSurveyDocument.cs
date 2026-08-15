@@ -4,10 +4,22 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using UiModel;
 
 namespace ScenarioRunner
 {
+    public sealed class SurveyLocatorElementRecord
+    {
+        public string AutomationId { get; set; } = "";
+        public string ControlType { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string ClassName { get; set; } = "";
+        public string AncestorPath { get; set; } = "";
+        public bool IsExcluded { get; set; }
+        public string? ExclusionReason { get; set; }
+    }
+
     public sealed class AppVersionSurveyRecord
     {
         public string Version { get; set; } = "";
@@ -49,8 +61,21 @@ namespace ScenarioRunner
         public AppVersionSurveyRecord V1 { get; set; } = new();
         public AppVersionSurveyRecord V2 { get; set; } = new();
         public ApplicationTreeDiffResult Diff { get; set; } = new();
-        public List<string> RemovedAutomationIds { get; set; } = new();
-        public List<string> AddedAutomationIds { get; set; } = new();
+
+        // Valid, developer-authored broken locators (unexcluded)
+        public List<SurveyLocatorElementRecord> RemovedLocators { get; set; } = new();
+        public List<SurveyLocatorElementRecord> AddedLocators { get; set; } = new();
+
+        // Audited volatile per-instance ids that were excluded
+        public List<SurveyLocatorElementRecord> ExcludedLocators { get; set; } = new();
+
+        // String projection for backward compatibility and concise logging
+        [JsonIgnore]
+        public List<string> RemovedAutomationIds => RemovedLocators.Select(r => r.AutomationId).ToList();
+
+        [JsonIgnore]
+        public List<string> AddedAutomationIds => AddedLocators.Select(a => a.AutomationId).ToList();
+
         public bool IsSuspectCapture { get; set; }
         public string? SuspectReason { get; set; }
         public bool IsViableHop { get; set; }
@@ -69,9 +94,114 @@ namespace ScenarioRunner
         // Only viable hops count. A suspect or failed hop reports ids that are the difference between
         // two different windows rather than between two releases, and must not inflate the dataset size.
         public int TotalCumulativeBrokenLocatorsCount =>
-            Hops.Where(h => h.IsViableHop).Sum(h => h.RemovedAutomationIds.Count);
+            Hops.Where(h => h.IsViableHop).Sum(h => h.RemovedLocators.Count);
+
+        public int TotalExcludedLocatorsCount =>
+            Hops.Sum(h => h.ExcludedLocators.Count);
+
         public bool IsViableBenchmarkTarget { get; set; }
         public string BenchmarkRecommendation { get; set; } = "";
+    }
+
+    public static class VolatileLocatorClassifier
+    {
+        // Generated accessibility name patterns on dynamic grid cells/headers
+        private static readonly Regex GeneratedRowPattern = new(@"\bRow\s+\d+\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex GeneratedColPattern = new(@"\bColumn\s+\d+\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static bool IsVolatile(SurveyLocatorElementRecord element, out string reason)
+        {
+            if (string.IsNullOrEmpty(element.AncestorPath))
+            {
+                reason = "No ancestor metadata available";
+                return false;
+            }
+
+            var path = element.AncestorPath;
+            var isContainerDescendant =
+                path.IndexOf("Table", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf("DataGrid", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf("DataGridView", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf("List[", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf("ListView", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf("Tree[", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (!isContainerDescendant)
+            {
+                reason = "Not a dynamic container descendant";
+                return false;
+            }
+
+            var isNumericId = long.TryParse(element.AutomationId, out _);
+            var name = element.Name ?? "";
+
+            var isGeneratedName =
+                GeneratedRowPattern.IsMatch(name) ||
+                GeneratedColPattern.IsMatch(name) ||
+                name.IndexOf("Top Row", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Not sorted", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Header Row", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (isNumericId && isGeneratedName)
+            {
+                reason = $"Numeric ID ({element.AutomationId}) in dynamic container with generated accessibility name ('{name}')";
+                return true;
+            }
+
+            if (isNumericId)
+            {
+                reason = $"Purely numeric ID ({element.AutomationId}) on container child element ({element.ControlType})";
+                return true;
+            }
+
+            if (isGeneratedName)
+            {
+                reason = $"Generated accessibility cell name ('{name}') in dynamic container";
+                return true;
+            }
+
+            reason = "Container descendant but carries non-generated named locator";
+            return false;
+        }
+    }
+
+    public static class SurveyTreeExtractor
+    {
+        public static List<SurveyLocatorElementRecord> ExtractLocatorElements(UiElementInfo? root)
+        {
+            var list = new List<SurveyLocatorElementRecord>();
+            if (root == null) return list;
+
+            void Walk(UiElementInfo node, string currentPath)
+            {
+                var cType = string.IsNullOrEmpty(node.ControlType) ? "Unknown" : node.ControlType;
+                var nodeDesc = string.IsNullOrEmpty(node.Name)
+                    ? cType
+                    : $"{cType}['{node.Name}']";
+
+                var newPath = string.IsNullOrEmpty(currentPath) ? nodeDesc : $"{currentPath} > {nodeDesc}";
+
+                if (!string.IsNullOrEmpty(node.AutomationId))
+                {
+                    list.Add(new SurveyLocatorElementRecord
+                    {
+                        AutomationId = node.AutomationId,
+                        ControlType = cType,
+                        Name = node.Name ?? "",
+                        ClassName = node.ClassName ?? "",
+                        AncestorPath = currentPath,
+                    });
+                }
+
+                foreach (var child in node.Children)
+                {
+                    Walk(child, newPath);
+                }
+            }
+
+            Walk(root, "");
+            return list;
+        }
     }
 
     public static class OpenSourceAppViabilityEvaluator
@@ -80,14 +210,14 @@ namespace ScenarioRunner
         public const double MaxAllowedNodeDropRatio = 3.0;
 
         // A capture smaller than this fraction of its chain's median is not the application.
-        // Chain-level and symmetric, unlike MaxAllowedNodeDropRatio, which only sees one hop at a time
-        // and only in the shrinking direction.
         public const double MinimumCaptureNodeFractionOfMedian = 1.0 / 3.0;
 
         public static AppHopSurveyRecord EvaluateHop(
             AppVersionSurveyRecord v1,
             AppVersionSurveyRecord v2,
-            ApplicationTreeDiffResult diff)
+            ApplicationTreeDiffResult diff,
+            UiElementInfo? tree1 = null,
+            UiElementInfo? tree2 = null)
         {
             var hop = new AppHopSurveyRecord
             {
@@ -98,8 +228,81 @@ namespace ScenarioRunner
                 Diff = diff,
             };
 
-            // Extract removed / added AutomationIds from diff details
-            ExtractAutomationIdDeltas(diff, hop.RemovedAutomationIds, hop.AddedAutomationIds);
+            // 1. Extract and classify locators
+            if (tree1 != null && tree2 != null)
+            {
+                var elementsV1 = SurveyTreeExtractor.ExtractLocatorElements(tree1);
+                var elementsV2 = SurveyTreeExtractor.ExtractLocatorElements(tree2);
+
+                var mapV2 = elementsV2
+                    .GroupBy(e => e.AutomationId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+                var mapV1 = elementsV1
+                    .GroupBy(e => e.AutomationId, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+                // Check removed locators (in V1 but missing in V2)
+                foreach (var el in elementsV1)
+                {
+                    if (!mapV2.ContainsKey(el.AutomationId))
+                    {
+                        if (VolatileLocatorClassifier.IsVolatile(el, out var reason))
+                        {
+                            el.IsExcluded = true;
+                            el.ExclusionReason = reason;
+                            hop.ExcludedLocators.Add(el);
+                        }
+                        else
+                        {
+                            hop.RemovedLocators.Add(el);
+                        }
+                    }
+                }
+
+                // Check added locators (in V2 but missing in V1)
+                foreach (var el in elementsV2)
+                {
+                    if (!mapV1.ContainsKey(el.AutomationId))
+                    {
+                        if (VolatileLocatorClassifier.IsVolatile(el, out var reason))
+                        {
+                            el.IsExcluded = true;
+                            el.ExclusionReason = reason;
+                            hop.ExcludedLocators.Add(el);
+                        }
+                        else
+                        {
+                            hop.AddedLocators.Add(el);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Fallback for tree-less synthetic tests: parse diff.Details bare strings and default to unexcluded
+                var removedIds = new List<string>();
+                var addedIds = new List<string>();
+                ExtractAutomationIdDeltas(diff, removedIds, addedIds);
+
+                foreach (var id in removedIds)
+                {
+                    hop.RemovedLocators.Add(new SurveyLocatorElementRecord
+                    {
+                        AutomationId = id,
+                        ControlType = "Unknown",
+                    });
+                }
+
+                foreach (var id in addedIds)
+                {
+                    hop.AddedLocators.Add(new SurveyLocatorElementRecord
+                    {
+                        AutomationId = id,
+                        ControlType = "Unknown",
+                    });
+                }
+            }
 
             if (!v1.Downloaded || !v1.Launched || v1.Metrics == null)
             {
@@ -151,10 +354,10 @@ namespace ScenarioRunner
                 return hop;
             }
 
-            if (hop.RemovedAutomationIds.Count > 0)
+            if (hop.RemovedLocators.Count > 0)
             {
                 hop.IsViableHop = true;
-                hop.ViabilityReason = $"Viable hop: {hop.RemovedAutomationIds.Count} removed AutomationId(s) [{string.Join(", ", hop.RemovedAutomationIds)}] with {ReportFormatting.Percent(maxEmptyFraction)} empty IDs";
+                hop.ViabilityReason = $"Viable hop: {hop.RemovedLocators.Count} valid removed AutomationId(s) [{string.Join(", ", hop.RemovedLocators.Select(r => r.AutomationId))}] with {ReportFormatting.Percent(maxEmptyFraction)} empty IDs";
                 return hop;
             }
 
@@ -178,15 +381,14 @@ namespace ScenarioRunner
             var distinctRemovedIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var hop in chain.Hops)
             {
-                // Ids from a non-viable hop describe a bad capture, not maintainer-driven locator drift.
                 if (!hop.IsViableHop)
                 {
                     continue;
                 }
 
-                foreach (var id in hop.RemovedAutomationIds)
+                foreach (var loc in hop.RemovedLocators)
                 {
-                    distinctRemovedIds.Add(id);
+                    distinctRemovedIds.Add(loc.AutomationId);
                 }
             }
 
@@ -220,9 +422,6 @@ namespace ScenarioRunner
             chain.BenchmarkRecommendation = "Insufficient maintainer-driven locator drift across chain";
         }
 
-        // Judges each capture against the chain it belongs to. Doing this at chain level is what makes the
-        // rule symmetric: run 31885249314 rejected 149 → 23 as a drop and then accepted 23 → 149 as viable,
-        // harvesting five scrollbar ids out of an error window.
         private static void MarkUnreliableCaptures(AppChainSurveyRecord chain)
         {
             foreach (var version in chain.Versions)
@@ -339,19 +538,22 @@ namespace ScenarioRunner
 
     public sealed class OpenSourceAppSurveyReport
     {
-        public int SchemaVersion { get; set; } = 2;
+        public int SchemaVersion { get; set; } = 3;
         public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
         public List<AppChainSurveyRecord> Chains { get; set; } = new();
 
         public int TotalDistinctBrokenLocatorsAcrossAllChains =>
             Chains.Sum(c => c.TotalDistinctBrokenLocatorsCount);
 
+        public int TotalExcludedLocatorsAcrossAllChains =>
+            Chains.Sum(c => c.TotalExcludedLocatorsCount);
+
         public string ToMarkdownSummary()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# 📦 Open-Source App Version Chains Benchmark Survey (Issue #71)");
+            sb.AppendLine("# 📦 Open-Source App Version Chains Benchmark Survey (Issue #71 & #78)");
             sb.AppendLine();
-            sb.AppendLine($"**Captured At:** {Timestamp:yyyy-MM-dd HH:mm:ss UTC} | **Chains Evaluated:** {Chains.Count} | **Total Distinct Broken Locators:** **{TotalDistinctBrokenLocatorsAcrossAllChains}**");
+            sb.AppendLine($"**Captured At:** {Timestamp:yyyy-MM-dd HH:mm:ss UTC} | **Chains Evaluated:** {Chains.Count} | **Total Distinct Broken Locators:** **{TotalDistinctBrokenLocatorsAcrossAllChains}** | **Excluded Volatile Identifiers:** {TotalExcludedLocatorsAcrossAllChains}");
             sb.AppendLine();
 
             foreach (var chain in Chains)
@@ -362,13 +564,14 @@ namespace ScenarioRunner
                 sb.AppendLine($"- **Consecutive Hops:** {chain.Hops.Count}");
                 sb.AppendLine($"- **Distinct Broken Locators (Deduplicated):** **{chain.TotalDistinctBrokenLocatorsCount}**");
                 sb.AppendLine($"- **Cumulative Broken Locators:** {chain.TotalCumulativeBrokenLocatorsCount}");
+                sb.AppendLine($"- **Excluded Volatile Identifiers:** {chain.TotalExcludedLocatorsCount}");
                 sb.AppendLine($"- **Viable Benchmark Target:** {(chain.IsViableBenchmarkTarget ? "✅ **Yes**" : "❌ No")} ({chain.BenchmarkRecommendation})");
                 sb.AppendLine();
 
                 sb.AppendLine("### 🔀 Consecutive Hop Drift Telemetry");
                 sb.AppendLine();
-                sb.AppendLine("| Hop | Older Version | Newer Version | Drift Signal | Removed AutomationIds (Per-Hop) | Status |");
-                sb.AppendLine("| :--- | :--- | :--- | :---: | :--- | :---: |");
+                sb.AppendLine("| Hop | Older Version | Newer Version | Drift Signal | Valid Broken Locators | Excluded Volatile IDs | Status |");
+                sb.AppendLine("| :--- | :--- | :--- | :---: | :--- | :---: | :---: |");
 
                 foreach (var hop in chain.Hops)
                 {
@@ -380,15 +583,19 @@ namespace ScenarioRunner
                         ? $"`{hop.V2.Version}` ({hop.V2.Metrics.TotalNodes} nodes, {ReportFormatting.Percent(hop.V2.Metrics.EmptyAutomationIdFraction, 0)} empty ID)"
                         : $"`{hop.V2.Version}` ❌ {hop.V2.Error ?? "Failed"}";
 
-                    var removedStr = hop.RemovedAutomationIds.Count > 0
-                        ? string.Join(", ", hop.RemovedAutomationIds)
+                    var removedStr = hop.RemovedLocators.Count > 0
+                        ? string.Join(", ", hop.RemovedLocators.Select(r => $"`{r.AutomationId}` ({r.ControlType})"))
                         : "–";
+
+                    var excludedStr = hop.ExcludedLocators.Count > 0
+                        ? $"{hop.ExcludedLocators.Count} excluded"
+                        : "0";
 
                     var statusBadge = hop.IsSuspectCapture
                         ? $"⚠️ Suspect ({hop.SuspectReason})"
                         : hop.IsViableHop ? "✅ Viable" : "–";
 
-                    sb.AppendLine($"| `{hop.FromVersion}` → `{hop.ToVersion}` | {v1Text} | {v2Text} | **{hop.Diff.DriftSignal}** | `{removedStr}` | {statusBadge} |");
+                    sb.AppendLine($"| `{hop.FromVersion}` → `{hop.ToVersion}` | {v1Text} | {v2Text} | **{hop.Diff.DriftSignal}** | {removedStr} | {excludedStr} | {statusBadge} |");
                 }
 
                 sb.AppendLine();
@@ -425,7 +632,26 @@ namespace ScenarioRunner
                     sb.AppendLine();
                     foreach (var id in chain.DistinctRemovedAutomationIds)
                     {
-                        sb.AppendLine($"- `{id}`");
+                        var loc = chain.Hops.SelectMany(h => h.RemovedLocators).FirstOrDefault(l => l.AutomationId == id);
+                        var desc = loc != null && !string.IsNullOrEmpty(loc.Name) ? $" (`{loc.ControlType}`, Name: '{loc.Name}', Path: `{loc.AncestorPath}`)" : "";
+                        sb.AppendLine($"- `{id}`{desc}");
+                    }
+                }
+
+                var allExcluded = chain.Hops.SelectMany(h => h.ExcludedLocators).ToList();
+                if (allExcluded.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("### 🛡️ Audited Excluded Volatile Identifiers");
+                    sb.AppendLine();
+                    sb.AppendLine("| Identifier | ControlType | Name | Ancestor Path | Reason for Exclusion |");
+                    sb.AppendLine("| :--- | :---: | :--- | :--- | :--- |");
+
+                    foreach (var ex in allExcluded)
+                    {
+                        var name = string.IsNullOrEmpty(ex.Name) ? "*(empty)*" : $"'{ex.Name}'";
+                        var path = string.IsNullOrEmpty(ex.AncestorPath) ? "–" : $"`{ex.AncestorPath}`";
+                        sb.AppendLine($"| `{ex.AutomationId}` | `{ex.ControlType}` | {name} | {path} | _{ex.ExclusionReason}_ |");
                     }
                 }
 
@@ -439,12 +665,12 @@ namespace ScenarioRunner
             if (TotalDistinctBrokenLocatorsAcrossAllChains >= 15)
             {
                 sb.AppendLine($"> [!TIP]");
-                sb.AppendLine($"> **Dataset adequacy verified**: Found **{TotalDistinctBrokenLocatorsAcrossAllChains} distinct broken locators** across all candidate version chains. This provides an organic, maintainer-authored dataset of sufficient scale to host the #15 false-heal rate benchmark.");
+                sb.AppendLine($"> **Dataset adequacy verified**: Found **{TotalDistinctBrokenLocatorsAcrossAllChains} distinct broken locators** across candidate version chains (excluding {TotalExcludedLocatorsAcrossAllChains} volatile IDs). This provides an organic, maintainer-authored dataset of sufficient scale to host the #15 false-heal rate benchmark.");
             }
             else if (TotalDistinctBrokenLocatorsAcrossAllChains > 0)
             {
                 sb.AppendLine($"> [!NOTE]");
-                sb.AppendLine($"> **Moderate broken locator dataset**: Found **{TotalDistinctBrokenLocatorsAcrossAllChains} distinct broken locators** across version chains. Usable for initial benchmark scenarios in #15.");
+                sb.AppendLine($"> **Moderate broken locator dataset**: Found **{TotalDistinctBrokenLocatorsAcrossAllChains} distinct broken locators** across version chains (excluding {TotalExcludedLocatorsAcrossAllChains} volatile IDs). Usable for initial benchmark scenarios in #15.");
             }
             else
             {

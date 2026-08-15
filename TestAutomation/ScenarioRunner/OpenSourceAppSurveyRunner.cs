@@ -152,9 +152,9 @@ namespace ScenarioRunner
                         treeV1,
                         treeV2);
 
-                    var hopRecord = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff);
+                    var hopRecord = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff, treeV1, treeV2);
                     chainRecord.Hops.Add(hopRecord);
-                    log($"[OpenSourceSurvey] Hop '{hopRecord.FromVersion}' → '{hopRecord.ToVersion}': Viable={hopRecord.IsViableHop}, Removed IDs={hopRecord.RemovedAutomationIds.Count} ({hopRecord.ViabilityReason})");
+                    log($"[OpenSourceSurvey] Hop '{hopRecord.FromVersion}' → '{hopRecord.ToVersion}': Viable={hopRecord.IsViableHop}, Removed Valid={hopRecord.RemovedLocators.Count}, Excluded={hopRecord.ExcludedLocators.Count} ({hopRecord.ViabilityReason})");
                 }
 
                 // 3. Evaluate chain totals & deduplication
