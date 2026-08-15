@@ -18,6 +18,13 @@ namespace ScenarioRunner
         public bool Launched { get; set; }
         public bool Settled { get; set; }
         public bool HydrationTimedOut { get; set; }
+
+        // Set by EvaluateChain once every version in the chain is known: a capture far below the chain's
+        // typical size is a dialog, an error window or an unhydrated tree, whichever direction it is
+        // compared in. Hops touching one are excluded from the dataset.
+        public bool IsUnreliableCapture { get; set; }
+        public string? CaptureReliabilityReason { get; set; }
+
         public int SettlePassCount { get; set; }
         public string? SettleTelemetry { get; set; }
         public string? WindowTitle { get; set; }
@@ -71,6 +78,11 @@ namespace ScenarioRunner
     {
         public const double MinimumEmptyAutomationIdFraction = 0.35;
         public const double MaxAllowedNodeDropRatio = 3.0;
+
+        // A capture smaller than this fraction of its chain's median is not the application.
+        // Chain-level and symmetric, unlike MaxAllowedNodeDropRatio, which only sees one hop at a time
+        // and only in the shrinking direction.
+        public const double MinimumCaptureNodeFractionOfMedian = 1.0 / 3.0;
 
         public static AppHopSurveyRecord EvaluateHop(
             AppVersionSurveyRecord v1,
@@ -160,6 +172,9 @@ namespace ScenarioRunner
 
         public static void EvaluateChain(AppChainSurveyRecord chain)
         {
+            MarkUnreliableCaptures(chain);
+            InvalidateHopsTouchingUnreliableCaptures(chain);
+
             var distinctRemovedIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var hop in chain.Hops)
             {
@@ -203,6 +218,80 @@ namespace ScenarioRunner
 
             chain.IsViableBenchmarkTarget = false;
             chain.BenchmarkRecommendation = "Insufficient maintainer-driven locator drift across chain";
+        }
+
+        // Judges each capture against the chain it belongs to. Doing this at chain level is what makes the
+        // rule symmetric: run 31885249314 rejected 149 → 23 as a drop and then accepted 23 → 149 as viable,
+        // harvesting five scrollbar ids out of an error window.
+        private static void MarkUnreliableCaptures(AppChainSurveyRecord chain)
+        {
+            foreach (var version in chain.Versions)
+            {
+                version.IsUnreliableCapture = false;
+                version.CaptureReliabilityReason = null;
+            }
+
+            var captured = chain.Versions
+                .Where(v => v.Launched && v.Metrics != null && v.Metrics.TotalNodes > 0)
+                .ToList();
+
+            if (captured.Count == 0)
+            {
+                return;
+            }
+
+            var median = MedianNodeCount(captured.Select(v => v.Metrics!.TotalNodes));
+            var floor = median * MinimumCaptureNodeFractionOfMedian;
+
+            foreach (var version in captured)
+            {
+                var nodes = version.Metrics!.TotalNodes;
+
+                if (version.HydrationTimedOut)
+                {
+                    version.IsUnreliableCapture = true;
+                    version.CaptureReliabilityReason = $"Hydration timed out at {nodes} node(s)";
+                    continue;
+                }
+
+                if (nodes < floor)
+                {
+                    version.IsUnreliableCapture = true;
+                    version.CaptureReliabilityReason =
+                        $"Capture of {nodes} node(s) is below {ReportFormatting.Number(floor, 1)}, " +
+                        $"a third of the {ReportFormatting.Number(median, 1)} node chain median";
+                }
+            }
+        }
+
+        private static void InvalidateHopsTouchingUnreliableCaptures(AppChainSurveyRecord chain)
+        {
+            foreach (var hop in chain.Hops)
+            {
+                var culprit = hop.V1.IsUnreliableCapture ? hop.V1
+                    : hop.V2.IsUnreliableCapture ? hop.V2
+                    : null;
+
+                if (culprit == null)
+                {
+                    continue;
+                }
+
+                hop.IsSuspectCapture = true;
+                hop.SuspectReason = $"Touches unreliable capture {culprit.Version}: {culprit.CaptureReliabilityReason}";
+                hop.IsViableHop = false;
+                hop.ViabilityReason = $"Rejected: {hop.SuspectReason}";
+            }
+        }
+
+        private static double MedianNodeCount(IEnumerable<int> nodeCounts)
+        {
+            var ordered = nodeCounts.OrderBy(n => n).ToList();
+            var middle = ordered.Count / 2;
+
+            return ordered.Count % 2 == 1
+                ? ordered[middle]
+                : (ordered[middle - 1] + ordered[middle]) / 2.0;
         }
 
         private static void ExtractAutomationIdDeltas(
@@ -316,6 +405,11 @@ namespace ScenarioRunner
                     var settled = v.Settled ? $"✅ ({v.SettlePassCount}p)" : "❌ No";
                     var hyd = v.HydrationTimedOut ? "⚠️ Timed Out" : "✅ Ready";
                     var reason = v.WindowSelectionReason ?? "–";
+                    if (v.IsUnreliableCapture)
+                    {
+                        reason += $" | ⚠️ Unreliable capture: {v.CaptureReliabilityReason}";
+                    }
+
                     if (v.LaunchDiagnostics.Count > 0)
                     {
                         reason += " | " + string.Join(" | ", v.LaunchDiagnostics);

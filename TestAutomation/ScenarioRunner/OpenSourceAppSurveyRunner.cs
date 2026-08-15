@@ -216,6 +216,9 @@ namespace ScenarioRunner
             var zipFileName = $"{appName}_{safeVersion}.zip";
             var zipFilePath = Path.Combine(downloadsDir, zipFileName);
             var appExtractDir = Path.Combine(extractedDir, $"{appName}_{safeVersion}");
+            var profileDir = Path.Combine(extractedDir, $"{appName}_{safeVersion}_profile");
+            var roamingProfileDir = Path.Combine(profileDir, "Roaming");
+            var localProfileDir = Path.Combine(profileDir, "Local");
 
             // 1. Download
             try
@@ -298,6 +301,16 @@ namespace ScenarioRunner
                 // capture made under a different runtime major is still a fact about the capture.
                 psi.Environment["DOTNET_ROLL_FORWARD"] = "LatestMajor";
                 record.LaunchDiagnostics.Add("DOTNET_ROLL_FORWARD=LatestMajor applied");
+
+                // Releases in a chain otherwise share one user profile, so a settings file written by an
+                // earlier release changes how a later one starts. In run 31885249314 that turned HandBrake
+                // 1.9.2 into an "An Unknown Error has occurred." window. A private profile makes every
+                // capture a genuine first run and independent of probe order.
+                Directory.CreateDirectory(roamingProfileDir);
+                Directory.CreateDirectory(localProfileDir);
+                psi.Environment["APPDATA"] = roamingProfileDir;
+                psi.Environment["LOCALAPPDATA"] = localProfileDir;
+                record.LaunchDiagnostics.Add("Isolated APPDATA/LOCALAPPDATA for this version");
 
                 try
                 {
@@ -567,6 +580,15 @@ namespace ScenarioRunner
                     if (Directory.Exists(appExtractDir))
                     {
                         Directory.Delete(appExtractDir, recursive: true);
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    if (Directory.Exists(profileDir))
+                    {
+                        Directory.Delete(profileDir, recursive: true);
                     }
                 }
                 catch { }

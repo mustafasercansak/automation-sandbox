@@ -491,18 +491,44 @@ namespace ScenarioRunner
                 },
             };
 
+            var newest = new AppVersionSurveyRecord
+            {
+                Version = "1.12.0",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "HandBrake",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 171,
+                    EmptyAutomationIdCount = 120,
+                    EmptyAutomationIdFraction = 0.70,
+                },
+            };
+
+            var riseOutDiff = new ApplicationTreeDiffResult
+            {
+                HasStructuralDrift = true,
+                DriftSignal = "⚡ Drift (+153 nodes)",
+                Details = new List<string>
+                {
+                    "AutomationIds removed in 1.11.2: errorText",
+                },
+            };
+
             var realDiff = new ApplicationTreeDiffResult
             {
                 HasStructuralDrift = true,
                 DriftSignal = "⚡ Drift (+11 nodes)",
                 Details = new List<string>
                 {
-                    "AutomationIds removed in 1.11.2: btnQueueLegacy",
+                    "AutomationIds removed in 1.12.0: btnQueueLegacy",
                 },
             };
 
             var suspectHop = OpenSourceAppViabilityEvaluator.EvaluateHop(real, dialog, suspectDiff);
-            var viableHop = OpenSourceAppViabilityEvaluator.EvaluateHop(dialog, later, realDiff);
+            var riseOutHop = OpenSourceAppViabilityEvaluator.EvaluateHop(dialog, later, riseOutDiff);
+            var viableHop = OpenSourceAppViabilityEvaluator.EvaluateHop(later, newest, realDiff);
 
             Assert.True(suspectHop.IsSuspectCapture);
             Assert.False(suspectHop.IsViableHop);
@@ -513,16 +539,202 @@ namespace ScenarioRunner
             {
                 AppName = "HandBrake",
                 Toolkit = "WPF",
-                Versions = new List<AppVersionSurveyRecord> { real, dialog, later },
-                Hops = new List<AppHopSurveyRecord> { suspectHop, viableHop },
+                Versions = new List<AppVersionSurveyRecord> { real, dialog, later, newest },
+                Hops = new List<AppHopSurveyRecord> { suspectHop, riseOutHop, viableHop },
             };
 
             OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
 
+            // Only the hop between two sound captures survives: the drop into the dialog and the rise
+            // back out of it are both excluded, in both directions.
             Assert.Equal(new[] { "btnQueueLegacy" }, chain.DistinctRemovedAutomationIds);
             Assert.Equal(1, chain.TotalDistinctBrokenLocatorsCount);
             Assert.Equal(1, chain.TotalCumulativeBrokenLocatorsCount);
             Assert.DoesNotContain("shellView", chain.DistinctRemovedAutomationIds);
+            Assert.DoesNotContain("errorText", chain.DistinctRemovedAutomationIds);
+        }
+
+        [Fact]
+        public void AppChainSurvey_ExcludesHopsRisingOutOfAnUnreliableCapture()
+        {
+            // Run 31885249314 node counts: 149, 149, 149, 23, 149. The 23-node capture was HandBrake's
+            // "An Unknown Error has occurred." window. The drop into it was rejected, but the rise out of
+            // it was accepted and harvested five scrollbar ids as if a maintainer had removed them.
+            var chain = HandBrakeShapedChain(
+                out var dropHop,
+                out var riseHop,
+                riseRemovedIds: "errorText, VerticalScrollBar, PART_LineUpButton, PageUp, PageDown");
+
+            // Before the chain-level pass, the rising hop looks perfectly viable.
+            Assert.False(dropHop.IsViableHop);
+            Assert.True(riseHop.IsViableHop);
+            Assert.Equal(5, riseHop.RemovedAutomationIds.Count);
+
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            var unreliable = chain.Versions.Single(v => v.IsUnreliableCapture);
+            Assert.Equal("1.9.2", unreliable.Version);
+            Assert.Contains("23 node(s)", unreliable.CaptureReliabilityReason);
+
+            Assert.False(riseHop.IsViableHop);
+            Assert.True(riseHop.IsSuspectCapture);
+            Assert.Contains("1.9.2", riseHop.SuspectReason);
+
+            Assert.Empty(chain.DistinctRemovedAutomationIds);
+            Assert.Equal(0, chain.TotalCumulativeBrokenLocatorsCount);
+            Assert.False(chain.IsViableBenchmarkTarget);
+        }
+
+        [Fact]
+        public void AppChainSurvey_KeepsLegitimateGrowth_WhenNoCaptureIsFarBelowMedian()
+        {
+            // ShareX's real node counts. 34 -> 63 is a 1.9x spread across the chain and must stay viable;
+            // the reliability rule has to separate organic growth from a capture that is not the app.
+            var nodeCounts = new[] { 34, 34, 34, 59, 59, 59, 63, 63 };
+            var versions = new List<AppVersionSurveyRecord>();
+            for (var i = 0; i < nodeCounts.Length; i++)
+            {
+                versions.Add(new AppVersionSurveyRecord
+                {
+                    Version = $"v{i}",
+                    Downloaded = true,
+                    Launched = true,
+                    Settled = true,
+                    Metrics = new ApplicationTreeMetrics
+                    {
+                        TotalNodes = nodeCounts[i],
+                        EmptyAutomationIdFraction = 0.49,
+                    },
+                });
+            }
+
+            var growthHop = OpenSourceAppViabilityEvaluator.EvaluateHop(
+                versions[2],
+                versions[3],
+                new ApplicationTreeDiffResult
+                {
+                    HasStructuralDrift = true,
+                    DriftSignal = "⚡ Drift (+25 nodes)",
+                    Details = new List<string> { "AutomationIds removed in v3: pThumbnailView, lblThumbnailViewTip" },
+                });
+
+            var chain = new AppChainSurveyRecord
+            {
+                AppName = "ShareX",
+                Toolkit = "WinForms",
+                Versions = versions,
+                Hops = new List<AppHopSurveyRecord> { growthHop },
+            };
+
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            Assert.DoesNotContain(chain.Versions, v => v.IsUnreliableCapture);
+            Assert.True(growthHop.IsViableHop);
+            Assert.Equal(new[] { "lblThumbnailViewTip", "pThumbnailView" }, chain.DistinctRemovedAutomationIds);
+        }
+
+        [Fact]
+        public void AppChainSurvey_MarksHydrationTimeoutUnreliable_EvenNearTheMedian()
+        {
+            var chain = new AppChainSurveyRecord
+            {
+                AppName = "StubApp",
+                Toolkit = "WPF",
+                Versions = new List<AppVersionSurveyRecord>
+                {
+                    new AppVersionSurveyRecord
+                    {
+                        Version = "1.0",
+                        Downloaded = true,
+                        Launched = true,
+                        Settled = true,
+                        Metrics = new ApplicationTreeMetrics { TotalNodes = 40, EmptyAutomationIdFraction = 0.5 },
+                    },
+                    new AppVersionSurveyRecord
+                    {
+                        Version = "1.1",
+                        Downloaded = true,
+                        Launched = true,
+                        Settled = true,
+                        HydrationTimedOut = true,
+                        Metrics = new ApplicationTreeMetrics { TotalNodes = 38, EmptyAutomationIdFraction = 0.5 },
+                    },
+                },
+            };
+
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            Assert.False(chain.Versions[0].IsUnreliableCapture);
+            Assert.True(chain.Versions[1].IsUnreliableCapture);
+            Assert.Contains("Hydration timed out", chain.Versions[1].CaptureReliabilityReason);
+        }
+
+        [Fact]
+        public void MarkdownSummary_RendersUnreliableCapture_InReadinessTable()
+        {
+            var chain = HandBrakeShapedChain(out _, out _, riseRemovedIds: "errorText");
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            var report = new OpenSourceAppSurveyReport { Chains = { chain } };
+            var md = report.ToMarkdownSummary();
+
+            Assert.Contains("⚠️ Unreliable capture", md);
+            Assert.Contains("chain median", md);
+        }
+
+        // 149, 149, 149, 23, 149 with a hop into and a hop out of the 23-node capture.
+        private static AppChainSurveyRecord HandBrakeShapedChain(
+            out AppHopSurveyRecord dropHop,
+            out AppHopSurveyRecord riseHop,
+            string riseRemovedIds)
+        {
+            AppVersionSurveyRecord Capture(string version, int nodes, double emptyFraction) =>
+                new AppVersionSurveyRecord
+                {
+                    Version = version,
+                    Downloaded = true,
+                    Launched = true,
+                    Settled = true,
+                    Metrics = new ApplicationTreeMetrics
+                    {
+                        TotalNodes = nodes,
+                        EmptyAutomationIdFraction = emptyFraction,
+                    },
+                };
+
+            var v161 = Capture("1.6.1", 149, 0.711);
+            var v173 = Capture("1.7.3", 149, 0.711);
+            var v182 = Capture("1.8.2", 149, 0.711);
+            var v192 = Capture("1.9.2", 23, 0.522);
+            var v1112 = Capture("1.11.2", 149, 0.705);
+
+            dropHop = OpenSourceAppViabilityEvaluator.EvaluateHop(
+                v182,
+                v192,
+                new ApplicationTreeDiffResult
+                {
+                    HasStructuralDrift = true,
+                    DriftSignal = "⚡ Drift (-126 nodes)",
+                    Details = new List<string> { "AutomationIds removed in 1.9.2: shellView, MainViewModel" },
+                });
+
+            riseHop = OpenSourceAppViabilityEvaluator.EvaluateHop(
+                v192,
+                v1112,
+                new ApplicationTreeDiffResult
+                {
+                    HasStructuralDrift = true,
+                    DriftSignal = "⚡ Drift (+126 nodes)",
+                    Details = new List<string> { $"AutomationIds removed in 1.11.2: {riseRemovedIds}" },
+                });
+
+            return new AppChainSurveyRecord
+            {
+                AppName = "HandBrake",
+                Toolkit = "WPF",
+                Versions = new List<AppVersionSurveyRecord> { v161, v173, v182, v192, v1112 },
+                Hops = new List<AppHopSurveyRecord> { dropHop, riseHop },
+            };
         }
 
         [Fact]
