@@ -24,7 +24,7 @@ namespace ScenarioRunner
             var report = OpenSourceAppSurveyRunner.RunSurvey(outputDir);
 
             Assert.NotNull(report);
-            Assert.NotEmpty(report.Pairs);
+            Assert.NotEmpty(report.Chains);
         }
     }
 }
