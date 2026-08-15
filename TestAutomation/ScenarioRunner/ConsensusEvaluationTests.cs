@@ -246,8 +246,13 @@ namespace ScenarioRunner
 
                 if (healResult.ProviderAttempts != null)
                 {
-                    foreach (var (providerName, attempts) in healResult.ProviderAttempts)
+                    // Indexed rather than deconstructed: KeyValuePair.Deconstruct arrived in
+                    // .NET Core 2.0, so `foreach (var (k, v) in dict)` does not compile for the
+                    // net48 leg this project also targets.
+                    foreach (var kvp in healResult.ProviderAttempts)
                     {
+                        var providerName = kvp.Key;
+                        var attempts = kvp.Value;
                         if (totalAttempts.ContainsKey(providerName))
                         {
                             totalAttempts[providerName] += attempts;
