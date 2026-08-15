@@ -281,8 +281,12 @@ namespace ScenarioRunner
                     ConsensusReached = isConsensus,
                     IsCorrect = isCorrect,
                     AgreedProviders = healResult.AgreedProviders.ToList(),
+                    // ToDictionary rather than the copy constructor: Dictionary's
+                    // IEnumerable<KeyValuePair<,>> overload arrived in .NET Core 2.0, so on the
+                    // net48 leg an IReadOnlyDictionary argument binds to Dictionary(int capacity)
+                    // instead and fails with CS1503.
                     ProviderAttempts = healResult.ProviderAttempts != null
-                        ? new Dictionary<string, int>(healResult.ProviderAttempts)
+                        ? healResult.ProviderAttempts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
                         : new Dictionary<string, int>(),
                 };
 
@@ -416,8 +420,12 @@ namespace ScenarioRunner
                     ConsensusReached = isConsensus,
                     IsCorrect = isConsensus,
                     AgreedProviders = healResult.AgreedProviders.ToList(),
+                    // ToDictionary rather than the copy constructor: Dictionary's
+                    // IEnumerable<KeyValuePair<,>> overload arrived in .NET Core 2.0, so on the
+                    // net48 leg an IReadOnlyDictionary argument binds to Dictionary(int capacity)
+                    // instead and fails with CS1503.
                     ProviderAttempts = healResult.ProviderAttempts != null
-                        ? new Dictionary<string, int>(healResult.ProviderAttempts)
+                        ? healResult.ProviderAttempts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
                         : new Dictionary<string, int>(),
                 });
             }
