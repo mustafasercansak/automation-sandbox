@@ -1,0 +1,45 @@
+name: Open-Source Application Benchmark Survey
+
+# Surveys released version pairs of candidate open-source Windows applications (ShareX, HandBrake)
+# to find maintainer-driven UI tree drift and locator-breaking changes for #15 benchmark.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  survey:
+    name: Open-Source App Pairs Survey (windows-2025)
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build Solution
+        run: |
+          dotnet restore AutomationSandbox.sln
+          dotnet build AutomationSandbox.sln --configuration Debug --no-restore
+
+      - name: Run Open-Source Application Survey
+        env:
+          RUN_OPEN_SOURCE_APP_SURVEY: "1"
+          SURVEY_OUTPUT_DIR: ${{ github.workspace }}/TestResults/open-source-survey
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net48 --no-build --filter "FullyQualifiedName~OpenSourceAppSurveyLiveTests.RunLiveOpenSourceAppSurvey" --logger "console;verbosity=normal"
+
+      - name: Upload Survey Trees and Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: open-source-survey-trees
+          path: TestResults/open-source-survey/**
+          retention-days: 90
+          if-no-files-found: error

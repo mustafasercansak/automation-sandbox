@@ -38,6 +38,8 @@
     <Compile Remove="LlmHealingEvaluationTests.cs" />
     <Compile Remove="WindowsAppSurveyRunner.cs" />
     <Compile Remove="WindowsAppSurveyLiveTests.cs" />
+    <Compile Remove="OpenSourceAppSurveyRunner.cs" />
+    <Compile Remove="OpenSourceAppSurveyLiveTests.cs" />
   </ItemGroup>
 
 </Project>
