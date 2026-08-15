@@ -342,7 +342,7 @@ namespace ScenarioRunner
                                 FromVersion = "v16.1.0",
                                 ToVersion = "v17.0.0",
                                 Diff = new ApplicationTreeDiffResult { HasStructuralDrift = true, DriftSignal = "⚡ Drift (+10 nodes)" },
-                                RemovedAutomationIds = new List<string> { "btnLegacyUpload1" },
+                                RemovedLocators = new List<SurveyLocatorElementRecord> { new() { AutomationId = "btnLegacyUpload1", ControlType = "Button" } },
                                 IsViableHop = true,
                                 ViabilityReason = "1 removed ID",
                             },
@@ -351,7 +351,11 @@ namespace ScenarioRunner
                                 FromVersion = "v17.0.0",
                                 ToVersion = "v21.0.0",
                                 Diff = new ApplicationTreeDiffResult { HasStructuralDrift = true, DriftSignal = "⚡ Drift (+45 nodes)" },
-                                RemovedAutomationIds = new List<string> { "btnLegacyUpload2", "btnLegacyUpload1" },
+                                RemovedLocators = new List<SurveyLocatorElementRecord>
+                                {
+                                    new() { AutomationId = "btnLegacyUpload2", ControlType = "Button" },
+                                    new() { AutomationId = "btnLegacyUpload1", ControlType = "Button" },
+                                },
                                 IsViableHop = true,
                                 ViabilityReason = "2 removed IDs",
                             },
@@ -774,6 +778,233 @@ namespace ScenarioRunner
 
             Assert.Contains("DOTNET_ROLL_FORWARD=LatestMajor applied", md);
             Assert.Contains("Dismissed startup dialog 'Check for updates?' via 'No'", md);
+        }
+
+        [Fact]
+        public void VolatileLocatorClassifier_ExcludesReassignedNumericGridCells()
+        {
+            // Real captured elements from ShareX run 31888358528
+            var cell1 = new SurveyLocatorElementRecord
+            {
+                AutomationId = "4255429698",
+                ControlType = "Edit",
+                Name = "Hotkey Row 4",
+                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Row 4']",
+            };
+
+            var header1 = new SurveyLocatorElementRecord
+            {
+                AutomationId = "429021196",
+                ControlType = "Header",
+                Name = "",
+                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Top Row']",
+            };
+
+            var header2 = new SurveyLocatorElementRecord
+            {
+                AutomationId = "4214081900",
+                ControlType = "Header",
+                Name = "",
+                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Top Row']",
+            };
+
+            Assert.True(VolatileLocatorClassifier.IsVolatile(cell1, out var reason1));
+            Assert.Contains("Numeric ID (4255429698) in dynamic container", reason1);
+
+            Assert.True(VolatileLocatorClassifier.IsVolatile(header1, out var reason2));
+            Assert.Contains("Purely numeric ID (429021196) on container child element", reason2);
+
+            Assert.True(VolatileLocatorClassifier.IsVolatile(header2, out var reason3));
+            Assert.Contains("Purely numeric ID (4214081900) on container child element", reason3);
+        }
+
+        [Fact]
+        public void VolatileLocatorClassifier_PreservesAuthoredControlNames()
+        {
+            // Real developer-authored WinForms controls from ShareX v15.0.0
+            var panel = new SurveyLocatorElementRecord
+            {
+                AutomationId = "pThumbnailView",
+                ControlType = "Pane",
+                Name = "",
+                ClassName = "Panel",
+                AncestorPath = "Window['MainForm']",
+            };
+
+            var label = new SurveyLocatorElementRecord
+            {
+                AutomationId = "lblThumbnailViewTip",
+                ControlType = "Text",
+                Name = "Drag and drop images here...",
+                ClassName = "Label",
+                AncestorPath = "Window['MainForm'] > Pane['pThumbnailView']",
+            };
+
+            Assert.False(VolatileLocatorClassifier.IsVolatile(panel, out _));
+            Assert.False(VolatileLocatorClassifier.IsVolatile(label, out _));
+        }
+
+        [Fact]
+        public void VolatileLocatorClassifier_PreservesHandBrakeStableNamedIds()
+        {
+            // Stable developer-authored WPF identifiers in HandBrake
+            var mainVm = new SurveyLocatorElementRecord
+            {
+                AutomationId = "MainViewModel",
+                ControlType = "Custom",
+                Name = "",
+                ClassName = "MainViewModel",
+                AncestorPath = "Window['HandBrake']",
+            };
+
+            var shell = new SurveyLocatorElementRecord
+            {
+                AutomationId = "shellView",
+                ControlType = "Custom",
+                Name = "",
+                ClassName = "ShellView",
+                AncestorPath = "Window['HandBrake']",
+            };
+
+            var grid = new SurveyLocatorElementRecord
+            {
+                AutomationId = "SourceGrid",
+                ControlType = "Pane",
+                Name = "",
+                ClassName = "Grid",
+                AncestorPath = "Window['HandBrake'] > Custom['MainViewModel']",
+            };
+
+            Assert.False(VolatileLocatorClassifier.IsVolatile(mainVm, out _));
+            Assert.False(VolatileLocatorClassifier.IsVolatile(shell, out _));
+            Assert.False(VolatileLocatorClassifier.IsVolatile(grid, out _));
+        }
+
+        [Fact]
+        public void EvaluateHop_WithFullTrees_ExcludesVolatileGridIds_AndKeepsValidBrokenLocators()
+        {
+            // Tree 1 (v15.0.0): contains pThumbnailView, lblThumbnailViewTip, and 14 numeric DataGridView cells
+            var gridTable1 = new UiElementInfo { ControlType = "Table", Name = "DataGridView", AutomationId = "dgvHotkeys" };
+            for (var r = 0; r < 7; r++)
+            {
+                var row = new UiElementInfo { ControlType = "Unknown", Name = $"Row {r}" };
+                row.Children.Add(new UiElementInfo { ControlType = "Edit", Name = $"Hotkey Row {r}", AutomationId = $"425542969{r}" });
+                row.Children.Add(new UiElementInfo { ControlType = "Edit", Name = $"Description Row {r}", AutomationId = $"42902119{r}" });
+                gridTable1.Children.Add(row);
+            }
+
+            var tree1 = new UiElementInfo { ControlType = "Window", Name = "MainForm", AutomationId = "MainForm" };
+            var thumbnailPanel = new UiElementInfo { ControlType = "Pane", AutomationId = "pThumbnailView", Name = "" };
+            thumbnailPanel.Children.Add(new UiElementInfo { ControlType = "Text", AutomationId = "lblThumbnailViewTip", Name = "Drag and drop..." });
+            tree1.Children.Add(thumbnailPanel);
+            tree1.Children.Add(gridTable1);
+
+            // Tree 2 (v16.0.1): pThumbnailView removed, lblThumbnailViewTip removed, grid has new reassigned cell IDs
+            var gridTable2 = new UiElementInfo { ControlType = "Table", Name = "DataGridView", AutomationId = "dgvHotkeys" };
+            for (var r = 0; r < 7; r++)
+            {
+                var row = new UiElementInfo { ControlType = "Unknown", Name = $"Row {r}" };
+                row.Children.Add(new UiElementInfo { ControlType = "Edit", Name = $"Hotkey Row {r}", AutomationId = $"525542969{r}" });
+                row.Children.Add(new UiElementInfo { ControlType = "Edit", Name = $"Description Row {r}", AutomationId = $"52902119{r}" });
+                gridTable2.Children.Add(row);
+            }
+
+            var tree2 = new UiElementInfo { ControlType = "Window", Name = "MainForm", AutomationId = "MainForm" };
+            tree2.Children.Add(gridTable2);
+
+            var v1 = new AppVersionSurveyRecord
+            {
+                Version = "v15.0.0",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                Metrics = new ApplicationTreeMetrics { TotalNodes = 50, EmptyAutomationIdFraction = 0.50 },
+            };
+
+            var v2 = new AppVersionSurveyRecord
+            {
+                Version = "v16.0.1",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                Metrics = new ApplicationTreeMetrics { TotalNodes = 50, EmptyAutomationIdFraction = 0.50 },
+            };
+
+            var diff = new ApplicationTreeDiffResult { HasStructuralDrift = true };
+            var hop = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff, tree1, tree2);
+
+            // Assert: Exactly 2 valid broken locators survive (pThumbnailView, lblThumbnailViewTip)
+            Assert.True(hop.IsViableHop);
+            Assert.Equal(2, hop.RemovedLocators.Count);
+            Assert.Contains(hop.RemovedLocators, r => r.AutomationId == "pThumbnailView");
+            Assert.Contains(hop.RemovedLocators, r => r.AutomationId == "lblThumbnailViewTip");
+
+            // Assert: Exactly 28 grid cell IDs (14 removed from tree1 + 14 added to tree2) are classified as excluded
+            Assert.Equal(28, hop.ExcludedLocators.Count);
+            Assert.Equal(14, hop.ExcludedLocators.Count(ex => ex.AutomationId.StartsWith("42")));
+            Assert.Equal(14, hop.ExcludedLocators.Count(ex => ex.AutomationId.StartsWith("52")));
+            Assert.All(hop.ExcludedLocators, ex => Assert.True(ex.IsExcluded));
+            Assert.All(hop.ExcludedLocators, ex => Assert.Contains("dynamic container", ex.ExclusionReason, StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void OpenSourceAppSurveyReport_RendersAuditedExcludedVolatileIdentifiersTable()
+        {
+            var report = new OpenSourceAppSurveyReport
+            {
+                Timestamp = new DateTimeOffset(2026, 8, 15, 17, 0, 0, TimeSpan.Zero),
+                Chains =
+                {
+                    new AppChainSurveyRecord
+                    {
+                        AppName = "ShareX",
+                        Toolkit = "WinForms",
+                        Versions =
+                        {
+                            new AppVersionSurveyRecord { Version = "v15.0.0", Launched = true, Settled = true, Metrics = new ApplicationTreeMetrics { TotalNodes = 50 } },
+                            new AppVersionSurveyRecord { Version = "v16.0.1", Launched = true, Settled = true, Metrics = new ApplicationTreeMetrics { TotalNodes = 50 } },
+                        },
+                        Hops =
+                        {
+                            new AppHopSurveyRecord
+                            {
+                                FromVersion = "v15.0.0",
+                                ToVersion = "v16.0.1",
+                                IsViableHop = true,
+                                RemovedLocators =
+                                {
+                                    new SurveyLocatorElementRecord { AutomationId = "pThumbnailView", ControlType = "Pane", Name = "", AncestorPath = "Window['MainForm']" },
+                                    new SurveyLocatorElementRecord { AutomationId = "lblThumbnailViewTip", ControlType = "Text", Name = "Tip", AncestorPath = "Window['MainForm'] > Pane['pThumbnailView']" },
+                                },
+                                ExcludedLocators =
+                                {
+                                    new SurveyLocatorElementRecord
+                                    {
+                                        AutomationId = "4255429698",
+                                        ControlType = "Edit",
+                                        Name = "Hotkey Row 4",
+                                        AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Row 4']",
+                                        IsExcluded = true,
+                                        ExclusionReason = "Numeric ID in dynamic container",
+                                    },
+                                },
+                            },
+                        },
+                        DistinctRemovedAutomationIds = { "lblThumbnailViewTip", "pThumbnailView" },
+                        IsViableBenchmarkTarget = true,
+                    },
+                },
+            };
+
+            var md = report.ToMarkdownSummary();
+
+            Assert.Contains("### 🛡️ Audited Excluded Volatile Identifiers", md);
+            Assert.Contains("`4255429698`", md);
+            Assert.Contains("`Edit`", md);
+            Assert.Contains("'Hotkey Row 4'", md);
+            Assert.Contains("_Numeric ID in dynamic container_", md);
+            Assert.Contains("Excluded Volatile Identifiers:** 1", md);
+            Assert.Contains("Distinct Broken Locators (Deduplicated):** **2**", md);
         }
     }
 }
