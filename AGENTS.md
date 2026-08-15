@@ -115,6 +115,8 @@ Coverage is blind to most of this by construction, because it counts execution r
 
   **Only `ScenarioRunner` is exposed.** `UiModel`, `SelfHealing`, `LlmHealing`, `IntentAutomation` and `WebDiscovery` all target `netstandard2.0`, whose surface is close enough to `net48` that a local `dotnet build -f netstandard2.0` catches these mistakes before they reach CI. `ScenarioRunner` has no such target — it is `net8.0` on Linux and `net48;net8.0` on Windows — which is why every failure of this kind has landed in test code rather than library code. When writing in `ScenarioRunner`, ask whether the API you are reaching for would compile in one of the `netstandard2.0` libraries; if you are unsure, it probably would not.
 
+  **Worse than an uncompilable file is a file that is never compiled at all.** Eight files are `Compile Remove`d outside `net48` — including `OpenSourceAppSurveyRunner.cs`, `WindowsAppSurveyRunner.cs` and the live test files. On Linux they are not type-checked, not parsed, not seen. A rename in shared code leaves them referencing a member that no longer exists and nothing warns you: #71 renamed `Pairs` to `Chains` and left `OpenSourceAppSurveyLiveTests.cs` broken through a full green Linux run. So a verification plan that offers `dotnet build AutomationSandbox.sln` or `dotnet test` on Linux as evidence for a change in one of these files is offering no evidence at all — #78's plan did exactly that. When you touch a `Compile Remove`d file, say plainly that Linux cannot verify it and name the Windows CI run that can.
+
   So: either build on Windows, or check your diff against the list above and then treat the Windows CI leg as the actual gate — do not merge on a green Linux leg alone. This class of failure has now broken CI four times (#23, #24, and twice on #47).
 - Scoring must remain deterministic and allocation-conscious (O(N) flattening, no per-call provider requirements). `SimilarityWeights.Default` values are tuned against exactly the two demo scenarios — treat changes to defaults as behavior changes needing test updates.
 - Public API shape is part of the product (`Resolve`, `ResolveAsync`, `ScoreCandidates`, `DiscoveryOptions`/`DiscoveryResult` are documented in the README with examples). If you change them, update `README.md` (and `PROJECT_SHOWCASE.md` if it describes the same behavior).
@@ -126,6 +128,14 @@ Coverage is blind to most of this by construction, because it counts execution r
 This is not bookkeeping. Recording the reasoning up front is what has kept decisions from being relitigated: #48 opened with the duplication measured in lines, so the design discussion started from the number instead of from opinion; #47 recorded that it was blocked by #11, and that ordering held on its own weeks later; #10 recorded which alternatives #19 had rejected, which stopped a later plan from quietly reintroducing them.
 
 When something is discovered mid-change that is real but out of scope, file it rather than widening the PR — #48, #54 and #56 all came out of work on other issues.
+
+### Open the issue before the code, and merge only what was reviewed
+
+Two failures here are cheap to prevent and expensive to unwind, and both happened repeatedly in one day.
+
+**The issue comes first, then the branch, then the edit.** An issue opened after the code exists cannot be closed by the PR that implements it: #74, #76 and #77 all merged with no closing reference because their issues were written once the work was already in flight, leaving #73 open behind merged code and, at one point, two open issues (#73 and #75) describing the same goal. Retroactive linkage also loses what the issue is for — the reasoning as it stood *before* the implementation.
+
+**Do not merge while review findings are still uncommitted.** #79 was merged with the reviewed fix sitting unstaged in a working tree. Because its body said `Closes #78`, the merge closed the issue too, so a defect that was already understood — a container check matching `"Portable"` as `"table"` — landed on `main` with nothing tracking it, and #78 had to be reopened to get it back. Before merging, confirm that the code on the branch is the code that was reviewed. If a finding is not going in, say so in the PR and move it to a follow-up issue; do not let a merge decide it silently.
 
 ## Design principles
 

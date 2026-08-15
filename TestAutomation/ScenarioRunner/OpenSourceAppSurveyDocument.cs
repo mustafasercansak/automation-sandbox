@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +16,16 @@ namespace ScenarioRunner
         public string ControlType { get; set; } = "";
         public string Name { get; set; } = "";
         public string ClassName { get; set; } = "";
+
+        // Human-readable breadcrumb for the report, e.g. Window['ShareX 15.0 Portable'] > Table['DataGridView'].
         public string AncestorPath { get; set; } = "";
+
+        // The same chain as ControlTypes only, root first. Classification matches against this rather than
+        // against AncestorPath: the readable path embeds element names, and a name can contain a control
+        // type as a substring — "ShareX 15.0 Portable" contains "table", which made every ShareX element
+        // look like a grid descendant.
+        public List<string> AncestorControlTypes { get; set; } = new();
+
         public bool IsExcluded { get; set; }
         public string? ExclusionReason { get; set; }
     }
@@ -109,22 +119,31 @@ namespace ScenarioRunner
         private static readonly Regex GeneratedRowPattern = new(@"\bRow\s+\d+\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex GeneratedColPattern = new(@"\bColumn\s+\d+\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // UIA control types whose children are rows and cells generated from data rather than authored
+        // by a developer. Matched as whole control types, never as substrings of a path.
+        private static readonly HashSet<string> DynamicContainerControlTypes =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Table",
+                "DataGrid",
+                "DataGridView",
+                "DataItem",
+                "List",
+                "ListView",
+                "Tree",
+            };
+
         public static bool IsVolatile(SurveyLocatorElementRecord element, out string reason)
         {
-            if (string.IsNullOrEmpty(element.AncestorPath))
+            if (element.AncestorControlTypes.Count == 0)
             {
                 reason = "No ancestor metadata available";
                 return false;
             }
 
-            var path = element.AncestorPath;
-            var isContainerDescendant =
-                path.IndexOf("Table", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                path.IndexOf("DataGrid", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                path.IndexOf("DataGridView", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                path.IndexOf("List[", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                path.IndexOf("ListView", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                path.IndexOf("Tree[", StringComparison.OrdinalIgnoreCase) >= 0;
+            var containerType = element.AncestorControlTypes
+                .FirstOrDefault(t => DynamicContainerControlTypes.Contains(t));
+            var isContainerDescendant = containerType != null;
 
             if (!isContainerDescendant)
             {
@@ -132,7 +151,13 @@ namespace ScenarioRunner
                 return false;
             }
 
-            var isNumericId = long.TryParse(element.AutomationId, out _);
+            // NumberStyles.None + invariant culture: an id is "numeric" only when it is bare digits.
+            // Leading signs, whitespace and culture-specific separators must not qualify.
+            var isNumericId = long.TryParse(
+                element.AutomationId,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out _);
             var name = element.Name ?? "";
 
             var isGeneratedName =
@@ -144,19 +169,19 @@ namespace ScenarioRunner
 
             if (isNumericId && isGeneratedName)
             {
-                reason = $"Numeric ID ({element.AutomationId}) in dynamic container with generated accessibility name ('{name}')";
+                reason = $"Numeric id ({element.AutomationId}) under {containerType} with generated accessibility name ('{name}')";
                 return true;
             }
 
             if (isNumericId)
             {
-                reason = $"Purely numeric ID ({element.AutomationId}) on container child element ({element.ControlType})";
+                reason = $"Purely numeric id ({element.AutomationId}) on a {element.ControlType} under {containerType}";
                 return true;
             }
 
             if (isGeneratedName)
             {
-                reason = $"Generated accessibility cell name ('{name}') in dynamic container";
+                reason = $"Generated accessibility cell name ('{name}') under {containerType}";
                 return true;
             }
 
@@ -172,7 +197,7 @@ namespace ScenarioRunner
             var list = new List<SurveyLocatorElementRecord>();
             if (root == null) return list;
 
-            void Walk(UiElementInfo node, string currentPath)
+            void Walk(UiElementInfo node, string currentPath, List<string> ancestorTypes)
             {
                 var cType = string.IsNullOrEmpty(node.ControlType) ? "Unknown" : node.ControlType;
                 var nodeDesc = string.IsNullOrEmpty(node.Name)
@@ -190,16 +215,27 @@ namespace ScenarioRunner
                         Name = node.Name ?? "",
                         ClassName = node.ClassName ?? "",
                         AncestorPath = currentPath,
+
+                        // Copied, not shared: each record keeps the chain as it stood at its own depth.
+                        AncestorControlTypes = new List<string>(ancestorTypes),
                     });
                 }
 
+                if (node.Children.Count == 0)
+                {
+                    return;
+                }
+
+                ancestorTypes.Add(cType);
                 foreach (var child in node.Children)
                 {
-                    Walk(child, newPath);
+                    Walk(child, newPath, ancestorTypes);
                 }
+
+                ancestorTypes.RemoveAt(ancestorTypes.Count - 1);
             }
 
-            Walk(root, "");
+            Walk(root, "", new List<string>());
             return list;
         }
     }

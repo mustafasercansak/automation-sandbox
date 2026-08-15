@@ -783,13 +783,14 @@ namespace ScenarioRunner
         [Fact]
         public void VolatileLocatorClassifier_ExcludesReassignedNumericGridCells()
         {
-            // Real captured elements from ShareX run 31888358528
+            // Real captured elements from ShareX run 31888358528, including the real window title.
             var cell1 = new SurveyLocatorElementRecord
             {
                 AutomationId = "4255429698",
                 ControlType = "Edit",
                 Name = "Hotkey Row 4",
-                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Row 4']",
+                AncestorPath = "Window['ShareX 16.0.1 Portable'] > Table['DataGridView'] > Unknown['Row 4']",
+                AncestorControlTypes = new List<string> { "Window", "Table", "Unknown" },
             };
 
             var header1 = new SurveyLocatorElementRecord
@@ -797,7 +798,8 @@ namespace ScenarioRunner
                 AutomationId = "429021196",
                 ControlType = "Header",
                 Name = "",
-                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Top Row']",
+                AncestorPath = "Window['ShareX 16.1 Portable'] > Table['DataGridView'] > Unknown['Top Row']",
+                AncestorControlTypes = new List<string> { "Window", "Table", "Unknown" },
             };
 
             var header2 = new SurveyLocatorElementRecord
@@ -805,17 +807,80 @@ namespace ScenarioRunner
                 AutomationId = "4214081900",
                 ControlType = "Header",
                 Name = "",
-                AncestorPath = "Window['MainForm'] > Table['DataGridView'] > Unknown['Top Row']",
+                AncestorPath = "Window['ShareX 16.0.1 Portable'] > Table['DataGridView'] > Unknown['Top Row']",
+                AncestorControlTypes = new List<string> { "Window", "Table", "Unknown" },
             };
 
             Assert.True(VolatileLocatorClassifier.IsVolatile(cell1, out var reason1));
-            Assert.Contains("Numeric ID (4255429698) in dynamic container", reason1);
+            Assert.Contains("Numeric id (4255429698) under Table", reason1);
 
             Assert.True(VolatileLocatorClassifier.IsVolatile(header1, out var reason2));
-            Assert.Contains("Purely numeric ID (429021196) on container child element", reason2);
+            Assert.Contains("Purely numeric id (429021196) on a Header under Table", reason2);
 
             Assert.True(VolatileLocatorClassifier.IsVolatile(header2, out var reason3));
-            Assert.Contains("Purely numeric ID (4214081900) on container child element", reason3);
+            Assert.Contains("Purely numeric id (4214081900) on a Header under Table", reason3);
+        }
+
+        [Fact]
+        public void VolatileLocatorClassifier_DoesNotTreatANameContainingAControlTypeAsAContainer()
+        {
+            // Every ShareX window is titled "ShareX <version> Portable", and "Portable" contains "table".
+            // Matching the readable ancestor path as a string made 95 of 193 ShareX ids look like grid
+            // descendants, which disabled the guard that keeps an authored numeric id from being excluded.
+            var numericAuthoredId = new SurveyLocatorElementRecord
+            {
+                AutomationId = "12345",
+                ControlType = "Button",
+                Name = "Capture",
+                AncestorPath = "Window['ShareX 15.0 Portable'] > Pane",
+                AncestorControlTypes = new List<string> { "Window", "Pane" },
+            };
+
+            Assert.False(VolatileLocatorClassifier.IsVolatile(numericAuthoredId, out var reason));
+            Assert.Equal("Not a dynamic container descendant", reason);
+        }
+
+        [Theory]
+        [InlineData("Timetable")]
+        [InlineData("Table Designer")]
+        [InlineData("Playlist Manager")]
+        [InlineData("Tree View Options")]
+        public void VolatileLocatorClassifier_IsUnaffectedByContainerWordsInWindowTitles(string windowTitle)
+        {
+            var element = new SurveyLocatorElementRecord
+            {
+                AutomationId = "998877",
+                ControlType = "Edit",
+                Name = "Row 3",
+                AncestorPath = $"Window['{windowTitle}'] > Pane",
+                AncestorControlTypes = new List<string> { "Window", "Pane" },
+            };
+
+            // Both signals would fire if the title leaked into the container decision: the id is numeric
+            // and the name matches the generated-cell pattern. Only the ancestor control types may decide.
+            Assert.False(VolatileLocatorClassifier.IsVolatile(element, out _));
+        }
+
+        [Fact]
+        public void SurveyTreeExtractor_RecordsAncestorControlTypesPerDepth()
+        {
+            var root = new UiElementInfo { ControlType = "Window", Name = "ShareX 15.0 Portable", AutomationId = "MainForm" };
+            var pane = new UiElementInfo { ControlType = "Pane", AutomationId = "pThumbnailView" };
+            var table = new UiElementInfo { ControlType = "Table", Name = "DataGridView", AutomationId = "dgvHotkeys" };
+            var row = new UiElementInfo { ControlType = "Unknown", Name = "Row 4" };
+            row.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Hotkey Row 4", AutomationId = "4255429698" });
+            table.Children.Add(row);
+            root.Children.Add(pane);
+            root.Children.Add(table);
+
+            var elements = SurveyTreeExtractor.ExtractLocatorElements(root);
+
+            // The chain is per element, not shared: walking into the table must not leave "Table" behind
+            // on a sibling captured earlier.
+            Assert.Equal(new string[0], elements.Single(e => e.AutomationId == "MainForm").AncestorControlTypes);
+            Assert.Equal(new[] { "Window" }, elements.Single(e => e.AutomationId == "pThumbnailView").AncestorControlTypes);
+            Assert.Equal(new[] { "Window" }, elements.Single(e => e.AutomationId == "dgvHotkeys").AncestorControlTypes);
+            Assert.Equal(new[] { "Window", "Table", "Unknown" }, elements.Single(e => e.AutomationId == "4255429698").AncestorControlTypes);
         }
 
         [Fact]
@@ -893,7 +958,7 @@ namespace ScenarioRunner
                 gridTable1.Children.Add(row);
             }
 
-            var tree1 = new UiElementInfo { ControlType = "Window", Name = "MainForm", AutomationId = "MainForm" };
+            var tree1 = new UiElementInfo { ControlType = "Window", Name = "ShareX 15.0 Portable", AutomationId = "MainForm" };
             var thumbnailPanel = new UiElementInfo { ControlType = "Pane", AutomationId = "pThumbnailView", Name = "" };
             thumbnailPanel.Children.Add(new UiElementInfo { ControlType = "Text", AutomationId = "lblThumbnailViewTip", Name = "Drag and drop..." });
             tree1.Children.Add(thumbnailPanel);
@@ -909,7 +974,7 @@ namespace ScenarioRunner
                 gridTable2.Children.Add(row);
             }
 
-            var tree2 = new UiElementInfo { ControlType = "Window", Name = "MainForm", AutomationId = "MainForm" };
+            var tree2 = new UiElementInfo { ControlType = "Window", Name = "ShareX 16.0.1 Portable", AutomationId = "MainForm" };
             tree2.Children.Add(gridTable2);
 
             var v1 = new AppVersionSurveyRecord
@@ -944,7 +1009,7 @@ namespace ScenarioRunner
             Assert.Equal(14, hop.ExcludedLocators.Count(ex => ex.AutomationId.StartsWith("42")));
             Assert.Equal(14, hop.ExcludedLocators.Count(ex => ex.AutomationId.StartsWith("52")));
             Assert.All(hop.ExcludedLocators, ex => Assert.True(ex.IsExcluded));
-            Assert.All(hop.ExcludedLocators, ex => Assert.Contains("dynamic container", ex.ExclusionReason, StringComparison.OrdinalIgnoreCase));
+            Assert.All(hop.ExcludedLocators, ex => Assert.Contains("under Table", ex.ExclusionReason, StringComparison.OrdinalIgnoreCase));
         }
 
         [Fact]
