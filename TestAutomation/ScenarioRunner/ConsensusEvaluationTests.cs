@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using LlmHealing;
 using SelfHealing;
@@ -30,6 +31,26 @@ namespace ScenarioRunner
                 Assert.True(
                     candidates.Count >= 2,
                     $"Scenario '{s.Name}' must produce at least 2 scored candidates above MinCandidateScore for LLM evaluation (produced {candidates.Count}).");
+            }
+        }
+
+        [Fact]
+        public void AllEvaluationFixtures_GroundTruthMustBePresentInScoredCandidates()
+        {
+            var scenarios = EvaluationScenarios.All;
+            Assert.NotEmpty(scenarios);
+
+            foreach (var s in scenarios)
+            {
+                if (string.IsNullOrEmpty(s.GroundTruthAutomationId))
+                {
+                    continue;
+                }
+
+                var candidates = SelfHealingResolver.ScoreCandidates(s.Expected, s.CurrentTreeRoot, SimilarityWeights.Default);
+                Assert.Contains(
+                    candidates,
+                    c => string.Equals(c.Candidate.AutomationId, s.GroundTruthAutomationId, StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -150,16 +171,33 @@ namespace ScenarioRunner
                         AgreedProviders = new List<string> { "Gemini", "Grok" },
                         ProviderAttempts = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
                     },
+                    new()
+                    {
+                        ScenarioName = "Desktop_UndecidableSplitExportAction",
+                        Platform = "windows-uia",
+                        GroundTruthAutomationId = null,
+                        ConsensusWinnerAutomationId = null,
+                        HeuristicCandidateAutomationId = "btn_csv",
+                        ConsensusReached = false,
+                        IsCorrect = null,
+                        Outcome = ConsensusOutcome.Disagreement,
+                        AgreedProviders = new List<string>(),
+                        ProviderAttempts = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
+                    },
                 },
                 Summary = new ConsensusEvaluationSummary
                 {
-                    TotalScenarios = 1,
+                    TotalScenarios = 2,
                     ConsensusCount = 1,
                     CorrectCount = 1,
-                    TotalProviderAttempts = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
-                    TotalProviderAnswered = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 1 },
+                    DecidableScenariosCount = 1,
+                    DecidableConsensusCount = 1,
+                    UndecidableScenariosCount = 1,
+                    UndecidableConsensusCount = 0,
+                    SplitVoteCount = 1,
+                    TotalProviderAttempts = new Dictionary<string, int> { ["Gemini"] = 2, ["Grok"] = 2, ["Kimi"] = 2 },
+                    TotalProviderAnswered = new Dictionary<string, int> { ["Gemini"] = 2, ["Grok"] = 2, ["Kimi"] = 2 },
                     TotalProviderFailed = new Dictionary<string, int> { ["Gemini"] = 0, ["Grok"] = 0, ["Kimi"] = 0 },
-                    // Kimi answered but was outvoted: healthy provider, no consensus credit.
                     TotalProviderInConsensus = new Dictionary<string, int> { ["Gemini"] = 1, ["Grok"] = 1, ["Kimi"] = 0 },
                     AgreementMatrix = new Dictionary<string, Dictionary<string, int>>
                     {
@@ -173,16 +211,26 @@ namespace ScenarioRunner
             var json = ConsensusEvaluationSerializer.ToJson(doc);
             Assert.Contains("\"SchemaVersion\": 1", json);
             Assert.Contains("\"Desktop_AmbiguousSiblingTabs\"", json);
+            Assert.Contains("\"Desktop_UndecidableSplitExportAction\"", json);
 
             var roundtripped = ConsensusEvaluationSerializer.FromJson(json);
             Assert.Equal(doc.SchemaVersion, roundtripped.SchemaVersion);
-            Assert.Single(roundtripped.Scenarios);
+            Assert.Equal(2, roundtripped.Scenarios.Count);
             Assert.Equal("tabItem_1", roundtripped.Scenarios[0].ConsensusWinnerAutomationId);
+            Assert.Null(roundtripped.Scenarios[1].GroundTruthAutomationId);
+            Assert.Equal(1, roundtripped.Summary.DecidableScenariosCount);
+            Assert.Equal(1, roundtripped.Summary.UndecidableScenariosCount);
+            Assert.Equal(0, roundtripped.Summary.UndecidableConsensusCount);
 
             var markdown = doc.ToMarkdownStepSummary();
             Assert.Contains("Multi-Provider Consensus Evaluation Summary", markdown);
             Assert.Contains("Desktop_AmbiguousSiblingTabs", markdown);
+            Assert.Contains("Desktop_UndecidableSplitExportAction", markdown);
             Assert.Contains("Consensus (Correct)", markdown);
+            Assert.Contains("*(undecidable)*", markdown);
+            Assert.Contains("✅ No Consensus (Expected)", markdown);
+            Assert.Contains("**Accuracy (on Decidable Consensus):** 1/1 (100%)", markdown);
+            Assert.Contains("**Consensus on Undecidable:** 0/1", markdown);
         }
 
         [Fact]
@@ -297,12 +345,16 @@ namespace ScenarioRunner
 
             var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: false);
 
-            Assert.Equal(4, doc.Scenarios.Count);
-            Assert.Equal(4, doc.Summary.ConsensusCount);
+            Assert.Equal(5, doc.Scenarios.Count);
+            Assert.Equal(5, doc.Summary.ConsensusCount);
+            Assert.Equal(4, doc.Summary.DecidableScenariosCount);
+            Assert.Equal(1, doc.Summary.UndecidableScenariosCount);
+            Assert.Equal(1, doc.Summary.UndecidableConsensusCount);
 
             var markdown = doc.ToMarkdownStepSummary();
             Assert.Contains("Multi-Provider Consensus Evaluation Summary", markdown);
-            Assert.Contains("**Consensus Rate:** 4/4 (100%)", markdown);
+            Assert.Contains("**Consensus Rate:** 5/5 (100%)", markdown);
+            Assert.Contains("**Consensus on Undecidable:** 1/1", markdown);
 
             // Per-provider outcomes are recorded even on the happy path, so the mocked run
             // exercises the same classification the nightly depends on rather than a parallel
@@ -313,7 +365,7 @@ namespace ScenarioRunner
                 Assert.All(s.ProviderResults, r => Assert.Equal(ProviderOutcome.Answered, r.Outcome));
                 Assert.Equal(ConsensusOutcome.ConsensusReached, s.Outcome);
             });
-            Assert.All(doc.ConfiguredProviders, p => Assert.Equal(4, doc.Summary.TotalProviderAnswered[p]));
+            Assert.All(doc.ConfiguredProviders, p => Assert.Equal(5, doc.Summary.TotalProviderAnswered[p]));
             Assert.All(doc.ConfiguredProviders, p => Assert.Equal(0, doc.Summary.TotalProviderFailed[p]));
         }
 
@@ -354,6 +406,10 @@ namespace ScenarioRunner
 
             var consensusCount = 0;
             var correctCount = 0;
+            var decidableScenariosCount = 0;
+            var decidableConsensusCount = 0;
+            var undecidableScenariosCount = 0;
+            var undecidableConsensusCount = 0;
             var disagreementCount = 0;
             var tooFewVotesCount = 0;
             var noneAnsweredCount = 0;
@@ -363,6 +419,16 @@ namespace ScenarioRunner
                 if (verbose)
                 {
                     Console.WriteLine($"[ConsensusEvaluation] Evaluating scenario: {s.Name} ({s.Platform})");
+                }
+
+                var isDecidable = !string.IsNullOrEmpty(s.GroundTruthAutomationId);
+                if (isDecidable)
+                {
+                    decidableScenariosCount++;
+                }
+                else
+                {
+                    undecidableScenariosCount++;
                 }
 
                 // Each provider is wrapped so its raw LlmHealingResult can be observed while the
@@ -388,8 +454,8 @@ namespace ScenarioRunner
                 var consensusWinner = isConsensus ? healResult.Matched?.AutomationId : null;
                 var heuristicCandidate = healResult.HeuristicMatched?.AutomationId
                     ?? (healResult.Source == HealSource.Heuristic ? healResult.Matched?.AutomationId : null);
-                var isCorrect = isConsensus && !string.IsNullOrEmpty(consensusWinner)
-                    ? string.Equals(consensusWinner, s.GroundTruthAutomationId, StringComparison.OrdinalIgnoreCase)
+                var isCorrect = isConsensus && !string.IsNullOrEmpty(consensusWinner) && isDecidable
+                    ? (bool?)string.Equals(consensusWinner, s.GroundTruthAutomationId, StringComparison.OrdinalIgnoreCase)
                     : (bool?)null;
 
                 var providerResults = new List<ProviderOutcomeRecord>();
@@ -436,7 +502,15 @@ namespace ScenarioRunner
                 {
                     outcomeClass = ConsensusOutcome.ConsensusReached;
                     consensusCount++;
-                    if (isCorrect == true) correctCount++;
+                    if (isDecidable)
+                    {
+                        decidableConsensusCount++;
+                        if (isCorrect == true) correctCount++;
+                    }
+                    else
+                    {
+                        undecidableConsensusCount++;
+                    }
                 }
                 else if (answered == 0)
                 {
@@ -497,6 +571,10 @@ namespace ScenarioRunner
                 TotalScenarios = scenarios.Count,
                 ConsensusCount = consensusCount,
                 CorrectCount = correctCount,
+                DecidableScenariosCount = decidableScenariosCount,
+                DecidableConsensusCount = decidableConsensusCount,
+                UndecidableScenariosCount = undecidableScenariosCount,
+                UndecidableConsensusCount = undecidableConsensusCount,
                 SplitVoteCount = disagreementCount,
                 InsufficientProvidersCount = tooFewVotesCount,
                 NoProviderAnsweredCount = noneAnsweredCount,

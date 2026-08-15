@@ -22,6 +22,17 @@ namespace ScenarioRunner
             sb.AppendLine($"- **Timestamp (UTC):** `{Timestamp:yyyy-MM-dd HH:mm:ss} UTC`");
             sb.AppendLine($"- **Configured Providers ({ConfiguredProviders.Count}):** {string.Join(", ", ConfiguredProviders.Select(p => $"`{p}`"))}");
             sb.AppendLine($"- **Consensus Rate:** {Summary.ConsensusCount}/{Summary.TotalScenarios} ({((double)Summary.ConsensusCount / Math.Max(1, Summary.TotalScenarios) * 100):F0}%)");
+
+            if (Summary.DecidableConsensusCount > 0)
+            {
+                sb.AppendLine($"- **Accuracy (on Decidable Consensus):** {Summary.CorrectCount}/{Summary.DecidableConsensusCount} ({((double)Summary.CorrectCount / Summary.DecidableConsensusCount * 100):F0}%)");
+            }
+
+            if (Summary.UndecidableScenariosCount > 0)
+            {
+                sb.AppendLine($"- **Consensus on Undecidable:** {Summary.UndecidableConsensusCount}/{Summary.UndecidableScenariosCount}");
+            }
+
             sb.AppendLine();
 
             sb.AppendLine("### 📋 Scenario Results");
@@ -31,10 +42,22 @@ namespace ScenarioRunner
 
             foreach (var s in Scenarios)
             {
+                var isDecidable = !string.IsNullOrEmpty(s.GroundTruthAutomationId);
                 string status;
                 if (s.ConsensusReached)
                 {
-                    status = s.IsCorrect == true ? "✅ Consensus (Correct)" : "⚠️ Consensus (Mismatch)";
+                    if (isDecidable)
+                    {
+                        status = s.IsCorrect == true ? "✅ Consensus (Correct)" : "⚠️ Consensus (Mismatch)";
+                    }
+                    else
+                    {
+                        status = "ℹ️ Consensus (Undecidable)";
+                    }
+                }
+                else if (!isDecidable)
+                {
+                    status = "✅ No Consensus (Expected)";
                 }
                 else if (s.Outcome == ConsensusOutcome.NoProviderAnswered)
                 {
@@ -49,6 +72,10 @@ namespace ScenarioRunner
                     status = "⚔️ Models Disagreed";
                 }
 
+                var gt = isDecidable
+                    ? $"`{s.GroundTruthAutomationId}`"
+                    : "*(undecidable)*";
+
                 var winner = s.ConsensusReached && !string.IsNullOrEmpty(s.ConsensusWinnerAutomationId)
                     ? $"`{s.ConsensusWinnerAutomationId}`"
                     : "*(none)*";
@@ -61,7 +88,7 @@ namespace ScenarioRunner
                     ? string.Join(", ", s.AgreedProviders)
                     : "*(none)*";
 
-                sb.AppendLine($"| `{s.ScenarioName}` | `{s.Platform}` | `{s.GroundTruthAutomationId}` | {winner} | {heuristic} | {status} | {agreed} |");
+                sb.AppendLine($"| `{s.ScenarioName}` | `{s.Platform}` | {gt} | {winner} | {heuristic} | {status} | {agreed} |");
             }
 
             sb.AppendLine();
@@ -157,7 +184,7 @@ namespace ScenarioRunner
     {
         public string ScenarioName { get; set; } = string.Empty;
         public string Platform { get; set; } = string.Empty;
-        public string GroundTruthAutomationId { get; set; } = string.Empty;
+        public string? GroundTruthAutomationId { get; set; }
         public string? ConsensusWinnerAutomationId { get; set; }
         public string? HeuristicCandidateAutomationId { get; set; }
         public bool ConsensusReached { get; set; }
@@ -211,6 +238,10 @@ namespace ScenarioRunner
         public int TotalScenarios { get; set; }
         public int ConsensusCount { get; set; }
         public int CorrectCount { get; set; }
+        public int DecidableScenariosCount { get; set; }
+        public int DecidableConsensusCount { get; set; }
+        public int UndecidableScenariosCount { get; set; }
+        public int UndecidableConsensusCount { get; set; }
         public int SplitVoteCount { get; set; }
         public int InsufficientProvidersCount { get; set; }
         public int NoProviderAnsweredCount { get; set; }
