@@ -15,6 +15,8 @@ When running automated tests in CI/CD pipelines (e.g. GitHub Actions, Azure DevO
 
 `SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically!
 
+For `ExecuteWithHealingAsync`, an accepted event is written only after the action retry with the proposed element succeeds. If that retry fails, the proposal is not reported as accepted and the locator repository remains unchanged.
+
 ---
 
 ### ⚙️ Enabling Reports via Environment Variables
@@ -58,6 +60,8 @@ Each event in the report contains:
 CI/CD süreçlerinde (GitHub Actions, Azure DevOps vb.) testleriniz çalışırken **hangi elemanların iyileştirildiği**, **neye dönüştüğü** ve **yapay zekanın devreye girip girmediği** raporlanmalıdır.
 
 `SelfHealingEngine` motoru kabul edilen tüm iyileştirme olaylarını anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder!
+
+`ExecuteWithHealingAsync` kullanıldığında kabul edilmiş bir olay, yalnızca önerilen elemanla yapılan eylem tekrarı başarılı olduktan sonra yazılır. Bu tekrar başarısız olursa öneri kabul edilmiş olarak raporlanmaz ve locator repository değişmeden kalır.
 
 ---
 

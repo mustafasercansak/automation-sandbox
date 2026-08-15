@@ -49,7 +49,7 @@ timeline
 ### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers, Reports & Docs
 * **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
 * **Extended LLM Providers:** Added `OpenAiHealingProvider` (`gpt-4o-mini`) and offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
-* **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with automatic repository update on healing (`ExecuteWithHealingAsync`), guarded by an opt-in `shouldHeal` exception-classification policy (default: locator-resolution failures only).
+* **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with an automatic repository update only after the healed action retry succeeds (`ExecuteWithHealingAsync`), guarded by an opt-in `shouldHeal` exception-classification policy (default: locator-resolution failures only).
 * **Healing Reports & CI Artifacts:** JSON and HTML reports emitted during CI with before/after snapshots, source, confidence, risk status (`accepted`, `accepted-with-llm`, `manual-review`), and LLM reasoning where available.
 * **GitHub Pages Documentation:** Jekyll-based documentation site with Mermaid diagram rendering for architecture, workflow, and roadmap diagrams.
 
@@ -254,7 +254,7 @@ timeline
 ### 4️⃣ Milestone 4: Web, SDK, Raporlama & Dokümantasyon
 * **Playwright Web Bağlayıcısı:** Shadow DOM, iframe ve hidden/offscreen CSS tespitiyle web DOM ağacını ortak `UiElementInfo` modeline taşır.
 * **Genişletilmiş LLM Sağlayıcıları:** Claude ve Gemini yanında OpenAI ve yerel/offline Ollama desteği.
-* **SelfHealingEngine SDK:** Locator repository, resolver ve LLM sağlayıcılarını tek yüksek seviyeli API ile birleştirir.
+* **SelfHealingEngine SDK:** Locator repository, resolver ve LLM sağlayıcılarını tek yüksek seviyeli API ile birleştirir; önerilen locator'ı yalnızca iyileştirilmiş eylem denemesi başarılı olduktan sonra repository'ye kaydeder.
 * **Onarım Raporları:** CI artifact olarak JSON + HTML rapor üretir; eski/yeni snapshot, kaynak, skor, risk durumu ve LLM gerekçesini gösterir.
 * **GitHub Pages Dokümanları:** Mermaid diyagramlarını render eden Jekyll tabanlı dokümantasyon sitesi.
 

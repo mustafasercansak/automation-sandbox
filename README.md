@@ -40,7 +40,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI, Grok, Kimi, and offline Ollama providers behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
 | **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, and nightly multi-model evaluation harness with GitHub Step Summary reporting. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
-| **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, repository auto-upsert, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only, reducing the risk that non-idempotent actions are blindly re-run). |
+| **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only). A proposed locator is persisted and reported as accepted only after the retried action succeeds. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
 | **Healing Reports & CI Artifacts** | ✅ Implemented | JSON + HTML report artifacts for accepted healing events, including before/after snapshots, confidence, source, and review status. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees; core targets `netstandard2.0` / `net8.0` and runs cross-platform across Windows and Linux CI. |
