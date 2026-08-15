@@ -247,6 +247,8 @@ namespace ScenarioRunner
             Assert.Equal(HealSource.Heuristic, result.Source);
             Assert.Equal("textBoxFar", result.Matched!.AutomationId);
             Assert.Empty(result.AgreedProviders);
+            Assert.NotNull(result.ProviderAttempts);
+            Assert.Equal(1, result.ProviderAttempts["Solo"]);
         }
 
         [Fact]
@@ -268,6 +270,9 @@ namespace ScenarioRunner
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.Equal(0.2, result.LlmConfidence);
             Assert.True(result.IsConfident);
+            Assert.NotNull(result.ProviderAttempts);
+            Assert.Equal(1, result.ProviderAttempts["AlphaLlm"]);
+            Assert.Equal(1, result.ProviderAttempts["BetaLlm"]);
         }
 
         [Fact]
@@ -382,6 +387,11 @@ namespace ScenarioRunner
 
             Assert.Equal(HealSource.Heuristic, result.Source);
             Assert.Empty(result.AgreedProviders);
+            Assert.NotNull(result.ProviderAttempts);
+            Assert.Equal(3, result.ProviderAttempts.Count);
+            Assert.Equal(1, result.ProviderAttempts["AlphaLlm"]);
+            Assert.Equal(1, result.ProviderAttempts["BetaLlm"]);
+            Assert.Equal(1, result.ProviderAttempts["GammaLlm"]);
         }
 
         [Fact]
@@ -406,6 +416,8 @@ namespace ScenarioRunner
 
             Assert.Equal(HealSource.Heuristic, result.Source);
             Assert.Empty(result.AgreedProviders);
+            Assert.NotNull(result.ProviderAttempts);
+            Assert.Equal(4, result.ProviderAttempts.Count);
         }
 
         [Fact]
@@ -1151,7 +1163,12 @@ namespace ScenarioRunner
             {
                 LastCandidates = candidates;
                 LastPlatform = platform;
-                return Task.FromResult(_resolve());
+                var res = _resolve();
+                if (res.AttemptCount == 0)
+                {
+                    res.AttemptCount = 1;
+                }
+                return Task.FromResult(res);
             }
         }
 

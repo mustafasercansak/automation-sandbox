@@ -2,6 +2,8 @@ bin/
 obj/
 **/bin/
 **/obj/
+TestResults/
+**/TestResults/
 *.user
 .vs/
 .vscode/
@@ -13,3 +15,4 @@ obj/
 !.gitignore
 !.github/
 !.github/**
+

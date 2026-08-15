@@ -1,0 +1,49 @@
+name: Nightly Multi-Provider Consensus Evaluation
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consensus-evaluation:
+    name: Multi-Provider Consensus Evaluation (Linux net8.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build ScenarioRunner
+        run: |
+          dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+
+      - name: Run multi-provider consensus evaluation
+        env:
+          CONSENSUS_EVALUATION: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation" --logger "console;verbosity=normal"
+
+      - name: Upload Consensus Evaluation Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consensus-evaluation-report
+          path: "**/consensus-evaluation.json"
+          retention-days: 90
+          if-no-files-found: ignore

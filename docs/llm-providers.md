@@ -1,6 +1,6 @@
 # 🤖 LLM Providers Guide / Yapay Zeka Sağlayıcıları Rehberi
 
-Automation Sandbox includes 4 built-in AI providers for low-confidence healing fallback ($Score < 50\%$).
+Automation Sandbox includes built-in AI providers and an environment-driven factory for low-confidence healing fallback ($Score < 50\%$).
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
@@ -17,22 +17,46 @@ Automation Sandbox includes 4 built-in AI providers for low-confidence healing f
 | **Gemini** | `gemini-3.6-flash` | `GEMINI_API_KEY` | Very Low | Cloud |
 | **Claude** | `claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` | Very Low | Cloud |
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Very Low | Cloud |
+| **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
+| **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free ($0)** | **100% Local (Offline)** |
 
-### Setting Up Free Offline AI (Ollama)
-1. Download & install [Ollama](https://ollama.com).
-2. Open terminal and pull the lightweight Llama model:
-   ```bash
-   ollama run llama3.2
-   ```
-3. Pass `OllamaHealingProvider` in C# code:
-   ```csharp
-   var provider = new OllamaHealingProvider(host: "http://localhost:11434");
-   ```
+### 🏭 Dynamic Environment Provider Factory (`LlmProviderFactory`)
+
+`LlmProviderFactory.CreateConfiguredProviders()` automatically discovers and instantiates available providers based on active environment variables without needing code changes:
+
+- **Well-known auto-discovery**:
+  - `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`) $\rightarrow$ `ClaudeHealingProvider`
+  - `GEMINI_API_KEY` (+ optional `GEMINI_MODEL`) $\rightarrow$ `GeminiHealingProvider`
+  - `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider`
+  - `GROK_API_KEY` (+ optional `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`)
+  - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
+  - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider`
+
+- **Arbitrary Custom Endpoints (`LLM_CUSTOM_PROVIDERS`)**:
+  Provide a JSON array string to configure additional OpenAI-compatible endpoints:
+  ```json
+  [
+    {
+      "name": "DeepSeek",
+      "endpoint": "https://api.deepseek.com/v1",
+      "model": "deepseek-chat",
+      "apiKeyEnvVar": "DEEPSEEK_API_KEY",
+      "timeoutSeconds": 20
+    }
+  ]
+  ```
+
+```csharp
+// Discover all available providers dynamically:
+var providers = LlmProviderFactory.CreateConfiguredProviders();
+
+var result = await SelfHealingResolver.ResolveAsync(expected, treeRoot, llmProviders: providers);
+```
 
 ### ⏱️ Timeouts & Resilience Patterns
 
-All LLM providers support configurable per-attempt timeouts, overall total operation timeouts, and automatic retry with exponential backoff:
+All LLM providers derive from `HttpLlmHealingProvider` and support configurable per-attempt timeouts, overall total operation timeouts, and automatic retry with exponential backoff:
 
 | Setting | Default (Cloud) | Default (Ollama) | Description |
 | :--- | :---: | :---: | :--- |
@@ -45,47 +69,23 @@ All LLM providers support configurable per-attempt timeouts, overall total opera
 - **Fail-Fast on Permanent Errors**: HTTP 400, 401, 403, and 404 fail immediately without wasting retry attempts.
 - **`Retry-After` Header & Quota Guard**: If a response includes a `Retry-After` header $\le 10\text{s}$, the transport pauses for the requested delay. If `Retry-After` $> 10\text{s}$ (e.g. daily quota exhaustion), the provider fails fast immediately.
 
-```csharp
-// Example: Custom timeouts and retries
-var provider = new ClaudeHealingProvider(
-    timeout: TimeSpan.FromSeconds(10),
-    totalTimeout: TimeSpan.FromSeconds(25),
-    maxRetries: 1);
-```
-
 ### 🤝 Consensus Acceptance
 
-An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale, so treating the larger number as the better answer just rewards whichever model is most optimistic.
-
-What follows from that rule:
+An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
 
 | Situation | Outcome |
 | :--- | :--- |
 | Two or more providers name the same candidate | Accepted; the voters are recorded in `HealResult.AgreedProviders` |
-| Only one provider is configured | **Never accepted** — one provider cannot agree with itself, no matter how confident it claims to be |
-| Every provider names a different candidate | Not accepted — this is the LLM layer reporting "we do not know" |
-| Two candidates tie for the most votes | Not accepted — a tie is disagreement; breaking it by confidence would reinstate the comparison this rule removes |
-| A provider fails, times out, or names a candidate that was not on its shortlist | That vote is discarded before counting; the remaining valid votes still stand on their own |
-
-When a pick is not accepted the resolver returns the heuristic result unchanged, exactly as it does when no provider is configured at all.
-
-```csharp
-// Consensus needs at least two independent providers.
-var result = await SelfHealingResolver.ResolveAsync(
-    expected,
-    currentTreeRoot,
-    new ILlmHealingProvider[] { new ClaudeHealingProvider(), new GeminiHealingProvider() });
-
-// result.AgreedProviders => ["Claude", "Gemini"] when they converged.
-```
-
-The quorum is tunable through `SimilarityWeights.MinimumConsensusVotes` (default `2`); values below 2 are rejected by `Validate()`.
+| Only one provider is configured | **Never accepted** — one provider cannot agree with itself |
+| Every provider names a different candidate | Not accepted — reported as split vote / disagreement |
+| Two candidates tie for the most votes | Not accepted — a tie is disagreement |
+| A provider fails or times out | Vote is discarded; remaining valid votes determine consensus |
 
 > **Independence is the point.** Two `OpenAiHealingProvider` instances pointed at the same endpoint and model are the same model voting twice, not a consensus. Prefer providers backed by genuinely different models.
 
 #### Naming providers
 
-`HealResult.AgreedProviders` identifies voters by `ILlmHealingProvider.Name`, so names must be unique within a run. Because `OpenAiHealingProvider` speaks to any OpenAI-compatible endpoint, several instances of it can legitimately be configured at once — give each one a `name`:
+`HealResult.AgreedProviders` identifies voters by `ILlmHealingProvider.Name`, so names must be unique within a run — `LlmProviderFactory` throws on a duplicate rather than producing an unreadable report. Because `OpenAiHealingProvider` speaks to any OpenAI-compatible endpoint, several instances of it can legitimately be configured at once. The factory handles the well-known ones for you; construct them by hand and each needs a `name`:
 
 ```csharp
 var providers = new ILlmHealingProvider[]
@@ -96,6 +96,19 @@ var providers = new ILlmHealingProvider[]
 ```
 
 Without `name`, both would report `"OpenAI"` and their votes would be indistinguishable in the report.
+
+### Setting Up Free Offline AI (Ollama)
+1. Download & install [Ollama](https://ollama.com).
+2. Open terminal and pull the lightweight Llama model:
+   ```bash
+   ollama run llama3.2
+   ```
+3. Pass `OllamaHealingProvider` in C# code:
+   ```csharp
+   var provider = new OllamaHealingProvider(host: "http://localhost:11434");
+   ```
+
+On modest hardware, prefer a smaller model (`llama3.2:1b`, `qwen2.5:0.5b`) — set it with `OLLAMA_MODEL` or the `model:` parameter. Ollama alone cannot satisfy consensus: it is one provider, so pair it with a second one if you want LLM picks accepted rather than only recorded.
 
 ### 🌐 Free Cloud AI via GitHub Models & Custom Endpoints
 `OpenAiHealingProvider` supports custom OpenAI-compatible endpoints (such as GitHub Models, Azure OpenAI, vLLM, LM Studio).
@@ -109,74 +122,66 @@ var provider = new OpenAiHealingProvider(
     model: "gpt-4o-mini");
 ```
 
+> GitHub Models is being retired and has already answered `HTTP 410` on a brownout (#44). The endpoint above still works as a template for any OpenAI-compatible provider — point `endpoint:` elsewhere and supply that provider's key.
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
 
-### 📊 Yapay Zeka Karşılaştırma Tablosu
+### 📊 Sağlayıcı Karşılaştırma Tablosu
 
-| Sağlayıcı | Varsayılan Model | Kurulum | Maliyet | Gizlilik |
+| Sağlayıcı | Varsayılan Model | Kurulum / Değişken | Maliyet | Gizlilik |
 | :--- | :--- | :--- | :---: | :---: |
 | **Gemini** | `gemini-3.6-flash` | `GEMINI_API_KEY` | Çok Düşük | Bulut |
 | **Claude** | `claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` | Çok Düşük | Bulut |
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
-| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Ücretsiz ($0)** | **100% Yerel (Offline)** |
+| **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
+| **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
+| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz ($0)** | **%100 Yerel (Çevrimdışı)** |
+
+### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
+
+`LlmProviderFactory.CreateConfiguredProviders()` ortamdaki anahtarları otomatik keşfeder ve kod değiştirmeden sağlayıcı listesini hazırlar:
+
+```csharp
+// Ortamdaki tüm geçerli sağlayıcıları otomatik al:
+var providers = LlmProviderFactory.CreateConfiguredProviders();
+
+var result = await SelfHealingResolver.ResolveAsync(expected, treeRoot, llmProviders: providers);
+```
 
 ### ⏱️ Zaman Aşımı (Timeout) ve Dayanıklılık (Resilience)
-Tüm LLM sağlayıcıları yapılandırılabilir deneme başına zaman aşımı, toplam tavan süresi ve üstel geri çekilmeli otomatik yeniden deneme (retry) desteğine sahiptir:
+
+Tüm sağlayıcılar `HttpLlmHealingProvider` tabanından türer; deneme başına zaman aşımı, toplam işlem tavanı ve üstel geri çekilmeli (exponential backoff) otomatik yeniden deneme destekler:
 
 | Ayar | Varsayılan (Bulut) | Varsayılan (Ollama) | Açıklama |
 | :--- | :---: | :---: | :--- |
-| **`Timeout`** | `15s` | `30s` | İstek başına HTTP zaman aşımı. Asılı kalan tek bir isteğin boru hattını kilitlemesini önler. |
-| **`TotalTimeout`** | `35s` | `70s` | Tüm denemeler ve geri çekilmeler dahil genel işlem tavanı. |
-| **`MaxRetries`** | `2` | `2` | Geçici hatalarda yeniden deneme sayısı (toplam en fazla 3 istek). |
+| **`Timeout`** | `15s` | `30s` | Deneme başına HTTP zaman aşımı. Tek bir asılı isteğin akışı kilitlemesini önler. |
+| **`TotalTimeout`** | `35s` | `70s` | Tüm denemeler ve bekleme süreleri dahil toplam işlem tavanı. |
+| **`MaxRetries`** | `2` | `2` | Geçici hatalarda yeniden deneme sayısı (toplam en fazla 3 deneme). |
 
 #### Yeniden Deneme (Retry) Kuralları:
-- **Yeniden Denenen Geçici Hatalar**: HTTP 429 (Rate Limited), HTTP 500, 502, 503, 504 ve `HttpRequestException` (geçici bağlantı kopmaları) üstel geri çekilme ve jitter ile otomatik olarak yeniden denenir.
-- **Kalıcı Hatalarda Hızlı Başarısızlık (Fail-Fast)**: HTTP 400, 401, 403 ve 404 hatalarında yeniden deneme yapılmaz, hemen başarısızlık dönülür.
-- **`Retry-After` Başlığı ve Kota Koruması**: Yanıtta `Retry-After` başlığı $\le 10\text{s}$ ise belirtilen süre kadar beklenir. Eğer $> 10\text{s}$ ise (ör. günlük kota tükenmesi) boşuna beklenmez ve doğrudan fail-fast yapılır.
+- **Yeniden denenen geçici hatalar**: HTTP 429 (kota aşımı), 500, 502, 503, 504 ve `HttpRequestException` (geçici ağ kopmaları) üstel geri çekilme ve jitter ile otomatik olarak yeniden denenir.
+- **Kalıcı hatalarda hızlı başarısızlık**: HTTP 400, 401, 403 ve 404 yeniden deneme hakkı harcamadan anında başarısız döner.
+- **`Retry-After` Başlığı ve Kota Koruması**: Yanıtta `Retry-After` başlığı $\le 10\text{s}$ ise belirtilen süre kadar beklenir. $> 10\text{s}$ ise (ör. günlük kota tükenmesi) boşuna beklenmez, doğrudan başarısız dönülür.
 
-```csharp
-// Örnek: Özel zaman aşımı ve deneme ayarları
-var provider = new ClaudeHealingProvider(
-    timeout: TimeSpan.FromSeconds(10),
-    totalTimeout: TimeSpan.FromSeconds(25),
-    maxRetries: 1);
-```
+### 🤝 Mutabakat (Consensus) Kabul Kuralı
 
-### 🤝 Mutabakatla Kabul (Consensus)
-
-Bir LLM seçimi, ancak **en az iki sağlayıcı birbirinden bağımsız olarak aynı adayı işaret ederse** kabul edilir. Modellerin kendi bildirdiği güven skoru kaydedilir ama asla karşılaştırılmaz veya bir eşiğe sokulmaz: Claude'un `0.72`'si ile Gemini'nin `0.95`'i aynı ölçekte değildir; büyük sayıyı doğru cevap saymak yalnızca en iyimser modeli ödüllendirir.
-
-Bu kuralın sonuçları:
+Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seçtiğinde** kabul edilir. Modellerin kendi beyan ettiği güven puanları karşılaştırılmaz.
 
 | Durum | Sonuç |
 | :--- | :--- |
 | İki veya daha fazla sağlayıcı aynı adayı seçer | Kabul edilir; oy verenler `HealResult.AgreedProviders` içine yazılır |
-| Yalnızca tek sağlayıcı yapılandırılmış | **Asla kabul edilmez** — bir sağlayıcı kendisiyle mutabık olamaz, ne kadar emin olduğunu söylerse söylesin |
-| Her sağlayıcı farklı bir aday seçer | Kabul edilmez — bu, LLM katmanının "bilmiyoruz" demesidir |
-| İki aday en yüksek oyda berabere kalır | Kabul edilmez — beraberlik anlaşmazlıktır; güvene göre çözmek, kaldırılan karşılaştırmayı geri getirir |
-| Bir sağlayıcı hata verir, zaman aşımına uğrar veya kısa listede olmayan bir aday söyler | O oy sayımdan önce elenir; kalan geçerli oylar kendi başına geçerliliğini korur |
-
-Seçim kabul edilmediğinde çözümleyici, hiç sağlayıcı yapılandırılmamış gibi sezgisel (heuristic) sonucu değiştirmeden döndürür.
-
-```csharp
-// Mutabakat için en az iki bağımsız sağlayıcı gerekir.
-var result = await SelfHealingResolver.ResolveAsync(
-    expected,
-    currentTreeRoot,
-    new ILlmHealingProvider[] { new ClaudeHealingProvider(), new GeminiHealingProvider() });
-
-// Anlaştıklarında result.AgreedProviders => ["Claude", "Gemini"]
-```
-
-Yeter sayı `SimilarityWeights.MinimumConsensusVotes` ile ayarlanabilir (varsayılan `2`); 2'nin altındaki değerler `Validate()` tarafından reddedilir.
+| Yalnızca tek sağlayıcı yapılandırılmış | **Asla kabul edilmez** — tek sağlayıcı kendisiyle mutabakat sağlayamaz |
+| Her sağlayıcı farklı bir aday seçer | Kabul edilmez — ayrık oy (split vote) olarak raporlanır |
+| İki aday en yüksek oyda berabere kalır | Kabul edilmez — beraberlik anlaşmazlıktır |
+| Bir sağlayıcı hata verir veya zaman aşımına uğrar | O oy elenir; kalan geçerli oylar mutabakatı belirler |
 
 > **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, mutabakat değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin.
 
 #### Sağlayıcılara isim verme
 
-`HealResult.AgreedProviders` oy verenleri `ILlmHealingProvider.Name` ile tanımlar; bu yüzden isimler bir çalıştırma içinde benzersiz olmalıdır. `OpenAiHealingProvider` OpenAI uyumlu her uç noktayla konuştuğu için aynı anda birden çok örneği meşru biçimde yapılandırılabilir — her birine `name` verin:
+`HealResult.AgreedProviders` oy verenleri `ILlmHealingProvider.Name` ile tanımlar; bu yüzden isimler bir çalıştırma içinde benzersiz olmalıdır — `LlmProviderFactory` yinelenen bir isimde okunmaz bir rapor üretmek yerine hata fırlatır. `OpenAiHealingProvider` OpenAI uyumlu her uç noktayla konuştuğu için aynı anda birden çok örneği meşru biçimde yapılandırılabilir. Bilinen sağlayıcıları fabrika sizin için kurar; elle kuruyorsanız her birine `name` verin:
 
 ```csharp
 var providers = new ILlmHealingProvider[]
@@ -199,6 +204,8 @@ var providers = new ILlmHealingProvider[]
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
 
+Bilgisayarınız zayıfsa daha küçük bir model tercih edin (`llama3.2:1b`, `qwen2.5:0.5b`) — `OLLAMA_MODEL` ile veya `model:` parametresiyle ayarlanır. Ollama tek başına mutabakatı sağlayamaz: tek sağlayıcıdır, dolayısıyla LLM seçimlerinin yalnız kaydedilmesi değil kabul edilmesi isteniyorsa yanına ikinci bir sağlayıcı gerekir.
+
 ### 🌐 GitHub Models ve Özel OpenAI Uç Noktaları
 `OpenAiHealingProvider` özel OpenAI uyumlu uç noktaları (GitHub Models, Azure OpenAI, vLLM, LM Studio) destekler.
 
@@ -211,4 +218,4 @@ var provider = new OpenAiHealingProvider(
     model: "gpt-4o-mini");
 ```
 
-
+> GitHub Models emekliye ayrılıyor ve bir kesinti sırasında `HTTP 410` döndürdü (#44). Yukarıdaki uç nokta, OpenAI uyumlu herhangi bir sağlayıcı için şablon olarak hâlâ geçerli — `endpoint:` değerini değiştirip o sağlayıcının anahtarını verin.

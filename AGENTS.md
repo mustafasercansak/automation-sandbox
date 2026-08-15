@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository. Read this before makin
 
 ## Project overview
 
-**Automation Sandbox** is an open-source locator healing and intent-driven test generation engine for Windows desktop and web. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the `Microsoft.Playwright` .NET SDK. When a locator (`AutomationId` or DOM locator) breaks due to a UI refactor, the engine re-resolves the element using a deterministic, pure-heuristic structural similarity scorer, with an opt-in LLM fallback chain (Claude/Gemini/OpenAI/Ollama) guarded against hallucinated picks. It is an open alternative to the black-box locator recovery in commercial tools — not a replacement for their full suite (IDE, recorder, execution grid), which is deliberately out of scope.
+**Automation Sandbox** is an open-source locator healing and intent-driven test generation engine for Windows desktop and web. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the `Microsoft.Playwright` .NET SDK. When a locator (`AutomationId` or DOM locator) breaks due to a UI refactor, the engine re-resolves the element using a deterministic, pure-heuristic structural similarity scorer, with an opt-in multi-provider LLM fallback (Claude, Gemini, OpenAI and any OpenAI-compatible endpoint, plus offline Ollama) that is guarded against hallucinated picks and accepted only by consensus between independent providers. It is an open alternative to the black-box locator recovery in commercial tools — not a replacement for their full suite (IDE, recorder, execution grid), which is deliberately out of scope.
 
 Single Visual Studio solution: `AutomationSandbox.sln`. Everything is C#; there is no JavaScript/Python/Rust tooling, no `package.json`, no `pyproject.toml`. `PlaywrightLiveExploration` depends on the `Microsoft.Playwright` NuGet package, but that's a fully managed .NET client - it does not require Node.js at runtime, so this claim still holds. A real Model Context Protocol bridge (the canonical Playwright MCP server is Node.js-based) was deliberately rejected for exactly this reason - see `docs/intent-driven-automation.md`.
 
@@ -76,8 +76,49 @@ When changing scoring, discovery, or resolver behavior, add or update tests here
 - Follow the existing file's conventions: file-scoped vs. block namespaces (existing code uses block-scoped `namespace X { }` with 4-space indentation), `Nullable`/`ImplicitUsings` settings differ per project — don't "fix" them globally.
 - Comments are plain, explanatory prose that documents *why* (trade-offs, calibration caveats, guard semantics), not *what*. Keep that tone when editing; update comments when behavior changes.
 - Keep the cross-platform boundary clean: no FlaUI, Windows-only APIs, or `net48`-only constructs in `UiModel`, `SelfHealing`, or `LlmHealing` — they must stay compilable for `netstandard2.0`.
+- **The boundary is violated in both directions, and the modern-into-`net48` direction is the one that keeps breaking CI.** `ScenarioRunner` targets `net48` alongside `net8.0` on Windows, and the core libraries target `netstandard2.0`, so several ordinary C# features are unavailable there:
+  - `record` types and `init` accessors need `System.Runtime.CompilerServices.IsExternalInit` (.NET 5+). A positional record compiles fine on `net8.0` and fails the Windows leg with `CS0518` — this cost a red CI run on #47. Use a plain class with get-only properties, as every other DTO here does.
+  - `KeyValuePair<K,V>` deconstruction — `foreach (var (key, value) in dictionary)` — needs `KeyValuePair.Deconstruct`, added in .NET Core 2.0 / netstandard2.1. Use `kvp.Key` / `kvp.Value`. Deconstructing a `ValueTuple` returned from a method is fine; only the dictionary form breaks.
+  - `required` members, `Random.Shared`, `DateOnly`/`TimeOnly`/`Half`, `Index`/`Range` (`^1`, `a..b`), `Dictionary.TryAdd`, `Enumerable.ToHashSet`, `Math.Clamp`, `StringBuilder.AppendJoin` and the `StringComparison`/`char` overloads of `string.Contains` are likewise unavailable. For thread-safe randomness use `[ThreadStatic] private static Random?`, which is what `LlmHttpTransport` does.
+
+  **Linux cannot catch any of this, and cannot be made to.** `dotnet build`/`dotnet test` on Linux only ever compiles `net8.0`, so a green local run proves nothing about `net48`. Forcing it with `-p:TargetFrameworks=net48` does not work either: the property cascades to every referenced project, and `UiModel`/`SelfHealing`/`LlmHealing`/`IntentAutomation` do not target `net48` at all, so the build collapses on `System.Net.Http` long before reaching your code.
+
+  **The trap is not always a missing method name — it is often a missing overload.** `new Dictionary<string, int>(someReadOnlyDictionary)` compiles on `net8.0` because `Dictionary(IEnumerable<KeyValuePair<,>>)` exists there; on `net48` only `Dictionary(IDictionary<,>)` and `Dictionary(int capacity)` exist, so an `IReadOnlyDictionary` argument silently binds to the capacity overload and fails with `CS1503`. Use `.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)`. Grepping for API names will not find this class of problem.
+
+  **Only `ScenarioRunner` is exposed.** `UiModel`, `SelfHealing`, `LlmHealing`, `IntentAutomation` and `WebDiscovery` all target `netstandard2.0`, whose surface is close enough to `net48` that a local `dotnet build -f netstandard2.0` catches these mistakes before they reach CI. `ScenarioRunner` has no such target — it is `net8.0` on Linux and `net48;net8.0` on Windows — which is why every failure of this kind has landed in test code rather than library code. When writing in `ScenarioRunner`, ask whether the API you are reaching for would compile in one of the `netstandard2.0` libraries; if you are unsure, it probably would not.
+
+  So: either build on Windows, or check your diff against the list above and then treat the Windows CI leg as the actual gate — do not merge on a green Linux leg alone. This class of failure has now broken CI four times (#23, #24, and twice on #47).
 - Scoring must remain deterministic and allocation-conscious (O(N) flattening, no per-call provider requirements). `SimilarityWeights.Default` values are tuned against exactly the two demo scenarios — treat changes to defaults as behavior changes needing test updates.
 - Public API shape is part of the product (`Resolve`, `ResolveAsync`, `ScoreCandidates`, `DiscoveryOptions`/`DiscoveryResult` are documented in the README with examples). If you change them, update `README.md` (and `PROJECT_SHOWCASE.md` if it describes the same behavior).
+
+## Documentation is part of every change
+
+**Behavior change and documentation change land in the same commit.** Documentation here is not a nice-to-have that trails the code — it is what the next agent reads to decide how the system works, so stale documentation actively causes wrong implementations. This has already happened: `README.md`'s central sequence diagram and this file's own pipeline section both kept describing single-provider LLM acceptance after #10 replaced it with consensus, and a published release note claimed live provider calls were "unverified in CI" while the Windows CI leg had been making a real Gemini call on every run.
+
+Before opening a PR, check every surface below and update the ones your change touched. If none needed updating, that should be because you checked, not because you didn't look.
+
+| Surface | Update when |
+| :--- | :--- |
+| `AGENTS.md` | Any change to acceptance rules, thresholds, schema versions, test conventions, workflows, or the module layout. **The healing-pipeline section is the one most likely to go stale — re-read it whenever resolver behavior changes.** |
+| `README.md` | Public API shape, defaults, the resolution-flow sequence diagram, the implementation-status and test-coverage tables, the roadmap, and target frameworks per project. The diagram is the most-read part and the easiest to forget. |
+| `docs/*.md` | The detailed guides — `llm-providers.md` for provider and consensus behavior, `nuget-packaging.md` for release mechanics. These are published to GitHub Pages, so they are user-facing. Keep the English and Turkish sections in sync; updating only one is worse than updating neither, because the other silently becomes a contradiction. |
+| `PROJECT_SHOWCASE.md` | When it describes behavior your change altered. |
+| Release notes in `release.yml` | Every behavior change that reaches a package. Breaking changes go at the top, and a change that fails silently (like consensus disabling single-provider healing) must say so explicitly — users get no error to tell them. |
+| Package `<Description>` in each `.csproj` | When a package gains or loses a capability. This metadata is frozen inside the `.nupkg` at pack time and cannot be corrected after publishing. |
+
+Three rules that follow from the same principle:
+
+- **Never document intent as fact.** If a threshold is an estimate rather than a measured value, say so where it is documented. The calibration caveats in `README.md` and `SimilarityWeights` exist for this reason.
+- **When you remove a behavior, remove its documentation in the same change** — and where the old rule was prominent, say explicitly that it no longer applies. `MinimumLlmConfidence` still exists as a property, so its documentation now states that it gates nothing; deleting the mention would have left readers guessing.
+- **Never overwrite or truncate entire documentation files.** Always perform targeted in-place edits (`replace_file_content`). Existing setup guides, step-by-step instructions, examples, notes, and dual-language sections (English and Turkish) must be preserved in full. Do not replace entire files with partial summaries. Adding a section is not a licence to drop neighbouring ones: while `LlmProviderFactory` documentation was being added to `docs/llm-providers.md`, the file went **net −94 lines** and took the Ollama setup guide, the GitHub Models section, "Naming providers" and the entire Turkish resilience section with it — nothing in the change looked wrong, the content was simply gone.
+
+  Verify the outcome rather than trusting the method, because a targeted edit can still swallow sections. Before opening a PR, list what your diff removed:
+
+  ```bash
+  git diff docs/llm-providers.md | grep -E "^-#{2,4} "   # headings this change deleted
+  ```
+
+  Every heading it prints must be one you meant to remove. For the bilingual guides also confirm the halves still line up — same section count, same order, one-to-one.
 
 ## CI and deployment
 
@@ -85,6 +126,7 @@ When changing scoring, discovery, or resolver behavior, add or update tests here
 - `.github/workflows/pack.yml` — manual `workflow_dispatch` only, deliberately separate from CI. Packs `UiModel`, `SelfHealing`, `LlmHealing`, `Discovery`, `WebDiscovery`, `IntentAutomation`, and `PlaywrightLiveExploration` in Release and uploads `.nupkg` files as a build artifact. There is intentionally no `dotnet nuget push` step — no publish feed has been chosen yet. Do not add publishing without explicit instruction.
 - `.github/workflows/release.yml` — manual `workflow_dispatch` with a `dry_run` input; packs the same seven libraries, uploads artifacts (`if: always()`), and creates the GitHub release. Release notes are built with a **literal** PowerShell here-string (`@'...'@`) and a `__TAG__` placeholder: an expandable here-string treats backticks as escapes and silently corrupts the notes.
 - `.github/workflows/llm-smoke.yml` — live smoke test against any OpenAI-compatible endpoint. The nightly schedule is deliberately commented out: GitHub Models answered `HTTP 410 github_models_retirement_brownout` and a nightly nobody can fix trains everyone to ignore red (#44). Endpoint and model come from repo variables, so switching backends is two variables and a secret, no code change.
+- `.github/workflows/nightly-consensus.yml` — nightly (02:00 UTC) and manual multi-provider consensus evaluation on Linux/`net8.0`, writing a JSON telemetry artifact and a Markdown table to `$GITHUB_STEP_SUMMARY` (#47). It is gated behind `CONSENSUS_EVALUATION=1`, which **only this workflow sets** — `ci.yml` passes provider keys on every PR, so without that gate the evaluation would run on each push and consume the free-tier quota the nightly depends on. `GITHUB_TOKEN` is deliberately **not** exported here: `OpenAiHealingProvider` falls back to it, which would send a GitHub token to `api.openai.com` and 401 every night. The job stays green when providers rate-limit or fail — that outcome is recorded as data, not treated as a build failure.
 - `.github/workflows/docs.yml` — publishes `docs/` to GitHub Pages.
 - Planned (not implemented — don't assume they exist): NuGet release (no publish feed chosen yet), a real Model Context Protocol bridge (deliberately rejected in favor of `PlaywrightLiveExplorer` — see `docs/intent-driven-automation.md`).
 
