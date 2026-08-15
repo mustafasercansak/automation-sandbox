@@ -33,8 +33,16 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -uo pipefail
+
+          # Everything is teed so the same table reaches the run log as well as the job
+          # summary. GitHub does not expose step summaries over the REST API, so a
+          # summary-only report can be read in a browser and nowhere else - which made the
+          # first diagnostics run impossible to inspect from the CLI.
+          SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 
           {
             echo "## 🔌 LLM Provider Diagnostics"
@@ -42,14 +50,14 @@ jobs:
             echo "Status of each provider's models endpoint, and the model ids it will accept."
             echo "Set the repository **variables** (\`GROK_MODEL\`, \`KIMI_MODEL\`, \`KIMI_ENDPOINT\`, …) from what is listed here."
             echo
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$SUMMARY"
 
           # $1 label, $2 url, $3 key, $4 auth style (bearer|x-goog|x-api-key)
           probe() {
             local label="$1" url="$2" key="$3" style="$4"
 
             if [ -z "$key" ]; then
-              printf '| `%s` | _no key configured_ | – | – |\n' "$label" >> "$GITHUB_STEP_SUMMARY"
+              printf '| `%s` | _no key configured_ | – | – |\n' "$label" | tee -a "$SUMMARY"
               return
             fi
 
@@ -75,15 +83,18 @@ jobs:
               ids="_${ids:-no response}_"
             fi
 
-            printf '| `%s` | %s | `%s` | %s |\n' "$label" "$code" "$url" "$ids" >> "$GITHUB_STEP_SUMMARY"
+            printf '| `%s` | %s | `%s` | %s |\n' "$label" "$code" "$url" "$ids" | tee -a "$SUMMARY"
           }
 
           {
             echo "| Provider | HTTP | Endpoint | Models / Error |"
             echo "| :--- | :---: | :--- | :--- |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$SUMMARY"
 
           probe "Grok"        "https://api.x.ai/v1/models"                                    "${GROK_API_KEY:-}"      bearer
+          # Groq, not Grok - unrelated company, one letter apart, separate key.
+          probe "Groq"        "https://api.groq.com/openai/v1/models"                         "${GROQ_API_KEY:-}"      bearer
+          probe "OpenRouter"  "https://openrouter.ai/api/v1/models"                           "${OPENROUTER_API_KEY:-}" bearer
           # Moonshot runs separate regions with separate accounts. Probing both in one run is
           # what distinguishes "key belongs to the other region" from "key is invalid" - the
           # nightly's HTTP 401 alone cannot tell those apart.
@@ -103,4 +114,4 @@ jobs:
             echo "**Reading this:** \`200\` with model ids means the credential works and those names are valid."
             echo "\`401\`/\`403\` is an authentication problem, not a model problem."
             echo "For Kimi, one region returning \`200\` while the other returns \`401\` means the key is fine and \`KIMI_ENDPOINT\` needs to point at the region that answered."
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$SUMMARY"
