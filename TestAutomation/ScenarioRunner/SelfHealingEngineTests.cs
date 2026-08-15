@@ -98,7 +98,7 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ExecuteWithHealingAsync_RetriesActionWithHealedElementWhenInitialFails()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
 
             var expected = new UiElementInfo
             {
@@ -135,6 +135,8 @@ namespace ScenarioRunner
                         throw new ElementNotFoundException("Element not found with old automation ID!");
                     }
 
+                    Assert.Null(repository.Find("submit_btn"));
+                    Assert.False(File.Exists(_tempReportPath));
                     return Task.FromResult("Clicked: " + element.AutomationId);
                 },
                 captureTreeRoot: () => currentTree);
@@ -145,6 +147,74 @@ namespace ScenarioRunner
             var record = repository.Find("submit_btn");
             Assert.NotNull(record);
             Assert.Equal("btnSubmit_Renamed", record!.Snapshot.AutomationId);
+            Assert.Single(record.HealingHistory);
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            Assert.Single(report!.Events);
+            Assert.Equal("submit_btn", report.Events[0].LocatorKey);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ExecuteWithHealingAsync_DoesNotPersistHealWhenRetriedActionFails()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+            repository.Upsert("submit_btn", expected, applicationName: "CustomerApp", platform: "windows-uia");
+            var repositoryBytesBeforeHeal = File.ReadAllBytes(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnSubmit_Renamed",
+                        Name = "Submit",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+            var originalException = new ElementNotFoundException("Element not found with old automation ID!");
+            var retryException = new InvalidOperationException("The healed element could not be invoked.");
+            var attemptCount = 0;
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element =>
+                    {
+                        attemptCount++;
+                        if (element.AutomationId == "btnSubmit_Old")
+                        {
+                            throw originalException;
+                        }
+
+                        throw retryException;
+                    },
+                    captureTreeRoot: () => currentTree));
+
+            Assert.Equal(2, attemptCount);
+            Assert.Same(originalException, exception.InnerException);
+            Assert.Contains("The healed element could not be invoked.", exception.Message);
+            Assert.Same(retryException, exception.Data[SelfHealingEngine.RetryExceptionDataKey]);
+            Assert.NotNull(retryException.StackTrace);
+            Assert.Equal(repositoryBytesBeforeHeal, File.ReadAllBytes(_tempRepoPath));
+
+            var record = repository.Find("submit_btn");
+            Assert.NotNull(record);
+            Assert.Equal("btnSubmit_Old", record!.Snapshot.AutomationId);
+            Assert.Empty(record.HealingHistory);
+            Assert.False(File.Exists(_tempReportPath));
         }
 
         [Fact]

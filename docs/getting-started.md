@@ -17,7 +17,7 @@ Before writing code, make sure you have:
 Whenever you perform a test step, **Automation Sandbox** manages elements using a 3-step process:
 1. **Repository Check:** It looks up the saved element snapshot in `my_locators.locator.json`.
 2. **Execute Action:** It tries to perform your action (e.g. click).
-3. **Automatic Healing:** If the element was renamed or moved, it automatically finds the new element, updates `my_locators.locator.json`, and retries your action.
+3. **Automatic Healing:** If the element was renamed or moved, it finds a candidate and retries your action with it. Only after that retry succeeds does it update `my_locators.locator.json`; a failed retry never becomes the repository's new baseline.
 
 > **Which failures trigger healing?** By default, `ExecuteWithHealingAsync` only heals exceptions whose exact type name is a known locator/element-resolution failure (e.g. `ElementNotFoundException`, `NoSuchElementException`, FlaUI's `ElementNotAvailableException`). Any other exception (assertion, timeout, backend error) is rethrown without retrying your action — this reduces the risk of duplicate execution for a non-idempotent step (like placing an order), though it isn't an absolute guarantee: a multi-step action can still have a side effect occur before a correctly-classified locator failure, and the retry re-runs the whole action. Pass the optional `shouldHeal: ex => ...` parameter to define your own policy.
 
@@ -113,7 +113,7 @@ Koda başlamadan önce bilgisayarınızda şunların kurulu olduğundan emin olu
 Bir test adımı çalıştırdığınızda **Automation Sandbox** 3 adımda işlemleri yönetir:
 1. **Depo Kontrolü:** `my_locators.locator.json` dosyasından kaydedilmiş eleman bilgilerini okur.
 2. **Eylemi Çalıştırma:** Tıklama veya metin yazma eyleminizi dener.
-3. **Otomatik İyileştirme (Self-Healing):** Elemanın adı/ID'si değiştiği için hata alınırsa, ekrandaki en yakın elemanı otomatik bulur, JSON dosyasını günceller ve tıklama işlemini **başarıyla tamamlar**.
+3. **Otomatik İyileştirme (Self-Healing):** Elemanın adı/ID'si değiştiği için hata alınırsa, bir aday bulur ve eylemi bu adayla yeniden dener. `my_locators.locator.json` yalnızca bu ikinci deneme başarılı olduktan sonra güncellenir; başarısız bir deneme repository'nin yeni referans noktası olmaz.
 
 > **Hangi hatalar iyileştirmeyi tetikler?** `ExecuteWithHealingAsync` varsayılan olarak yalnızca istisnanın tam tip adı bilinen bir locator/eleman çözümleme hatasıyla eşleşiyorsa iyileştirme yapar (örn. `ElementNotFoundException`, `NoSuchElementException`, FlaUI'nin `ElementNotAvailableException`'ı). Diğer tüm hatalar (assertion, zaman aşımı, backend hatası) eyleminizi tekrar çalıştırmadan geri fırlatılır — bu, sipariş verme gibi tekrar çalıştırılamayan bir adımda yinelenen çalıştırma riskini azaltır, ancak mutlak bir garanti değildir: çok adımlı bir action'da, doğru sınıflandırılmış bir locator hatasından önce bir side effect zaten gerçekleşmiş olabilir ve retry tüm action'ı yeniden çalıştırır. Kendi politikanızı tanımlamak için isteğe bağlı `shouldHeal: ex => ...` parametresini kullanın.
 

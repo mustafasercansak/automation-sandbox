@@ -9,6 +9,12 @@ namespace SelfHealing
 {
     public sealed class SelfHealingEngine
     {
+        /// <summary>
+        /// The <see cref="Exception.Data"/> key that contains the exception thrown by a failed
+        /// action retry while the original locator-resolution failure remains the inner exception.
+        /// </summary>
+        public const string RetryExceptionDataKey = "RetryException";
+
         private readonly LocatorRepository? _repository;
         private readonly SimilarityWeights _weights;
         private readonly IReadOnlyList<ILlmHealingProvider> _llmProviders;
@@ -31,6 +37,11 @@ namespace SelfHealing
             _reportSink = reportSink ?? HealingReportFileSink.FromEnvironment();
         }
 
+        /// <summary>
+        /// Resolves a candidate and immediately persists a confident match without proving it
+        /// through an action. Use <see cref="ExecuteWithHealingAsync{T}"/> when persistence must
+        /// happen only after the healed action succeeds.
+        /// </summary>
         public async Task<HealResult> ResolveAndRecordAsync(
             string locatorKey,
             UiElementInfo expected,
@@ -39,33 +50,62 @@ namespace SelfHealing
             string? platform = null,
             CancellationToken cancellationToken = default)
         {
-            var healResult = await SelfHealingResolver.ResolveAsync(
+            var healResult = await ResolveAsync(
                 expected,
                 currentTreeRoot,
-                _llmProviders,
-                _weights,
                 log,
                 platform,
                 cancellationToken).ConfigureAwait(false);
 
             if (healResult.IsConfident && healResult.Matched != null)
             {
-                var matchedSnapshot = UiElementSnapshot.Capture(healResult.Matched);
-                if (string.IsNullOrWhiteSpace(matchedSnapshot.TestIntent) && !string.IsNullOrWhiteSpace(expected.TestIntent))
-                {
-                    matchedSnapshot.TestIntent = expected.TestIntent;
-                }
-
-                if (_repository != null)
-                {
-                    var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
-                    _repository.Upsert(locatorKey, matchedSnapshot, entry, platform: platform);
-                }
-
-                _reportSink?.Record(HealingReportEntry.FromHealResult(locatorKey, expected, matchedSnapshot, healResult));
+                CommitAcceptedHeal(locatorKey, expected, healResult, platform);
             }
 
             return healResult;
+        }
+
+        private Task<HealResult> ResolveAsync(
+            UiElementInfo expected,
+            UiElementInfo currentTreeRoot,
+            Action<string>? log,
+            string? platform,
+            CancellationToken cancellationToken)
+        {
+            return SelfHealingResolver.ResolveAsync(
+                expected,
+                currentTreeRoot,
+                _llmProviders,
+                _weights,
+                log,
+                platform,
+                cancellationToken);
+        }
+
+        private void CommitAcceptedHeal(
+            string locatorKey,
+            UiElementInfo expected,
+            HealResult healResult,
+            string? platform)
+        {
+            if (!healResult.IsConfident || healResult.Matched == null)
+            {
+                throw new InvalidOperationException("Only a confident matched heal can be committed.");
+            }
+
+            var matchedSnapshot = UiElementSnapshot.Capture(healResult.Matched);
+            if (string.IsNullOrWhiteSpace(matchedSnapshot.TestIntent) && !string.IsNullOrWhiteSpace(expected.TestIntent))
+            {
+                matchedSnapshot.TestIntent = expected.TestIntent;
+            }
+
+            if (_repository != null)
+            {
+                var entry = LocatorHealingHistoryEntryFactory.FromHealResult(healResult, expected);
+                _repository.Upsert(locatorKey, matchedSnapshot, entry, platform: platform);
+            }
+
+            _reportSink?.Record(HealingReportEntry.FromHealResult(locatorKey, expected, matchedSnapshot, healResult));
         }
 
         // Exact type names that mark an exception as a locator/element-resolution failure.
@@ -94,6 +134,17 @@ namespace SelfHealing
             return LocatorResolutionExceptionTypeNames.Contains(exception.GetType().Name);
         }
 
+        /// <summary>
+        /// Executes an action and, after a locator-resolution failure, retries it with a healed
+        /// candidate. Repository history and accepted-heal reporting are committed only when the
+        /// retry succeeds.
+        /// </summary>
+        /// <remarks>
+        /// If the retry fails, the original locator-resolution exception remains the returned
+        /// exception's <see cref="Exception.InnerException"/> and the retry exception, including
+        /// its stack trace, is available from <see cref="RetryExceptionDataKey"/> in
+        /// <see cref="Exception.Data"/>.
+        /// </remarks>
         public async Task<T> ExecuteWithHealingAsync<T>(
             string locatorKey,
             UiElementInfo expected,
@@ -149,7 +200,7 @@ namespace SelfHealing
                 }
 
                 var currentTree = captureTreeRoot();
-                var healResult = await ResolveAndRecordAsync(locatorKey, target, currentTree, log, platform, cancellationToken).ConfigureAwait(false);
+                var healResult = await ResolveAsync(target, currentTree, log, platform, cancellationToken).ConfigureAwait(false);
 
                 if (!healResult.IsConfident || healResult.Matched == null)
                 {
@@ -158,7 +209,26 @@ namespace SelfHealing
                 }
 
                 log?.Invoke($"[SelfHealingEngine] Healed locator '{locatorKey}' -> matched AutomationId='{healResult.Matched.AutomationId}'. Retrying action...");
-                return await action(healResult.Matched).ConfigureAwait(false);
+                T result;
+                try
+                {
+                    result = await action(healResult.Matched).ConfigureAwait(false);
+                }
+                catch (Exception retryException)
+                {
+                    log?.Invoke($"[SelfHealingEngine] Retried action for locator '{locatorKey}' threw {retryException.GetType().Name} ('{retryException.Message}'). The proposed heal was not persisted.");
+                    var failure = new InvalidOperationException(
+                        $"Self-healing matched locator '{locatorKey}', but the retried action failed with {retryException.GetType().Name}: {retryException.Message}",
+                        ex);
+                    failure.Data[RetryExceptionDataKey] = retryException;
+                    throw failure;
+                }
+
+                // The action is the proof that the proposed element works. Persisting before this
+                // point would turn a failed retry into the repository's new baseline and report an
+                // unproven match as accepted on every later run.
+                CommitAcceptedHeal(locatorKey, target, healResult, platform);
+                return result;
             }
         }
     }
