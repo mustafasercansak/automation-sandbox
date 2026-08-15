@@ -8,7 +8,7 @@ namespace ScenarioRunner
     public class OpenSourceAppSurveyTests
     {
         [Fact]
-        public void AppPairSurvey_EvaluatesViability_AccordingTo3Criteria()
+        public void AppChainSurvey_EvaluatesMultipleHops_AndDeduplicatesBrokenLocators()
         {
             var v1 = new AppVersionSurveyRecord
             {
@@ -16,7 +16,8 @@ namespace ScenarioRunner
                 Downloaded = true,
                 Launched = true,
                 Settled = true,
-                SettlePassCount = 2,
+                WindowTitle = "App v1.0.0",
+                RootClassName = "MainForm",
                 Metrics = new ApplicationTreeMetrics
                 {
                     TotalNodes = 100,
@@ -31,34 +32,135 @@ namespace ScenarioRunner
                 Downloaded = true,
                 Launched = true,
                 Settled = true,
-                SettlePassCount = 2,
+                WindowTitle = "App v2.0.0",
+                RootClassName = "MainForm",
                 Metrics = new ApplicationTreeMetrics
                 {
-                    TotalNodes = 120,
+                    TotalNodes = 115,
                     EmptyAutomationIdCount = 50,
-                    EmptyAutomationIdFraction = 50.0 / 120.0,
+                    EmptyAutomationIdFraction = 50.0 / 115.0,
                 },
             };
 
-            var diffWithRemovedIds = new ApplicationTreeDiffResult
+            var v3 = new AppVersionSurveyRecord
+            {
+                Version = "3.0.0",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "App v3.0.0",
+                RootClassName = "MainForm",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 130,
+                    EmptyAutomationIdCount = 55,
+                    EmptyAutomationIdFraction = 55.0 / 130.0,
+                },
+            };
+
+            var diff1to2 = new ApplicationTreeDiffResult
             {
                 HasStructuralDrift = true,
-                DriftSignal = "⚡ Drift (+20 nodes)",
+                DriftSignal = "⚡ Drift (+15 nodes)",
                 Details = new List<string>
                 {
-                    "Total nodes changed: 100 → 120 (+20)",
-                    "AutomationIds removed in 2025: btnOldAction, tabLegacySettings",
+                    "AutomationIds removed in 2025: btnSaveOld, btnExportLegacy",
                 },
             };
 
-            var (isViable, reason) = OpenSourceAppViabilityEvaluator.Evaluate(v1, v2, diffWithRemovedIds);
-            Assert.True(isViable);
-            Assert.Contains("verified removed AutomationIds", reason);
-            Assert.Contains("45.0%", reason);
+            var diff2to3 = new ApplicationTreeDiffResult
+            {
+                HasStructuralDrift = true,
+                DriftSignal = "⚡ Drift (+15 nodes)",
+                Details = new List<string>
+                {
+                    "AutomationIds removed in 2025: btnExportLegacy, tabPreferencesOld",
+                },
+            };
+
+            var hop1 = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff1to2);
+            var hop2 = OpenSourceAppViabilityEvaluator.EvaluateHop(v2, v3, diff2to3);
+
+            Assert.True(hop1.IsViableHop);
+            Assert.Equal(2, hop1.RemovedAutomationIds.Count);
+            Assert.Contains("btnSaveOld", hop1.RemovedAutomationIds);
+            Assert.Contains("btnExportLegacy", hop1.RemovedAutomationIds);
+
+            Assert.True(hop2.IsViableHop);
+            Assert.Equal(2, hop2.RemovedAutomationIds.Count);
+            Assert.Contains("btnExportLegacy", hop2.RemovedAutomationIds);
+            Assert.Contains("tabPreferencesOld", hop2.RemovedAutomationIds);
+
+            var chain = new AppChainSurveyRecord
+            {
+                AppName = "SampleApp",
+                Toolkit = "WinForms",
+                Versions = new List<AppVersionSurveyRecord> { v1, v2, v3 },
+                Hops = new List<AppHopSurveyRecord> { hop1, hop2 },
+            };
+
+            OpenSourceAppViabilityEvaluator.EvaluateChain(chain);
+
+            Assert.True(chain.IsViableBenchmarkTarget);
+            Assert.Equal(4, chain.TotalCumulativeBrokenLocatorsCount);
+            Assert.Equal(3, chain.TotalDistinctBrokenLocatorsCount);
+            Assert.Equal(new[] { "btnExportLegacy", "btnSaveOld", "tabPreferencesOld" }, chain.DistinctRemovedAutomationIds);
         }
 
         [Fact]
-        public void AppPairSurvey_EvaluatesViability_RejectsUnsettledApps()
+        public void AppHopSurvey_FlagsSuspectCapture_OnOrderOfMagnitudeNodeDrop()
+        {
+            var v1 = new AppVersionSurveyRecord
+            {
+                Version = "1.8.2",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "HandBrake",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 149,
+                    EmptyAutomationIdCount = 105,
+                    EmptyAutomationIdFraction = 105.0 / 149.0,
+                },
+            };
+
+            var v2 = new AppVersionSurveyRecord
+            {
+                Version = "1.11.2",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                WindowTitle = "shellView",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 7, // 149 -> 7 is a ~21.3x drop (splash/unhydrated shell capture)
+                    EmptyAutomationIdCount = 2,
+                    EmptyAutomationIdFraction = 2.0 / 7.0,
+                },
+            };
+
+            var diff = new ApplicationTreeDiffResult
+            {
+                HasStructuralDrift = true,
+                DriftSignal = "⚡ Drift (-142 nodes)",
+                Details = new List<string>
+                {
+                    "Total nodes changed: 149 → 7 (-142)",
+                    "AutomationIds removed: shellView, SystemMenuBar, MainViewModel",
+                },
+            };
+
+            var hop = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff);
+
+            Assert.True(hop.IsSuspectCapture);
+            Assert.False(hop.IsViableHop);
+            Assert.Contains("Order-of-magnitude node drop: 149 → 7", hop.SuspectReason);
+            Assert.Contains("21.3x decrease", hop.SuspectReason);
+        }
+
+        [Fact]
+        public void AppHopSurvey_EvaluatesViability_RejectsUnsettledApps()
         {
             var v1 = new AppVersionSurveyRecord
             {
@@ -90,13 +192,14 @@ namespace ScenarioRunner
             };
 
             var diff = new ApplicationTreeDiffResult { HasStructuralDrift = true };
-            var (isViable, reason) = OpenSourceAppViabilityEvaluator.Evaluate(v1, v2, diff);
-            Assert.False(isViable);
-            Assert.Contains("did not settle cleanly", reason);
+            var hop = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff);
+
+            Assert.False(hop.IsViableHop);
+            Assert.Contains("did not settle cleanly", hop.ViabilityReason);
         }
 
         [Fact]
-        public void AppPairSurvey_EvaluatesViability_RejectsLowEmptyIdFraction()
+        public void AppHopSurvey_EvaluatesViability_RejectsLowEmptyIdFraction()
         {
             var v1 = new AppVersionSurveyRecord
             {
@@ -134,72 +237,143 @@ namespace ScenarioRunner
                 Details = new List<string> { "AutomationIds removed: btnAction" },
             };
 
-            var (isViable, reason) = OpenSourceAppViabilityEvaluator.Evaluate(v1, v2, diff);
-            Assert.False(isViable);
-            Assert.Contains("Empty AutomationId fraction too low", reason);
+            var hop = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff);
+
+            Assert.False(hop.IsViableHop);
+            Assert.Contains("Empty AutomationId fraction too low", hop.ViabilityReason);
         }
 
         [Fact]
-        public void OpenSourceAppSurveyReport_GeneratesMarkdownWithReportFormatting()
+        public void AppVersionSurveyRecord_TracksWindowDiagnostics_AndHydrationTimeout()
+        {
+            var v = new AppVersionSurveyRecord
+            {
+                Version = "v21.0.0",
+                Downloaded = true,
+                Launched = true,
+                Settled = true,
+                HydrationTimedOut = false,
+                SettlePassCount = 2,
+                WindowTitle = "ShareX - Screen Capture",
+                RootClassName = "MainForm",
+                RootControlType = "Window",
+                WindowSelectionReason = "Selected window 'ShareX - Screen Capture' (140 nodes) over 2 candidates: [Title='ShareX - Screen Capture', Nodes=140], [Title='', Nodes=5]",
+                Metrics = new ApplicationTreeMetrics
+                {
+                    TotalNodes = 140,
+                    EmptyAutomationIdCount = 60,
+                    EmptyAutomationIdFraction = 60.0 / 140.0,
+                },
+            };
+
+            Assert.Equal("ShareX - Screen Capture", v.WindowTitle);
+            Assert.Equal("MainForm", v.RootClassName);
+            Assert.False(v.HydrationTimedOut);
+            Assert.Contains("140 nodes", v.WindowSelectionReason);
+        }
+
+        [Fact]
+        public void OpenSourceAppSurveyReport_GeneratesMarkdownWithHopsAndBrokenLocators()
         {
             var report = new OpenSourceAppSurveyReport
             {
-                Timestamp = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero),
-                Pairs = new List<AppPairSurveyRecord>
+                Timestamp = new DateTimeOffset(2026, 8, 15, 14, 0, 0, TimeSpan.Zero),
+                Chains = new List<AppChainSurveyRecord>
                 {
                     new()
                     {
                         AppName = "ShareX",
                         Toolkit = "WinForms",
-                        V1 = new AppVersionSurveyRecord
+                        Versions = new List<AppVersionSurveyRecord>
                         {
-                            Version = "v16.1.0",
-                            Launched = true,
-                            Settled = true,
-                            SettlePassCount = 2,
-                            Metrics = new ApplicationTreeMetrics
+                            new()
                             {
-                                TotalNodes = 85,
-                                EmptyAutomationIdCount = 35,
-                                EmptyAutomationIdFraction = 35.0 / 85.0,
+                                Version = "v16.1.0",
+                                Launched = true,
+                                Settled = true,
+                                SettlePassCount = 2,
+                                WindowTitle = "ShareX",
+                                RootClassName = "MainForm",
+                                Metrics = new ApplicationTreeMetrics
+                                {
+                                    TotalNodes = 85,
+                                    EmptyAutomationIdCount = 35,
+                                    EmptyAutomationIdFraction = 35.0 / 85.0,
+                                },
+                                WindowSelectionReason = "Single window",
+                            },
+                            new()
+                            {
+                                Version = "v17.0.0",
+                                Launched = true,
+                                Settled = true,
+                                SettlePassCount = 2,
+                                WindowTitle = "ShareX",
+                                RootClassName = "MainForm",
+                                Metrics = new ApplicationTreeMetrics
+                                {
+                                    TotalNodes = 95,
+                                    EmptyAutomationIdCount = 40,
+                                    EmptyAutomationIdFraction = 40.0 / 95.0,
+                                },
+                                WindowSelectionReason = "Single window",
+                            },
+                            new()
+                            {
+                                Version = "v21.0.0",
+                                Launched = true,
+                                Settled = true,
+                                SettlePassCount = 2,
+                                WindowTitle = "ShareX",
+                                RootClassName = "MainForm",
+                                Metrics = new ApplicationTreeMetrics
+                                {
+                                    TotalNodes = 140,
+                                    EmptyAutomationIdCount = 60,
+                                    EmptyAutomationIdFraction = 60.0 / 140.0,
+                                },
+                                WindowSelectionReason = "Selected from 2 candidates",
                             },
                         },
-                        V2 = new AppVersionSurveyRecord
+                        Hops = new List<AppHopSurveyRecord>
                         {
-                            Version = "v21.0.0",
-                            Launched = true,
-                            Settled = true,
-                            SettlePassCount = 2,
-                            Metrics = new ApplicationTreeMetrics
+                            new()
                             {
-                                TotalNodes = 140,
-                                EmptyAutomationIdCount = 60,
-                                EmptyAutomationIdFraction = 60.0 / 140.0,
+                                FromVersion = "v16.1.0",
+                                ToVersion = "v17.0.0",
+                                Diff = new ApplicationTreeDiffResult { HasStructuralDrift = true, DriftSignal = "⚡ Drift (+10 nodes)" },
+                                RemovedAutomationIds = new List<string> { "btnLegacyUpload1" },
+                                IsViableHop = true,
+                                ViabilityReason = "1 removed ID",
+                            },
+                            new()
+                            {
+                                FromVersion = "v17.0.0",
+                                ToVersion = "v21.0.0",
+                                Diff = new ApplicationTreeDiffResult { HasStructuralDrift = true, DriftSignal = "⚡ Drift (+45 nodes)" },
+                                RemovedAutomationIds = new List<string> { "btnLegacyUpload2", "btnLegacyUpload1" },
+                                IsViableHop = true,
+                                ViabilityReason = "2 removed IDs",
                             },
                         },
-                        Diff = new ApplicationTreeDiffResult
-                        {
-                            HasStructuralDrift = true,
-                            DriftSignal = "⚡ Drift (+55 nodes)",
-                            Details = new List<string>
-                            {
-                                "AutomationIds removed in 2025: btnLegacyUpload",
-                            },
-                        },
+                        DistinctRemovedAutomationIds = new List<string> { "btnLegacyUpload1", "btnLegacyUpload2" },
                         IsViableBenchmarkTarget = true,
-                        ViabilityReason = "Viable target with removed IDs and 42.9% empty IDs",
+                        BenchmarkRecommendation = "Viable target: 2 distinct broken locators across 2 viable hops",
                     },
                 },
             };
 
             var md = report.ToMarkdownSummary();
-            Assert.Contains("Open-Source App Version Pairs Benchmark Survey", md);
-            Assert.Contains("**ShareX**", md);
-            Assert.Contains("`v16.1.0`", md);
-            Assert.Contains("`v21.0.0`", md);
-            Assert.Contains("2p settle", md);
-            Assert.Contains("✅ **Viable**", md);
-            Assert.Contains("41%", md); // 35/85 = 41.2% -> 41% formatted with 0 decimals
+
+            Assert.Contains("Open-Source App Version Chains Benchmark Survey", md);
+            Assert.Contains("`ShareX` Version Chain (WinForms)", md);
+            Assert.Contains("Distinct Broken Locators (Deduplicated):** **2**", md);
+            Assert.Contains("Cumulative Broken Locators:** 3", md);
+            Assert.Contains("`v16.1.0` → `v17.0.0`", md);
+            Assert.Contains("`v17.0.0` → `v21.0.0`", md);
+            Assert.Contains("`btnLegacyUpload1`", md);
+            Assert.Contains("`btnLegacyUpload2`", md);
+            Assert.Contains("Window Diagnostics & Capture-Readiness", md);
         }
 
         [Fact]
@@ -207,54 +381,37 @@ namespace ScenarioRunner
         {
             var report = new OpenSourceAppSurveyReport
             {
-                Timestamp = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero),
-                Pairs = new List<AppPairSurveyRecord>
+                Timestamp = new DateTimeOffset(2026, 8, 15, 14, 0, 0, TimeSpan.Zero),
+                Chains = new List<AppChainSurveyRecord>
                 {
                     new()
                     {
                         AppName = "HandBrake",
                         Toolkit = "WPF",
-                        V1 = new AppVersionSurveyRecord
+                        Versions = new List<AppVersionSurveyRecord>
                         {
-                            Version = "1.8.2",
-                            DownloadUrl = "https://github.com/HandBrake/HandBrake/releases/download/1.8.2/HandBrake-1.8.2-x86_64-Win_GUI.zip",
-                            ExecutableRelativePath = "HandBrake.exe",
-                            Downloaded = true,
-                            Launched = true,
-                            Settled = true,
-                            SettlePassCount = 2,
-                            Metrics = new ApplicationTreeMetrics
+                            new()
                             {
-                                TotalNodes = 200,
-                                MaxDepth = 6,
-                                EmptyAutomationIdCount = 120,
-                                EmptyAutomationIdFraction = 0.60,
+                                Version = "1.8.2",
+                                DownloadUrl = "https://github.com/HandBrake/HandBrake/releases/download/1.8.2/HandBrake-1.8.2-x86_64-Win_GUI.zip",
+                                ExecutableRelativePath = "HandBrake.exe",
+                                Downloaded = true,
+                                Launched = true,
+                                Settled = true,
+                                SettlePassCount = 2,
+                                WindowTitle = "HandBrake",
+                                RootClassName = "Window",
+                                Metrics = new ApplicationTreeMetrics
+                                {
+                                    TotalNodes = 149,
+                                    EmptyAutomationIdCount = 105,
+                                    EmptyAutomationIdFraction = 105.0 / 149.0,
+                                },
                             },
                         },
-                        V2 = new AppVersionSurveyRecord
-                        {
-                            Version = "1.11.2",
-                            DownloadUrl = "https://github.com/HandBrake/HandBrake/releases/download/1.11.2/HandBrake-1.11.2-x86_64-Win_GUI.zip",
-                            ExecutableRelativePath = "HandBrake.exe",
-                            Downloaded = true,
-                            Launched = true,
-                            Settled = true,
-                            SettlePassCount = 3,
-                            Metrics = new ApplicationTreeMetrics
-                            {
-                                TotalNodes = 240,
-                                MaxDepth = 7,
-                                EmptyAutomationIdCount = 140,
-                                EmptyAutomationIdFraction = 140.0 / 240.0,
-                            },
-                        },
-                        Diff = new ApplicationTreeDiffResult
-                        {
-                            HasStructuralDrift = true,
-                            DriftSignal = "⚡ Drift (+40 nodes)",
-                        },
+                        DistinctRemovedAutomationIds = new List<string> { "btnSourceLegacy" },
                         IsViableBenchmarkTarget = true,
-                        ViabilityReason = "Viable target with 60.0% empty IDs in WPF",
+                        BenchmarkRecommendation = "1 broken locator",
                     },
                 },
             };
@@ -262,13 +419,13 @@ namespace ScenarioRunner
             var json = OpenSourceAppSurveySerializer.ToJson(report);
             Assert.Contains("\"HandBrake\"", json);
             Assert.Contains("\"1.8.2\"", json);
-            Assert.Contains("\"1.11.2\"", json);
+            Assert.Contains("\"btnSourceLegacy\"", json);
 
             var roundtripped = OpenSourceAppSurveySerializer.FromJson(json);
-            Assert.Single(roundtripped.Pairs);
-            Assert.Equal("HandBrake", roundtripped.Pairs[0].AppName);
-            Assert.Equal("1.8.2", roundtripped.Pairs[0].V1.Version);
-            Assert.True(roundtripped.Pairs[0].IsViableBenchmarkTarget);
+            Assert.Single(roundtripped.Chains);
+            Assert.Equal("HandBrake", roundtripped.Chains[0].AppName);
+            Assert.Equal("1.8.2", roundtripped.Chains[0].Versions[0].Version);
+            Assert.Equal(1, roundtripped.Chains[0].TotalDistinctBrokenLocatorsCount);
         }
     }
 }
