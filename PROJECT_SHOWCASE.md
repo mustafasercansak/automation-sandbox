@@ -103,8 +103,8 @@ flowchart TB
         Eval --> Providers
         Providers --> Guard
         Guard --> Consensus
-        Consensus -->|Yes (Agreed)| LlmMatch
-        Consensus -->|No (Split / Tie / < 2 Votes)| Fallback
+        Consensus -->|"Yes (Agreed)"| LlmMatch
+        Consensus -->|"No (Split / Tie / < 2 Votes)"| Fallback
     end
 
     HeuristicMatch --> Output["Final HealResult"]
@@ -308,8 +308,8 @@ flowchart TB
         Eval --> Providers
         Providers --> Guard
         Guard --> Consensus
-        Consensus -->|Evet (Uzlaşıldı)| LlmMatch
-        Consensus -->|Hayır (Ayrışma / Beraberlik / < 2 Oy)| Fallback
+        Consensus -->|"Evet (Uzlaşıldı)"| LlmMatch
+        Consensus -->|"Hayır (Ayrışma / Beraberlik / < 2 Oy)"| Fallback
     end
 
     HeuristicMatch --> Output["Sonuç (HealResult)"]

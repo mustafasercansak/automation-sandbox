@@ -102,8 +102,8 @@ flowchart TB
         Eval --> Providers
         Providers --> Guard
         Guard --> Consensus
-        Consensus -->|Yes (Agreed)| LLMRes
-        Consensus -->|No (Split / Tie / < 2 Votes)| HeuristicFallback
+        Consensus -->|"Yes (Agreed)"| LLMRes
+        Consensus -->|"No (Split / Tie / < 2 Votes)"| HeuristicFallback
     end
     ConfidentRes --> Output["Final HealResult"]
     LLMRes --> Output

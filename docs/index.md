@@ -104,6 +104,6 @@ flowchart TB
     C1 & C2 & C3 & C4 --> C5
     C5 --> C6
     C6 -- Agreed / Uzlaşıldı --> D1 & D2
-    C6 -- Split / Beraberlik (Fallback) --> B3
+    C6 -- "Split / Beraberlik (Fallback)" --> B3
     B3 --> D1 & D2
 ```
