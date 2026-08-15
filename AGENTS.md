@@ -73,6 +73,18 @@ When changing scoring, discovery, or resolver behavior, add or update tests here
 
 **Tests must assert behavior, not implementation.** This is what makes refactoring possible: #48 rewrote all four providers onto a shared base with "every existing test passes unchanged" as its acceptance criterion, and that criterion only worked because the tests asserted what the resolver *does*. Tests that pin internals would have had to be rewritten alongside the code, and the safety net would have evaporated exactly when it was needed.
 
+**When a refactor forces tests to be rewritten, account for every test that disappears.** The "no test changes" criterion above only applies when the behaviour is unchanged *and* the model is. Sometimes it genuinely changes — #71 replaced `AppPairSurveyRecord` with `AppHopSurveyRecord`, so the old tests could not compile and had to be rewritten rather than kept.
+
+That is where coverage leaks. The positive path gets rewritten because it is the thing being built; the **rejection paths quietly vanish**, because a test that asserts something is *refused* is invisible unless you look for it. #71 lost `RejectsUnsettledApps` and `RejectsLowEmptyIdFraction` while the `if (!v1.Settled)` and `if (maxEmptyFraction < MinimumEmptyAutomationIdFraction)` branches they guarded stayed in the code, untested.
+
+Same check as the one for documentation headings, applied to test names:
+
+```bash
+git diff -- '*Tests.cs' | grep -E "^-.*public (async )?(void|Task) [A-Za-z_]+"
+```
+
+Every name it prints must be one you deliberately dropped, and a dropped test needs a replacement covering the same behaviour under the new model. Test count staying flat is not evidence that nothing was lost — #71 went 269 → 269 while two behaviours fell out of coverage.
+
 **Match the verification to the failure mode; a unit test is not always it.** Of roughly ten real defects found across #10, #11, #47, #48 and the `0.2.0-beta.2` release, exactly one was caught by a test — the suite was green for all the others:
 
 | Failure mode | What catches it |

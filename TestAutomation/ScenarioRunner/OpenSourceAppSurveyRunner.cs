@@ -30,62 +30,62 @@ namespace ScenarioRunner
         public string Arguments { get; }
     }
 
-    public sealed class OpenSourceAppCandidatePair
+    public sealed class OpenSourceAppVersionChain
     {
-        public OpenSourceAppCandidatePair(
+        public OpenSourceAppVersionChain(
             string appName,
             string toolkit,
-            OpenSourceVersionCandidate olderVersion,
-            OpenSourceVersionCandidate newerVersion)
+            IReadOnlyList<OpenSourceVersionCandidate> versions)
         {
             AppName = appName;
             Toolkit = toolkit;
-            OlderVersion = olderVersion;
-            NewerVersion = newerVersion;
+            Versions = versions;
         }
 
         public string AppName { get; }
         public string Toolkit { get; }
-        public OpenSourceVersionCandidate OlderVersion { get; }
-        public OpenSourceVersionCandidate NewerVersion { get; }
+        public IReadOnlyList<OpenSourceVersionCandidate> Versions { get; }
     }
 
     public static class OpenSourceAppSurveyRunner
     {
-        public static IReadOnlyList<OpenSourceAppCandidatePair> DefaultCandidatePairs => new[]
+        public static IReadOnlyList<OpenSourceAppVersionChain> DefaultVersionChains => new[]
         {
-            new OpenSourceAppCandidatePair(
+            new OpenSourceAppVersionChain(
                 "ShareX",
                 "WinForms",
-                new OpenSourceVersionCandidate(
-                    "v16.1.0",
-                    "https://github.com/ShareX/ShareX/releases/download/v16.1.0/ShareX-16.1.0-portable.zip",
-                    "ShareX.exe"),
-                new OpenSourceVersionCandidate(
-                    "v21.0.0",
-                    "https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-portable-x64.zip",
-                    "ShareX.exe")),
+                new[]
+                {
+                    new OpenSourceVersionCandidate("v13.7.0", "https://github.com/ShareX/ShareX/releases/download/v13.7.0/ShareX-13.7.0-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v14.1.0", "https://github.com/ShareX/ShareX/releases/download/v14.1.0/ShareX-14.1.0-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v15.0.0", "https://github.com/ShareX/ShareX/releases/download/v15.0.0/ShareX-15.0.0-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v16.0.1", "https://github.com/ShareX/ShareX/releases/download/v16.0.1/ShareX-16.0.1-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v16.1.0", "https://github.com/ShareX/ShareX/releases/download/v16.1.0/ShareX-16.1.0-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v17.0.0", "https://github.com/ShareX/ShareX/releases/download/v17.0.0/ShareX-17.0.0-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v19.0.2", "https://github.com/ShareX/ShareX/releases/download/v19.0.2/ShareX-19.0.2-portable.zip", "ShareX.exe"),
+                    new OpenSourceVersionCandidate("v21.0.0", "https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-portable-x64.zip", "ShareX.exe"),
+                }),
 
-            new OpenSourceAppCandidatePair(
+            new OpenSourceAppVersionChain(
                 "HandBrake",
                 "WPF",
-                new OpenSourceVersionCandidate(
-                    "1.8.2",
-                    "https://github.com/HandBrake/HandBrake/releases/download/1.8.2/HandBrake-1.8.2-x86_64-Win_GUI.zip",
-                    "HandBrake.exe"),
-                new OpenSourceVersionCandidate(
-                    "1.11.2",
-                    "https://github.com/HandBrake/HandBrake/releases/download/1.11.2/HandBrake-1.11.2-x86_64-Win_GUI.zip",
-                    "HandBrake.exe")),
+                new[]
+                {
+                    new OpenSourceVersionCandidate("1.6.1", "https://github.com/HandBrake/HandBrake/releases/download/1.6.1/HandBrake-1.6.1-x86_64-Win_GUI.zip", "HandBrake.exe"),
+                    new OpenSourceVersionCandidate("1.7.3", "https://github.com/HandBrake/HandBrake/releases/download/1.7.3/HandBrake-1.7.3-x86_64-Win_GUI.zip", "HandBrake.exe"),
+                    new OpenSourceVersionCandidate("1.8.2", "https://github.com/HandBrake/HandBrake/releases/download/1.8.2/HandBrake-1.8.2-x86_64-Win_GUI.zip", "HandBrake.exe"),
+                    new OpenSourceVersionCandidate("1.9.2", "https://github.com/HandBrake/HandBrake/releases/download/1.9.2/HandBrake-1.9.2-x86_64-Win_GUI.zip", "HandBrake.exe"),
+                    new OpenSourceVersionCandidate("1.11.2", "https://github.com/HandBrake/HandBrake/releases/download/1.11.2/HandBrake-1.11.2-x86_64-Win_GUI.zip", "HandBrake.exe"),
+                }),
         };
 
         public static OpenSourceAppSurveyReport RunSurvey(
             string outputDirectory,
-            IReadOnlyList<OpenSourceAppCandidatePair>? candidatePairs = null,
+            IReadOnlyList<OpenSourceAppVersionChain>? versionChains = null,
             Action<string>? log = null)
         {
             log ??= Console.WriteLine;
-            candidatePairs ??= DefaultCandidatePairs;
+            versionChains ??= DefaultVersionChains;
 
             Directory.CreateDirectory(outputDirectory);
             var downloadsDir = Path.Combine(outputDirectory, "downloads");
@@ -98,61 +98,75 @@ namespace ScenarioRunner
                 Timestamp = DateTimeOffset.UtcNow,
             };
 
-            log($"[OpenSourceSurvey] Starting survey on {candidatePairs.Count} application pair(s).");
+            log($"[OpenSourceSurvey] Starting survey on {versionChains.Count} version chain(s).");
             log($"[OpenSourceSurvey] Output directory: {outputDirectory}");
 
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("AutomationSandbox-Survey/1.0");
             httpClient.Timeout = TimeSpan.FromMinutes(5);
 
-            foreach (var pair in candidatePairs)
+            foreach (var chain in versionChains)
             {
                 log($"[OpenSourceSurvey] ========================================================");
-                log($"[OpenSourceSurvey] Evaluating candidate pair: {pair.AppName} ({pair.Toolkit})");
-                log($"[OpenSourceSurvey] Older: {pair.OlderVersion.Version} | Newer: {pair.NewerVersion.Version}");
+                log($"[OpenSourceSurvey] Probing Version Chain: {chain.AppName} ({chain.Toolkit}) - {chain.Versions.Count} releases");
+                log($"[OpenSourceSurvey] Range: {chain.Versions.First().Version} → {chain.Versions.Last().Version}");
                 log($"[OpenSourceSurvey] ========================================================");
 
-                var pairRecord = new AppPairSurveyRecord
+                var chainRecord = new AppChainSurveyRecord
                 {
-                    AppName = pair.AppName,
-                    Toolkit = pair.Toolkit,
+                    AppName = chain.AppName,
+                    Toolkit = chain.Toolkit,
                 };
 
-                // Probe V1 (older)
-                pairRecord.V1 = ProbeVersion(pair.AppName, pair.OlderVersion, downloadsDir, extractedDir, outputDirectory, httpClient, log);
+                // 1. Probe every version in the chain
+                foreach (var versionCandidate in chain.Versions)
+                {
+                    var versionRecord = ProbeVersion(chain.AppName, versionCandidate, downloadsDir, extractedDir, outputDirectory, httpClient, log);
+                    chainRecord.Versions.Add(versionRecord);
+                }
 
-                // Probe V2 (newer)
-                pairRecord.V2 = ProbeVersion(pair.AppName, pair.NewerVersion, downloadsDir, extractedDir, outputDirectory, httpClient, log);
+                // 2. Evaluate consecutive hops (V_i -> V_{i+1})
+                for (var i = 0; i < chainRecord.Versions.Count - 1; i++)
+                {
+                    var v1 = chainRecord.Versions[i];
+                    var v2 = chainRecord.Versions[i + 1];
 
-                // Load trees for deep diff comparison if both captured
-                UiElementInfo? treeV1 = LoadTree(outputDirectory, pairRecord.V1.TreeJsonFileName);
-                UiElementInfo? treeV2 = LoadTree(outputDirectory, pairRecord.V2.TreeJsonFileName);
+                    UiElementInfo? treeV1 = LoadTree(outputDirectory, v1.TreeJsonFileName);
+                    UiElementInfo? treeV2 = LoadTree(outputDirectory, v2.TreeJsonFileName);
 
-                pairRecord.Diff = ApplicationTreeDiff.Compare(
-                    new ApplicationSurveyRecord
-                    {
-                        AppName = $"{pair.AppName}_{pair.OlderVersion.Version}",
-                        Launched = pairRecord.V1.Launched,
-                        LaunchError = pairRecord.V1.Error,
-                        Metrics = pairRecord.V1.Metrics,
-                    },
-                    new ApplicationSurveyRecord
-                    {
-                        AppName = $"{pair.AppName}_{pair.NewerVersion.Version}",
-                        Launched = pairRecord.V2.Launched,
-                        LaunchError = pairRecord.V2.Error,
-                        Metrics = pairRecord.V2.Metrics,
-                    },
-                    treeV1,
-                    treeV2);
+                    var diff = ApplicationTreeDiff.Compare(
+                        new ApplicationSurveyRecord
+                        {
+                            AppName = $"{chain.AppName}_{v1.Version}",
+                            Launched = v1.Launched,
+                            LaunchError = v1.Error,
+                            Metrics = v1.Metrics,
+                        },
+                        new ApplicationSurveyRecord
+                        {
+                            AppName = $"{chain.AppName}_{v2.Version}",
+                            Launched = v2.Launched,
+                            LaunchError = v2.Error,
+                            Metrics = v2.Metrics,
+                        },
+                        treeV1,
+                        treeV2);
 
-                var (isViable, viabilityReason) = OpenSourceAppViabilityEvaluator.Evaluate(pairRecord.V1, pairRecord.V2, pairRecord.Diff);
-                pairRecord.IsViableBenchmarkTarget = isViable;
-                pairRecord.ViabilityReason = viabilityReason;
+                    var hopRecord = OpenSourceAppViabilityEvaluator.EvaluateHop(v1, v2, diff);
+                    chainRecord.Hops.Add(hopRecord);
+                    log($"[OpenSourceSurvey] Hop '{hopRecord.FromVersion}' → '{hopRecord.ToVersion}': Viable={hopRecord.IsViableHop}, Removed IDs={hopRecord.RemovedAutomationIds.Count} ({hopRecord.ViabilityReason})");
+                }
 
-                log($"[OpenSourceSurvey] Pair assessment for {pair.AppName}: Viable={isViable} ({viabilityReason})");
-                report.Pairs.Add(pairRecord);
+                // 3. Evaluate chain totals & deduplication
+                OpenSourceAppViabilityEvaluator.EvaluateChain(chainRecord);
+                log($"[OpenSourceSurvey] Chain summary for {chain.AppName}: {chainRecord.TotalDistinctBrokenLocatorsCount} distinct broken locators, {chainRecord.TotalCumulativeBrokenLocatorsCount} cumulative across {chainRecord.Hops.Count} hops. ({chainRecord.BenchmarkRecommendation})");
+
+                report.Chains.Add(chainRecord);
             }
+
+            // Clean up empty helper directories if needed
+            try { if (Directory.Exists(downloadsDir) && !Directory.EnumerateFileSystemEntries(downloadsDir).Any()) Directory.Delete(downloadsDir); } catch { }
+            try { if (Directory.Exists(extractedDir) && !Directory.EnumerateFileSystemEntries(extractedDir).Any()) Directory.Delete(extractedDir); } catch { }
 
             // Save JSON report
             var reportJsonPath = Path.Combine(outputDirectory, "survey-report-open-source.json");
@@ -249,7 +263,6 @@ namespace ScenarioRunner
             var exeFullPath = Path.Combine(appExtractDir, candidate.ExecutableRelativePath);
             if (!File.Exists(exeFullPath))
             {
-                // Search recursively in subdirectories if not at root
                 var matched = Directory.GetFiles(appExtractDir, Path.GetFileName(candidate.ExecutableRelativePath), SearchOption.AllDirectories).FirstOrDefault();
                 if (matched != null)
                 {
@@ -298,7 +311,6 @@ namespace ScenarioRunner
                     return record;
                 }
 
-                // Initial process wait
                 Thread.Sleep(2500);
 
                 if (process.HasExited)
@@ -324,33 +336,12 @@ namespace ScenarioRunner
                     return record;
                 }
 
-                Window? window = null;
-                try
-                {
-                    window = Retry.WhileNull(
-                        () => app.GetMainWindow(automation, TimeSpan.FromSeconds(2)),
-                        timeout: TimeSpan.FromSeconds(20)).Result;
-                }
-                catch (Exception winEx)
-                {
-                    record.Launched = false;
-                    record.Error = $"GetMainWindow timed out: {winEx.Message}";
-                    log($"[OpenSourceSurvey] ❌ Main window timeout for {appName} {candidate.Version}: {winEx.Message}");
-                    return record;
-                }
-
-                if (window == null)
-                {
-                    record.Launched = false;
-                    record.Error = "Main window was not found within 20s timeout.";
-                    log($"[OpenSourceSurvey] ❌ Main window not found for {appName} {candidate.Version}.");
-                    return record;
-                }
-
-                record.Launched = true;
-
-                // 5. Dynamic Settle Discovery Loop
-                log($"[OpenSourceSurvey] Performing dynamic settle capture on {appName} {candidate.Version}...");
+                // 5. Robust Window Selection & Hydration Loop
+                // Rule: Visibility + size (W>=200, H>=150) -> highest node count -> non-empty title tie-breaker
+                log($"[OpenSourceSurvey] Acquiring main window and polling visual tree hydration for {appName} {candidate.Version}...");
+                Window? chosenWindow = null;
+                var hydrationSw = Stopwatch.StartNew();
+                const int hydrationMaxWaitSeconds = 15;
                 var discoveryOptions = new DiscoveryOptions
                 {
                     MaxDepth = 25,
@@ -359,6 +350,80 @@ namespace ScenarioRunner
                     Timeout = TimeSpan.FromSeconds(25),
                 };
 
+                var candidatesLog = new List<string>();
+
+                while (hydrationSw.Elapsed.TotalSeconds < hydrationMaxWaitSeconds)
+                {
+                    var topLevelWindows = app.GetAllTopLevelWindows(automation);
+                    var viableWindows = new List<(Window Win, int NodeCount, string Title)>();
+
+                    foreach (var win in topLevelWindows)
+                    {
+                        try
+                        {
+                            var rect = win.BoundingRectangle;
+                            if (rect.Width < 200 || rect.Height < 150) continue;
+
+                            var probeResult = UiTreeWalker.Discover(win, new DiscoveryOptions
+                            {
+                                MaxDepth = 10,
+                                MaxElements = 500,
+                                Timeout = TimeSpan.FromSeconds(5),
+                            });
+
+                            viableWindows.Add((win, probeResult.CapturedCount, win.Title));
+                        }
+                        catch { }
+                    }
+
+                    if (viableWindows.Count > 0)
+                    {
+                        // Order by node count descending, then non-empty title descending
+                        var best = viableWindows
+                            .OrderByDescending(w => w.NodeCount)
+                            .ThenByDescending(w => !string.IsNullOrEmpty(w.Title))
+                            .First();
+
+                        chosenWindow = best.Win;
+                        candidatesLog = viableWindows.Select(w => $"[Title='{w.Title}', Nodes={w.NodeCount}]").ToList();
+
+                        // If visual tree has substantive content (> 15 nodes), consider hydrated
+                        if (best.NodeCount > 15)
+                        {
+                            break;
+                        }
+                    }
+
+                    Thread.Sleep(1000);
+                }
+
+                if (chosenWindow == null)
+                {
+                    try
+                    {
+                        chosenWindow = app.GetMainWindow(automation, TimeSpan.FromSeconds(2));
+                    }
+                    catch { }
+                }
+
+                if (chosenWindow == null)
+                {
+                    record.Launched = false;
+                    record.Error = "No usable top-level window found within timeout.";
+                    log($"[OpenSourceSurvey] ❌ No usable window found for {appName} {candidate.Version}.");
+                    return record;
+                }
+
+                record.Launched = true;
+                record.WindowTitle = chosenWindow.Title;
+                record.RootClassName = chosenWindow.ClassName;
+                record.RootControlType = chosenWindow.ControlType.ToString();
+
+                var candidatesSummary = candidatesLog.Count > 0 ? string.Join(", ", candidatesLog) : "Single window";
+                record.WindowSelectionReason = $"Selected window '{chosenWindow.Title}' (Class='{chosenWindow.ClassName}') from {candidatesLog.Count} candidates: {candidatesSummary}";
+
+                // 6. Dynamic Settle Discovery Loop
+                log($"[OpenSourceSurvey] Running settle loop on '{record.WindowTitle}' for {appName} {candidate.Version}...");
                 const int maxSettlePasses = 5;
                 var passCounts = new List<int>();
                 DiscoveryResult? settledResult = null;
@@ -366,7 +431,7 @@ namespace ScenarioRunner
 
                 for (var pass = 1; pass <= maxSettlePasses; pass++)
                 {
-                    var result = UiTreeWalker.Discover(window, discoveryOptions);
+                    var result = UiTreeWalker.Discover(chosenWindow, discoveryOptions);
                     settledResult = result;
                     var currentCount = result.CapturedCount;
                     passCounts.Add(currentCount);
@@ -395,13 +460,20 @@ namespace ScenarioRunner
                     var metrics = TreeMetricsCalculator.Calculate(settledResult.Root);
                     record.Metrics = metrics;
 
+                    if (metrics.TotalNodes <= 15)
+                    {
+                        record.HydrationTimedOut = true;
+                        record.WindowSelectionReason += " | ⚠️ Hydration timed out (node count <= 15)";
+                        log($"[OpenSourceSurvey] ⚠️ Hydration warning for {appName} {candidate.Version}: node count remained at {metrics.TotalNodes} <= 15");
+                    }
+
                     var treeFileName = $"{appName}_{safeVersion}.json";
                     var treePath = Path.Combine(outputDirectory, treeFileName);
                     var treeJson = UiTreeSerializer.ToJson(settledResult.Root);
                     File.WriteAllText(treePath, treeJson);
                     record.TreeJsonFileName = treeFileName;
 
-                    log($"[OpenSourceSurvey] ✅ Captured {appName} {candidate.Version}: {metrics.TotalNodes} nodes, {ReportFormatting.Percent(metrics.EmptyAutomationIdFraction)} empty ID, settled in {record.SettlePassCount} passes ({record.SettleTelemetry})");
+                    log($"[OpenSourceSurvey] ✅ Captured {appName} {candidate.Version}: {metrics.TotalNodes} nodes, {ReportFormatting.Percent(metrics.EmptyAutomationIdFraction)} empty ID, window='{record.WindowTitle}' ({record.SettlePassCount}p settle)");
                 }
                 else
                 {
@@ -437,6 +509,25 @@ namespace ScenarioRunner
                 app?.Dispose();
                 automation?.Dispose();
                 process?.Dispose();
+
+                // Clean up disk: remove extracted folder and zip file after probe
+                try
+                {
+                    if (Directory.Exists(appExtractDir))
+                    {
+                        Directory.Delete(appExtractDir, recursive: true);
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    if (File.Exists(zipFilePath))
+                    {
+                        File.Delete(zipFilePath);
+                    }
+                }
+                catch { }
             }
 
             return record;
