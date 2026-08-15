@@ -295,22 +295,20 @@ namespace ScenarioRunner
                     UseShellExecute = false,
                 };
 
-                // Older releases in a chain target runtimes that are long out of support and absent from
-                // CI images (HandBrake 1.6.1/1.7.3 ask for .NET 6). Rolling forward to the newest installed
-                // major lets them start instead of showing a host error dialog. Recorded, not hidden: a
-                // capture made under a different runtime major is still a fact about the capture.
-                psi.Environment["DOTNET_ROLL_FORWARD"] = "LatestMajor";
-                record.LaunchDiagnostics.Add("DOTNET_ROLL_FORWARD=LatestMajor applied");
-
-                // Releases in a chain otherwise share one user profile, so a settings file written by an
-                // earlier release changes how a later one starts. In run 31885249314 that turned HandBrake
-                // 1.9.2 into an "An Unknown Error has occurred." window. A private profile makes every
-                // capture a genuine first run and independent of probe order.
+                // Runtime roll-forward policy and per-version profile isolation. Both are recorded rather
+                // than hidden: how an application was launched is part of what its capture means.
                 Directory.CreateDirectory(roamingProfileDir);
                 Directory.CreateDirectory(localProfileDir);
-                psi.Environment["APPDATA"] = roamingProfileDir;
-                psi.Environment["LOCALAPPDATA"] = localProfileDir;
-                record.LaunchDiagnostics.Add("Isolated APPDATA/LOCALAPPDATA for this version");
+
+                foreach (var variable in SurveyLaunchEnvironment.Build(roamingProfileDir, localProfileDir))
+                {
+                    psi.Environment[variable.Key] = variable.Value;
+                }
+
+                foreach (var diagnostic in SurveyLaunchEnvironment.Describe())
+                {
+                    record.LaunchDiagnostics.Add(diagnostic);
+                }
 
                 try
                 {
