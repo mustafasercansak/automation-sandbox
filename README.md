@@ -38,7 +38,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **Explainable Scoring** | ✅ Implemented | `ScoreComponents` breakdown (ControlType, Parent, Sibling, Name, Position). |
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
 | **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI, Grok, Kimi, and offline Ollama providers behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
-| **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, and nightly multi-model evaluation harness with GitHub Step Summary reporting. |
+| **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, nightly multi-model evaluation, and a gating live Gemini + Groq assertion on a known ground-truth candidate. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only). A proposed locator is persisted and reported as accepted only after the retried action succeeds. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
@@ -634,7 +634,7 @@ Work is now tracked through GitHub milestones rather than the original M1–M6 s
 
 - **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
 - **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
-- **Phase 3 — Post-Beta Measurement** *(in progress)*: the thresholds shipped so far are documented estimates, not values derived from data. This phase measures them — a real-world false-positive benchmark on an organic application, and a nightly multi-provider run that records how often independent models actually agree.
+- **Phase 3 — Post-Beta Measurement** *(in progress)*: the thresholds shipped so far are documented estimates, not values derived from data. This phase measures them — a real-world false-positive benchmark on an organic application, plus a nightly multi-provider run whose Gemini + Groq ground-truth scenario is now a failing gate rather than collection-only telemetry.
 
 ---
 
