@@ -39,7 +39,6 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GROQ_MODEL: ${{ vars.GROQ_MODEL }}
-          GROQ_ENDPOINT: ${{ vars.GROQ_ENDPOINT }}
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LocatorAblationTests.HandBrakeFixture_LlmConsensus_LiveEvaluation" --logger "console;verbosity=normal"
 
       # The run is not reproducible - providers are non-deterministic - so the raw per-provider votes
