@@ -19,6 +19,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Very Low | Cloud |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
+| **Cloudflare Workers AI** | Explicit (`CLOUDFLARE_MODEL`) | Token + account ID + model | Free daily allocation | Cloud |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free (\$0)** | **100% Local (Offline)** |
 
 ### 🏭 Dynamic Environment Provider Factory (`LlmProviderFactory`)
@@ -37,6 +38,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider`
   - `GROK_API_KEY` (+ optional `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`)
   - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
+  - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Cloudflare"`)
   - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider`
 
 - **Arbitrary Custom Endpoints (`LLM_CUSTOM_PROVIDERS`)**:
@@ -118,19 +120,21 @@ Without `name`, both would report `"OpenAI"` and their votes would be indistingu
 
 On modest hardware, prefer a smaller model (`llama3.2:1b`, `qwen2.5:0.5b`) — set it with `OLLAMA_MODEL` or the `model:` parameter. Ollama alone cannot satisfy consensus: it is one provider, so pair it with a second one if you want LLM picks accepted rather than only recorded.
 
-### 🌐 Free Cloud AI via GitHub Models & Custom Endpoints
-`OpenAiHealingProvider` supports custom OpenAI-compatible endpoints (such as GitHub Models, Azure OpenAI, vLLM, LM Studio).
+### 🌐 Free Cloud AI with Cloudflare Workers AI
 
-In GitHub Actions, you can use **GitHub Models** (`https://models.github.ai/inference`) with the built-in `GITHUB_TOKEN` and `permissions: models: read`:
+Cloudflare Workers AI exposes an account-scoped OpenAI-compatible endpoint and includes a daily free allocation. Configure all three values; the factory deliberately skips Cloudflare when any one is missing because neither the account path nor a currently available model can be guessed safely:
 
-```csharp
-// Example: Connect to GitHub Models using GITHUB_TOKEN
-var provider = new OpenAiHealingProvider(
-    endpoint: "https://models.github.ai/inference",
-    model: "gpt-4o-mini");
+```text
+CLOUDFLARE_API_TOKEN=<repository secret>
+CLOUDFLARE_ACCOUNT_ID=<repository variable>
+CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-> GitHub Models is being retired and has already answered `HTTP 410` on a brownout (#44). The endpoint above still works as a template for any OpenAI-compatible provider — point `endpoint:` elsewhere and supply that provider's key.
+The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
+
+Choose a model family different from the other voters. Two endpoints serving the same underlying model do not provide independent consensus. The free allocation is appropriate for low-volume nightly or manual evaluation, not a guaranteed per-PR release gate.
+
+`OpenAiHealingProvider` also supports other OpenAI-compatible endpoints such as Azure OpenAI, vLLM, and LM Studio. GitHub Models is not an option: its inference API was fully retired on July 30, 2026.
 
 ---
 
@@ -145,6 +149,7 @@ var provider = new OpenAiHealingProvider(
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
+| **Cloudflare Workers AI** | Açıkça belirtilir (`CLOUDFLARE_MODEL`) | Token + hesap kimliği + model | Günlük ücretsiz kota | Bulut |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz (\$0)** | **%100 Yerel (Çevrimdışı)** |
 
 ### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
@@ -156,6 +161,7 @@ var provider = new OpenAiHealingProvider(
 >
 > **Bir sağlayıcı slotunu başka bir sağlayıcının uç noktasına yönlendirmeyin.** `OpenAiHealingProvider` herhangi bir OpenAI-uyumlu adresi kabul ettiği için `OPENAI_*` slotunu başka bir sağlayıcı için yeniden kullanmak cazip gelir. Aynı modeli çağıran iki slot, iki isimli tek bir oy demektir: aynı sistem oldukları için anlaşırlar ve aralarındaki uzlaşma anlamsızdır (#19). İkinci bir görüş gerekiyorsa ikinci bir sağlayıcı kullanın. `OPENAI_*` slotu gerçek bir OpenAI kimlik bilgisine ayrılmıştır; başka bir amaçla doldurmayın, boş bırakın.
 
+Cloudflare için `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ve `CLOUDFLARE_MODEL` değerlerinin üçü de zorunludur. Tam yapılandırma `"Cloudflare"` adlı bir `OpenAiHealingProvider` oluşturur; herhangi biri eksikse bozuk bir uç nokta veya tahmini model üretmek yerine sağlayıcı atlanır.
 
 ```csharp
 // Ortamdaki tüm geçerli sağlayıcıları otomatik al:
@@ -222,16 +228,18 @@ var providers = new ILlmHealingProvider[]
 
 Bilgisayarınız zayıfsa daha küçük bir model tercih edin (`llama3.2:1b`, `qwen2.5:0.5b`) — `OLLAMA_MODEL` ile veya `model:` parametresiyle ayarlanır. Ollama tek başına mutabakatı sağlayamaz: tek sağlayıcıdır, dolayısıyla LLM seçimlerinin yalnız kaydedilmesi değil kabul edilmesi isteniyorsa yanına ikinci bir sağlayıcı gerekir.
 
-### 🌐 GitHub Models ve Özel OpenAI Uç Noktaları
-`OpenAiHealingProvider` özel OpenAI uyumlu uç noktaları (GitHub Models, Azure OpenAI, vLLM, LM Studio) destekler.
+### 🌐 Cloudflare Workers AI ile Ücretsiz Bulut Yapay Zekası
 
-GitHub Actions içerisinde dahili `GITHUB_TOKEN` ve `permissions: models: read` izni ile **GitHub Models** (`https://models.github.ai/inference`) kullanılabilir:
+Cloudflare Workers AI hesap kapsamlı, OpenAI uyumlu bir uç nokta ve günlük ücretsiz kota sunar. Üç değerin tamamını yapılandırın:
 
-```csharp
-// Örnek: GITHUB_TOKEN ile GitHub Models'e bağlanma
-var provider = new OpenAiHealingProvider(
-    endpoint: "https://models.github.ai/inference",
-    model: "gpt-4o-mini");
+```text
+CLOUDFLARE_API_TOKEN=<repository secret>
+CLOUDFLARE_ACCOUNT_ID=<repository variable>
+CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-> GitHub Models emekliye ayrılıyor ve bir kesinti sırasında `HTTP 410` döndürdü (#44). Yukarıdaki uç nokta, OpenAI uyumlu herhangi bir sağlayıcı için şablon olarak hâlâ geçerli — `endpoint:` değerini değiştirip o sağlayıcının anahtarını verin.
+Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions` olur. Model erişilebilirliği ve ücretsiz plan uygunluğu değişebilir; model seçmeden önce `provider-diagnostics.yml` çalıştırın ve [Workers AI fiyatlandırmasını](https://developers.cloudflare.com/workers-ai/platform/pricing/) kontrol edin. Model kimlikleri secret değil repository variable olarak tutulmalıdır.
+
+Diğer oy verenlerden farklı bir model ailesi seçin. Aynı temel modeli sunan iki uç nokta bağımsız mutabakat oluşturmaz. Ücretsiz kota düşük hacimli nightly veya manuel değerlendirmeye uygundur; her PR için garantili release gate olarak kullanılmamalıdır.
+
+`OpenAiHealingProvider`, Azure OpenAI, vLLM ve LM Studio gibi diğer OpenAI uyumlu uç noktaları da destekler. GitHub Models artık seçenek değildir: inference API 30 Temmuz 2026 tarihinde tamamen kapatılmıştır.

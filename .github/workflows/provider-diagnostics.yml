@@ -1,8 +1,8 @@
 name: LLM Provider Diagnostics
 
 # Answers two questions the consensus nightly cannot: is a provider's credential still valid,
-# and which model ids may it be asked for. Both providers involved speak the OpenAI wire
-# protocol, so each exposes a /models endpoint that reports exactly this.
+# and which model ids may it be asked for. Most providers expose a /models endpoint; Cloudflare's
+# account-scoped model-search endpoint can return the equivalent OpenRouter-shaped catalog.
 #
 # Run this by hand whenever a provider goes quiet in the nightly. Free tiers lapse, get retired
 # (#44) and rename their models - the nightly reports "HTTP 400: Model not found", and this
@@ -35,6 +35,8 @@ jobs:
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -uo pipefail
 
@@ -58,6 +60,10 @@ jobs:
 
             if [ -z "$key" ]; then
               printf '| `%s` | _no key configured_ | – | – |\n' "$label" | tee -a "$SUMMARY"
+              return
+            fi
+            if [ -z "$url" ]; then
+              printf '| `%s` | _endpoint configuration missing_ | – | – |\n' "$label" | tee -a "$SUMMARY"
               return
             fi
 
@@ -95,6 +101,11 @@ jobs:
           # Groq, not Grok - unrelated company, one letter apart, separate key.
           probe "Groq"        "https://api.groq.com/openai/v1/models"                         "${GROQ_API_KEY:-}"      bearer
           probe "OpenRouter"  "https://openrouter.ai/api/v1/models"                           "${OPENROUTER_API_KEY:-}" bearer
+          cloudflare_models_url=""
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            cloudflare_models_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/models/search?format=openrouter&task=text-generation&per_page=100"
+          fi
+          probe "Cloudflare"  "$cloudflare_models_url"                                      "${CLOUDFLARE_API_TOKEN:-}" bearer
           # Moonshot runs separate regions with separate accounts. Probing both in one run is
           # what distinguishes "key belongs to the other region" from "key is invalid" - the
           # nightly's HTTP 401 alone cannot tell those apart.
