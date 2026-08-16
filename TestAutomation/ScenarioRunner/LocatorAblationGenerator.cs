@@ -158,8 +158,7 @@ namespace ScenarioRunner
                         throw new InvalidOperationException(
                             $"Scenario '{scenario.ScenarioId}' targets AutomationId '{scenario.OriginalAutomationId}', which is not in the source tree.");
                     }
-
-                    return clone;
+                    break;
 
                 case LocatorMutationKind.RemovedElement:
                     if (string.Equals(clone.AutomationId, scenario.OriginalAutomationId, StringComparison.Ordinal))
@@ -173,12 +172,42 @@ namespace ScenarioRunner
                         throw new InvalidOperationException(
                             $"Scenario '{scenario.ScenarioId}' targets AutomationId '{scenario.OriginalAutomationId}', which is not in the source tree.");
                     }
-
-                    return clone;
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(scenario), scenario.MutationKind, "Unknown mutation kind.");
             }
+
+            // Anonymize all candidate AutomationIds in the mutated tree to the exact same opaque format
+            // (ablation-XXXXXXXX) so that the target element cannot be distinguished by its identifier format (#97).
+            // The target element retains scenario.MutatedAutomationId.
+            MakeAllAutomationIdsOpaque(clone, scenario);
+
+            return clone;
+        }
+
+        private static void MakeAllAutomationIdsOpaque(UiElementInfo root, LocatorAblationScenario scenario)
+        {
+            void Walk(UiElementInfo node, string path)
+            {
+                if (!string.IsNullOrEmpty(node.AutomationId))
+                {
+                    // Target element already has scenario.MutatedAutomationId (e.g. ablation-XXXXXXXX).
+                    // All other elements are mapped to the exact same ablation-XXXXXXXX format.
+                    if (!string.Equals(node.AutomationId, scenario.MutatedAutomationId, StringComparison.Ordinal))
+                    {
+                        node.AutomationId = OpaqueId(scenario.ScenarioId + "#" + path + "#" + node.AutomationId);
+                    }
+                }
+
+                var next = Append(path, node);
+                foreach (var child in node.Children)
+                {
+                    Walk(child, next);
+                }
+            }
+
+            Walk(root, "");
         }
 
         // Walks the mutated tree the same way the generator walked the source, so a fingerprint recorded
