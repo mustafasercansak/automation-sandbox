@@ -916,6 +916,47 @@ namespace ScenarioRunner
             Assert.All(delays, d => Assert.Equal(TimeSpan.FromSeconds(4), d));
         }
 
+        [Fact]
+        public async Task AblationSummary_WhenOneProviderAnswersEverythingAndAnotherFailsEverything_ShowsBoth()
+        {
+            // #112. Run 31959334927 printed "Provider errors | 0" while Gemini failed 42 of 42 requests
+            // and Groq failed 23 of 42. The old counter measured the resolution status, which never
+            // reaches ProviderError as long as one provider keeps answering - so a result resting on
+            // one provider was indistinguishable from one resting on three.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(3).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("Always", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new FailingAblationProvider("Exhausted", "429 You exceeded your current quota"),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            var participation = report.Metrics.ProviderParticipation;
+            Assert.Equal(3, participation["Always"].Answered);
+            Assert.Equal(0, participation["Always"].Failed);
+            Assert.Equal(0, participation["Exhausted"].Answered);
+            Assert.Equal(3, participation["Exhausted"].Failed);
+            Assert.Contains("quota", participation["Exhausted"].SampleError);
+
+            // The resolution-level counter is still 0 here - one provider answered every time - which
+            // is exactly why it cannot be the number a reader sees on its own.
+            Assert.Equal(0, report.Metrics.ResolutionsWithoutAnyProviderAnswer);
+
+            var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "unit");
+            Assert.Contains("Provider participation", markdown);
+            Assert.Contains("`Exhausted`", markdown);
+            Assert.Contains("quota", markdown);
+        }
+
         private sealed class FailingAblationProvider : ILlmHealingProvider
         {
             private readonly string _error;
