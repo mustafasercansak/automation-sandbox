@@ -103,7 +103,16 @@ jobs:
           probe "OpenRouter"  "https://openrouter.ai/api/v1/models"                           "${OPENROUTER_API_KEY:-}" bearer
           cloudflare_models_url=""
           if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            cloudflare_models_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/models/search?format=openrouter&task=text-generation&per_page=100"
+            # format=openrouter is required, not cosmetic: Cloudflare's native shape is
+            # {"result":[{"name":"@cf/..."}]}, and the extractor above reads .data[].id /
+            # .models[].name, so the ids would be invisible without it. It also limits the
+            # listing to chat-completion models on its own.
+            #
+            # No task filter. Cloudflare matches task against its display name ("Text
+            # Generation"), so the literal "text-generation" matched nothing and the probe
+            # answered 200 with {"data":[]} - a valid credential reporting an empty catalog,
+            # which reads exactly like a permissions problem. See #107.
+            cloudflare_models_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/models/search?format=openrouter&per_page=100"
           fi
           probe "Cloudflare"  "$cloudflare_models_url"                                      "${CLOUDFLARE_API_TOKEN:-}" bearer
           # Moonshot runs separate regions with separate accounts. Probing both in one run is
