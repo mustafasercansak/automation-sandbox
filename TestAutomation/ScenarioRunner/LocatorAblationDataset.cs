@@ -13,8 +13,17 @@ namespace ScenarioRunner
     // labelling judgement enters the data.
     public enum LocatorMutationKind
     {
-        // The element survives under a new AutomationId. The engine should find it again.
+        // Pure identifier break: the element survives under an opaque new AutomationId with no other changes.
         RenamedAutomationId,
+
+        // Textual drift: AutomationId changes and Name/label is perturbed (e.g. edited text).
+        NameDrift,
+
+        // Layout shift: AutomationId changes and BoundingRectangle coordinates shift.
+        PositionShift,
+
+        // Compound refactor: AutomationId changes along with both Name perturbation and layout shift.
+        CompoundDrift,
 
         // The element and its subtree are gone. The engine should decline rather than pick a neighbour.
         RemovedElement,
@@ -57,7 +66,7 @@ namespace ScenarioRunner
 
         // The dataset stores the recipe, not a mutated copy of the tree. Regenerating the mutation from
         // the source tree keeps the file small and makes every scenario reproducible without re-running
-        // capture — storing 43 copies of a 149-node tree would do neither.
+        // capture — storing dozens of copies of a tree would do neither.
         public string SourceTreeFileName { get; set; } = "";
 
         public LocatorMutationKind MutationKind { get; set; }
@@ -66,8 +75,14 @@ namespace ScenarioRunner
         // The locator as the test knew it, before the mutation.
         public string OriginalAutomationId { get; set; } = "";
 
-        // What the id becomes under RenamedAutomationId. Null for RemovedElement.
+        // What the id becomes in the mutated tree. An opaque synthetic identifier (e.g. ablation-7f3a91)
+        // so that LLM shortlist prompts do not leak the answer. Null for RemovedElement.
         public string? MutatedAutomationId { get; set; }
+
+        // Parameterized mutations for text drift and coordinate shifts
+        public string? MutatedName { get; set; }
+        public double ShiftX { get; set; }
+        public double ShiftY { get; set; }
 
         // The correct answer, or null when the correct answer is "do not heal".
         public ElementFingerprint? GroundTruth { get; set; }

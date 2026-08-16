@@ -49,7 +49,12 @@ namespace ScenarioRunner
 
     public sealed class AblationMetrics
     {
+        public int SuccessorScenarios { get; set; }
         public int RenameScenarios { get; set; }
+        public int NameDriftScenarios { get; set; }
+        public int PositionShiftScenarios { get; set; }
+        public int CompoundDriftScenarios { get; set; }
+
         public int CorrectHeals { get; set; }
         public int FalseHeals { get; set; }
         public int MissedHeals { get; set; }
@@ -58,10 +63,20 @@ namespace ScenarioRunner
         public int CorrectDeclines { get; set; }
         public int FalseHealsOnRemoved { get; set; }
 
-        // Of the locators that could be healed, how many were.
-        public double AutoHealRecall => RenameScenarios == 0 ? 0.0 : (double)CorrectHeals / RenameScenarios;
+        // Of the locators that survived (with rename, drift, or shift), how many were found.
+        public double AutoHealRecall => SuccessorScenarios == 0 ? 0.0 : (double)CorrectHeals / SuccessorScenarios;
 
-        // Of everything the engine accepted, how much was wrong. The headline number for #15.
+        // Of everything the engine accepted, how much was the true element.
+        public double Precision
+        {
+            get
+            {
+                var accepted = CorrectHeals + FalseHeals + FalseHealsOnRemoved;
+                return accepted == 0 ? 1.0 : (double)CorrectHeals / accepted;
+            }
+        }
+
+        // Of everything the engine accepted, how much was wrong (misdirected or accepted on deleted element).
         public double FalseHealRate
         {
             get
@@ -71,12 +86,12 @@ namespace ScenarioRunner
             }
         }
 
-        // How often a human is asked to decide.
+        // How often a human is asked to decide (declined because of low confidence, low evidence, or ambiguity).
         public double ManualReviewRate
         {
             get
             {
-                var total = RenameScenarios + RemovalScenarios;
+                var total = SuccessorScenarios + RemovalScenarios;
                 return total == 0 ? 0.0 : (double)(MissedHeals + CorrectDeclines) / total;
             }
         }
@@ -160,8 +175,9 @@ namespace ScenarioRunner
                 return AblationOutcome.MissedHeal;
             }
 
-            var isGroundTruth = scenario.GroundTruth != null &&
-                scenario.GroundTruth.Matches(heal.Matched, matchedPath ?? "");
+            var isGroundTruth = heal.Matched != null &&
+                (string.Equals(heal.Matched.AutomationId, scenario.MutatedAutomationId, StringComparison.Ordinal) ||
+                 (scenario.GroundTruth != null && scenario.GroundTruth.Matches(heal.Matched, matchedPath ?? "")));
 
             return isGroundTruth ? AblationOutcome.CorrectHeal : AblationOutcome.FalseHeal;
         }
@@ -169,9 +185,14 @@ namespace ScenarioRunner
         public static AblationMetrics Summarize(IEnumerable<AblationScenarioResult> results)
         {
             var all = results.ToList();
+            var successors = all.Where(r => r.MutationKind != LocatorMutationKind.RemovedElement).ToList();
             return new AblationMetrics
             {
+                SuccessorScenarios = successors.Count,
                 RenameScenarios = all.Count(r => r.MutationKind == LocatorMutationKind.RenamedAutomationId),
+                NameDriftScenarios = all.Count(r => r.MutationKind == LocatorMutationKind.NameDrift),
+                PositionShiftScenarios = all.Count(r => r.MutationKind == LocatorMutationKind.PositionShift),
+                CompoundDriftScenarios = all.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift),
                 CorrectHeals = all.Count(r => r.Outcome == AblationOutcome.CorrectHeal),
                 FalseHeals = all.Count(r => r.Outcome == AblationOutcome.FalseHeal),
                 MissedHeals = all.Count(r => r.Outcome == AblationOutcome.MissedHeal),
@@ -188,11 +209,12 @@ namespace ScenarioRunner
             {
                 $"### Locator ablation benchmark — {datasetName}",
                 "",
-                $"- Scenarios: **{report.Results.Count}** ({m.RenameScenarios} rename, {m.RemovalScenarios} removal)",
+                $"- Scenarios: **{report.Results.Count}** ({m.SuccessorScenarios} successor [{m.RenameScenarios} rename, {m.NameDriftScenarios} text drift, {m.PositionShiftScenarios} pos shift, {m.CompoundDriftScenarios} compound], {m.RemovalScenarios} removal)",
                 "",
                 "| Metric | Value | Reading |",
                 "| :--- | ---: | :--- |",
-                $"| Auto-heal recall | {ReportFormatting.Percent(m.AutoHealRecall)} | renamed locators found again |",
+                $"| Precision | {ReportFormatting.Percent(m.Precision)} | of everything accepted, how much was correct |",
+                $"| Auto-heal recall | {ReportFormatting.Percent(m.AutoHealRecall)} | surviving locators found again |",
                 $"| False-heal rate | {ReportFormatting.Percent(m.FalseHealRate)} | of everything accepted, how much was wrong |",
                 $"| Manual-review rate | {ReportFormatting.Percent(m.ManualReviewRate)} | how often a human is asked |",
                 "",

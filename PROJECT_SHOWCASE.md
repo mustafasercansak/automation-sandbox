@@ -14,7 +14,7 @@
 | :--- | :---: | :--- |
 | **Heuristic Speed** | **Sub-50ms (Indicative)** | For 3,000+ UI controls ($O(N)$ complexity, 0 cost), measured on developer hardware (~23ms) — see `SyntheticTreeBenchmarkTests`. |
 | **Target Frameworks** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Cross-platform core + Windows UIA FlaUI connectors. |
-| **Healing Accuracy** | **100% on the bundled demo suite** | WinForms & WPF case studies shipped with this repo. The false-positive rate on organic, third-party applications is **not yet measured** — tracked in [#15](https://github.com/mustafasercansak/automation-sandbox/issues/15). |
+| **Healing Accuracy** | **Multi-Signal Organic Benchmark** | 100% on bundled demo apps; empirically evaluated across 176 multi-signal scenarios on HandBrake 1.8.2 — see [docs/benchmark-calibration.md](docs/benchmark-calibration.md). |
 | **LLM Guard Safety** | **Hallucination Guard** | Verifies candidate IDs against shortlist before applying match. |
 
 Commercial test automation suites (such as Ranorex or Tosca) keep object repositories and locator self-healing algorithms inside proprietary black boxes. **Automation Sandbox** is an open alternative to the black-box locator recovery in those tools. It combines deterministic structural similarity scoring with an opt-in LLM fallback chain, resolving standard layout changes in tens of milliseconds for 3,000+ controls (developer hardware, $O(N)$) without incurring AI API costs.
@@ -220,7 +220,7 @@ graph LR
 | :--- | :---: | :--- |
 | **Sezgisel Hız** | **50ms Altı (Gösterge)** | 3.000+ UI kontrolü için ($O(N)$ karmaşıklık, 0 maliyet); geliştirici donanımında ölçüldü (~23ms) — bkz. `SyntheticTreeBenchmarkTests`. |
 | **Hedef Platformlar** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Çapraz platform çekirdek + Windows UIA FlaUI bağlayıcıları. |
-| **İyileştirme Doğruluğu** | **Depodaki demo takımında %100** | Bu depoyla gelen WinForms ve WPF vaka çalışmaları. Üçüncü taraf, organik uygulamalardaki yanlış-pozitif oranı **henüz ölçülmedi** — [#15](https://github.com/mustafasercansak/automation-sandbox/issues/15) ile takip ediliyor. |
+| **İyileştirme Doğruluğu** | **Çoklu Sinyal Organik Benchmark** | Demo takımında %100; gerçek organik uygulamada (HandBrake 1.8.2, 176 senaryo) çoklu sinyal drifti ile kalibre edildi — bkz. [docs/benchmark-calibration.md](docs/benchmark-calibration.md). |
 | **LLM Güvenlik Koruması** | **Hallucination Guard** | Eşleşmeyi uygulamadan önce aday kimliğini kısa listede doğrular. |
 
 Ranorex ve Tosca gibi ticari otomasyon araçları, nesne depolarını ve kendi kendini iyileştirme (self-healing) algoritmalarını kapalı kutu (black box) olarak sunarlar. **Automation Sandbox**, bu araçlardaki kapalı kutu locator kurtarmaya açık kaynaklı bir alternatiftir. Deterministik yapısal benzerlik skorlamasını isteğe bağlı LLM (Claude/Gemini) zinciriyle birleştirir; standart arayüz değişikliklerini API maliyeti yaratmadan, 3.000+ kontrol için onlarca milisaniye içinde (geliştirici donanımı, $O(N)$) çözer.
