@@ -35,6 +35,13 @@ flowchart TD
 
     M1 & M2 & M3 & M4 --> EvalSuccessor["Engine Evaluates (Expected: Successor)"]
     M5 --> EvalDecline["Engine Evaluates (Expected: No Successor / Decline)"]
+
+    classDef mutation fill:#eef2f7,stroke:#5f6b7a,color:#17202a;
+    classDef removal fill:#fdecea,stroke:#c62828,color:#17202a;
+    classDef survive fill:#e6f4ea,stroke:#1e7e34,color:#17202a;
+    class M1,M2,M3,M4 mutation;
+    class M5,EvalDecline removal;
+    class EvalSuccessor survive;
 ```
 
 | Mutation Tier | Description | Target Signal Tested |
@@ -55,23 +62,29 @@ flowchart TD
 Running the baseline heuristic engine (`SimilarityWeights.Default`, `MinimumConfidence = 0.50`) across all 176 scenarios in the HandBrake 1.8.2 benchmark reveals the per-mutation score distributions:
 
 ```mermaid
-gantt
-    title Heuristic Score Distribution Ranges by Mutation Tier
-    dateFormat X
-    axisFormat %s
-    section RenamedAutomationId
-    [1.000 - 1.000] : 1000, 1000
-    section NameDrift
-    [0.877 - 0.950] : 877, 950
-    section PositionShift
-    [0.832 - 0.955] : 832, 955
-    section CompoundDrift
-    [0.749 - 0.874] : 749, 874
-    section Removed (False Heals)
-    [0.665 - 0.955] : 665, 955
-    section Removed (Declines)
-    [0.344 - 0.955] : 344, 955
+xychart-beta
+    title "Score range per mutation tier: highest and lowest observed"
+    x-axis ["Rename", "NameDrift", "PosShift", "Compound", "Del-heal", "Del-decl"]
+    y-axis "Similarity score" 0.30 --> 1.00
+    line [1.000, 0.950, 0.955, 0.874, 0.955, 0.955]
+    line [1.000, 0.877, 0.832, 0.749, 0.665, 0.344]
+    line [0.874, 0.874, 0.874, 0.874, 0.874, 0.874]
 ```
+
+The upper line is each tier's **highest** observed score, the lower line its **lowest**; the gap between the two lines is where that tier's scores actually live. The flat middle line sits at $0.874$ — the highest score any genuinely surviving element reached in this dataset. Every accepted candidate above it in `Del-heal` is a false heal that no threshold can filter out without also discarding the best true successor. `Del-heal` and `Del-decl` are both `RemovedElement`, split by what the engine did — accepted a neighbour, or correctly declined. At `Rename` the two lines meet, because that tier has no spread at all: every one of its 42 scenarios scored exactly $1.000$. A single point there is the measurement, not a rendering artefact.
+
+**Read the chart vertically.** At `Compound` the band runs $0.749-0.874$; at `Del-heal` it runs $0.665-0.955$. Those two spans cover the same scores, so no horizontal threshold line can be drawn across this chart with true successors above it and deleted elements below it. That is the entire finding of this section.
+
+The outcome split shows where the damage concentrates — false heals appear only in the last two tiers, and overwhelmingly in `RemovedElement`:
+
+```mermaid
+xychart-beta
+    title "False heals per mutation tier (out of n scenarios)"
+    x-axis ["Rename", "NameDrift", "PosShift", "Compound", "Removed"]
+    y-axis "False heals" 0 --> 20
+    bar [0, 0, 0, 2, 17]
+```
+
 
 | Mutation Tier | Scenario Count ($n$) | Correct Heals / Declines | False Heals | Missed (Review) | Score Range | Mean Score |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -103,6 +116,18 @@ Because the score distributions overlap, varying the `MinimumConfidence` thresho
 | **`0.90`** | $94.5\%$ | $38.8\%$ | $5.5\%$ | $68.8\%$ | 52 | 0 | 3 | 82 | 39 |
 | **`0.95`** | $97.6\%$ | $30.6\%$ | $2.4\%$ | $76.1\%$ | 41 | 0 | 1 | 93 | 41 |
 
+The same sweep drawn as curves — precision (top line), auto-heal recall (middle), false-heal rate (bottom). The recall cliff at $0.90$ and the stubborn false-heal floor are the trade-off made visible:
+
+```mermaid
+xychart-beta
+    title "Threshold sweep: precision, recall and false-heal rate (%)"
+    x-axis ["0.50", "0.60", "0.70", "0.75", "0.80", "0.85", "0.90", "0.95"]
+    y-axis "Percent" 0 --> 100
+    line [84.4, 84.4, 87.3, 90.4, 92.4, 91.6, 94.5, 97.6]
+    line [76.9, 76.9, 76.9, 76.9, 72.4, 64.9, 38.8, 30.6]
+    line [15.6, 15.6, 12.7, 9.6, 7.6, 8.4, 5.5, 2.4]
+```
+
 #### Trade-Off Mechanics:
 1. **Aggressive Auto-Healing ($\text{Threshold} = 0.50 - 0.70$):** Maximizes recall ($76.9\%$) by accepting compound and shifted elements, at the expense of a higher false heal rate on removed elements ($12.7\% - 15.6\%$).
 2. **Recommended Operating Point on This Dataset ($\text{Threshold} = 0.75 - 0.80$):** High precision ($90.4\% - 92.4\%$) and high recall ($72.4\% - 76.9\%$), cutting false heals on removed controls in half ($17 \rightarrow 6$). This is **not** the shipped default — `SimilarityWeights.MinimumConfidence` ships at `0.50` — and the range is derived from a single application, so treat it as provisional until a second application is measured.
@@ -132,6 +157,17 @@ We evaluated four distinct absence hypotheses against the recorded candidate sco
 | **`0.10`** | $2 / 25$ ($8.0\%$) | $7 / 42$ ($16.7\%$) | $89.5\%$ | $57.5\%$ |
 | **`0.15`** | $2 / 25$ ($8.0\%$) | $4 / 42$ ($9.5\%$) | $92.9\%$ | $38.8\%$ |
 | **`0.20`** | $0 / 25$ ($0.0\%$) | $2 / 42$ ($4.8\%$) | $94.6\%$ | $26.1\%$ |
+
+The two curves fall together — the negative result made visible (upper line: false heals on removed elements; lower line: compound-drift recall). Raising the margin never widens the gap between them:
+
+```mermaid
+xychart-beta
+    title "Margin sweep: false heals on removed vs compound-drift recall (%)"
+    x-axis ["0.00", "0.05", "0.08", "0.10", "0.15", "0.20"]
+    y-axis "Percent" 0 --> 100
+    line [92.9, 40.5, 26.2, 16.7, 9.5, 4.8]
+    line [44.0, 24.0, 8.0, 8.0, 8.0, 0.0]
+```
 
 *Result:* **Negative.** Margin gating exhibits the exact same trade-off curve as the confidence threshold. Increasing the required margin from $0.05$ to $0.10$ eliminates $10$ false heals on removed elements, but drops compound drift recall by $67\%$ ($6 \rightarrow 2$). At margin $0.20$, compound recall is completely wiped out ($0\%$), yet $2$ false heals on removed elements persist because a single isolated sibling in a deleted container stands far apart from other controls.
 
@@ -215,6 +251,14 @@ Both failures are free-tier daily quota exhaustion, which is the normal state of
 
 Agreement tracks survival: providers agreed on **86%** of the scenarios where a true successor existed, and on **25%** of the scenarios where the element was gone. None of the four heuristic hypotheses in §5 separated the bands at all, so this is the first mechanism in the project that produces any separation.
 
+```mermaid
+xychart-beta
+    title "Consensus agreement rate by scenario type (n=19)"
+    x-axis ["CompoundDrift (successor exists)", "RemovedElement (deleted)"]
+    y-axis "Unanimous agreement (%)" 0 --> 100
+    bar [86, 25]
+```
+
 > [!WARNING]
 > **Unanimity is not a safe gate.** Of the 9 unanimous verdicts, 3 named an element that does not exist. Treating agreement as evidence of survival would carry a **33% false-heal rate** on deletions — better than the heuristic, and nowhere near safe. Note the sample sizes underneath those percentages: the "33%" is three scenarios.
 
@@ -247,34 +291,115 @@ Sentetik testler (`SyntheticTreeBenchmarkTests`), ağaç dolaşımı ve skorlama
 
 ### 2. Çoklu Sinyal Ablasyon Metodolojisi
 
-Gerçek WPF ağacında (`HandBrake 1.8.2`, 149 düğüm, 42 özgün locator) 5 farklı mutasyon katmanı ile 176 senaryo üretilir:
+Üretim sürümleri arasındaki doğal locator kayması seyrektir (onlarca sürüm, sıfır ya da birkaç kazara yeniden adlandırma üretebilir). **Kontrollü ablasyon** problemi tersine çevirir: gerçek bir uygulamadan yakalanmış UI ağacı üzerinde (`HandBrake_1.8.2.tree.json`, 149 düğüm, 42 özgün locator) locator'ları 5 ayrı bozulma katmanında sistematik olarak mutasyona uğratırız:
 
-1. **`RenamedAutomationId`:** Sadece `AutomationId` opak bir hash ile değiştirilir (`ablation-XXXXXXXX`).
-2. **`NameDrift`:** İsim/etiket metni değiştirilir (yalnızca `Name` değeri dolu olan elemanlara uygulanır).
-3. **`PositionShift`:** Koordinatlar $+140\text{px}$ X ve $+80\text{px}$ Y kaydırılır ($\sim 161\text{px}$ Öklid mesafesi).
-4. **`CompoundDrift`:** Hem metin hem konum aynı anda değiştirilerek bileşik refactor simüle edilir.
-5. **`RemovedElement`:** Eleman ve alt ağacı tamamen silinir (motorun reddetmesi beklenir).
+```mermaid
+flowchart TD
+    Kaynak["Yakalanmış Gerçek UI Ağacı (HandBrake 1.8.2)"] --> Hedefler["42 Özgün Locator"]
+    Hedefler --> M1["1. Saf Yeniden Adlandırma (Opak ID: ablation-7f3a91)"]
+    Hedefler --> M2["2. Metin/Etiket Kayması (Levenshtein Bozulması)"]
+    Hedefler --> M3["3. Yerleşim/Konum Kayması (+140px X, +80px Y)"]
+    Hedefler --> M4["4. Bileşik Refactor (Metin + Yerleşim Kayması)"]
+    Hedefler --> M5["5. Eleman Silme (Alt Ağaç Kaldırıldı)"]
+
+    M1 & M2 & M3 & M4 --> DegHalef["Motor Değerlendirir (Beklenen: Halef)"]
+    M5 --> DegRed["Motor Değerlendirir (Beklenen: Halef Yok / Ret)"]
+
+    classDef mutation fill:#eef2f7,stroke:#5f6b7a,color:#17202a;
+    classDef removal fill:#fdecea,stroke:#c62828,color:#17202a;
+    classDef survive fill:#e6f4ea,stroke:#1e7e34,color:#17202a;
+    class M1,M2,M3,M4 mutation;
+    class M5,DegRed removal;
+    class DegHalef survive;
+```
+
+| Mutasyon Katmanı | Açıklama | Test Edilen Sinyal |
+| :--- | :--- | :--- |
+| **`RenamedAutomationId`** | AutomationId opak bir hash ile değiştirilir (`ablation-XXXXXXXX`). | Yapısal sinyaller aynı kalırken saf kimlik kurtarmayı ölçer. |
+| **`NameDrift`** | AutomationId değiştirilir + `Name` bozulur (metin düzenleme/sonek). Yalnızca `Name` doluyken üretilir. | Metinsel etiket refactor'lerine toleransı ölçer (Levenshtein mesafesi). |
+| **`PositionShift`** | AutomationId değiştirilir + `BoundingRectangle` kaydırılır ($+140\text{px}$ X, $+80\text{px}$ Y; $\sim 161\text{px}$ Öklid mesafesi). | UI yeniden biçimlendirme/boyutlandırma altında yerleşim duyarlılığını ölçer. |
+| **`CompoundDrift`** | AutomationId değiştirilir + `Name` kayması ve konum kayması aynı anda uygulanır. | Birden fazla sinyalin birlikte bozulduğu bileşik refactor toleransını ölçer. |
+| **`RemovedElement`** | Hedef kontrol ve tüm alt ağacı UI ağacından silinir. | Ret güvenliğini ölçer: motorun yakındaki komşuyu tahmin etmek yerine reddettiğini doğrular. |
+
+> [!IMPORTANT]
+> **Bilgi Sızıntısı Koruması:** Mutasyona uğramış kimlikler, tahmin edilebilir sonekler (`_ablated` gibi) yerine opak ve türetilemez sentetik ID'ler kullanır (`ablation-` + SHA-256 tohum hex'i). Bu, LLM kısa liste değerlendirmelerinin tamamen kör kalmasını ve senaryoların aday adlarına bakılarak çözülememesini sağlar.
 
 ---
 
 ### 3. Temel Bulgu: Skor Dağılımlarının Çakışması
 
-HandBrake 1.8.2 üzerinde yapılan ölçümlerde şu skor aralıkları gözlenmiştir:
-- **Silinen elemanlarda yanlış eşleşen komşuların skoru:** $0.665 - 0.955$
-- **Bileşik mutasyona uğramış gerçek elemanların skoru:** $0.749 - 0.874$
-- **Konumu kaymış gerçek elemanların skoru:** $0.832 - 0.955$
-- **Silinen elemanlarda doğru reddedilen durumlar:** $0.344 - 0.955$
+Temel sezgisel motor (`SimilarityWeights.Default`, `MinimumConfidence = 0.50`) HandBrake 1.8.2 benchmark'ındaki 176 senaryonun tamamında koşturulduğunda mutasyon başına şu skor dağılımları gözlenir:
 
-**Sonuç:** Skor tek başına "bu eleman taşındı/yenilendi" ile "bu eleman silindi ve yanındaki komşu benziyor" ayrımını mükemmel şekilde yapamaz. Dağılımlar doğal olarak çakışmaktadır.
+```mermaid
+xychart-beta
+    title "Mutasyon katmanı başına skor aralığı: en yüksek ve en düşük"
+    x-axis ["Rename", "NameDrift", "PosShift", "Compound", "Sil-iyilesme", "Sil-ret"]
+    y-axis "Benzerlik skoru" 0.30 --> 1.00
+    line [1.000, 0.950, 0.955, 0.874, 0.955, 0.955]
+    line [1.000, 0.877, 0.832, 0.749, 0.665, 0.344]
+    line [0.874, 0.874, 0.874, 0.874, 0.874, 0.874]
+```
+
+Üstteki çizgi her katmanın gözlenen **en yüksek**, alttaki **en düşük** skorudur; iki çizgi arasındaki boşluk o katmanın skorlarının gerçekte bulunduğu yerdir. Ortadaki yatay çizgi $0.874$'te durur — bu veri kümesinde gerçekten hayatta kalan bir elemanın ulaştığı en yüksek skor. `Sil-iyilesme` sütununda bu çizginin üzerinde kabul edilen her aday, en iyi gerçek halefi de dışarı atmadan hiçbir eşiğin eleyemeyeceği bir yanlış iyileştirmedir. `Sil-iyilesme` ve `Sil-ret` ikisi de `RemovedElement`'tir, motorun ne yaptığına göre ayrılmıştır — komşuyu kabul etti mi, yoksa doğru biçimde reddetti mi. `Rename` katmanında iki çizgi birleşir, çünkü o katmanın hiç yayılımı yoktur: 42 senaryonun tamamı tam olarak $1.000$ almıştır. Oradaki tek nokta bir çizim kusuru değil, ölçümün kendisidir.
+
+**Grafiği dikey okuyun.** `Compound` katmanında bant $0.749-0.874$, `Sil-iyilesme` katmanında $0.665-0.955$ aralığında. Bu iki aralık aynı skorları kapsıyor; dolayısıyla bu grafiğin üzerine, gerçek halefler üstünde ve silinmiş elemanlar altında kalacak şekilde yatay bir eşik çizgisi çizilemez. Bu bölümün bulgusu tam olarak budur.
+
+Hasarın nerede yoğunlaştığını sonuç dağılımı gösteriyor — yanlış iyileştirmeler yalnızca son iki katmanda görülüyor ve ağırlıklı olarak `RemovedElement`'te:
+
+```mermaid
+xychart-beta
+    title "Mutasyon katmanı başına yanlış iyileştirme (n senaryo üzerinden)"
+    x-axis ["Rename", "NameDrift", "PosShift", "Compound", "Removed"]
+    y-axis "Yanlış iyileştirme" 0 --> 20
+    bar [0, 0, 0, 2, 17]
+```
+
+| Mutasyon Katmanı | Senaryo Sayısı ($n$) | Doğru İyileştirme / Ret | Yanlış İyileştirme | Kaçırılan (İnceleme) | Skor Aralığı | Ortalama Skor |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`RenamedAutomationId`** | 42 | 40 | 0 | 2 | $[1.000 - 1.000]$ | $1.000$ |
+| **`NameDrift`** | 25 | 23 | 0 | 2 | $[0.877 - 0.950]$ | $0.901$ |
+| **`PositionShift`** | 42 | 34 | 0 | 8 | $[0.832 - 0.955]$ | $0.867$ |
+| **`CompoundDrift`** | 25 | 6 | 2 | 17 | $[0.749 - 0.874]$ | $0.790$ |
+| **`RemovedElement`** | 42 | 25 | 17 | 0 | $[0.344 - 0.955]$ | $0.755$ |
+
+#### Temel Çıkarım: Skorların Doğal Çakışması
+- **Silinen elemanlardaki yanlış iyileştirmeler $0.665$ ile $0.955$ arasında skor alır**, çünkü yakındaki kardeş butonlar veya kapsayıcılar silinen elemanla aynı `ParentControlType`, kardeş yakınlığı ya da ekran koordinatlarını paylaşır.
+- **Gerçekten bileşik kaymaya uğramış elemanlar $0.749$ ile $0.874$ arasında skor alır.**
+- **Bu dağılımlar büyük ölçüde çakışır.** Dolayısıyla hiçbir statik matematiksel güven skoru, taşınmış/yeniden adlandırılmış bir kontrolü, komşusu yapısal olarak benzeyen silinmiş bir kontrolden tek başına ayırt edemez.
 
 ---
 
 ### 4. "Yanlış İyileştirme $\downarrow$ vs. Manuel İnceleme $\uparrow$" Dengesi
 
-Eşik değeri (`MinimumConfidence`) artırıldıkça:
-- Silinen elemanlardaki yanlış eşleşmeler $17$'den $1$'e düşer (Hata oranı $\%15.6 \rightarrow \%2.4$).
-- Ancak ağır refactor geçirmiş elemanlar da insan onayına gönderilir (Manuel inceleme $\%30.7 \rightarrow \%76.1$).
-- Projeler risk toleranslarına göre eşik değerini `SimilarityWeights` üzerinden ayarlayabilir. Bu veri setinde dengeli çalışma noktası $0.75 - 0.80$ aralığıdır; ancak bu **ürünün varsayılanı değildir** (`MinimumConfidence` varsayılan olarak `0.50` gelir) ve tek bir uygulamadan türetildiği için ikinci bir uygulama ölçülene kadar geçicidir.
+Skor dağılımları çakıştığı için, `MinimumConfidence` eşiğini değiştirmek otomatik iyileştirme kapsamı ile insan incelemesi yükü arasında ampirik bir denge üretir:
+
+| `MinimumConfidence` | Kesinlik | Otomatik İyileştirme Kapsamı | Yanlış İyileştirme Oranı | Manuel İnceleme Oranı | Doğru İyileştirme | Yanlış İyileştirme (Halef) | Yanlış İyileştirme (Silinmiş) | Kaçırılan | Doğru Ret |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`0.50`** (Varsayılan) | $\%84.4$ | $\%76.9$ | $\%15.6$ | $\%30.7$ | 103 | 2 | 17 | 29 | 25 |
+| **`0.60`** | $\%84.4$ | $\%76.9$ | $\%15.6$ | $\%30.7$ | 103 | 2 | 17 | 29 | 25 |
+| **`0.70`** | $\%87.3$ | $\%76.9$ | $\%12.7$ | $\%33.0$ | 103 | 2 | 13 | 29 | 29 |
+| **`0.75`** | $\%90.4$ | $\%76.9$ | $\%9.6$ | $\%35.2$ | 103 | 2 | 9 | 29 | 33 |
+| **`0.80`** | $\%92.4$ | $\%72.4$ | $\%7.6$ | $\%40.3$ | 97 | 2 | 6 | 35 | 36 |
+| **`0.85`** | $\%91.6$ | $\%64.9$ | $\%8.4$ | $\%46.0$ | 87 | 2 | 6 | 45 | 36 |
+| **`0.90`** | $\%94.5$ | $\%38.8$ | $\%5.5$ | $\%68.8$ | 52 | 0 | 3 | 82 | 39 |
+| **`0.95`** | $\%97.6$ | $\%30.6$ | $\%2.4$ | $\%76.1$ | 41 | 0 | 1 | 93 | 41 |
+
+Aynı sweep eğriler halinde — kesinlik (üst çizgi), otomatik iyileştirme kapsamı (orta), yanlış iyileştirme oranı (alt). $0.90$'daki kapsam uçurumu ve bir türlü sıfırlanamayan yanlış iyileştirme tabanı, dengenin görünür hâlidir:
+
+```mermaid
+xychart-beta
+    title "Eşik sweep'i: kesinlik, kapsam ve yanlış iyileştirme oranı (%)"
+    x-axis ["0.50", "0.60", "0.70", "0.75", "0.80", "0.85", "0.90", "0.95"]
+    y-axis "Yüzde" 0 --> 100
+    line [84.4, 84.4, 87.3, 90.4, 92.4, 91.6, 94.5, 97.6]
+    line [76.9, 76.9, 76.9, 76.9, 72.4, 64.9, 38.8, 30.6]
+    line [15.6, 15.6, 12.7, 9.6, 7.6, 8.4, 5.5, 2.4]
+```
+
+#### Denge Mekaniği:
+1. **Agresif Otomatik İyileştirme (Eşik $= 0.50 - 0.70$):** Bileşik ve kaymış elemanları kabul ederek kapsamı en yükseğe çıkarır ($\%76.9$); bedeli silinmiş elemanlarda daha yüksek yanlış iyileştirme oranıdır ($\%12.7 - \%15.6$).
+2. **Bu Veri Kümesinde Önerilen Çalışma Noktası (Eşik $= 0.75 - 0.80$):** Yüksek kesinlik ($\%90.4 - \%92.4$) ve yüksek kapsam ($\%72.4 - \%76.9$); silinmiş kontrollerdeki yanlış iyileştirmeleri yarıya indirir ($17 \rightarrow 6$). Bu **ürünün varsayılanı değildir** — `SimilarityWeights.MinimumConfidence` `0.50` olarak gelir — ve tek bir uygulamadan türetildiği için ikinci bir uygulama ölçülene kadar geçici sayılmalıdır.
+3. **Katı Sıfır-Hata Politikası (Eşik $= 0.90 - 0.95$):** Yanlış iyileştirmeyi en aza indirir ($\%2.4 - \%5.5$) ve kesinliği en üste çıkarır ($\%97.6$), ancak ağır kaymış kontrolleri manuel incelemeye yönlendirir ($\%68.8 - \%76.1$).
 
 > [!NOTE]
 > **Neden Körlemesine 0.95 Seçilmemelidir:** Eşik $0.90$'dan $0.95$'e çıkarıldığında, son 2 yanlış iyileştirme elenir ($3 \rightarrow 1$), ancak bunun bedeli $11$ doğru iyileştirmenin feda edilmesidir ($52 \rightarrow 41$) ve geçerli locator'ların dörtte üçünden fazlası insan incelemesine yönlendirilir ($\%76.1$). Bu nedenle motor tek bir katı eşik dayatmaz; en uygun çalışma noktası ekibin yanlış pozitif toleransı ile manuel inceleme yükü arasındaki tercihe bağlıdır.
@@ -298,6 +423,17 @@ Silinen elemanlar ($[0.665 - 0.955]$) ile bileşik mutasyona uğrayıp hayatta k
 | **`0.10`** | $2 / 25$ ($\%8.0$) | $7 / 42$ ($\%16.7$) | $\%89.5$ | $\%57.5$ |
 | **`0.15`** | $2 / 25$ ($\%8.0$) | $4 / 42$ ($\%9.5$) | $\%92.9$ | $\%38.8$ |
 | **`0.20`** | $0 / 25$ ($\%0.0$) | $2 / 42$ ($\%4.8$) | $\%94.6$ | $\%26.1$ |
+
+İki eğri birlikte düşüyor — olumsuz sonucun görünür hâli (üst çizgi: silinen elemanlarda yanlış iyileştirme, alt çizgi: bileşik başarı). Marjı yükseltmek aralarındaki makası hiç açmıyor:
+
+```mermaid
+xychart-beta
+    title "Marj sweep'i: silinenlerde yanlış iyileştirme ve bileşik başarı (%)"
+    x-axis ["0.00", "0.05", "0.08", "0.10", "0.15", "0.20"]
+    y-axis "Yüzde" 0 --> 100
+    line [92.9, 40.5, 26.2, 16.7, 9.5, 4.8]
+    line [44.0, 24.0, 8.0, 8.0, 8.0, 0.0]
+```
 
 *Sonuç:* **Olumsuz.** Marj filtresi güven eşiği ile aynı denge eğrisini gösterir. Marj $0.05$'ten $0.10$'a çıkarıldığında silinen elemanlardaki hata $17$'den $7$'ye düşer, ancak bileşik mutasyondaki doğru iyileştirme $\%67$ oranında çöker ($6 \rightarrow 2$). Marj $0.20$ yapıldığında bileşik başarı sıfırlanır, ancak silinmiş 2 eleman komşuları izole olduğu için hala yanlış eşleşir.
 
@@ -372,6 +508,14 @@ Her iki başarısızlık da ücretsiz katman günlük kotasının tükenmesidir;
 | `RemovedElement` (eleman silinmiş) | 12 | 3 | 9 | 3'te 3 yanlış |
 
 Uzlaşma, elemanın hayatta kalmasıyla birlikte hareket ediyor: gerçek bir halefin bulunduğu senaryoların **%86**'sında, elemanın silindiği senaryoların ise **%25**'inde sağlayıcılar aynı adayda buluştu. §5'teki dört sezgisel hipotezin hiçbiri bantları ayıramamıştı; dolayısıyla bu, projede herhangi bir ayrışma üreten ilk mekanizmadır.
+
+```mermaid
+xychart-beta
+    title "Senaryo tipine göre konsensüs uzlaşma oranı (n=19)"
+    x-axis ["CompoundDrift (halef mevcut)", "RemovedElement (silinmiş)"]
+    y-axis "Oybirliği (%)" 0 --> 100
+    bar [86, 25]
+```
 
 > [!WARNING]
 > **Oybirliği güvenli bir kapı değildir.** 9 oybirliği kararının 3'ü var olmayan bir elemanı işaret etti. Uzlaşmayı "eleman duruyor" kanıtı saymak, silinmelerde **%33 yanlış iyileştirme oranı** demektir — heuristikten iyi, güvenli olmaktan uzak. Yüzdelerin altındaki örneklem büyüklüğüne dikkat: bu "%33" üç senaryodur.
