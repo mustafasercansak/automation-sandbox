@@ -1,0 +1,54 @@
+name: Ablation Consensus Evaluation
+
+# Answers #97: on the ablation dataset, do independent providers scatter when the element was
+# deleted, or do they agree on the same wrong neighbour?
+#
+# Manual dispatch only. The run costs real API budget (67 scenarios x configured providers), and
+# the answer changes slowly, so there is no schedule.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: Live consensus on ablated locators (Linux net8.0)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Build ScenarioRunner
+        run: |
+          dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+
+      - name: Run live consensus evaluation
+        env:
+          RUN_ABLATION_CONSENSUS: "1"
+          ABLATION_OUTPUT_DIR: ${{ github.workspace }}/TestResults/ablation-consensus
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          GROQ_ENDPOINT: ${{ vars.GROQ_ENDPOINT }}
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LocatorAblationTests.HandBrakeFixture_LlmConsensus_LiveEvaluation" --logger "console;verbosity=normal"
+
+      # The run is not reproducible - providers are non-deterministic - so the raw per-provider votes
+      # are the only auditable record of what was actually answered.
+      - name: Upload raw provider votes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ablation-consensus-votes
+          path: TestResults/ablation-consensus/**
+          retention-days: 90
+          if-no-files-found: warn
