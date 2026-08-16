@@ -488,6 +488,15 @@ namespace ScenarioRunner
         [Fact]
         public async Task HandBrakeFixture_LlmConsensus_LiveEvaluation()
         {
+            // Opt-in like every other live test here. Without the flag a workflow that merely has
+            // provider credentials in scope would spend real API budget by accident.
+            var optIn = Environment.GetEnvironmentVariable("RUN_ABLATION_CONSENSUS");
+            if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("[LlmConsensusEvaluation] RUN_ABLATION_CONSENSUS=1 is not set - skipping live evaluation.");
+                return;
+            }
+
             var configured = LlmProviderFactory.CreateConfiguredProviders();
             if (configured.Count < 2)
             {
@@ -506,8 +515,104 @@ namespace ScenarioRunner
                 new SimilarityWeights { MinimumConfidence = 0.50 },
                 scenarioFilter: s => s.MutationKind == LocatorMutationKind.CompoundDrift || s.MutationKind == LocatorMutationKind.RemovedElement);
 
-            Console.WriteLine(LocatorAblationHarness.ToMarkdownSummary(report, "HandBrake 1.8.2 Live Consensus"));
+            var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "HandBrake 1.8.2 Live Consensus");
+            Console.WriteLine(markdown);
+
+            var summaryPath = Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY");
+            if (!string.IsNullOrEmpty(summaryPath))
+            {
+                File.AppendAllText(summaryPath, Environment.NewLine + markdown + Environment.NewLine);
+            }
+
+            // The run is not reproducible - providers are non-deterministic - so the raw votes are the
+            // only auditable record of what was actually answered. Keep them next to the summary.
+            var outputDir = Environment.GetEnvironmentVariable("ABLATION_OUTPUT_DIR");
+            if (!string.IsNullOrEmpty(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+                var votes = report.Results.Select(r => new
+                {
+                    r.ScenarioId,
+                    MutationKind = r.MutationKind.ToString(),
+                    Outcome = r.Outcome.ToString(),
+                    VotePattern = r.VotePattern.ToString(),
+                    r.ProviderVotes,
+                    AgreedProviders = r.AgreedProviders,
+                    r.Score,
+                });
+                File.WriteAllText(
+                    Path.Combine(outputDir, "ablation-consensus-votes.json"),
+                    System.Text.Json.JsonSerializer.Serialize(votes, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+
             Assert.NotEmpty(report.Results);
+        }
+
+        [Fact]
+        public async Task LlmConsensus_ScatteredVotes_AreDistinguishableFromMutualDecline()
+        {
+            // These two look identical in HealResult - both are "no consensus" - and they mean opposite
+            // things for #97. Scattering supports the hypothesis; mutual decline is a different finding.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+            var weights = new SimilarityWeights { MinimumConfidence = 0.99 };
+
+            var scattered = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new MockAblationProvider("B", (_, c) => (c.Count > 1 ? c[1].CandidateId : null, 0.9, "")),
+                },
+                weights);
+
+            var declined = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, _) => (null, 0.0, "no match")),
+                    new MockAblationProvider("B", (_, _) => (null, 0.0, "no match")),
+                },
+                weights);
+
+            Assert.Equal(ConsensusVotePattern.Scattered, scattered.Results[0].VotePattern);
+            Assert.Equal(ConsensusVotePattern.AllDeclined, declined.Results[0].VotePattern);
+        }
+
+        [Fact]
+        public async Task LlmConsensus_UnanimousVoteOnARemovedElement_IsRecordedAsSuch()
+        {
+            // The failure mode the issue exists to detect: both providers confidently name the same
+            // neighbour for a control that no longer exists.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new MockAblationProvider("B", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.8, "")),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.Equal(ConsensusVotePattern.Unanimous, report.Results[0].VotePattern);
+            Assert.Equal(AblationOutcome.FalseHealOnRemoved, report.Results[0].Outcome);
+
+            var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "unit");
+            Assert.Contains("Provider vote patterns", markdown);
+            Assert.Contains("Answer to the #97 question", markdown);
         }
 
         private sealed class MockAblationProvider : ILlmHealingProvider

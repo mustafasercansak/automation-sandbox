@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +30,31 @@ namespace ScenarioRunner
         FalseHealOnRemoved,
     }
 
+    // How the independent providers behaved on one scenario. This — not the heal outcome — is what
+    // #97 asks about: when the element is gone there is no correct answer, so the hypothesis is that
+    // providers scatter. Agreement on a decoy would be the opposite, and worse than a heuristic miss,
+    // because consensus is what the engine trusts most.
+    public enum ConsensusVotePattern
+    {
+        // The LLM path never ran; the heuristic answered on its own.
+        NotEvaluated,
+
+        // Every provider that answered named the same candidate.
+        Unanimous,
+
+        // Providers answered but named different candidates.
+        Scattered,
+
+        // Every provider declined to name a candidate.
+        AllDeclined,
+
+        // Some answered, some declined. Not consensus, but not scatter either.
+        Partial,
+
+        // At least one provider failed to produce a usable answer. Measurement noise, not a finding.
+        ProviderFailure,
+    }
+
     public sealed class AblationScenarioResult
     {
         public string ScenarioId { get; set; } = "";
@@ -53,6 +79,8 @@ namespace ScenarioRunner
         // The raw score vector, kept so thresholds can be swept offline without re-running the harness
         // (#15 asks for this directly).
         public IReadOnlyList<CandidateScore> Candidates { get; set; } = new List<CandidateScore>();
+
+        public ConsensusVotePattern VotePattern { get; set; } = ConsensusVotePattern.NotEvaluated;
 
         public string? ExpectedElement { get; set; }
         public string? MatchedElement { get; set; }
@@ -257,6 +285,7 @@ namespace ScenarioRunner
                     ProviderErrors = heal.ProviderErrors ?? new Dictionary<string, string>(),
                     ProviderVotes = providerVotes,
                     ProviderResults = providerResults,
+                    VotePattern = ClassifyVotePattern(providerVotes, providerResults),
                     LlmConfidence = heal.LlmConfidence,
                     LlmReasoning = heal.LlmReasoning,
                     Candidates = heal.Candidates ?? new List<CandidateScore>(),
@@ -321,6 +350,56 @@ namespace ScenarioRunner
             return isGroundTruth ? AblationOutcome.CorrectHeal : AblationOutcome.FalseHeal;
         }
 
+
+        // Reads the raw votes rather than the consensus verdict. HealResult only reports whether two
+        // providers agreed; it cannot say whether the others scattered, declined, or failed - and that
+        // distinction is the entire question in #97.
+        private static ConsensusVotePattern ClassifyVotePattern(
+            IReadOnlyDictionary<string, string?> votes,
+            IReadOnlyDictionary<string, LlmHealingResult> results)
+        {
+            if (votes.Count == 0)
+            {
+                return ConsensusVotePattern.NotEvaluated;
+            }
+
+            foreach (var entry in results)
+            {
+                if (entry.Value == null || !entry.Value.Success)
+                {
+                    return ConsensusVotePattern.ProviderFailure;
+                }
+            }
+
+            var answered = new List<string>();
+            var declined = 0;
+            foreach (var entry in votes)
+            {
+                if (string.IsNullOrEmpty(entry.Value))
+                {
+                    declined++;
+                }
+                else
+                {
+                    answered.Add(entry.Value!);
+                }
+            }
+
+            if (answered.Count == 0)
+            {
+                return ConsensusVotePattern.AllDeclined;
+            }
+
+            var distinct = new HashSet<string>(answered, StringComparer.Ordinal).Count;
+
+            if (declined > 0)
+            {
+                return ConsensusVotePattern.Partial;
+            }
+
+            return distinct == 1 ? ConsensusVotePattern.Unanimous : ConsensusVotePattern.Scattered;
+        }
+
         public static AblationMetrics Summarize(IEnumerable<AblationScenarioResult> results)
         {
             var all = results.ToList();
@@ -377,6 +456,45 @@ namespace ScenarioRunner
                 lines.Add($"| LLM-accepted heals | {m.LlmHeals} |");
                 lines.Add($"| Disagreement / No-consensus declines | {m.ConsensusDeclines} |");
                 lines.Add($"| Provider errors | {m.ProviderErrors} |");
+            }
+
+            var evaluated = report.Results.Where(r => r.VotePattern != ConsensusVotePattern.NotEvaluated).ToList();
+            if (evaluated.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("#### Provider vote patterns");
+                lines.Add("");
+                lines.Add("Read from the raw per-provider votes, not from the consensus verdict. On removed elements");
+                lines.Add("there is no correct answer, so scattering is the hypothesis and unanimity on a decoy is the");
+                lines.Add("failure mode worth knowing about.");
+                lines.Add("");
+                lines.Add("| Mutation | Unanimous | Scattered | All declined | Partial | Provider failure |");
+                lines.Add("| :--- | ---: | ---: | ---: | ---: | ---: |");
+
+                foreach (var group in evaluated.GroupBy(r => r.MutationKind).OrderBy(g => g.Key.ToString(), StringComparer.Ordinal))
+                {
+                    lines.Add(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "| `{0}` | {1} | {2} | {3} | {4} | {5} |",
+                        group.Key,
+                        group.Count(r => r.VotePattern == ConsensusVotePattern.Unanimous),
+                        group.Count(r => r.VotePattern == ConsensusVotePattern.Scattered),
+                        group.Count(r => r.VotePattern == ConsensusVotePattern.AllDeclined),
+                        group.Count(r => r.VotePattern == ConsensusVotePattern.Partial),
+                        group.Count(r => r.VotePattern == ConsensusVotePattern.ProviderFailure)));
+                }
+
+                var removed = evaluated.Where(r => r.MutationKind == LocatorMutationKind.RemovedElement).ToList();
+                if (removed.Count > 0)
+                {
+                    var unanimousOnDecoy = removed.Count(r => r.VotePattern == ConsensusVotePattern.Unanimous);
+                    lines.Add("");
+                    lines.Add(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "**Answer to the #97 question:** on {0} removed elements the providers agreed unanimously {1} time(s) — every one of those is agreement on an element that does not exist.",
+                        removed.Count,
+                        unanimousOnDecoy));
+                }
             }
 
             return string.Join(Environment.NewLine, lines);
