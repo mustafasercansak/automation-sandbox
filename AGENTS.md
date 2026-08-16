@@ -137,6 +137,10 @@ Two failures here are cheap to prevent and expensive to unwind, and both happene
 
 **Do not merge while review findings are still uncommitted.** #79 was merged with the reviewed fix sitting unstaged in a working tree. Because its body said `Closes #78`, the merge closed the issue too, so a defect that was already understood — a container check matching `"Portable"` as `"table"` — landed on `main` with nothing tracking it, and #78 had to be reopened to get it back. Before merging, confirm that the code on the branch is the code that was reviewed. If a finding is not going in, say so in the PR and move it to a follow-up issue; do not let a merge decide it silently.
 
+**`Closes #N` only when the PR finishes the issue.** The keyword closes the issue on merge, so it is a claim that every acceptance criterion is now met — not that some code shipped. Two issues had to be reopened the same day for want of that check: #85 required the diagrams to render and they no longer parsed; #97 required the LLM arm to be measured and only the harness had been built. Both PRs were good work; both closed an issue that was not finished.
+
+Before writing the keyword, read the issue's acceptance criteria and confirm this PR ticks every box — literally. Tick the checkboxes in the issue body as each criterion is verified during review, so that at merge time "is this finished?" is something you can see rather than reconstruct. An issue with unticked boxes is not ready for a closing keyword, and if a box cannot honestly be ticked, say why in a comment instead of closing around it. When it delivers only part, write `Part of #N` instead — the link still shows in the timeline, the issue stays open, and what remains gets listed in a comment on it. Dropping closing keywords altogether is worse and was tried first: #74, #76 and #77 merged with no reference at all, which left #73 open behind merged code and produced a second issue (#75) describing the same goal.
+
 ## Design principles
 
 **Duplicated code is a defect, not a style preference.** Extract it. The judgement is *how*, and the deciding question is whether the duplicated parts share state:
