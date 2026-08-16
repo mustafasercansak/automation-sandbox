@@ -538,6 +538,15 @@ namespace ScenarioRunner
                     VotePattern = r.VotePattern.ToString(),
                     r.ProviderVotes,
                     AgreedProviders = r.AgreedProviders,
+
+                    // Without these a failed run cannot be diagnosed at all: the first live run showed
+                    // every scenario as a provider failure and the reason was nowhere on disk.
+                    r.ProviderErrors,
+                    ProviderMessages = r.ProviderResults.ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value == null
+                            ? "no result"
+                            : (kvp.Value.Success ? "ok" : "failed: " + kvp.Value.ErrorMessage)),
                     r.Score,
                 });
                 File.WriteAllText(
@@ -546,6 +555,14 @@ namespace ScenarioRunner
             }
 
             Assert.NotEmpty(report.Results);
+
+            // A run that produced no votes is not a green run. Reporting success here is how the first
+            // live evaluation looked healthy while answering nothing.
+            var usable = LocatorAblationHarness.UsableConsensusScenarios(report.Results);
+            Assert.True(
+                usable > 0,
+                "The live evaluation produced no usable provider votes - every evaluated scenario failed at the provider. " +
+                "See the uploaded ablation-consensus-votes.json for the per-provider error messages.");
         }
 
         [Fact]
@@ -613,6 +630,100 @@ namespace ScenarioRunner
             var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "unit");
             Assert.Contains("Provider vote patterns", markdown);
             Assert.Contains("Answer to the #97 question", markdown);
+        }
+
+        [Fact]
+        public async Task LlmConsensus_WhenEveryProviderFails_TheSummaryRefusesToAnswer()
+        {
+            // The first live run (31931888890) reported "agreed unanimously 0 time(s)" while no provider
+            // had answered at all. Zero agreement through silence reads identically to zero agreement
+            // through scatter, and only one of them supports the hypothesis.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(2).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new FailingAblationProvider("A", "429 rate limited"),
+                    new FailingAblationProvider("B", "429 rate limited"),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.All(report.Results, r => Assert.Equal(ConsensusVotePattern.ProviderFailure, r.VotePattern));
+            Assert.Equal(0, LocatorAblationHarness.UsableConsensusScenarios(report.Results));
+
+            var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "unit");
+            Assert.Contains("No usable data", markdown);
+            Assert.DoesNotContain("Answer to the #97 question", markdown);
+        }
+
+        [Fact]
+        public async Task LlmConsensus_WhenSomeProvidersFail_TheAnswerExcludesThemAndSaysSo()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var removed = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(2).ToList();
+            var weights = new SimilarityWeights { MinimumConfidence = 0.99 };
+
+            var good = await LocatorAblationHarness.RunAsync(
+                new LocatorAblationDataset { Scenarios = removed.Take(1).ToList() },
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new MockAblationProvider("B", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                },
+                weights);
+
+            var bad = await LocatorAblationHarness.RunAsync(
+                new LocatorAblationDataset { Scenarios = removed.Skip(1).Take(1).ToList() },
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new FailingAblationProvider("A", "500"),
+                    new FailingAblationProvider("B", "500"),
+                },
+                weights);
+
+            var merged = new AblationRunReport { Results = good.Results.Concat(bad.Results).ToList() };
+            merged.Metrics = LocatorAblationHarness.Summarize(merged.Results);
+
+            var markdown = LocatorAblationHarness.ToMarkdownSummary(merged, "unit");
+            Assert.Contains("Answer to the #97 question", markdown);
+            Assert.Contains("failed at the provider and are excluded", markdown);
+            Assert.Equal(1, LocatorAblationHarness.UsableConsensusScenarios(merged.Results));
+        }
+
+        private sealed class FailingAblationProvider : ILlmHealingProvider
+        {
+            private readonly string _error;
+
+            public FailingAblationProvider(string name, string error)
+            {
+                Name = name;
+                _error = error;
+            }
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default) =>
+                Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = _error,
+                });
         }
 
         private sealed class MockAblationProvider : ILlmHealingProvider
