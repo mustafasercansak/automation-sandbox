@@ -400,6 +400,12 @@ namespace ScenarioRunner
             return distinct == 1 ? ConsensusVotePattern.Unanimous : ConsensusVotePattern.Scattered;
         }
 
+        // Scenarios where the LLM actually answered. A run where every provider failed produces results
+        // but no measurement, and the difference has to be visible to the caller, not just in prose.
+        public static int UsableConsensusScenarios(IEnumerable<AblationScenarioResult> results) =>
+            results.Count(r => r.VotePattern != ConsensusVotePattern.NotEvaluated &&
+                               r.VotePattern != ConsensusVotePattern.ProviderFailure);
+
         public static AblationMetrics Summarize(IEnumerable<AblationScenarioResult> results)
         {
             var all = results.ToList();
@@ -484,16 +490,50 @@ namespace ScenarioRunner
                         group.Count(r => r.VotePattern == ConsensusVotePattern.ProviderFailure)));
                 }
 
+                var failures = evaluated.Count(r => r.VotePattern == ConsensusVotePattern.ProviderFailure);
+                var usable = evaluated.Count - failures;
                 var removed = evaluated.Where(r => r.MutationKind == LocatorMutationKind.RemovedElement).ToList();
-                if (removed.Count > 0)
+                var usableRemoved = removed.Count(r => r.VotePattern != ConsensusVotePattern.ProviderFailure);
+
+                lines.Add("");
+                if (usable == 0)
                 {
-                    var unanimousOnDecoy = removed.Count(r => r.VotePattern == ConsensusVotePattern.Unanimous);
-                    lines.Add("");
+                    // Zero unanimous votes because nobody voted is not the same as zero unanimous votes
+                    // because they scattered, and printing the second reading of the first situation is how
+                    // a failed run gets quoted as a finding.
+                    lines.Add("> [!WARNING]");
                     lines.Add(string.Format(
                         CultureInfo.InvariantCulture,
-                        "**Answer to the #97 question:** on {0} removed elements the providers agreed unanimously {1} time(s) — every one of those is agreement on an element that does not exist.",
-                        removed.Count,
+                        "> **No usable data.** All {0} evaluated scenarios ended in provider failure, so this run answers nothing. The counts above describe the heuristic path only; the consensus question in #97 remains open.",
+                        evaluated.Count));
+                }
+                else if (usableRemoved == 0)
+                {
+                    lines.Add("> [!WARNING]");
+                    lines.Add(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "> **Inconclusive for #97.** {0} of {1} scenarios produced votes, but every removed-element scenario failed, and those are the ones the question is about.",
+                        usable,
+                        evaluated.Count));
+                }
+                else
+                {
+                    var unanimousOnDecoy = removed.Count(r => r.VotePattern == ConsensusVotePattern.Unanimous);
+                    lines.Add(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "**Answer to the #97 question:** of {0} removed elements with usable votes, the providers agreed unanimously {1} time(s) — every one of those is agreement on an element that does not exist.",
+                        usableRemoved,
                         unanimousOnDecoy));
+
+                    if (failures > 0)
+                    {
+                        lines.Add("");
+                        lines.Add(string.Format(
+                            CultureInfo.InvariantCulture,
+                            "_{0} of {1} evaluated scenarios failed at the provider and are excluded from that reading._",
+                            failures,
+                            evaluated.Count));
+                    }
                 }
             }
 
