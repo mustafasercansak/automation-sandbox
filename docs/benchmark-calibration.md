@@ -105,7 +105,7 @@ Because the score distributions overlap, varying the `MinimumConfidence` thresho
 
 #### Trade-Off Mechanics:
 1. **Aggressive Auto-Healing ($\text{Threshold} = 0.50 - 0.70$):** Maximizes recall ($76.9\%$) by accepting compound and shifted elements, at the expense of a higher false heal rate on removed elements ($12.7\% - 15.6\%$).
-2. **Balanced Production Default ($\text{Threshold} = 0.75 - 0.80$):** High precision ($90.4\% - 92.4\%$) and high recall ($72.4\% - 76.9\%$), cutting false heals on removed controls in half ($17 \rightarrow 6$).
+2. **Recommended Operating Point on This Dataset ($\text{Threshold} = 0.75 - 0.80$):** High precision ($90.4\% - 92.4\%$) and high recall ($72.4\% - 76.9\%$), cutting false heals on removed controls in half ($17 \rightarrow 6$). This is **not** the shipped default — `SimilarityWeights.MinimumConfidence` ships at `0.50` — and the range is derived from a single application, so treat it as provisional until a second application is measured.
 3. **Strict Zero-Defect Policy ($\text{Threshold} = 0.90 - 0.95$):** Minimizes false heals ($2.4\% - 5.5\%$) and maximizes precision ($97.6\%$), but routes heavily drifted controls to manual review ($68.8\% - 76.1\%$).
 
 > [!NOTE]
@@ -154,13 +154,23 @@ We evaluated four distinct absence hypotheses against the recorded candidate sco
 
 *Result:* **Negative (inverted).** True compound-drifted elements actually exhibit *higher* cluster density than deleted elements because when a control relocates, both the moved control and several nearby siblings in the target container score competitively.
 
+#### Hypothesis 4: Combined Filter (Strict ControlType + Margin $\ge 0.08$)
+
+Because each signal failed alone, the obvious next question is whether they compose: require the winner to match the expected `ControlType` exactly **and** to lead the runner-up by a clear margin.
+
+*Result:* **Negative.** The two filters remove largely the same cases. Same-type false heals on deleted controls survive the `ControlType` gate by construction, and the ones that also clear the margin gate are precisely the confident-looking impostors the combination was meant to catch — while compound-drift recall falls further, because a genuinely relocated element competes with the siblings it landed among and rarely leads them by a wide margin.
+
 #### Formal Finding
 > [!IMPORTANT]
-> **No single-target heuristic signal can construct an absence detector.** A surviving sibling in a deleted control's container looks structurally indistinguishable from a compound-drifted true element that moved near a sibling. Resolving this fundamental boundary requires holistic multi-element matching (e.g., whole-page bipartite locator graph reconciliation) rather than independent single-locator resolution.
+> **No single-target heuristic signal can construct an absence detector.** A surviving sibling in a deleted control's container looks structurally indistinguishable from a compound-drifted true element that moved near a sibling. What this does **not** establish is the remedy. Whole-tree reconciliation — resolving all locators jointly so elements compete for one another, instead of one locator at a time — is the natural next hypothesis, and it is untested. It is tracked in #98, where it is to be probed against this dataset before any implementation is proposed.
 
 ---
 
 ### 6. Multi-Provider LLM Consensus as an Absence Detector (#97)
+
+> [!WARNING]
+> **Not yet measured.** What follows is a hypothesis and the instrument built to test it (#97). The live evaluation has not been run against real providers, so this section contains **no result**. Do not read the methodology below as a finding.
+
 
 While heuristic signals are bounded by geometric and hierarchy similarities, multi-provider consensus ($\ge 2$ independent model votes) asks a fundamentally different question: *do independent reasoners converge or scatter?*
 
@@ -223,7 +233,7 @@ HandBrake 1.8.2 üzerinde yapılan ölçümlerde şu skor aralıkları gözlenmi
 Eşik değeri (`MinimumConfidence`) artırıldıkça:
 - Silinen elemanlardaki yanlış eşleşmeler $17$'den $1$'e düşer (Hata oranı $\%15.6 \rightarrow \%2.4$).
 - Ancak ağır refactor geçirmiş elemanlar da insan onayına gönderilir (Manuel inceleme $\%30.7 \rightarrow \%76.1$).
-- Projeler risk toleranslarına göre eşik değerini `SimilarityWeights` üzerinden ayarlayabilir ($0.75 - 0.80$ dengeli üretim önerisidir).
+- Projeler risk toleranslarına göre eşik değerini `SimilarityWeights` üzerinden ayarlayabilir. Bu veri setinde dengeli çalışma noktası $0.75 - 0.80$ aralığıdır; ancak bu **ürünün varsayılanı değildir** (`MinimumConfidence` varsayılan olarak `0.50` gelir) ve tek bir uygulamadan türetildiği için ikinci bir uygulama ölçülene kadar geçicidir.
 
 > [!NOTE]
 > **Neden Körlemesine 0.95 Seçilmemelidir:** Eşik $0.90$'dan $0.95$'e çıkarıldığında, son 2 yanlış iyileştirme elenir ($3 \rightarrow 1$), ancak bunun bedeli $11$ doğru iyileştirmenin feda edilmesidir ($52 \rightarrow 41$) ve geçerli locator'ların dörtte üçünden fazlası insan incelemesine yönlendirilir ($\%76.1$). Bu nedenle motor tek bir katı eşik dayatmaz; en uygun çalışma noktası ekibin yanlış pozitif toleransı ile manuel inceleme yükü arasındaki tercihe bağlıdır.
@@ -246,7 +256,7 @@ Silinen elemanlar ($[0.665 - 0.955]$) ile bileşik mutasyona uğrayıp hayatta k
 | **`0.08`** | $2 / 25$ ($\%8.0$) | $11 / 42$ ($\%26.2$) | $\%87.3$ | $\%66.4$ |
 | **`0.10`** | $2 / 25$ ($\%8.0$) | $7 / 42$ ($\%16.7$) | $\%89.5$ | $\%57.5$ |
 | **`0.15`** | $2 / 25$ ($\%8.0$) | $4 / 42$ ($\%9.5$) | $\%92.9$ | $\%38.8$ |
-| **`0.20`** | $0 / 25$ ($\%0.0$) | $2 / 42$ ($\%4.8$) | $\%94.6$) | $\%26.1$ |
+| **`0.20`** | $0 / 25$ ($\%0.0$) | $2 / 42$ ($\%4.8$) | $\%94.6$ | $\%26.1$ |
 
 *Sonuç:* **Olumsuz.** Marj filtresi güven eşiği ile aynı denge eğrisini gösterir. Marj $0.05$'ten $0.10$'a çıkarıldığında silinen elemanlardaki hata $17$'den $7$'ye düşer, ancak bileşik mutasyondaki doğru iyileştirme $\%67$ oranında çöker ($6 \rightarrow 2$). Marj $0.20$ yapıldığında bileşik başarı sıfırlanır, ancak silinmiş 2 eleman komşuları izole olduğu için hala yanlış eşleşir.
 
@@ -261,13 +271,23 @@ Silinen elemanlar ($[0.665 - 0.955]$) ile bileşik mutasyona uğrayıp hayatta k
 - **Bileşik Mutasyon (Gerçek Elemanlar):** $3.08$
 *Sonuç:* **Olumsuz (Ters yönde).** Gerçek eleman taşındığında yeni konumundaki komşularla da yarışır, bu nedenle küme yoğunluğu silinen elemanlardan daha yüksektir.
 
+#### Hipotez 4: Birleşik Filtre (Katı ControlType + Marj $\ge 0.08$)
+
+Sinyaller tek tek başarısız olduğu için akla gelen ilk soru bunların birleşip birleşmediğidir: kazanan adayın hem beklenen `ControlType` ile birebir eşleşmesi **hem de** ikinci adayı belirgin bir marjla geçmesi şartı.
+
+*Sonuç:* **Olumsuz.** İki filtre büyük ölçüde aynı vakaları eliyor. Silinen kontrollerdeki aynı tipten yanlış eşleşmeler `ControlType` kapısını tanımı gereği geçiyor; bunların marj kapısını da geçenleri ise tam olarak birleşimin yakalaması beklenen "kendinden emin görünen sahte adaylar" oluyor. Bu sırada bileşik mutasyon geri çağırımı daha da düşüyor, çünkü gerçekten taşınmış bir eleman indiği yerdeki komşularıyla yarışır ve onları nadiren geniş bir marjla geçer.
+
 #### Resmi Çıkarım
 > [!IMPORTANT]
-> **Tekil hedef odaklı hiçbir sezgisel sinyal bir yokluk dedektörü oluşturamaz.** Silinen bir kontrolün kapsayıcısındaki komşu eleman, yapısal olarak yeni bir konuma taşınmış gerçek bir kontrolden farksız görünür. Bu sınırın aşılması, tekil locator bağımsız çözümü yerine tüm sayfanın bütüncül graf eşleştirmesini (bipartite reconciliation) gerektirir.
+> **Tekil hedef odaklı hiçbir sezgisel sinyal bir yokluk dedektörü oluşturamaz.** Silinen bir kontrolün kapsayıcısındaki komşu eleman, yapısal olarak yeni bir konuma taşınmış gerçek bir kontrolden farksız görünür. Bu bulgunun **söylemediği** şey ise çözümün ne olduğudur. Tüm ağacın birlikte çözülmesi — locator'ları tek tek değil, elemanların birbiriyle yarıştığı ortak bir atamayla eşleştirmek — akla gelen bir sonraki hipotezdir ve henüz sınanmamıştır. #98 altında izlenmektedir; herhangi bir uygulama önerilmeden önce bu veri seti üzerinde ön testten geçirilecektir.
 
 ---
 
 ### 6. Çoklu LLM Konsensüsü ile Yokluk Tespiti (#97)
+
+> [!WARNING]
+> **Henüz ölçülmedi.** Aşağıdaki bölüm bir hipotezi ve onu sınamak için kurulan aracı anlatır (#97). Canlı değerlendirme gerçek sağlayıcılara karşı hiç çalıştırılmadı; dolayısıyla burada **sonuç yoktur**. Aşağıdaki metodolojiyi bir bulgu olarak okumayın.
+
 
 Sezgisel sinyaller geometri ve hiyerarşi benzerliğiyle sınırlıyken, çoklu sağlayıcı konsensüsü ($\ge 2$ bağımsız model oyu) temelde farklı bir soru sorar: *bağımsız akıl yürütücüler aynı hedefte uzlaşıyor mu yoksa dağılıyor mu?*
 
