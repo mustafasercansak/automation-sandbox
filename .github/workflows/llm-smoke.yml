@@ -1,9 +1,9 @@
 name: LLM Models Smoke Test
 
 # The nightly schedule is deliberately disabled. On its first manual run GitHub Models answered
-# HTTP 410 github_models_retirement_brownout - a planned outage ahead of the service being retired -
-# so a nightly run would fail every night for a reason nobody can fix, and a recurring red that
-# cannot be acted on trains everyone to ignore the one that matters.
+# HTTP 410 github_models_retirement_brownout before its inference API was fully retired on
+# July 30, 2026. A nightly run would now fail every night for a reason nobody can fix, and a
+# recurring red that cannot be acted on trains everyone to ignore the one that matters.
 #
 # Manual dispatch is kept: the endpoint, auth and permissions are all proven working (the 410 came
 # from GitHub Models itself, so the request reached it), and the provider takes any OpenAI-compatible

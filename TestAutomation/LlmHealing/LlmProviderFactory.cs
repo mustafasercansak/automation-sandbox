@@ -120,7 +120,23 @@ namespace LlmHealing
                     name: "OpenRouter"));
             }
 
-            // 8. Ollama
+            // 8. Cloudflare Workers AI - the account id is part of the endpoint, and model ids
+            // are account/plan dependent. Requiring all three values avoids constructing a
+            // provider that can only fail with a malformed URL or an unavailable guessed model.
+            var cloudflareKey = Env("CLOUDFLARE_API_TOKEN");
+            var cloudflareAccountId = Env("CLOUDFLARE_ACCOUNT_ID");
+            var cloudflareModel = Env("CLOUDFLARE_MODEL");
+            if (cloudflareKey != null && cloudflareAccountId != null && cloudflareModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: cloudflareKey,
+                    model: cloudflareModel,
+                    endpoint: $"https://api.cloudflare.com/client/v4/accounts/{cloudflareAccountId}/ai/v1",
+                    name: "Cloudflare"));
+            }
+
+            // 9. Ollama
             var ollamaEnabled = string.Equals(Env("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase)
                 || Env("OLLAMA_HOST") != null
                 || Env("OLLAMA_MODEL") != null;
@@ -133,7 +149,7 @@ namespace LlmHealing
                     model: Env("OLLAMA_MODEL")));
             }
 
-            // 7. Custom providers via LLM_CUSTOM_PROVIDERS JSON array
+            // 10. Custom providers via LLM_CUSTOM_PROVIDERS JSON array
             var customJson = Env("LLM_CUSTOM_PROVIDERS");
             if (customJson != null)
             {

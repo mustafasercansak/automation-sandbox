@@ -117,6 +117,79 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task LlmProviderFactory_ConfiguresCloudflare_WhenTokenAccountAndModelAreSet()
+        {
+            string? requestUrl = null;
+            string? authorization = null;
+            string? requestBody = null;
+            using var httpClient = new HttpClient(new AsyncFakeHandler(async request =>
+            {
+                requestUrl = request.RequestUri?.ToString();
+                authorization = request.Headers.Authorization?.ToString();
+                requestBody = request.Content == null
+                    ? null
+                    : await request.Content.ReadAsStringAsync();
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"choices\":[{\"message\":{\"content\":\"{\\\"candidateId\\\":\\\"c0\\\",\\\"confidence\\\":0.9,\\\"reasoning\\\":\\\"match\\\"}\"}}]}",
+                        System.Text.Encoding.UTF8,
+                        "application/json"),
+                };
+            }));
+            var env = new Dictionary<string, string>
+            {
+                ["CLOUDFLARE_API_TOKEN"] = "cloudflare-test-token",
+                ["CLOUDFLARE_ACCOUNT_ID"] = "0123456789abcdef",
+                ["CLOUDFLARE_MODEL"] = "@cf/zai-org/glm-4.7-flash",
+            };
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: httpClient,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+
+            var cloudflare = Assert.Single(providers);
+            Assert.Equal("Cloudflare", cloudflare.Name);
+            var scenario = EvaluationScenarios.All[0];
+            var candidates = SelfHealingResolver.ScoreCandidates(scenario.Expected, scenario.CurrentTreeRoot);
+            var result = await cloudflare.ResolveAsync(scenario.Expected, candidates, scenario.Platform);
+
+            Assert.True(result.Success);
+            Assert.Equal("https://api.cloudflare.com/client/v4/accounts/0123456789abcdef/ai/v1/chat/completions", requestUrl);
+            Assert.Equal("Bearer cloudflare-test-token", authorization);
+            Assert.Contains("\"model\":\"@cf/zai-org/glm-4.7-flash\"", requestBody);
+        }
+
+        [Fact]
+        public void LlmProviderFactory_SkipsCloudflare_WhenAnyRequiredSettingIsMissing()
+        {
+            var configurations = new[]
+            {
+                new Dictionary<string, string>
+                {
+                    ["CLOUDFLARE_ACCOUNT_ID"] = "0123456789abcdef",
+                    ["CLOUDFLARE_MODEL"] = "@cf/zai-org/glm-4.7-flash",
+                },
+                new Dictionary<string, string>
+                {
+                    ["CLOUDFLARE_API_TOKEN"] = "cloudflare-test-token",
+                    ["CLOUDFLARE_MODEL"] = "@cf/zai-org/glm-4.7-flash",
+                },
+                new Dictionary<string, string>
+                {
+                    ["CLOUDFLARE_API_TOKEN"] = "cloudflare-test-token",
+                    ["CLOUDFLARE_ACCOUNT_ID"] = "0123456789abcdef",
+                },
+            };
+
+            foreach (var env in configurations)
+            {
+                var providers = LlmProviderFactory.CreateConfiguredProviders(getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+                Assert.DoesNotContain(providers, p => p.Name == "Cloudflare");
+            }
+        }
+
+        [Fact]
         public void LlmProviderFactory_ThrowsOnDuplicateProviderNames()
         {
             var env = new Dictionary<string, string>
@@ -625,6 +698,21 @@ namespace ScenarioRunner
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
             {
                 return Task.FromResult(_responder(request));
+            }
+        }
+
+        private sealed class AsyncFakeHandler : HttpMessageHandler
+        {
+            private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _responder;
+
+            public AsyncFakeHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder)
+            {
+                _responder = responder;
+            }
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
+            {
+                return _responder(request);
             }
         }
     }
