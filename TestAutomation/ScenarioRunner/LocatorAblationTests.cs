@@ -241,6 +241,114 @@ namespace ScenarioRunner
                 var avgScore = subset.Count > 0 ? subset.Average(r => r.Score) : 0;
                 Console.WriteLine($"  {kind,-20} (n={subset.Count,2}): Correct={correct,2}, False={falseHeals,2}, Missed={missed,2} | Score Range: [{minScore:F3} - {maxScore:F3}], Avg: {avgScore:F3}");
             }
+
+            // Offline Absence Signal Investigation across the 176 HandBrake scenarios
+            Console.WriteLine("\n=======================================================");
+            Console.WriteLine("OFFLINE EVALUATION OF CANDIDATE ABSENCE SIGNALS (#95)");
+            Console.WriteLine("=======================================================");
+
+            // 1. Margin threshold sweep (0.05 to 0.20)
+            Console.WriteLine("\n[Hypothesis 1] Runner-Up Margin Gating (at MinimumConfidence = 0.50):");
+            Console.WriteLine("| MinMargin | Compound Recall (n=25) | Removed False Heals (n=42) | Total Precision | AutoHeal Recall |");
+            Console.WriteLine("| ---: | ---: | ---: | ---: | ---: |");
+            foreach (var minMargin in new[] { 0.00, 0.05, 0.08, 0.10, 0.15, 0.20 })
+            {
+                var w = new SimilarityWeights { MinimumConfidence = 0.50, MinimumCandidateMargin = minMargin };
+                var r = LocatorAblationHarness.Run(dataset, root, w);
+                var compoundCorrect = r.Results.Count(x => x.MutationKind == LocatorMutationKind.CompoundDrift && x.Outcome == AblationOutcome.CorrectHeal);
+                var falseRemoved = r.Results.Count(x => x.Outcome == AblationOutcome.FalseHealOnRemoved);
+                Console.WriteLine($"| {minMargin:F2} | {compoundCorrect,2}/25 ({(double)compoundCorrect/25:P1}) | {falseRemoved,2}/42 ({(double)falseRemoved/42:P1}) | {r.Metrics.Precision:P1} | {r.Metrics.AutoHealRecall:P1} |");
+            }
+
+            // 2. ControlType Invariance (Strict ControlType match)
+            Console.WriteLine("\n[Hypothesis 2] Strict ControlType Gating (ControlTypeScore == 1.0 required):");
+            {
+                var r = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+                // Filter results where top candidate has ControlTypeScore == 1.0
+                var compoundCorrectStrict = r.Results.Count(x => x.MutationKind == LocatorMutationKind.CompoundDrift && x.Outcome == AblationOutcome.CorrectHeal && x.Candidates.Count > 0 && x.Candidates[0].Components.ControlTypeScore == 1.0);
+                var falseRemovedStrict = r.Results.Count(x => x.Outcome == AblationOutcome.FalseHealOnRemoved && x.Candidates.Count > 0 && x.Candidates[0].Components.ControlTypeScore == 1.0);
+                Console.WriteLine($"  Compound Recall: {compoundCorrectStrict}/25 ({(double)compoundCorrectStrict/25:P1}), Removed False Heals: {falseRemovedStrict}/42 ({(double)falseRemovedStrict/42:P1})");
+            }
+
+            // 3. Cluster Density / Decoy Count (Candidates within 0.10 of top candidate)
+            Console.WriteLine("\n[Hypothesis 3] Candidate Cluster Density (Score within 0.10 of Top Candidate):");
+            {
+                var r = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+                var falseRemovedClusters = r.Results
+                    .Where(x => x.Outcome == AblationOutcome.FalseHealOnRemoved)
+                    .Select(x => x.Candidates.Count(c => c.TotalScore >= x.Candidates[0].TotalScore - 0.10))
+                    .ToList();
+                var compoundClusters = r.Results
+                    .Where(x => x.MutationKind == LocatorMutationKind.CompoundDrift)
+                    .Select(x => x.Candidates.Count(c => c.TotalScore >= (x.Candidates.Count > 0 ? x.Candidates[0].TotalScore - 0.10 : 0.0)))
+                    .ToList();
+                Console.WriteLine($"  Removed False Heals avg cluster size: {(falseRemovedClusters.Count > 0 ? falseRemovedClusters.Average() : 0):F2} (range {falseRemovedClusters.Min()} - {falseRemovedClusters.Max()})");
+                Console.WriteLine($"  Compound Drift avg cluster size: {(compoundClusters.Count > 0 ? compoundClusters.Average() : 0):F2} (range {compoundClusters.Min()} - {compoundClusters.Max()})");
+            }
+
+            // 4. Combined Margin + Strict ControlType + Position Filter
+            Console.WriteLine("\n[Hypothesis 4] Combined Filter (Strict ControlType + Margin >= 0.08):");
+            {
+                var w = new SimilarityWeights { MinimumConfidence = 0.50, MinimumCandidateMargin = 0.08 };
+                var r = LocatorAblationHarness.Run(dataset, root, w);
+                var compoundCorrect = r.Results.Count(x => x.MutationKind == LocatorMutationKind.CompoundDrift && x.Outcome == AblationOutcome.CorrectHeal && x.Candidates[0].Components.ControlTypeScore == 1.0);
+                var falseRemoved = r.Results.Count(x => x.Outcome == AblationOutcome.FalseHealOnRemoved && x.Candidates[0].Components.ControlTypeScore == 1.0);
+                Console.WriteLine($"  Compound Recall: {compoundCorrect}/25 ({(double)compoundCorrect/25:P1}), Removed False Heals: {falseRemoved}/42 ({(double)falseRemoved/42:P1})");
+            }
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AbsenceSignalEvaluation_RunnerUpMarginDoesNotSeparateBands()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+
+            // Baseline at default margin (0.05)
+            var report005 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50, MinimumCandidateMargin = 0.05 });
+            var compound005 = report005.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var removed005 = report005.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+
+            // Tight margin (0.10)
+            var report010 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50, MinimumCandidateMargin = 0.10 });
+            var compound010 = report010.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var removed010 = report010.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+
+            // Ultra-tight margin (0.20)
+            var report020 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50, MinimumCandidateMargin = 0.20 });
+            var compound020 = report020.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var removed020 = report020.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+
+            // Finding: Margin gating filters compound drift faster than it eliminates deleted false heals.
+            // At 0.10, compound recall drops 67% (6 -> 2) while 7 false heals on removed elements still survive.
+            Assert.True(compound010 < compound005);
+            Assert.True(removed010 > 0);
+
+            // At 0.20, compound recall is completely destroyed (0) while false heals on removed elements still persist (2).
+            Assert.Equal(0, compound020);
+            Assert.True(removed020 > 0);
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AbsenceSignalEvaluation_ClusterDensityCannotDetectAbsence()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var report = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+
+            // Decoy cluster density: number of candidates scored within 0.10 of the best candidate
+            var falseRemovedClusters = report.Results
+                .Where(x => x.Outcome == AblationOutcome.FalseHealOnRemoved && x.Candidates.Count > 0)
+                .Select(x => x.Candidates.Count(c => c.TotalScore >= x.Candidates[0].TotalScore - 0.10))
+                .ToList();
+
+            var compoundClusters = report.Results
+                .Where(x => x.MutationKind == LocatorMutationKind.CompoundDrift && x.Candidates.Count > 0)
+                .Select(x => x.Candidates.Count(c => c.TotalScore >= x.Candidates[0].TotalScore - 0.10))
+                .ToList();
+
+            // Finding: Compound drift has higher cluster density than removed elements (true moved element competes with neighbors in the new location)
+            Assert.True(compoundClusters.Average() > falseRemovedClusters.Average(),
+                $"Expected compound drift average cluster size ({compoundClusters.Average():F2}) to exceed removed elements ({falseRemovedClusters.Average():F2}).");
         }
 
         [Fact]
