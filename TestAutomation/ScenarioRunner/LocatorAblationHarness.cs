@@ -96,6 +96,16 @@ namespace ScenarioRunner
         public string? MatchedElement { get; set; }
     }
 
+    public sealed class ProviderParticipation
+    {
+        public int Answered { get; set; }
+        public int Failed { get; set; }
+
+        // One representative message rather than all of them: a provider that is out of quota
+        // returns the same 429 for every scenario, and printing it 42 times hides the other provider.
+        public string? SampleError { get; set; }
+    }
+
     public sealed class AblationMetrics
     {
         public int SuccessorScenarios { get; set; }
@@ -114,7 +124,17 @@ namespace ScenarioRunner
 
         public int LlmHeals { get; set; }
         public int ConsensusDeclines { get; set; }
-        public int ProviderErrors { get; set; }
+        // Resolutions that ended with no usable provider answer at all. This is a property of the
+        // resolution, not of the providers: if one provider answers everything, this stays 0 even
+        // when every other provider failed every request. Name it for what it counts - #112 was
+        // filed because "Provider errors | 0" was printed for a run in which 65 provider calls
+        // failed and two of three providers never answered once.
+        public int ResolutionsWithoutAnyProviderAnswer { get; set; }
+
+        // Per-provider participation, which is what a reader needs in order to know how much of the
+        // provider set the result actually rests on.
+        public IReadOnlyDictionary<string, ProviderParticipation> ProviderParticipation { get; set; } =
+            new Dictionary<string, ProviderParticipation>();
 
         // Of the locators that survived (with rename, drift, or shift), how many were found.
         public double AutoHealRecall => SuccessorScenarios == 0 ? 0.0 : (double)CorrectHeals / SuccessorScenarios;
@@ -495,8 +515,39 @@ namespace ScenarioRunner
                 FalseHealsOnRemoved = all.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved),
                 LlmHeals = all.Count(r => r.Source == HealSource.Llm && r.EngineAccepted),
                 ConsensusDeclines = all.Count(r => r.ResolutionStatus == HealResolutionStatus.NoConsensus),
-                ProviderErrors = all.Count(r => r.ResolutionStatus == HealResolutionStatus.ProviderError),
+                ResolutionsWithoutAnyProviderAnswer = all.Count(r => r.ResolutionStatus == HealResolutionStatus.ProviderError),
+                ProviderParticipation = SummarizeParticipation(all),
             };
+        }
+
+        private static IReadOnlyDictionary<string, ProviderParticipation> SummarizeParticipation(
+            IEnumerable<AblationScenarioResult> results)
+        {
+            var participation = new SortedDictionary<string, ProviderParticipation>(StringComparer.Ordinal);
+
+            foreach (var result in results)
+            {
+                foreach (var entry in result.ProviderResults)
+                {
+                    if (!participation.TryGetValue(entry.Key, out var counts))
+                    {
+                        counts = new ProviderParticipation();
+                        participation[entry.Key] = counts;
+                    }
+
+                    if (entry.Value != null && entry.Value.Success)
+                    {
+                        counts.Answered++;
+                    }
+                    else
+                    {
+                        counts.Failed++;
+                        counts.SampleError ??= entry.Value?.ErrorMessage;
+                    }
+                }
+            }
+
+            return participation;
         }
 
         public static string ToMarkdownSummary(AblationRunReport report, string datasetName)
@@ -524,14 +575,33 @@ namespace ScenarioRunner
                 $"| False heal on removed element | {m.FalseHealsOnRemoved} |",
             };
 
-            if (m.LlmHeals > 0 || m.ConsensusDeclines > 0 || m.ProviderErrors > 0)
+            if (m.LlmHeals > 0 || m.ConsensusDeclines > 0 || m.ResolutionsWithoutAnyProviderAnswer > 0)
             {
                 lines.Add("");
                 lines.Add("| LLM Consensus Telemetry | Count |");
                 lines.Add("| :--- | ---: |");
                 lines.Add($"| LLM-accepted heals | {m.LlmHeals} |");
                 lines.Add($"| Disagreement / No-consensus declines | {m.ConsensusDeclines} |");
-                lines.Add($"| Provider errors | {m.ProviderErrors} |");
+                lines.Add($"| Resolutions with no provider answer at all | {m.ResolutionsWithoutAnyProviderAnswer} |");
+            }
+
+            if (m.ProviderParticipation.Count > 0)
+            {
+                // #112. Without this the reader cannot tell a three-provider result from a
+                // one-provider result, and the run that prompted this had two of its three providers
+                // fail every single request while the summary reported no errors.
+                lines.Add("");
+                lines.Add("#### Provider participation");
+                lines.Add("");
+                lines.Add("| Provider | Answered | Failed | Sample error |");
+                lines.Add("| :--- | ---: | ---: | :--- |");
+                foreach (var entry in m.ProviderParticipation)
+                {
+                    var sample = string.IsNullOrEmpty(entry.Value.SampleError)
+                        ? "—"
+                        : "`" + ReportFormatting.Truncate(entry.Value.SampleError!.Replace("\n", " "), 90) + "`";
+                    lines.Add($"| `{entry.Key}` | {entry.Value.Answered} | {entry.Value.Failed} | {sample} |");
+                }
             }
 
             var evaluated = report.Results.Where(r => r.VotePattern != ConsensusVotePattern.NotEvaluated).ToList();

@@ -32,5 +32,12 @@ namespace ScenarioRunner
 
         public static string Number(double value, int decimals = 2) =>
             value.ToString("F" + decimals.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+
+        // Provider error bodies can be several hundred characters of JSON. One long message must not
+        // push the rest of a summary table off the screen.
+        public static string Truncate(string value, int maxLength) =>
+            string.IsNullOrEmpty(value) || value.Length <= maxLength
+                ? value
+                : value.Substring(0, maxLength) + "…";
     }
 }

@@ -168,8 +168,8 @@ Because each signal failed alone, the obvious next question is whether they comp
 
 ### 6. Multi-Provider LLM Consensus as an Absence Detector (#97)
 
-> [!WARNING]
-> **Not yet measured.** What follows is a hypothesis and the instrument built to test it (#97). The live evaluation has not been run against real providers, so this section contains **no result**. Do not read the methodology below as a finding.
+> [!IMPORTANT]
+> **Measured on 2026-08-16** in run [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927). The result is in §4. Consensus is the first signal in this project that separates the bands at all — and it is still not safe as a gate, for a reason the hypothesis did not predict.
 
 
 While heuristic signals are bounded by geometric and hierarchy similarities, multi-provider consensus ($\ge 2$ independent model votes) asks a fundamentally different question: *do independent reasoners converge or scatter?*
@@ -191,6 +191,47 @@ To ensure complete benchmark integrity without altering product prompt generatio
 - **Single-Sample Uncertainty:** Unlike deterministic heuristic traversal, LLM evaluations represent non-deterministic empirical samples. A run over 42 removal scenarios carries a statistical confidence band of $\sim \pm 14\%$.
 - **Auditability:** Models must run with temperature $0$, and raw votes per provider must be recorded alongside agreement telemetry (`AgreedProviders`, `ProviderAttempts`, `ProviderErrors`).
 - **Targeted Subset:** To manage token costs, evaluation is targeted at the informative subsets: the 25 `CompoundDrift` and 42 `RemovedElement` scenarios ($n=67$).
+
+#### 4. Empirical Result
+
+Run [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927), 2026-08-16. Providers: Cloudflare Workers AI (`@cf/mistralai/mistral-small-3.1-24b-instruct`), Groq (`llama-3.3-70b-versatile`), Gemini (`gemini-2.5-flash`).
+
+**What the run actually rests on.** Of the 67 scenarios, 25 never reached the LLM path — the heuristic resolved them confidently on its own. Of the 42 that did, 23 received fewer than two usable answers and are excluded, because one opinion can neither agree nor disagree. **The result below is $n=19$.**
+
+| Provider | Answered | Failed | Error |
+| :--- | ---: | ---: | :--- |
+| Cloudflare | 42/42 | 0 | — |
+| Groq | 17/42 | 23 | `Retry-After of 1102s exceeds maximum delay threshold` |
+| Gemini | 0/42 | 42 | `429 You exceeded your current quota` |
+
+Both failures are free-tier daily quota exhaustion, which is the normal state of this project's provider set rather than an unlucky day.
+
+**The measurement.**
+
+| Mutation | Usable | Unanimous | Scattered / Partial | Ground truth of the unanimous verdicts |
+| :--- | ---: | ---: | ---: | :--- |
+| `CompoundDrift` (successor exists) | 7 | 6 | 1 | 6 of 6 correct |
+| `RemovedElement` (element deleted) | 12 | 3 | 9 | 3 of 3 wrong |
+
+Agreement tracks survival: providers agreed on **86%** of the scenarios where a true successor existed, and on **25%** of the scenarios where the element was gone. None of the four heuristic hypotheses in §5 separated the bands at all, so this is the first mechanism in the project that produces any separation.
+
+> [!WARNING]
+> **Unanimity is not a safe gate.** Of the 9 unanimous verdicts, 3 named an element that does not exist. Treating agreement as evidence of survival would carry a **33% false-heal rate** on deletions — better than the heuristic, and nowhere near safe. Note the sample sizes underneath those percentages: the "33%" is three scenarios.
+
+#### 5. The Mechanism Is Disagreement, Not Recognition
+
+The hypothesis predicted two safe outcomes on a deleted element: providers decline, or providers scatter. **The declining half never happened.** Cloudflare named a candidate in 42 of 42 prompts and never once answered "none of these"; `AllDeclined` did not occur in the entire run.
+
+Every one of the 9 correct rejections therefore came from providers *disagreeing with each other*, not from any provider recognising that the element was gone. The models do not know the control was deleted. Each one confidently points at a different neighbour, and the engine rejects the heal because the votes do not match.
+
+This matters for how far the result generalises:
+
+- The protection is a **byproduct of independence**, so it degrades as providers become more alike. Two models of the same family, or two runs of one model, would agree more often — including on the same wrong neighbour.
+- It cannot be strengthened by asking for more confidence, because the failing cases are already confident. It can only be strengthened by making the voters more independent.
+- A provider that never declines contributes nothing to absence detection. Its vote is only useful as something for another provider to contradict.
+
+> [!IMPORTANT]
+> **Formal finding.** Multi-provider consensus separates surviving elements from deleted ones where every heuristic signal in §5 failed (86% vs 25% agreement, $n=19$). It is not sufficient as an acceptance gate: a third of unanimous verdicts on this dataset were false heals on deleted controls. The separation comes from disagreement between independent providers rather than from any model detecting absence, so it is bounded by how independent the provider set actually is — not by model quality, and not by prompt design.
 
 ---
 
@@ -285,8 +326,8 @@ Sinyaller tek tek başarısız olduğu için akla gelen ilk soru bunların birle
 
 ### 6. Çoklu LLM Konsensüsü ile Yokluk Tespiti (#97)
 
-> [!WARNING]
-> **Henüz ölçülmedi.** Aşağıdaki bölüm bir hipotezi ve onu sınamak için kurulan aracı anlatır (#97). Canlı değerlendirme gerçek sağlayıcılara karşı hiç çalıştırılmadı; dolayısıyla burada **sonuç yoktur**. Aşağıdaki metodolojiyi bir bulgu olarak okumayın.
+> [!IMPORTANT]
+> **2026-08-16 tarihinde ölçüldü**, [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927) numaralı koşuda. Sonuç §4'te. Konsensüs, bu projede bantları ayırabilen **ilk** sinyaldir — ve buna rağmen kabul kapısı olarak güvenli değildir; üstelik sebebi hipotezin öngördüğü şey değildir.
 
 
 Sezgisel sinyaller geometri ve hiyerarşi benzerliğiyle sınırlıyken, çoklu sağlayıcı konsensüsü ($\ge 2$ bağımsız model oyu) temelde farklı bir soru sorar: *bağımsız akıl yürütücüler aynı hedefte uzlaşıyor mu yoksa dağılıyor mu?*
@@ -308,5 +349,46 @@ Sezgisel sinyaller geometri ve hiyerarşi benzerliğiyle sınırlıyken, çoklu 
 - **Tek Örnek (Single-Sample) Belirsizliği:** Deterministik heuristik testlerin aksine, LLM ölçümleri stokastik ampirik örneklerdir. 42 silinme senaryosundaki tek bir koşu yaklaşık $\pm \%14$ istatistiksel belirsizlik taşır.
 - **Denetlenebilirlik:** Sıcaklık $0$ olarak sabitlenmeli, sağlayıcı bazlı ham oylar ve uzlaşma telemetrisi (`AgreedProviders`, `ProviderAttempts`, `ProviderErrors`) eksiksiz kaydedilmelidir.
 - **Maliyet Kontrolü:** Token maliyetini sınırlamak için ölçüm 25 `CompoundDrift` ve 42 `RemovedElement` ($n=67$) senaryosu üzerinde hedeflenir.
+
+#### 4. Ampirik Sonuç
+
+[31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927) numaralı koşu, 2026-08-16. Sağlayıcılar: Cloudflare Workers AI (`@cf/mistralai/mistral-small-3.1-24b-instruct`), Groq (`llama-3.3-70b-versatile`), Gemini (`gemini-2.5-flash`).
+
+**Sonucun gerçekte dayandığı taban.** 67 senaryonun 25'i LLM yoluna hiç ulaşmadı; heuristik onları tek başına emin biçimde çözdü. Ulaşan 42 senaryonun 23'ünde ikiden az kullanılabilir cevap geldi ve ölçüm dışı bırakıldı, çünkü tek görüş ne uzlaşabilir ne de çelişebilir. **Aşağıdaki sonuç $n=19$'dur.**
+
+| Sağlayıcı | Cevapladı | Başarısız | Hata |
+| :--- | ---: | ---: | :--- |
+| Cloudflare | 42/42 | 0 | — |
+| Groq | 17/42 | 23 | `Retry-After of 1102s exceeds maximum delay threshold` |
+| Gemini | 0/42 | 42 | `429 You exceeded your current quota` |
+
+Her iki başarısızlık da ücretsiz katman günlük kotasının tükenmesidir; bu, projenin sağlayıcı kümesi için şanssız bir gün değil, olağan durumdur.
+
+**Ölçüm.**
+
+| Mutasyon | Kullanılabilir | Oybirliği | Dağılma / Kısmi | Oybirliği kararlarının gerçeği |
+| :--- | ---: | ---: | ---: | :--- |
+| `CompoundDrift` (halef mevcut) | 7 | 6 | 1 | 6'da 6 doğru |
+| `RemovedElement` (eleman silinmiş) | 12 | 3 | 9 | 3'te 3 yanlış |
+
+Uzlaşma, elemanın hayatta kalmasıyla birlikte hareket ediyor: gerçek bir halefin bulunduğu senaryoların **%86**'sında, elemanın silindiği senaryoların ise **%25**'inde sağlayıcılar aynı adayda buluştu. §5'teki dört sezgisel hipotezin hiçbiri bantları ayıramamıştı; dolayısıyla bu, projede herhangi bir ayrışma üreten ilk mekanizmadır.
+
+> [!WARNING]
+> **Oybirliği güvenli bir kapı değildir.** 9 oybirliği kararının 3'ü var olmayan bir elemanı işaret etti. Uzlaşmayı "eleman duruyor" kanıtı saymak, silinmelerde **%33 yanlış iyileştirme oranı** demektir — heuristikten iyi, güvenli olmaktan uzak. Yüzdelerin altındaki örneklem büyüklüğüne dikkat: bu "%33" üç senaryodur.
+
+#### 5. Mekanizma Yokluğu Tanımak Değil, Anlaşmazlıktır
+
+Hipotez, silinmiş bir elemanda iki güvenli sonuç öngörüyordu: sağlayıcılar ya "yok" der ya da dağılır. **"Yok" diyen yarısı hiç gerçekleşmedi.** Cloudflare 42 istemin 42'sinde bir aday isimlendirdi ve bir kez bile "bunların hiçbiri" demedi; koşunun tamamında `AllDeclined` hiç oluşmadı.
+
+Dolayısıyla 9 doğru reddin tamamı, sağlayıcıların *birbiriyle anlaşamamasından* doğdu; herhangi bir sağlayıcının elemanın gittiğini fark etmesinden değil. Modeller kontrolün silindiğini bilmiyor. Her biri güvenle farklı bir komşuyu işaret ediyor, motor da oylar tutmadığı için iyileştirmeyi reddediyor.
+
+Bu, sonucun ne kadar genellenebileceğini belirliyor:
+
+- Koruma, **bağımsızlığın yan ürünüdür**; sağlayıcılar birbirine benzedikçe zayıflar. Aynı ailenin iki modeli ya da tek modelin iki koşusu daha sık uzlaşır — aynı yanlış komşuda uzlaşmak dahil.
+- Daha yüksek güven eşiği istemekle güçlendirilemez, çünkü hata veren vakalar zaten güvenlidir. Yalnızca oy verenleri daha bağımsız kılarak güçlendirilebilir.
+- Hiç "yok" demeyen bir sağlayıcı yokluk tespitine katkı sunmaz. Oyu, ancak başka bir sağlayıcının çelişebileceği bir şey olarak değerlidir.
+
+> [!IMPORTANT]
+> **Resmi çıkarım.** Çoklu sağlayıcı konsensüsü, §5'teki her sezgisel sinyalin başarısız olduğu yerde hayatta kalan elemanları silinmiş olanlardan ayırır (%86'ya karşı %25 uzlaşma, $n=19$). Kabul kapısı olarak yeterli değildir: bu veri kümesinde oybirliği kararlarının üçte biri, silinmiş kontroller üzerinde yanlış iyileştirmedir. Ayrışma, herhangi bir modelin yokluğu tespit etmesinden değil bağımsız sağlayıcılar arasındaki anlaşmazlıktan doğar; bu nedenle sınırı model kalitesi ya da istem tasarımı değil, sağlayıcı kümesinin gerçekte ne kadar bağımsız olduğudur.
 
 
