@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -485,6 +486,22 @@ namespace ScenarioRunner
             });
         }
 
+        // Overridable from the workflow so a run that turns out to be rate-limited differently can be
+        // retuned without a code change. A malformed or negative value falls back to the default
+        // rather than silently disabling pacing.
+        private static TimeSpan ReadSecondsFromEnvironment(string name, TimeSpan fallback)
+        {
+            var raw = Environment.GetEnvironmentVariable(name);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return fallback;
+            }
+
+            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && seconds >= 0
+                ? TimeSpan.FromSeconds(seconds)
+                : fallback;
+        }
+
         [Fact]
         public async Task HandBrakeFixture_LlmConsensus_LiveEvaluation()
         {
@@ -507,13 +524,23 @@ namespace ScenarioRunner
             var root = LoadFixture();
             var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
 
+            // #110: pace the run and raise the Retry-After ceiling. Groq answers with 11-13s under
+            // load, which the transport's interactive 10s ceiling reads as quota exhaustion and
+            // abandons. This run would rather spend the seconds than lose the scenarios, and it is
+            // the only caller in the repository for which that tradeoff is the right one.
+            var pacing = ReadSecondsFromEnvironment("ABLATION_PACING_SECONDS", TimeSpan.FromSeconds(4));
+            var retryCeiling = ReadSecondsFromEnvironment("ABLATION_MAX_RETRY_AFTER_SECONDS", TimeSpan.FromSeconds(30));
+            Console.WriteLine($"[LlmConsensusEvaluation] Pacing {pacing.TotalSeconds:F0}s between scenarios, Retry-After ceiling {retryCeiling.TotalSeconds:F0}s.");
+
             // Target the 25 CompoundDrift and 42 RemovedElement scenarios (cost control)
             var report = await LocatorAblationHarness.RunAsync(
                 dataset,
                 root,
                 configured,
                 new SimilarityWeights { MinimumConfidence = 0.50 },
-                scenarioFilter: s => s.MutationKind == LocatorMutationKind.CompoundDrift || s.MutationKind == LocatorMutationKind.RemovedElement);
+                scenarioFilter: s => s.MutationKind == LocatorMutationKind.CompoundDrift || s.MutationKind == LocatorMutationKind.RemovedElement,
+                scenarioPacing: pacing,
+                maxRetryAfter: retryCeiling);
 
             var markdown = LocatorAblationHarness.ToMarkdownSummary(report, "HandBrake 1.8.2 Live Consensus");
             Console.WriteLine(markdown);
@@ -698,6 +725,195 @@ namespace ScenarioRunner
             Assert.Contains("Answer to the #97 question", markdown);
             Assert.Contains("failed at the provider and are excluded", markdown);
             Assert.Equal(1, LocatorAblationHarness.UsableConsensusScenarios(merged.Results));
+        }
+
+        [Fact]
+        public async Task LlmConsensus_OneProviderFailing_DoesNotDiscardWhatTheOthersAnswered()
+        {
+            // #109. The classifier used to return ProviderFailure the moment any provider failed, and
+            // UsableConsensusScenarios drops those. With Gemini out of quota that rule discarded every
+            // scenario in a run even when the other two answered every prompt - reporting "no data"
+            // when two independent providers had in fact agreed.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new MockAblationProvider("B", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.8, "")),
+                    new FailingAblationProvider("C", "429 quota exhausted"),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.Equal(ConsensusVotePattern.Unanimous, report.Results[0].VotePattern);
+            Assert.Equal(2, report.Results[0].RespondingProviders);
+            Assert.Equal(1, LocatorAblationHarness.UsableConsensusScenarios(report.Results));
+        }
+
+        [Fact]
+        public async Task LlmConsensus_WithOnlyOneProviderResponding_IsNotAMeasurement()
+        {
+            // One opinion cannot agree or disagree with anything. Consensus is defined as two or more
+            // providers naming the same candidate (#10, #19), so a lone survivor is noise, not a finding.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new FailingAblationProvider("B", "500"),
+                    new FailingAblationProvider("C", "429"),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.Equal(ConsensusVotePattern.ProviderFailure, report.Results[0].VotePattern);
+            Assert.Equal(1, report.Results[0].RespondingProviders);
+            Assert.Equal(0, LocatorAblationHarness.UsableConsensusScenarios(report.Results));
+        }
+
+        [Fact]
+        public async Task LlmConsensus_AFailedProvider_IsNotCountedAsADecline()
+        {
+            // The vote map stores a failure and a decline as the same null, so classifying from it
+            // would turn quota errors into "the model said none of these" - which is precisely the
+            // absence signal #97 is trying to measure. Fabricating it would answer the question with
+            // the provider's rate limiter.
+            //
+            // A answers, B declines, C fails. Two responded, one of them declined: Partial. If the
+            // failure were folded into the declines this would read AllDeclined on the same inputs.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                    new MockAblationProvider("B", (_, _) => (null, 0.0, "no match")),
+                    new FailingAblationProvider("C", "429 quota exhausted"),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.Equal(ConsensusVotePattern.Partial, report.Results[0].VotePattern);
+            Assert.Equal(2, report.Results[0].RespondingProviders);
+        }
+
+        [Fact]
+        public async Task LlmConsensus_EveryProviderDeclining_StaysDistinctFromEveryProviderFailing()
+        {
+            // Both produce zero votes. One says the element is gone - the hypothesis under test - and
+            // the other says nothing was asked successfully. They must not collapse into each other.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+            var weights = new SimilarityWeights { MinimumConfidence = 0.99 };
+
+            var declined = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, _) => (null, 0.0, "no match")),
+                    new MockAblationProvider("B", (_, _) => (null, 0.0, "no match")),
+                    new FailingAblationProvider("C", "429"),
+                },
+                weights);
+
+            var failed = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new FailingAblationProvider("A", "429"),
+                    new FailingAblationProvider("B", "429"),
+                    new FailingAblationProvider("C", "429"),
+                },
+                weights);
+
+            Assert.Equal(ConsensusVotePattern.AllDeclined, declined.Results[0].VotePattern);
+            Assert.Equal(2, declined.Results[0].RespondingProviders);
+            Assert.Equal(1, LocatorAblationHarness.UsableConsensusScenarios(declined.Results));
+
+            Assert.Equal(ConsensusVotePattern.ProviderFailure, failed.Results[0].VotePattern);
+            Assert.Equal(0, failed.Results[0].RespondingProviders);
+            Assert.Equal(0, LocatorAblationHarness.UsableConsensusScenarios(failed.Results));
+        }
+
+        [Fact]
+        public async Task AblationRun_WithoutPacing_NeverWaits()
+        {
+            // #110. The offline suite runs mock providers over no network, so any pacing at all would
+            // be pure cost. Zero must mean zero, not "a very short sleep".
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(3).ToList(),
+            };
+            var delays = new List<TimeSpan>();
+
+            await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 },
+                delayAsync: (d, _) => { delays.Add(d); return Task.CompletedTask; });
+
+            Assert.Empty(delays);
+        }
+
+        [Fact]
+        public async Task AblationRun_WithPacing_WaitsBetweenScenariosButNotBeforeTheFirst()
+        {
+            // A leading delay buys nothing - no request has been made yet, so there is no rate limit
+            // to be approaching. Three scenarios means two gaps.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(3).ToList(),
+            };
+            var delays = new List<TimeSpan>();
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[]
+                {
+                    new MockAblationProvider("A", (_, c) => (c.Count > 0 ? c[0].CandidateId : null, 0.9, "")),
+                },
+                new SimilarityWeights { MinimumConfidence = 0.99 },
+                scenarioPacing: TimeSpan.FromSeconds(4),
+                delayAsync: (d, _) => { delays.Add(d); return Task.CompletedTask; });
+
+            Assert.Equal(3, report.Results.Count);
+            Assert.Equal(2, delays.Count);
+            Assert.All(delays, d => Assert.Equal(TimeSpan.FromSeconds(4), d));
         }
 
         private sealed class FailingAblationProvider : ILlmHealingProvider

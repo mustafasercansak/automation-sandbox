@@ -51,7 +51,12 @@ namespace ScenarioRunner
         // Some answered, some declined. Not consensus, but not scatter either.
         Partial,
 
-        // At least one provider failed to produce a usable answer. Measurement noise, not a finding.
+        // Fewer than MinimumProvidersForConsensus providers produced a usable answer, so there were
+        // not enough independent opinions to call anything consensus. Measurement noise, not a finding.
+        //
+        // #109: this used to fire when *any* provider failed, which discarded scenarios that two
+        // other providers had answered completely. With one provider out of quota that rule threw
+        // away every scenario in a run and reported the absence of data as unusable data.
         ProviderFailure,
     }
 
@@ -73,6 +78,11 @@ namespace ScenarioRunner
         public IReadOnlyDictionary<string, string> ProviderErrors { get; set; } = new Dictionary<string, string>();
         public IReadOnlyDictionary<string, string?> ProviderVotes { get; set; } = new Dictionary<string, string?>();
         public IReadOnlyDictionary<string, LlmHealingResult> ProviderResults { get; set; } = new Dictionary<string, LlmHealingResult>();
+
+        // How many providers returned a usable answer for this scenario, counting declines as
+        // answers. Without it a two-provider observation is indistinguishable from a three-provider
+        // one in the report, and "unanimous" means something different in each case.
+        public int RespondingProviders { get; set; }
         public double? LlmConfidence { get; set; }
         public string? LlmReasoning { get; set; }
 
@@ -148,6 +158,11 @@ namespace ScenarioRunner
 
     public static class LocatorAblationHarness
     {
+        // Matches the engine's own acceptance rule (#10, #19): consensus needs two independent
+        // providers naming the same candidate. Below this there is nothing to agree or disagree
+        // about, so the scenario yields no measurement either way.
+        public const int MinimumProvidersForConsensus = 2;
+
         public static AblationRunReport Run(
             LocatorAblationDataset dataset,
             UiElementInfo sourceRoot,
@@ -215,7 +230,10 @@ namespace ScenarioRunner
             SimilarityWeights? weights = null,
             string? platform = null,
             Func<LocatorAblationScenario, bool>? scenarioFilter = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            TimeSpan? scenarioPacing = null,
+            TimeSpan? maxRetryAfter = null,
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
         {
             if (dataset == null)
             {
@@ -225,11 +243,34 @@ namespace ScenarioRunner
             var report = new AblationRunReport();
             var providersList = llmProviders?.ToList();
 
+            // #110: Groq answers with Retry-After values of 11-13s under load, above the transport's
+            // 10s interactive ceiling, so every rate-limited request failed fast instead of waiting.
+            if (maxRetryAfter.HasValue && providersList != null)
+            {
+                foreach (var http in providersList.OfType<HttpLlmHealingProvider>())
+                {
+                    http.MaxRetryAfterOverride = maxRetryAfter;
+                }
+            }
+
+            // Waiting after being told to is strictly worse than not being told to. Defaults to zero
+            // so the offline suite, which runs mock providers over no network, pays nothing for it.
+            var pacing = scenarioPacing ?? TimeSpan.Zero;
+            var delay = delayAsync ?? Task.Delay;
+            var pacedScenarios = 0;
+
             foreach (var scenario in dataset.Scenarios)
             {
                 if (scenarioFilter != null && !scenarioFilter(scenario))
                 {
                     continue;
+                }
+
+                // After the first evaluated scenario, not before it - a leading delay buys nothing
+                // because no request has been made yet.
+                if (pacing > TimeSpan.Zero && providersList != null && pacedScenarios++ > 0)
+                {
+                    await delay(pacing, cancellationToken).ConfigureAwait(false);
                 }
 
                 var expected = LocatorAblationGenerator.FindExpectedElement(sourceRoot, scenario.OriginalAutomationId);
@@ -285,6 +326,7 @@ namespace ScenarioRunner
                     ProviderErrors = heal.ProviderErrors ?? new Dictionary<string, string>(),
                     ProviderVotes = providerVotes,
                     ProviderResults = providerResults,
+                    RespondingProviders = CountRespondingProviders(providerResults),
                     VotePattern = ClassifyVotePattern(providerVotes, providerResults),
                     LlmConfidence = heal.LlmConfidence,
                     LlmReasoning = heal.LlmReasoning,
@@ -363,26 +405,39 @@ namespace ScenarioRunner
                 return ConsensusVotePattern.NotEvaluated;
             }
 
+            // Classify from the results rather than the vote map. A failed provider is written into
+            // the vote map as null, which is the same value a decline produces, so the vote map alone
+            // cannot tell "the request errored" from "the model said none of these". That distinction
+            // is the entire subject of #97: a decline on a removal scenario is the predicted signal,
+            // and folding failures into it would manufacture the result the run exists to test.
+            var answered = new List<string>();
+            var declined = 0;
+            var responding = CountRespondingProviders(results);
+
             foreach (var entry in results)
             {
                 if (entry.Value == null || !entry.Value.Success)
                 {
-                    return ConsensusVotePattern.ProviderFailure;
+                    continue;
                 }
-            }
 
-            var answered = new List<string>();
-            var declined = 0;
-            foreach (var entry in votes)
-            {
-                if (string.IsNullOrEmpty(entry.Value))
+                if (string.IsNullOrEmpty(entry.Value.MatchedCandidateId))
                 {
                     declined++;
                 }
                 else
                 {
-                    answered.Add(entry.Value!);
+                    answered.Add(entry.Value.MatchedCandidateId!);
                 }
+            }
+
+            // Consensus is defined as two or more independent providers naming the same candidate
+            // (#10, #19). Two responses are therefore a complete observation, and a third provider's
+            // HTTP failure says something about that provider's quota, not about whether the two
+            // that answered agreed.
+            if (responding < MinimumProvidersForConsensus)
+            {
+                return ConsensusVotePattern.ProviderFailure;
             }
 
             if (answered.Count == 0)
@@ -390,14 +445,29 @@ namespace ScenarioRunner
                 return ConsensusVotePattern.AllDeclined;
             }
 
-            var distinct = new HashSet<string>(answered, StringComparer.Ordinal).Count;
-
             if (declined > 0)
             {
                 return ConsensusVotePattern.Partial;
             }
 
+            var distinct = new HashSet<string>(answered, StringComparer.Ordinal).Count;
             return distinct == 1 ? ConsensusVotePattern.Unanimous : ConsensusVotePattern.Scattered;
+        }
+
+        // Providers that returned a usable answer. A decline counts: "none of these candidates is
+        // the element" is a considered response, not a missing one.
+        internal static int CountRespondingProviders(IReadOnlyDictionary<string, LlmHealingResult> results)
+        {
+            var responding = 0;
+            foreach (var entry in results)
+            {
+                if (entry.Value != null && entry.Value.Success)
+                {
+                    responding++;
+                }
+            }
+
+            return responding;
         }
 
         // Scenarios where the LLM actually answered. A run where every provider failed produces results
