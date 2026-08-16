@@ -1,6 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LlmHealing;
 using SelfHealing;
 using UiModel;
 using Xunit;
@@ -386,6 +389,159 @@ namespace ScenarioRunner
 
             Assert.True(maxFalseOnRemoved > minCompoundCorrect,
                 $"Empirical score overlap expected: max false heal on removed ({maxFalseOnRemoved:F3}) > min compound correct heal ({minCompoundCorrect:F3}).");
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AblationPrompt_ContainsNoAutomationIdOrAblationMarkers()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var opaqueIdPattern = new System.Text.RegularExpressions.Regex(@"^ablation-[0-9a-f]{8}$");
+
+            foreach (var scenario in dataset.Scenarios)
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                var shortlist = SelfHealingResolver.ScoreCandidates(expected, mutatedRoot, SimilarityWeights.Default)
+                    .Take(SimilarityWeights.Default.MaxCandidatesForLlm)
+                    .ToList();
+                for (var i = 0; i < shortlist.Count; i++)
+                {
+                    shortlist[i].CandidateId = "c" + i;
+                }
+
+                var prompt = LlmHealingPrompt.Build(expected, shortlist, platform: "windows-desktop");
+
+                // 1. Expected's original AutomationId must be redacted to empty string
+                Assert.Contains("\"AutomationId\": \"\"", prompt);
+                if (!string.IsNullOrEmpty(scenario.OriginalAutomationId))
+                {
+                    Assert.DoesNotContain($"\"AutomationId\": \"{scenario.OriginalAutomationId}\"", prompt);
+                }
+
+                // 2. All candidate AutomationIds in the mutated tree must have the exact same opaque format
+                // so no candidate is distinguishable by its identifier structure (#97).
+                foreach (var c in shortlist)
+                {
+                    var id = c.Candidate.AutomationId;
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        Assert.Matches(opaqueIdPattern, id);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task HandBrakeFixture_LlmConsensus_HarnessPlumbingWorksWithMockProviders()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+
+            // Filter to 2 compound drift scenarios where heuristic confidence is low
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.CompoundDrift).Take(2).ToList(),
+            };
+
+            var p1 = new MockAblationProvider("MockClaude", (exp, cands) => (cands.Count > 0 ? cands[0].CandidateId : null, 0.9, "matched"));
+            var p2 = new MockAblationProvider("MockGemini", (exp, cands) => (cands.Count > 0 ? cands[0].CandidateId : null, 0.85, "matched"));
+
+            var report = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new[] { p1, p2 },
+                new SimilarityWeights { MinimumConfidence = 0.90 }); // High heuristic threshold forces LLM fallback
+
+            Assert.Equal(2, report.Results.Count);
+            Assert.All(report.Results, r =>
+            {
+                Assert.Equal(HealSource.Llm, r.Source);
+                Assert.Equal(2, r.AgreedProviders.Count);
+                Assert.Contains("MockClaude", r.AgreedProviders);
+                Assert.Contains("MockGemini", r.AgreedProviders);
+                Assert.Equal(2, r.ProviderVotes.Count);
+                Assert.Equal("c0", r.ProviderVotes["MockClaude"]);
+                Assert.Equal("c0", r.ProviderVotes["MockGemini"]);
+                Assert.NotNull(r.ProviderResults["MockClaude"]);
+                Assert.NotNull(r.ProviderResults["MockGemini"]);
+            });
+
+            // Verify scattered votes: p1 -> c0, p2 -> c1 yields NoConsensus but preserves raw votes
+            var scatterP1 = new MockAblationProvider("MockClaude", (exp, cands) => ("c0", 0.9, "reason1"));
+            var scatterP2 = new MockAblationProvider("MockGemini", (exp, cands) => ("c1", 0.85, "reason2"));
+            var scatterReport = await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new[] { scatterP1, scatterP2 },
+                new SimilarityWeights { MinimumConfidence = 0.90 });
+
+            Assert.All(scatterReport.Results, r =>
+            {
+                Assert.Equal(HealResolutionStatus.NoConsensus, r.ResolutionStatus);
+                Assert.Empty(r.AgreedProviders);
+                Assert.Equal("c0", r.ProviderVotes["MockClaude"]);
+                Assert.Equal("c1", r.ProviderVotes["MockGemini"]);
+            });
+        }
+
+        [Fact]
+        public async Task HandBrakeFixture_LlmConsensus_LiveEvaluation()
+        {
+            var configured = LlmProviderFactory.CreateConfiguredProviders();
+            if (configured.Count < 2)
+            {
+                Console.WriteLine($"[LlmConsensusEvaluation] At least 2 configured LLM providers are required (found {configured.Count}) - skipping live evaluation.");
+                return;
+            }
+
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+
+            // Target the 25 CompoundDrift and 42 RemovedElement scenarios (cost control)
+            var report = await LocatorAblationHarness.RunAsync(
+                dataset,
+                root,
+                configured,
+                new SimilarityWeights { MinimumConfidence = 0.50 },
+                scenarioFilter: s => s.MutationKind == LocatorMutationKind.CompoundDrift || s.MutationKind == LocatorMutationKind.RemovedElement);
+
+            Console.WriteLine(LocatorAblationHarness.ToMarkdownSummary(report, "HandBrake 1.8.2 Live Consensus"));
+            Assert.NotEmpty(report.Results);
+        }
+
+        private sealed class MockAblationProvider : ILlmHealingProvider
+        {
+            private readonly Func<UiElementInfo, IReadOnlyList<CandidateScore>, (string? CandidateId, double Confidence, string Reasoning)> _responder;
+
+            public MockAblationProvider(string name, Func<UiElementInfo, IReadOnlyList<CandidateScore>, (string? CandidateId, double Confidence, string Reasoning)> responder)
+            {
+                Name = name;
+                _responder = responder;
+            }
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                var (candId, conf, reasoning) = _responder(expected, candidates);
+                var matched = candidates.FirstOrDefault(c => c.CandidateId == candId);
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = candId,
+                    MatchedAutomationId = matched?.Candidate.AutomationId,
+                    Confidence = conf,
+                    Reasoning = reasoning,
+                    AttemptCount = 1,
+                });
+            }
         }
 
         private static AblationScenarioResult Result(LocatorMutationKind kind, AblationOutcome outcome) =>

@@ -75,7 +75,6 @@ namespace ScenarioRunner
         }
 
         [Fact]
-
         public void Build_IncludesStructuralFieldsOfExpected_ButRedactsItsStaleAutomationId()
         {
             var prompt = LlmHealingPrompt.Build(Expected, BuildShortlist());

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LlmHealing;
 using SelfHealing;
 using UiModel;
 
@@ -38,6 +41,14 @@ namespace ScenarioRunner
         public double EvidenceCoverage { get; set; }
         public int CandidateCount { get; set; }
         public HealResolutionStatus ResolutionStatus { get; set; }
+        public HealSource Source { get; set; } = HealSource.Heuristic;
+        public IReadOnlyList<string> AgreedProviders { get; set; } = Array.Empty<string>();
+        public IReadOnlyDictionary<string, int> ProviderAttempts { get; set; } = new Dictionary<string, int>();
+        public IReadOnlyDictionary<string, string> ProviderErrors { get; set; } = new Dictionary<string, string>();
+        public IReadOnlyDictionary<string, string?> ProviderVotes { get; set; } = new Dictionary<string, string?>();
+        public IReadOnlyDictionary<string, LlmHealingResult> ProviderResults { get; set; } = new Dictionary<string, LlmHealingResult>();
+        public double? LlmConfidence { get; set; }
+        public string? LlmReasoning { get; set; }
 
         // The raw score vector, kept so thresholds can be swept offline without re-running the harness
         // (#15 asks for this directly).
@@ -62,6 +73,10 @@ namespace ScenarioRunner
         public int RemovalScenarios { get; set; }
         public int CorrectDeclines { get; set; }
         public int FalseHealsOnRemoved { get; set; }
+
+        public int LlmHeals { get; set; }
+        public int ConsensusDeclines { get; set; }
+        public int ProviderErrors { get; set; }
 
         // Of the locators that survived (with rename, drift, or shift), how many were found.
         public double AutoHealRecall => SuccessorScenarios == 0 ? 0.0 : (double)CorrectHeals / SuccessorScenarios;
@@ -144,6 +159,12 @@ namespace ScenarioRunner
                     EvidenceCoverage = heal.EvidenceCoverage,
                     CandidateCount = heal.CandidateCount,
                     ResolutionStatus = heal.ResolutionStatus,
+                    Source = heal.Source,
+                    AgreedProviders = heal.AgreedProviders ?? Array.Empty<string>(),
+                    ProviderAttempts = heal.ProviderAttempts ?? new Dictionary<string, int>(),
+                    ProviderErrors = heal.ProviderErrors ?? new Dictionary<string, string>(),
+                    LlmConfidence = heal.LlmConfidence,
+                    LlmReasoning = heal.LlmReasoning,
                     Candidates = heal.Candidates ?? new List<CandidateScore>(),
                     ExpectedElement = scenario.GroundTruth?.ToString(),
                     MatchedElement = heal.Matched == null
@@ -157,6 +178,124 @@ namespace ScenarioRunner
 
             report.Metrics = Summarize(report.Results);
             return report;
+        }
+
+        public static async Task<AblationRunReport> RunAsync(
+            LocatorAblationDataset dataset,
+            UiElementInfo sourceRoot,
+            IEnumerable<ILlmHealingProvider>? llmProviders = null,
+            SimilarityWeights? weights = null,
+            string? platform = null,
+            Func<LocatorAblationScenario, bool>? scenarioFilter = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dataset == null)
+            {
+                throw new ArgumentNullException(nameof(dataset));
+            }
+
+            var report = new AblationRunReport();
+            var providersList = llmProviders?.ToList();
+
+            foreach (var scenario in dataset.Scenarios)
+            {
+                if (scenarioFilter != null && !scenarioFilter(scenario))
+                {
+                    continue;
+                }
+
+                var expected = LocatorAblationGenerator.FindExpectedElement(sourceRoot, scenario.OriginalAutomationId);
+                if (expected == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Scenario '{scenario.ScenarioId}' references AutomationId '{scenario.OriginalAutomationId}', absent from the source tree.");
+                }
+
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(sourceRoot, scenario);
+                var recorders = providersList?.Select(p => new RecordingProvider(p)).ToList();
+                var heal = await SelfHealingResolver.ResolveAsync(
+                    expected,
+                    mutatedRoot,
+                    recorders,
+                    weights,
+                    log: _ => { },
+                    platform: platform ?? "windows-desktop",
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                var accepted = heal.IsConfident && heal.Matched != null;
+                var matchedPath = heal.Matched == null
+                    ? null
+                    : LocatorAblationGenerator.AncestorPathOf(mutatedRoot, heal.Matched);
+
+                var providerVotes = new SortedDictionary<string, string?>(StringComparer.Ordinal);
+                var providerResults = new SortedDictionary<string, LlmHealingResult>(StringComparer.Ordinal);
+                if (recorders != null)
+                {
+                    foreach (var rec in recorders)
+                    {
+                        if (rec.LastResult != null)
+                        {
+                            providerVotes[rec.Name] = rec.LastResult.Success ? rec.LastResult.MatchedCandidateId : null;
+                            providerResults[rec.Name] = rec.LastResult;
+                        }
+                    }
+                }
+
+                var result = new AblationScenarioResult
+                {
+                    ScenarioId = scenario.ScenarioId,
+                    MutationKind = scenario.MutationKind,
+                    OriginalAutomationId = scenario.OriginalAutomationId,
+                    EngineAccepted = accepted,
+                    Score = heal.Score,
+                    EvidenceCoverage = heal.EvidenceCoverage,
+                    CandidateCount = heal.CandidateCount,
+                    ResolutionStatus = heal.ResolutionStatus,
+                    Source = heal.Source,
+                    AgreedProviders = heal.AgreedProviders ?? Array.Empty<string>(),
+                    ProviderAttempts = heal.ProviderAttempts ?? new Dictionary<string, int>(),
+                    ProviderErrors = heal.ProviderErrors ?? new Dictionary<string, string>(),
+                    ProviderVotes = providerVotes,
+                    ProviderResults = providerResults,
+                    LlmConfidence = heal.LlmConfidence,
+                    LlmReasoning = heal.LlmReasoning,
+                    Candidates = heal.Candidates ?? new List<CandidateScore>(),
+                    ExpectedElement = scenario.GroundTruth?.ToString(),
+                    MatchedElement = heal.Matched == null
+                        ? null
+                        : LocatorAblationGenerator.Fingerprint(heal.Matched, matchedPath ?? "").ToString(),
+                    Outcome = Classify(scenario, heal, accepted, matchedPath),
+                };
+
+                report.Results.Add(result);
+            }
+
+            report.Metrics = Summarize(report.Results);
+            return report;
+        }
+
+        private sealed class RecordingProvider : ILlmHealingProvider
+        {
+            private readonly ILlmHealingProvider _inner;
+
+            public RecordingProvider(ILlmHealingProvider inner)
+            {
+                _inner = inner;
+            }
+
+            public string Name => _inner.Name;
+            public bool IsAvailable => _inner.IsAvailable;
+            public LlmHealingResult? LastResult { get; private set; }
+
+            public async Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                LastResult = await _inner.ResolveAsync(expected, candidates, platform, cancellationToken).ConfigureAwait(false);
+                return LastResult;
+            }
         }
 
         private static AblationOutcome Classify(
@@ -199,6 +338,9 @@ namespace ScenarioRunner
                 RemovalScenarios = all.Count(r => r.MutationKind == LocatorMutationKind.RemovedElement),
                 CorrectDeclines = all.Count(r => r.Outcome == AblationOutcome.CorrectDecline),
                 FalseHealsOnRemoved = all.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved),
+                LlmHeals = all.Count(r => r.Source == HealSource.Llm && r.EngineAccepted),
+                ConsensusDeclines = all.Count(r => r.ResolutionStatus == HealResolutionStatus.NoConsensus),
+                ProviderErrors = all.Count(r => r.ResolutionStatus == HealResolutionStatus.ProviderError),
             };
         }
 
@@ -226,6 +368,16 @@ namespace ScenarioRunner
                 $"| Correct decline (no successor) | {m.CorrectDeclines} |",
                 $"| False heal on removed element | {m.FalseHealsOnRemoved} |",
             };
+
+            if (m.LlmHeals > 0 || m.ConsensusDeclines > 0 || m.ProviderErrors > 0)
+            {
+                lines.Add("");
+                lines.Add("| LLM Consensus Telemetry | Count |");
+                lines.Add("| :--- | ---: |");
+                lines.Add($"| LLM-accepted heals | {m.LlmHeals} |");
+                lines.Add($"| Disagreement / No-consensus declines | {m.ConsensusDeclines} |");
+                lines.Add($"| Provider errors | {m.ProviderErrors} |");
+            }
 
             return string.Join(Environment.NewLine, lines);
         }
