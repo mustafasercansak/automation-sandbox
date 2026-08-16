@@ -39,7 +39,12 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `GROK_API_KEY` (+ optional `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`)
   - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
   - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Cloudflare"`)
-  - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider`
+  - `MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Mistral"`)
+  - `OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"OllamaCloud"`)
+  - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider` (local daemon on `localhost:11434`)
+
+> [!WARNING]
+> `OLLAMA_CLOUD_*` and `OLLAMA_*` are deliberately separate and must never be conflated. The local variables build a provider aimed at `localhost:11434`, where no daemon exists on a CI runner. Pointing `OLLAMA_MODEL` at a cloud model therefore produces a provider that fails every request **while still counting toward the two-provider consensus threshold**, which is the opposite of what adding a provider is meant to achieve.
 
 - **Arbitrary Custom Endpoints (`LLM_CUSTOM_PROVIDERS`)**:
   Provide a JSON array string to configure additional OpenAI-compatible endpoints:
@@ -162,6 +167,11 @@ Choose a model family different from the other voters. Two endpoints serving the
 > **Bir sağlayıcı slotunu başka bir sağlayıcının uç noktasına yönlendirmeyin.** `OpenAiHealingProvider` herhangi bir OpenAI-uyumlu adresi kabul ettiği için `OPENAI_*` slotunu başka bir sağlayıcı için yeniden kullanmak cazip gelir. Aynı modeli çağıran iki slot, iki isimli tek bir oy demektir: aynı sistem oldukları için anlaşırlar ve aralarındaki uzlaşma anlamsızdır (#19). İkinci bir görüş gerekiyorsa ikinci bir sağlayıcı kullanın. `OPENAI_*` slotu gerçek bir OpenAI kimlik bilgisine ayrılmıştır; başka bir amaçla doldurmayın, boş bırakın.
 
 Cloudflare için `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ve `CLOUDFLARE_MODEL` değerlerinin üçü de zorunludur. Tam yapılandırma `"Cloudflare"` adlı bir `OpenAiHealingProvider` oluşturur; herhangi biri eksikse bozuk bir uç nokta veya tahmini model üretmek yerine sağlayıcı atlanır.
+
+Aynı kural Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; ikisi de OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
+
+> [!WARNING]
+> `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.
 
 ```csharp
 // Ortamdaki tüm geçerli sağlayıcıları otomatik al:

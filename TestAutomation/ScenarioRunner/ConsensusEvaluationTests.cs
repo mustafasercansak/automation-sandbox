@@ -160,6 +160,113 @@ namespace ScenarioRunner
             Assert.Contains("\"model\":\"@cf/zai-org/glm-4.7-flash\"", requestBody);
         }
 
+        [Theory]
+        [InlineData("MISTRAL_API_KEY", "MISTRAL_MODEL", "Mistral", "https://api.mistral.ai/v1/chat/completions")]
+        [InlineData("OLLAMA_CLOUD_API_KEY", "OLLAMA_CLOUD_MODEL", "OllamaCloud", "https://ollama.com/v1/chat/completions")]
+        public async Task LlmProviderFactory_BuildsOpenAiCompatibleProvider_ForMistralAndOllamaCloud(
+            string keyVariable,
+            string modelVariable,
+            string expectedName,
+            string expectedUrl)
+        {
+            string? requestUrl = null;
+            string? authorization = null;
+            string? requestBody = null;
+
+            using var httpClient = new HttpClient(new AsyncFakeHandler(async request =>
+            {
+                requestUrl = request.RequestUri?.ToString();
+                authorization = request.Headers.Authorization?.ToString();
+                requestBody = request.Content == null ? null : await request.Content.ReadAsStringAsync();
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"choices\":[{\"message\":{\"content\":\"{\\\"candidateId\\\":\\\"c0\\\",\\\"confidence\\\":0.9,\\\"reasoning\\\":\\\"match\\\"}\"}}]}",
+                        System.Text.Encoding.UTF8,
+                        "application/json"),
+                };
+            }));
+
+            var env = new Dictionary<string, string>
+            {
+                [keyVariable] = "test-key",
+                [modelVariable] = "test-model",
+            };
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: httpClient,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal(expectedName, provider.Name);
+
+            var scenario = EvaluationScenarios.All[0];
+            var candidates = SelfHealingResolver.ScoreCandidates(scenario.Expected, scenario.CurrentTreeRoot);
+            var result = await provider.ResolveAsync(scenario.Expected, candidates, scenario.Platform);
+
+            Assert.True(result.Success);
+            Assert.Equal(expectedUrl, requestUrl);
+            Assert.Equal("Bearer test-key", authorization);
+            Assert.Contains("\"model\":\"test-model\"", requestBody);
+        }
+
+        [Theory]
+        [InlineData("MISTRAL_API_KEY", "MISTRAL_MODEL", "Mistral")]
+        [InlineData("OLLAMA_CLOUD_API_KEY", "OLLAMA_CLOUD_MODEL", "OllamaCloud")]
+        public void LlmProviderFactory_SkipsProvider_WhenEitherKeyOrModelIsMissing(
+            string keyVariable,
+            string modelVariable,
+            string providerName)
+        {
+            // A guessed model name produces a provider that authenticates and then fails every
+            // request, while still counting toward the two-provider consensus threshold (#109).
+            // Skipping is the safe failure.
+            var configurations = new[]
+            {
+                new Dictionary<string, string> { [keyVariable] = "test-key" },
+                new Dictionary<string, string> { [modelVariable] = "test-model" },
+            };
+
+            foreach (var env in configurations)
+            {
+                var providers = LlmProviderFactory.CreateConfiguredProviders(
+                    getEnv: key => env.TryGetValue(key, out var val) ? val : null);
+                Assert.DoesNotContain(providers, p => p.Name == providerName);
+            }
+        }
+
+        [Fact]
+        public void LlmProviderFactory_OllamaCloudAndLocalOllama_DoNotTriggerEachOther()
+        {
+            // #114. The local branch targets a daemon on localhost:11434, which does not exist on a
+            // CI runner. If OLLAMA_CLOUD_* leaked into it, the run would gain a provider that fails
+            // every request while still counting toward the consensus threshold - the exact opposite
+            // of the reason for configuring Ollama Cloud.
+            var cloudOnly = new Dictionary<string, string>
+            {
+                ["OLLAMA_CLOUD_API_KEY"] = "test-key",
+                ["OLLAMA_CLOUD_MODEL"] = "deepseek-v4-flash:0731",
+            };
+
+            var cloudProviders = LlmProviderFactory.CreateConfiguredProviders(
+                getEnv: key => cloudOnly.TryGetValue(key, out var val) ? val : null);
+
+            var cloud = Assert.Single(cloudProviders);
+            Assert.Equal("OllamaCloud", cloud.Name);
+
+            var localOnly = new Dictionary<string, string>
+            {
+                ["OLLAMA_HOST"] = "http://localhost:11434",
+                ["OLLAMA_MODEL"] = "llama3",
+            };
+
+            var localProviders = LlmProviderFactory.CreateConfiguredProviders(
+                getEnv: key => localOnly.TryGetValue(key, out var val) ? val : null);
+
+            Assert.DoesNotContain(localProviders, p => p.Name == "OllamaCloud");
+            Assert.NotEmpty(localProviders);
+        }
+
         [Fact]
         public void LlmProviderFactory_SkipsCloudflare_WhenAnyRequiredSettingIsMissing()
         {

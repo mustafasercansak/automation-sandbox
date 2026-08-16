@@ -136,7 +136,40 @@ namespace LlmHealing
                     name: "Cloudflare"));
             }
 
-            // 9. Ollama
+            // 9. Mistral - OpenAI-compatible, so no provider class of its own. Both values are
+            // required for the same reason as Cloudflare: a guessed model name produces a provider
+            // that authenticates and then fails every request, which is worse than no provider.
+            var mistralKey = Env("MISTRAL_API_KEY");
+            var mistralModel = Env("MISTRAL_MODEL");
+            if (mistralKey != null && mistralModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: mistralKey,
+                    model: mistralModel,
+                    endpoint: "https://api.mistral.ai/v1",
+                    name: "Mistral"));
+            }
+
+            // 10. Ollama Cloud - a hosted OpenAI-compatible endpoint, entirely separate from the
+            // local daemon below. The variables are deliberately not shared: OLLAMA_MODEL pointing at
+            // a cloud model would build an OllamaHealingProvider aimed at localhost:11434, which does
+            // not exist on a CI runner. That provider would then fail every request while still
+            // counting toward the two-provider consensus threshold - the opposite of the reason for
+            // adding it. See #114.
+            var ollamaCloudKey = Env("OLLAMA_CLOUD_API_KEY");
+            var ollamaCloudModel = Env("OLLAMA_CLOUD_MODEL");
+            if (ollamaCloudKey != null && ollamaCloudModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: ollamaCloudKey,
+                    model: ollamaCloudModel,
+                    endpoint: "https://ollama.com/v1",
+                    name: "OllamaCloud"));
+            }
+
+            // 11. Ollama (local daemon)
             var ollamaEnabled = string.Equals(Env("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase)
                 || Env("OLLAMA_HOST") != null
                 || Env("OLLAMA_MODEL") != null;
