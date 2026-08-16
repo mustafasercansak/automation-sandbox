@@ -25,6 +25,12 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 
 `LlmProviderFactory.CreateConfiguredProviders()` automatically discovers and instantiates available providers based on active environment variables without needing code changes:
 
+> [!IMPORTANT]
+> **No provider is required, and none of these keys is mandatory.** A provider exists only when its own `*_API_KEY` is present; everything else is skipped silently. Consensus acceptance needs **two** independent providers, so two keys is the practical minimum.
+>
+> **Never point one provider slot at another provider's endpoint.** `OpenAiHealingProvider` accepts any OpenAI-compatible URL, which makes it tempting to reuse the `OPENAI_*` slot for a different vendor. Two slots proxying the same model are one voter with two names: they agree because they are the same system, and consensus between them is meaningless (#19). If you need a second opinion, use a second vendor. The `OPENAI_*` slot is reserved for a genuine OpenAI credential; leave it unset otherwise.
+
+
 - **Well-known auto-discovery**:
   - `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`) $\rightarrow$ `ClaudeHealingProvider`
   - `GEMINI_API_KEY` (+ optional `GEMINI_MODEL`) $\rightarrow$ `GeminiHealingProvider`
@@ -144,6 +150,12 @@ var provider = new OpenAiHealingProvider(
 ### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
 
 `LlmProviderFactory.CreateConfiguredProviders()` ortamdaki anahtarları otomatik keşfeder ve kod değiştirmeden sağlayıcı listesini hazırlar:
+
+> [!IMPORTANT]
+> **Hiçbir sağlayıcı zorunlu değildir; bu anahtarların hiçbiri gerekli değildir.** Bir sağlayıcı yalnızca kendi `*_API_KEY` değeri varsa kurulur, aksi halde sessizce atlanır. Uzlaşma kabulü **iki** bağımsız sağlayıcı gerektirdiği için pratik alt sınır iki anahtardır.
+>
+> **Bir sağlayıcı slotunu başka bir sağlayıcının uç noktasına yönlendirmeyin.** `OpenAiHealingProvider` herhangi bir OpenAI-uyumlu adresi kabul ettiği için `OPENAI_*` slotunu başka bir sağlayıcı için yeniden kullanmak cazip gelir. Aynı modeli çağıran iki slot, iki isimli tek bir oy demektir: aynı sistem oldukları için anlaşırlar ve aralarındaki uzlaşma anlamsızdır (#19). İkinci bir görüş gerekiyorsa ikinci bir sağlayıcı kullanın. `OPENAI_*` slotu gerçek bir OpenAI kimlik bilgisine ayrılmıştır; başka bir amaçla doldurmayın, boş bırakın.
+
 
 ```csharp
 // Ortamdaki tüm geçerli sağlayıcıları otomatik al:
