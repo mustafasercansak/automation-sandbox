@@ -9,8 +9,6 @@ namespace ScenarioRunner
     // Turns a captured UI tree into ground-truth benchmark scenarios by breaking one locator at a time.
     public static class LocatorAblationGenerator
     {
-        public const string RenameSuffix = "_ablated";
-
         public static LocatorAblationDataset Generate(
             UiElementInfo sourceRoot,
             string applicationName,
@@ -27,32 +25,94 @@ namespace ScenarioRunner
 
             foreach (var target in targets)
             {
-                // A rename keeps the element, so the correct answer is that element.
+                var originalId = target.AutomationId;
+                var hasName = !string.IsNullOrWhiteSpace(target.Element.Name);
+
+                // 1. Pure AutomationId rename (baseline) with opaque ID (no _ablated leak to LLMs)
+                var renameId = BuildScenarioId(applicationName, sourceVersion, originalId, LocatorMutationKind.RenamedAutomationId);
                 dataset.Scenarios.Add(new LocatorAblationScenario
                 {
-                    ScenarioId = BuildScenarioId(applicationName, sourceVersion, target.AutomationId, LocatorMutationKind.RenamedAutomationId),
+                    ScenarioId = renameId,
                     ApplicationName = applicationName,
                     SourceVersion = sourceVersion,
                     SourceTreeFileName = sourceTreeFileName,
                     MutationKind = LocatorMutationKind.RenamedAutomationId,
                     ExpectedOutcome = LocatorExpectedOutcome.Successor,
-                    OriginalAutomationId = target.AutomationId,
-                    MutatedAutomationId = target.AutomationId + RenameSuffix,
+                    OriginalAutomationId = originalId,
+                    MutatedAutomationId = OpaqueId(renameId),
                     GroundTruth = Fingerprint(target.Element, target.AncestorPath),
                 });
 
-                // A removal takes the element away, so the correct answer is to decline. Without these
-                // the harness could only measure recall, and a resolver that heals everything would
-                // score perfectly.
+                // 2. Name drift: only generated when element has a non-empty Name
+                if (hasName)
+                {
+                    var nameDriftId = BuildScenarioId(applicationName, sourceVersion, originalId, LocatorMutationKind.NameDrift);
+                    var mutatedName = PerturbName(target.Element.Name!);
+                    dataset.Scenarios.Add(new LocatorAblationScenario
+                    {
+                        ScenarioId = nameDriftId,
+                        ApplicationName = applicationName,
+                        SourceVersion = sourceVersion,
+                        SourceTreeFileName = sourceTreeFileName,
+                        MutationKind = LocatorMutationKind.NameDrift,
+                        ExpectedOutcome = LocatorExpectedOutcome.Successor,
+                        OriginalAutomationId = originalId,
+                        MutatedAutomationId = OpaqueId(nameDriftId),
+                        MutatedName = mutatedName,
+                        GroundTruth = FingerprintWithName(target.Element, target.AncestorPath, mutatedName),
+                    });
+                }
+
+                // 3. Position shift: layout coordinate translation
+                var posShiftId = BuildScenarioId(applicationName, sourceVersion, originalId, LocatorMutationKind.PositionShift);
                 dataset.Scenarios.Add(new LocatorAblationScenario
                 {
-                    ScenarioId = BuildScenarioId(applicationName, sourceVersion, target.AutomationId, LocatorMutationKind.RemovedElement),
+                    ScenarioId = posShiftId,
+                    ApplicationName = applicationName,
+                    SourceVersion = sourceVersion,
+                    SourceTreeFileName = sourceTreeFileName,
+                    MutationKind = LocatorMutationKind.PositionShift,
+                    ExpectedOutcome = LocatorExpectedOutcome.Successor,
+                    OriginalAutomationId = originalId,
+                    MutatedAutomationId = OpaqueId(posShiftId),
+                    ShiftX = 140.0,
+                    ShiftY = 80.0,
+                    GroundTruth = Fingerprint(target.Element, target.AncestorPath),
+                });
+
+                // 4. Compound drift: combines Name drift and Position shift (only when Name is present)
+                if (hasName)
+                {
+                    var compoundId = BuildScenarioId(applicationName, sourceVersion, originalId, LocatorMutationKind.CompoundDrift);
+                    var mutatedName = PerturbName(target.Element.Name!);
+                    dataset.Scenarios.Add(new LocatorAblationScenario
+                    {
+                        ScenarioId = compoundId,
+                        ApplicationName = applicationName,
+                        SourceVersion = sourceVersion,
+                        SourceTreeFileName = sourceTreeFileName,
+                        MutationKind = LocatorMutationKind.CompoundDrift,
+                        ExpectedOutcome = LocatorExpectedOutcome.Successor,
+                        OriginalAutomationId = originalId,
+                        MutatedAutomationId = OpaqueId(compoundId),
+                        MutatedName = mutatedName,
+                        ShiftX = 140.0,
+                        ShiftY = 80.0,
+                        GroundTruth = FingerprintWithName(target.Element, target.AncestorPath, mutatedName),
+                    });
+                }
+
+                // 5. Complete removal: element and subtree deleted -> correct outcome is to decline
+                var removalId = BuildScenarioId(applicationName, sourceVersion, originalId, LocatorMutationKind.RemovedElement);
+                dataset.Scenarios.Add(new LocatorAblationScenario
+                {
+                    ScenarioId = removalId,
                     ApplicationName = applicationName,
                     SourceVersion = sourceVersion,
                     SourceTreeFileName = sourceTreeFileName,
                     MutationKind = LocatorMutationKind.RemovedElement,
                     ExpectedOutcome = LocatorExpectedOutcome.NoSuccessor,
-                    OriginalAutomationId = target.AutomationId,
+                    OriginalAutomationId = originalId,
                     MutatedAutomationId = null,
                     GroundTruth = null,
                 });
@@ -89,8 +149,11 @@ namespace ScenarioRunner
             switch (scenario.MutationKind)
             {
                 case LocatorMutationKind.RenamedAutomationId:
-                    var renamed = RenameFirst(clone, scenario.OriginalAutomationId, scenario.MutatedAutomationId ?? "");
-                    if (!renamed)
+                case LocatorMutationKind.NameDrift:
+                case LocatorMutationKind.PositionShift:
+                case LocatorMutationKind.CompoundDrift:
+                    var mutated = MutateFirst(clone, scenario);
+                    if (!mutated)
                     {
                         throw new InvalidOperationException(
                             $"Scenario '{scenario.ScenarioId}' targets AutomationId '{scenario.OriginalAutomationId}', which is not in the source tree.");
@@ -157,14 +220,66 @@ namespace ScenarioRunner
                 AncestorPath = ancestorPath,
             };
 
-        private static string BuildScenarioId(string app, string version, string automationId, LocatorMutationKind kind) =>
-            string.Format(
+        public static ElementFingerprint FingerprintWithName(UiElementInfo element, string ancestorPath, string? name) =>
+            new ElementFingerprint
+            {
+                ControlType = element.ControlType ?? "",
+                Name = name ?? element.Name ?? "",
+                ClassName = element.ClassName ?? "",
+                AncestorPath = ancestorPath,
+            };
+
+        public static string OpaqueId(string seed)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(seed));
+                var hex = BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+                return "ablation-" + hex.Substring(0, 8);
+            }
+        }
+
+        public static string PerturbName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+
+            // Realistic UI text drift: e.g. "Presets" -> "Presets...", "Start" -> "Start Encoding", "Cancel" -> "Cancel..."
+            if (name.EndsWith("...", StringComparison.Ordinal))
+            {
+                return name.Substring(0, name.Length - 3);
+            }
+
+            if (name.Length <= 4)
+            {
+                return name + "...";
+            }
+
+            return name + " Options";
+        }
+
+        private static string BuildScenarioId(string app, string version, string automationId, LocatorMutationKind kind)
+        {
+            var kindTag = kind switch
+            {
+                LocatorMutationKind.RenamedAutomationId => "rename",
+                LocatorMutationKind.NameDrift => "name-drift",
+                LocatorMutationKind.PositionShift => "pos-shift",
+                LocatorMutationKind.CompoundDrift => "compound",
+                LocatorMutationKind.RemovedElement => "remove",
+                _ => kind.ToString().ToLowerInvariant(),
+            };
+
+            return string.Format(
                 CultureInfo.InvariantCulture,
                 "{0}@{1}#{2}#{3}",
                 app,
                 version,
                 automationId,
-                kind == LocatorMutationKind.RenamedAutomationId ? "rename" : "remove");
+                kindTag);
+        }
 
         private sealed class LocatorTarget
         {
@@ -184,8 +299,6 @@ namespace ScenarioRunner
                 // The root is skipped: removing it leaves nothing to search, so it cannot carry a
                 // matched pair of scenarios. Duplicate ids are skipped because a mutation targeting one
                 // of them would have an ambiguous ground truth.
-                // Every sighting is collected; duplicates are dropped below, after the walk. Skipping
-                // the second sighting here would leave the first one looking unique.
                 if (!isRoot && !string.IsNullOrEmpty(id))
                 {
                     targets.Add(new LocatorTarget { Element = node, AutomationId = id, AncestorPath = path });
@@ -217,17 +330,29 @@ namespace ScenarioRunner
             return string.IsNullOrEmpty(path) ? descriptor : path + " > " + descriptor;
         }
 
-        private static bool RenameFirst(UiElementInfo node, string automationId, string replacement)
+        private static bool MutateFirst(UiElementInfo node, LocatorAblationScenario scenario)
         {
-            if (string.Equals(node.AutomationId ?? "", automationId, StringComparison.Ordinal))
+            if (string.Equals(node.AutomationId ?? "", scenario.OriginalAutomationId, StringComparison.Ordinal))
             {
-                node.AutomationId = replacement;
+                node.AutomationId = scenario.MutatedAutomationId ?? "";
+                if (scenario.MutatedName != null)
+                {
+                    node.Name = scenario.MutatedName;
+                }
+                if (scenario.ShiftX != 0.0 || scenario.ShiftY != 0.0)
+                {
+                    var r = node.BoundingRectangle;
+                    if (r.IsUsable)
+                    {
+                        node.BoundingRectangle = new BoundingRectangle(r.X + scenario.ShiftX, r.Y + scenario.ShiftY, r.Width, r.Height);
+                    }
+                }
                 return true;
             }
 
             foreach (var child in node.Children)
             {
-                if (RenameFirst(child, automationId, replacement))
+                if (MutateFirst(child, scenario))
                 {
                     return true;
                 }

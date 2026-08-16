@@ -52,6 +52,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
 | **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, and generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `Discovery.ApplicationConnector`. |
 | **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
+| **Organic Benchmark & Calibration** | ✅ Implemented | Controlled multi-signal locator ablation on organic application trees (`HandBrake 1.8.2`), empirical score distribution overlap findings, and threshold trade-off analysis. See [Benchmark & Calibration Guide](docs/benchmark-calibration.md). |
 
 ---
 
@@ -597,6 +598,38 @@ The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-mem
 - **Execution Scaling:** $O(N)$ tree traversal and candidate scoring (indicative ~23ms on developer hardware; execution time is hardware-dependent while candidate counts and score outputs are deterministic).
 - **Memory Footprint:** Allocation-optimized `Flatten` enumeration and fast Levenshtein matrix.
 - **Cross-Platform:** Benchmark unit tests run natively on Linux, macOS, and Windows.
+
+---
+
+## 🔬 Real-World Multi-Signal Benchmark & Calibration
+
+While synthetic benchmarks measure tree scaling, self-healing quality must be measured on real, organically evolved applications with known ground truth.
+
+We benchmark against a real WPF application tree (**HandBrake 1.8.2**, 149 nodes, 42 unique authored locators) using controlled **multi-signal locator ablation** across 176 test scenarios spanning 5 distinct perturbation tiers:
+1. **`RenamedAutomationId` (42 scenarios):** Pure identifier rename with an opaque ID (`ablation-XXXXXXXX`).
+2. **`NameDrift` (25 scenarios):** Identifier rename + label text perturbation (Levenshtein distance).
+3. **`PositionShift` (42 scenarios):** Identifier rename + layout coordinate shift ($+140\text{px}$ X, $+80\text{px}$ Y).
+4. **`CompoundDrift` (25 scenarios):** Identifier rename + text drift + layout shift simultaneously.
+5. **`RemovedElement` (42 scenarios):** Target element and subtree completely deleted from the UI tree.
+
+### Key Finding: Empirical Score Distribution Overlap
+- **False heals on removed elements score between $0.665$ and $0.955$** (mean $0.755$) because surviving neighbour elements share parent container, sibling proximity, or screen region with the deleted control.
+- **True compound-drifted elements score between $0.749$ and $0.874$** (mean $0.790$).
+- **The distributions naturally overlap.** No static heuristic score threshold can perfectly separate all relocated controls from all deleted controls whose neighbours look structurally similar.
+
+### The "False Heal $\downarrow$ vs. Manual Review $\uparrow$" Trade-Off
+Varying `MinimumConfidence` illustrates the direct trade-off between auto-healing recall and human review intervention:
+
+| `MinimumConfidence` | Precision | Auto-Heal Recall | False Heal Rate | Manual Review Rate | Correct Heals | False Heals (Removed) | Missed (Review) | Correct Declines |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`0.50`** (Default) | $84.4\%$ | $76.9\%$ | $15.6\%$ | $30.7\%$ | 103 | 17 | 29 | 25 |
+| **`0.70`** | $87.3\%$ | $76.9\%$ | $12.7\%$ | $33.0\%$ | 103 | 13 | 29 | 29 |
+| **`0.75`** | $90.4\%$ | $76.9\%$ | $9.6\%$ | $35.2\%$ | 103 | 9 | 29 | 33 |
+| **`0.80`** | $92.4\%$ | $72.4\%$ | $7.6\%$ | $40.3\%$ | 97 | 6 | 35 | 36 |
+| **`0.90`** | $94.5\%$ | $38.8\%$ | $5.5\%$ | $68.8\%$ | 52 | 3 | 82 | 39 |
+| **`0.95`** | $97.6\%$ | $30.6\%$ | $2.4\%$ | $76.1\%$ | 41 | 1 | 93 | 41 |
+
+For complete ablation methodologies, component breakdown analyses, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
 
 ---
 
