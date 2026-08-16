@@ -56,9 +56,15 @@ namespace LlmHealing
             TimeSpan totalTimeout,
             int maxRetries,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            TimeSpan? maxRetryAfter = null)
         {
             delayAsync ??= Task.Delay;
+            // #110: the 10s default encodes an interactive tradeoff - a UI test must not stall inside
+            // a locator resolution, so a long Retry-After is read as an exhausted quota. A batch
+            // benchmark has the opposite requirement: Groq answers with 11-13s under load, and
+            // refusing to wait there costs the entire measurement to save twelve seconds.
+            var retryAfterCeiling = maxRetryAfter ?? MaxRetryAfter;
             var totalAttemptsAllowed = maxRetries + 1;
             var attemptsMade = 0;
 
@@ -122,14 +128,14 @@ namespace LlmHealing
 
                     // Transient status code: check Retry-After header
                     var retryAfter = ParseRetryAfter(response);
-                    if (retryAfter.HasValue && retryAfter.Value > MaxRetryAfter)
+                    if (retryAfter.HasValue && retryAfter.Value > retryAfterCeiling)
                     {
                         return new LlmHttpResponse
                         {
                             IsSuccess = false,
                             StatusCode = response.StatusCode,
                             Body = responseBody,
-                            ErrorMessage = $"HTTP {(int)response.StatusCode}: Retry-After of {retryAfter.Value.TotalSeconds:F0}s exceeds maximum delay threshold ({MaxRetryAfter.TotalSeconds:F0}s).",
+                            ErrorMessage = $"HTTP {(int)response.StatusCode}: Retry-After of {retryAfter.Value.TotalSeconds:F0}s exceeds maximum delay threshold ({retryAfterCeiling.TotalSeconds:F0}s).",
                             AttemptsMade = attemptsMade,
                         };
                     }

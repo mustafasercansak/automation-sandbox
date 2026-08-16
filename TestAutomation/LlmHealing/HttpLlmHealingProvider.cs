@@ -25,6 +25,13 @@ namespace LlmHealing
 
         public string Name => _name;
         public abstract bool IsAvailable { get; }
+        // #110: raises the Retry-After fail-fast ceiling for this provider. Null keeps
+        // LlmHttpTransport.MaxRetryAfter, which is what every interactive caller wants. A batch
+        // benchmark sets it because waiting out a 12s rate limit is cheaper than losing the run.
+        // Settable rather than a constructor argument so the seven provider subclasses keep their
+        // signatures - the override is a property of how a provider is being used, not of what it is.
+        public TimeSpan? MaxRetryAfterOverride { get; set; }
+
         public TimeSpan Timeout => _timeout;
         public TimeSpan TotalTimeout => _totalTimeout;
         public int MaxRetries => _maxRetries;
@@ -105,7 +112,8 @@ namespace LlmHealing
                 _totalTimeout,
                 _maxRetries,
                 _delayAsync,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                MaxRetryAfterOverride).ConfigureAwait(false);
 
             if (!httpResponse.IsSuccess)
             {

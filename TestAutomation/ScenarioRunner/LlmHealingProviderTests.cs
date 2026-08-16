@@ -629,6 +629,83 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task RetryAfterJustAboveTheDefaultCeiling_StillFailsFast()
+        {
+            // #110. Groq answers with 11-13s under load - only a second or two over the 10s ceiling,
+            // but the rule is a threshold, so the request is abandoned rather than waited out. This
+            // pins the default behaviour so raising the ceiling elsewhere cannot silently relax it.
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(_ =>
+            {
+                callCount++;
+                var response = new HttpResponseMessage((HttpStatusCode)429)
+                {
+                    Content = new StringContent("rate limited")
+                };
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(12));
+                return response;
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Equal(1, callCount);
+            Assert.Contains("exceeds maximum delay threshold", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task RetryAfterAboveTheDefaultCeiling_IsHonouredWhenTheCallerRaisesIt()
+        {
+            // A batch benchmark would rather wait twelve seconds than lose the scenario. The override
+            // makes that the caller's decision instead of a constant shared with interactive healing.
+            var callCount = 0;
+            var delays = new List<TimeSpan>();
+            var handler = new FakeHttpMessageHandler(_ =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    var limited = new HttpResponseMessage((HttpStatusCode)429)
+                    {
+                        Content = new StringContent("rate limited")
+                    };
+                    limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(12));
+                    return limited;
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":\\\"c1\\\",\\\"confidence\\\":0.9,\\\"reasoning\\\":\\\"ok\\\"}\"}]}")
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                maxRetries: 2,
+                delayAsync: (d, _) => { delays.Add(d); return Task.CompletedTask; })
+            {
+                MaxRetryAfterOverride = TimeSpan.FromSeconds(20),
+            };
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.Equal(2, callCount);
+
+            // The wait honours the server's own number rather than the exponential backoff.
+            Assert.Single(delays);
+            Assert.Equal(TimeSpan.FromSeconds(12), delays[0]);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_TotalTimeoutCeiling_TerminatesOperation()
         {
             var handler = new FakeHttpMessageHandler(async (_, ct) =>
