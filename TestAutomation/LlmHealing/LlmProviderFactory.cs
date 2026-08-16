@@ -151,7 +151,21 @@ namespace LlmHealing
                     name: "Mistral"));
             }
 
-            // 10. Ollama Cloud - a hosted OpenAI-compatible endpoint, entirely separate from the
+            // 10. NVIDIA NIM - OpenAI-compatible, so no provider class of its own. Both values are
+            // required for the same reason as Cloudflare and Mistral.
+            var nvidiaKey = Env("NVIDIA_API_KEY");
+            var nvidiaModel = Env("NVIDIA_MODEL");
+            if (nvidiaKey != null && nvidiaModel != null)
+            {
+                providers.Add(new OpenAiHealingProvider(
+                    httpClient: httpClient,
+                    apiKey: nvidiaKey,
+                    model: nvidiaModel,
+                    endpoint: "https://integrate.api.nvidia.com/v1",
+                    name: "Nvidia"));
+            }
+
+            // 11. Ollama Cloud - a hosted OpenAI-compatible endpoint, entirely separate from the
             // local daemon below. The variables are deliberately not shared: OLLAMA_MODEL pointing at
             // a cloud model would build an OllamaHealingProvider aimed at localhost:11434, which does
             // not exist on a CI runner. That provider would then fail every request while still
@@ -169,7 +183,7 @@ namespace LlmHealing
                     name: "OllamaCloud"));
             }
 
-            // 11. Ollama (local daemon)
+            // 12. Ollama (local daemon)
             var ollamaEnabled = string.Equals(Env("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase)
                 || Env("OLLAMA_HOST") != null
                 || Env("OLLAMA_MODEL") != null;
@@ -182,7 +196,7 @@ namespace LlmHealing
                     model: Env("OLLAMA_MODEL")));
             }
 
-            // 10. Custom providers via LLM_CUSTOM_PROVIDERS JSON array
+            // 13. Custom providers via LLM_CUSTOM_PROVIDERS JSON array
             var customJson = Env("LLM_CUSTOM_PROVIDERS");
             if (customJson != null)
             {
