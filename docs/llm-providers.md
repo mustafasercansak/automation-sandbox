@@ -40,6 +40,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
   - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Cloudflare"`)
   - `MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Mistral"`)
+  - `NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Nvidia"`)
   - `OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"OllamaCloud"`)
   - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider` (local daemon on `localhost:11434`)
 
@@ -168,7 +169,7 @@ Choose a model family different from the other voters. Two endpoints serving the
 
 Cloudflare için `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ve `CLOUDFLARE_MODEL` değerlerinin üçü de zorunludur. Tam yapılandırma `"Cloudflare"` adlı bir `OpenAiHealingProvider` oluşturur; herhangi biri eksikse bozuk bir uç nokta veya tahmini model üretmek yerine sağlayıcı atlanır.
 
-Aynı kural Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; ikisi de OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
+Aynı kural Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`), NVIDIA NIM (`NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `"Nvidia"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; ikisi de OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
 
 > [!WARNING]
 > `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.

@@ -163,6 +163,7 @@ namespace ScenarioRunner
         [Theory]
         [InlineData("MISTRAL_API_KEY", "MISTRAL_MODEL", "Mistral", "https://api.mistral.ai/v1/chat/completions")]
         [InlineData("OLLAMA_CLOUD_API_KEY", "OLLAMA_CLOUD_MODEL", "OllamaCloud", "https://ollama.com/v1/chat/completions")]
+        [InlineData("NVIDIA_API_KEY", "NVIDIA_MODEL", "Nvidia", "https://integrate.api.nvidia.com/v1/chat/completions")]
         public async Task LlmProviderFactory_BuildsOpenAiCompatibleProvider_ForMistralAndOllamaCloud(
             string keyVariable,
             string modelVariable,
@@ -213,6 +214,7 @@ namespace ScenarioRunner
         [Theory]
         [InlineData("MISTRAL_API_KEY", "MISTRAL_MODEL", "Mistral")]
         [InlineData("OLLAMA_CLOUD_API_KEY", "OLLAMA_CLOUD_MODEL", "OllamaCloud")]
+        [InlineData("NVIDIA_API_KEY", "NVIDIA_MODEL", "Nvidia")]
         public void LlmProviderFactory_SkipsProvider_WhenEitherKeyOrModelIsMissing(
             string keyVariable,
             string modelVariable,
