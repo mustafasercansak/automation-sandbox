@@ -749,7 +749,7 @@ namespace ScenarioRunner
             });
 
             var claude = new ClaudeHealingProvider(
-                httpClient: new HttpClient(handler),
+                httpClient: new System.Net.Http.HttpClient(handler),
                 apiKey: "sk-test-key",
                 timeout: TimeSpan.FromSeconds(15),
                 maxRetries: 2);
@@ -784,7 +784,7 @@ namespace ScenarioRunner
                     "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":null,\\\"confidence\\\":0.0,\\\"reasoning\\\":\\\"none\\\"}\"}]}"),
             });
 
-            var claude = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+            var claude = new ClaudeHealingProvider(httpClient: new System.Net.Http.HttpClient(handler), apiKey: "sk-test-key");
 
             await LocatorAblationHarness.RunAsync(
                 subset,
