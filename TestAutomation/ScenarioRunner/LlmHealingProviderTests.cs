@@ -729,6 +729,83 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task TotalTimeoutOverride_Unset_LeavesTheInteractiveCeilingUnchanged()
+        {
+            // #127. Without an override, a call that would blow the constructor's total timeout
+            // must still be cancelled exactly as before - the new property must not weaken the
+            // default just by existing.
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(1000, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50),
+                totalTimeout: TimeSpan.FromMilliseconds(80),
+                maxRetries: 3,
+                delayAsync: (_, _) => Task.CompletedTask);
+
+            Assert.Null(provider.TotalTimeoutOverride);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("timed out after", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task TotalTimeoutOverride_Set_LetsAnHonouredRetryAfterWaitComplete()
+        {
+            // #127. Raising MaxRetryAfterOverride alone (#110) told the transport it was allowed
+            // to wait out a Retry-After - but the total timeout wrapping the whole operation was
+            // still the tight interactive default, so the wait itself got cancelled before it
+            // finished. The cancellation reads identically to a dead endpoint in the report, which
+            // is what made the widespread "Request timed out" failures in run 32153874838
+            // indistinguishable from genuine outages until this was traced.
+            var callCount = 0;
+            var handler = new FakeHttpMessageHandler(_ =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    // .NET Framework's HttpResponseMessage.Content is null until assigned, unlike
+                    // .NET 8's non-null default - LlmHttpTransport reads Content unconditionally, so
+                    // leaving this unset throws NullReferenceException only under net48.
+                    var limited = new HttpResponseMessage((HttpStatusCode)429)
+                    {
+                        Content = new StringContent("rate limited"),
+                    };
+                    limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromMilliseconds(150));
+                    return limited;
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":\\\"c1\\\",\\\"confidence\\\":0.9,\\\"reasoning\\\":\\\"ok\\\"}\"}]}")
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50),
+                totalTimeout: TimeSpan.FromMilliseconds(80), // too tight for a 150ms honoured wait
+                maxRetries: 2)
+            {
+                TotalTimeoutOverride = TimeSpan.FromMilliseconds(500),
+            };
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.Equal(2, callCount);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_CallerCancellation_TakesPrecedence()
         {
             var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));
