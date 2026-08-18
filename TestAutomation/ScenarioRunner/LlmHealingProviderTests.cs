@@ -771,7 +771,13 @@ namespace ScenarioRunner
                 callCount++;
                 if (callCount == 1)
                 {
-                    var limited = new HttpResponseMessage((HttpStatusCode)429);
+                    // .NET Framework's HttpResponseMessage.Content is null until assigned, unlike
+                    // .NET 8's non-null default - LlmHttpTransport reads Content unconditionally, so
+                    // leaving this unset throws NullReferenceException only under net48.
+                    var limited = new HttpResponseMessage((HttpStatusCode)429)
+                    {
+                        Content = new StringContent("rate limited"),
+                    };
                     limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromMilliseconds(150));
                     return limited;
                 }
