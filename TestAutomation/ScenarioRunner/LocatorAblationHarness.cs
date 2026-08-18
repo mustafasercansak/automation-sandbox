@@ -265,11 +265,25 @@ namespace ScenarioRunner
 
             // #110: Groq answers with Retry-After values of 11-13s under load, above the transport's
             // 10s interactive ceiling, so every rate-limited request failed fast instead of waiting.
+            //
+            // #127: raising that ceiling alone did nothing, because the total timeout that wraps
+            // every attempt was still the interactive 35s default. A wait this override now tells
+            // the transport to honour could itself exceed the total timeout, cancelling the call
+            // before the wait completed - indistinguishable in the report from a genuinely dead
+            // endpoint. TotalTimeoutOverride must widen in step, sized from each provider's own
+            // per-attempt timeout and retry count so a fully rate-limited run of retries still fits:
+            // (attempts * per-attempt timeout) + (retries * honoured wait) + margin.
             if (maxRetryAfter.HasValue && providersList != null)
             {
                 foreach (var http in providersList.OfType<HttpLlmHealingProvider>())
                 {
                     http.MaxRetryAfterOverride = maxRetryAfter;
+
+                    var attempts = http.MaxRetries + 1;
+                    var worstCase = TimeSpan.FromTicks(http.Timeout.Ticks * attempts)
+                        + TimeSpan.FromTicks(maxRetryAfter.Value.Ticks * http.MaxRetries)
+                        + TimeSpan.FromSeconds(10);
+                    http.TotalTimeoutOverride = worstCase;
                 }
             }
 

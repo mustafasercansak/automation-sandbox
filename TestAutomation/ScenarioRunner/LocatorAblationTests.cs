@@ -728,6 +728,75 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task AblationRun_RaisingMaxRetryAfter_WidensTotalTimeoutToFitTheWait()
+        {
+            // #127. MaxRetryAfterOverride alone tells the transport a wait is allowed; it does
+            // nothing if the total timeout wrapping the whole call is still short enough to cancel
+            // that wait before it finishes. The harness must widen both together, sized from the
+            // provider's own per-attempt timeout and retry count so a fully rate-limited call
+            // still fits: (attempts * timeout) + (retries * honoured wait) + margin.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var handler = new FakeHttpMessageHandler(_ => new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(
+                    "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":null,\\\"confidence\\\":0.0,\\\"reasoning\\\":\\\"none\\\"}\"}]}"),
+            });
+
+            var claude = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromSeconds(15),
+                maxRetries: 2);
+
+            await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[] { claude },
+                new SimilarityWeights { MinimumConfidence = 0.99 },
+                maxRetryAfter: TimeSpan.FromSeconds(30));
+
+            Assert.Equal(TimeSpan.FromSeconds(30), claude.MaxRetryAfterOverride);
+
+            // 3 attempts (2 retries) * 15s + 2 retries * 30s honoured wait + 10s margin.
+            var expected = TimeSpan.FromSeconds(15 * 3 + 30 * 2 + 10);
+            Assert.Equal(expected, claude.TotalTimeoutOverride);
+        }
+
+        [Fact]
+        public async Task AblationRun_WithoutMaxRetryAfter_LeavesTimeoutsAtInteractiveDefaults()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var subset = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios.Where(x => x.MutationKind == LocatorMutationKind.RemovedElement).Take(1).ToList(),
+            };
+
+            var handler = new FakeHttpMessageHandler(_ => new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(
+                    "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":null,\\\"confidence\\\":0.0,\\\"reasoning\\\":\\\"none\\\"}\"}]}"),
+            });
+
+            var claude = new ClaudeHealingProvider(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+
+            await LocatorAblationHarness.RunAsync(
+                subset,
+                root,
+                new ILlmHealingProvider[] { claude },
+                new SimilarityWeights { MinimumConfidence = 0.99 });
+
+            Assert.Null(claude.MaxRetryAfterOverride);
+            Assert.Null(claude.TotalTimeoutOverride);
+        }
+
+        [Fact]
         public async Task LlmConsensus_OneProviderFailing_DoesNotDiscardWhatTheOthersAnswered()
         {
             // #109. The classifier used to return ProviderFailure the moment any provider failed, and
@@ -1075,6 +1144,20 @@ namespace ScenarioRunner
                     yield return descendant;
                 }
             }
+        }
+
+        private sealed class FakeHttpMessageHandler : System.Net.Http.HttpMessageHandler
+        {
+            private readonly Func<System.Net.Http.HttpRequestMessage, System.Net.Http.HttpResponseMessage> _responder;
+
+            public FakeHttpMessageHandler(Func<System.Net.Http.HttpRequestMessage, System.Net.Http.HttpResponseMessage> responder)
+            {
+                _responder = responder;
+            }
+
+            protected override Task<System.Net.Http.HttpResponseMessage> SendAsync(
+                System.Net.Http.HttpRequestMessage request, CancellationToken cancellationToken) =>
+                Task.FromResult(_responder(request));
         }
     }
 }

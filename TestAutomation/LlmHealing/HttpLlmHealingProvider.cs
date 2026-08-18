@@ -32,6 +32,15 @@ namespace LlmHealing
         // signatures - the override is a property of how a provider is being used, not of what it is.
         public TimeSpan? MaxRetryAfterOverride { get; set; }
 
+        // #127: MaxRetryAfterOverride alone was not enough. Widening how long a Retry-After is
+        // honoured does nothing if the total operation still gets cancelled before the wait
+        // completes - attempt(<=15s) + honoured wait(<=30s) + retry(<=15s) can reach 60s against
+        // the interactive 35s default, and the resulting cancellation prints the same "Request
+        // timed out" message a genuinely dead endpoint would, making the two indistinguishable in
+        // a report. Null keeps the interactive default; a batch caller raising one ceiling must
+        // raise this one too.
+        public TimeSpan? TotalTimeoutOverride { get; set; }
+
         public TimeSpan Timeout => _timeout;
         public TimeSpan TotalTimeout => _totalTimeout;
         public int MaxRetries => _maxRetries;
@@ -109,7 +118,7 @@ namespace LlmHealing
                 _httpClient,
                 () => CreateRequest(prompt),
                 _timeout,
-                _totalTimeout,
+                TotalTimeoutOverride ?? _totalTimeout,
                 _maxRetries,
                 _delayAsync,
                 cancellationToken,
