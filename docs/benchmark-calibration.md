@@ -230,52 +230,47 @@ To ensure complete benchmark integrity without altering product prompt generatio
 
 #### 4. Empirical Result
 
-Run [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927), 2026-08-16. Providers: Cloudflare Workers AI (`@cf/mistralai/mistral-small-3.1-24b-instruct`), Groq (`llama-3.3-70b-versatile`), Gemini (`gemini-2.5-flash`).
+Four independent runs, 2026-08-16 to 2026-08-18, as the provider pool was widened from 3 configured providers to 7 and Groq's model was replaced twice (a removed model, then an unreliable one, then a working one — #126). Each run targets the same 25 `CompoundDrift` + 42 `RemovedElement` scenarios; a scenario counts as **usable** only when at least two providers returned an answer (#109), because one opinion can neither agree nor disagree with anything.
 
-**What the run actually rests on.** Of the 67 scenarios, 25 never reached the LLM path — the heuristic resolved them confidently on its own. Of the 42 that did, 23 received fewer than two usable answers and are excluded, because one opinion can neither agree nor disagree. **The result below is $n=19$.**
+| Run | Date | Usable ($n$) | `CompoundDrift` unanimous | `RemovedElement` unanimous |
+| :--- | :--- | ---: | :--- | :--- |
+| [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927) | 08-16 | 19 | 6 / 7 | 3 / 12 |
+| [31961463762](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31961463762) | 08-16 | 39 | 16 / 17 | 10 / 22 |
+| [31963741937](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31963741937) | 08-16 | 33 | 14 / 14 | 11 / 19 |
+| [32163961433](https://github.com/mustafasercansak/automation-sandbox/actions/runs/32163961433) | 08-18 | 42 | 16 / 17 | 10 / 25 |
+| **Total** | | **133** | **52 / 55** | **34 / 78** |
 
-| Provider | Answered | Failed | Error |
-| :--- | ---: | ---: | :--- |
-| Cloudflare | 42/42 | 0 | — |
-| Groq | 17/42 | 23 | `Retry-After of 1102s exceeds maximum delay threshold` |
-| Gemini | 0/42 | 42 | `429 You exceeded your current quota` |
+Each run's failures are recorded in its own workflow log: free-tier daily quota exhaustion (Gemini, Groq), a model requiring a paid plan (Ollama Cloud, dropped from the pool — #119), and, in the most recent run, individual requests exceeding a 15-second per-attempt ceiling on three providers (#129, unresolved as of this writing). None of that noise touches the measurement below — it only shrinks $n$.
 
-Both failures are free-tier daily quota exhaustion, which is the normal state of this project's provider set rather than an unlucky day.
-
-**The measurement.**
-
-| Mutation | Usable | Unanimous | Scattered / Partial | Ground truth of the unanimous verdicts |
-| :--- | ---: | ---: | ---: | :--- |
-| `CompoundDrift` (successor exists) | 7 | 6 | 1 | 6 of 6 correct |
-| `RemovedElement` (element deleted) | 12 | 3 | 9 | 3 of 3 wrong |
-
-Agreement tracks survival: providers agreed on **86%** of the scenarios where a true successor existed, and on **25%** of the scenarios where the element was gone. None of the four heuristic hypotheses in §5 separated the bands at all, so this is the first mechanism in the project that produces any separation.
+**The measurement, aggregated.** Agreement tracks survival: providers reached unanimous agreement on **94.5%** ($52/55$) of scenarios where a true successor existed, and on **43.6%** ($34/78$) of scenarios where the element was gone. None of the four heuristic hypotheses in §5 separated the bands at all, so this remains the only mechanism in the project that produces any separation.
 
 ```mermaid
 xychart-beta
-    title "Consensus agreement rate by scenario type (n=19)"
+    title "Consensus agreement rate by scenario type (4 runs, n=133)"
     x-axis ["CompoundDrift (successor exists)", "RemovedElement (deleted)"]
     y-axis "Unanimous agreement (%)" 0 --> 100
-    bar [86, 25]
+    bar [94.5, 43.6]
 ```
 
 > [!WARNING]
-> **Unanimity is not a safe gate.** Of the 9 unanimous verdicts, 3 named an element that does not exist. Treating agreement as evidence of survival would carry a **33% false-heal rate** on deletions — better than the heuristic, and nowhere near safe. Note the sample sizes underneath those percentages: the "33%" is three scenarios.
+> **Unanimity is not a safe gate, and it is worse than a single run suggested.** Every one of the 52 unanimous verdicts on a surviving element was correct. Every one of the 34 unanimous verdicts on a deleted element was a false heal — **zero exceptions in either direction, across four runs with four different provider sets.** An earlier version of this section reported "33%" from run 31959334927 alone; that figure pooled both mutation types into one denominator ($3$ wrong among $9$ total unanimous verdicts), which understated the removed-element rate by mixing it with the unrelated, reliably-correct compound-drift population. Read per type, the removed-element rate is $100\%$: agreement never once happened to be right about an absence.
 
 #### 5. The Mechanism Is Disagreement, Not Recognition
 
-The hypothesis predicted two safe outcomes on a deleted element: providers decline, or providers scatter. **The declining half never happened.** Cloudflare named a candidate in 42 of 42 prompts and never once answered "none of these"; `AllDeclined` did not occur in the entire run.
+The hypothesis predicted two safe outcomes on a deleted element: providers decline, or providers scatter. **Declining essentially never happens.** Across all 78 usable `RemovedElement` scenarios in the four runs, `AllDeclined` occurred exactly **once**. Every other provider that answered pointed at a specific — wrong — candidate.
 
-Every one of the 9 correct rejections therefore came from providers *disagreeing with each other*, not from any provider recognising that the element was gone. The models do not know the control was deleted. Each one confidently points at a different neighbour, and the engine rejects the heal because the votes do not match.
+Every correct rejection across the four runs therefore came from providers *disagreeing with each other*, not from any provider recognising that the element was gone. The models do not know the control was deleted; each one confidently names a different neighbour, and the engine rejects the heal only because the votes fail to match.
+
+**Widening the provider pool did not rescue this — it demonstrated the limit more clearly.** Run 31961463762 recorded 10 unanimous false heals; 7 of those 10 had **three** independently-sourced model families agreeing on the same non-existent element at once — Cloudflare (Qwen), Mistral, and OpenRouter (gpt-oss). Three separate vendors, three separate architectures, one wrong answer, unanimously. Going from 3 configured providers to 7 across these four runs did not reduce the removed-element unanimous-agreement rate (25% → 45% → 58% → 40%, no downward trend) or its accuracy (100% wrong throughout).
 
 This matters for how far the result generalises:
 
-- The protection is a **byproduct of independence**, so it degrades as providers become more alike. Two models of the same family, or two runs of one model, would agree more often — including on the same wrong neighbour.
-- It cannot be strengthened by asking for more confidence, because the failing cases are already confident. It can only be strengthened by making the voters more independent.
-- A provider that never declines contributes nothing to absence detection. Its vote is only useful as something for another provider to contradict.
+- The protection is a **byproduct of independence**, but the four-run aggregate shows independence alone does not bound the failure rate the way §5 originally predicted — a genuinely independent, capable reasoner finds a deleted control's surviving neighbour a convincing answer often enough that adding more independent reasoners is not guaranteed to break the tie.
+- It cannot be strengthened by asking for more confidence, because the failing cases are already confident. There is no evidence in this data that it can be strengthened by adding providers, either.
+- A provider that essentially never declines contributes nothing to absence detection on its own. Its vote is only useful as something for another provider to contradict — and per the paragraph above, that contradiction cannot be relied upon.
 
 > [!IMPORTANT]
-> **Formal finding.** Multi-provider consensus separates surviving elements from deleted ones where every heuristic signal in §5 failed (86% vs 25% agreement, $n=19$). It is not sufficient as an acceptance gate: a third of unanimous verdicts on this dataset were false heals on deleted controls. The separation comes from disagreement between independent providers rather than from any model detecting absence, so it is bounded by how independent the provider set actually is — not by model quality, and not by prompt design.
+> **Formal finding, revised across four runs ($n=133$, 2026-08-16 to 2026-08-18).** Multi-provider consensus separates surviving elements from deleted ones (94.5% vs 43.6% unanimous agreement) where every heuristic signal in §5 failed. It is not sufficient as an acceptance gate: **every** unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal, including cases where three independently-sourced model families agreed. The separation comes from disagreement between providers, not from any model detecting absence — and widening the provider pool from 3 configured providers to 7 did not reduce this failure rate. Do not assume that adding more providers will fix it; this data argues against that assumption.
 
 ---
 
@@ -488,51 +483,46 @@ Sezgisel sinyaller geometri ve hiyerarşi benzerliğiyle sınırlıyken, çoklu 
 
 #### 4. Ampirik Sonuç
 
-[31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927) numaralı koşu, 2026-08-16. Sağlayıcılar: Cloudflare Workers AI (`@cf/mistralai/mistral-small-3.1-24b-instruct`), Groq (`llama-3.3-70b-versatile`), Gemini (`gemini-2.5-flash`).
+2026-08-16 ile 2026-08-18 arasında dört bağımsız koşu; sağlayıcı havuzu 3 yapılandırılmış sağlayıcıdan 7'ye genişletildi ve Groq'un modeli iki kez değiştirildi (kaldırılmış bir model, sonra güvenilmez bir model, sonra çalışan bir model — #126). Her koşu aynı 25 `CompoundDrift` + 42 `RemovedElement` senaryosunu hedefliyor; bir senaryo yalnızca en az iki sağlayıcı cevap verdiğinde **kullanılabilir** sayılıyor (#109), çünkü tek görüş ne uzlaşabilir ne de çelişebilir.
 
-**Sonucun gerçekte dayandığı taban.** 67 senaryonun 25'i LLM yoluna hiç ulaşmadı; heuristik onları tek başına emin biçimde çözdü. Ulaşan 42 senaryonun 23'ünde ikiden az kullanılabilir cevap geldi ve ölçüm dışı bırakıldı, çünkü tek görüş ne uzlaşabilir ne de çelişebilir. **Aşağıdaki sonuç $n=19$'dur.**
+| Koşu | Tarih | Kullanılabilir ($n$) | `CompoundDrift` oybirliği | `RemovedElement` oybirliği |
+| :--- | :--- | ---: | :--- | :--- |
+| [31959334927](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31959334927) | 08-16 | 19 | 6 / 7 | 3 / 12 |
+| [31961463762](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31961463762) | 08-16 | 39 | 16 / 17 | 10 / 22 |
+| [31963741937](https://github.com/mustafasercansak/automation-sandbox/actions/runs/31963741937) | 08-16 | 33 | 14 / 14 | 11 / 19 |
+| [32163961433](https://github.com/mustafasercansak/automation-sandbox/actions/runs/32163961433) | 08-18 | 42 | 16 / 17 | 10 / 25 |
+| **Toplam** | | **133** | **52 / 55** | **34 / 78** |
 
-| Sağlayıcı | Cevapladı | Başarısız | Hata |
-| :--- | ---: | ---: | :--- |
-| Cloudflare | 42/42 | 0 | — |
-| Groq | 17/42 | 23 | `Retry-After of 1102s exceeds maximum delay threshold` |
-| Gemini | 0/42 | 42 | `429 You exceeded your current quota` |
+Her koşunun kendi hataları kendi iş akışı kaydında duruyor: ücretsiz katman günlük kota tükenmesi (Gemini, Groq), ücretli plan gerektiren bir model (Ollama Cloud, havuzdan düşürüldü — #119), ve en son koşuda üç sağlayıcıda 15 saniyelik tek-deneme tavanını aşan istekler (#129, bu yazı itibarıyla çözülmedi). Bu gürültünün hiçbiri aşağıdaki ölçümü etkilemiyor — yalnızca $n$'i küçültüyor.
 
-Her iki başarısızlık da ücretsiz katman günlük kotasının tükenmesidir; bu, projenin sağlayıcı kümesi için şanssız bir gün değil, olağan durumdur.
-
-**Ölçüm.**
-
-| Mutasyon | Kullanılabilir | Oybirliği | Dağılma / Kısmi | Oybirliği kararlarının gerçeği |
-| :--- | ---: | ---: | ---: | :--- |
-| `CompoundDrift` (halef mevcut) | 7 | 6 | 1 | 6'da 6 doğru |
-| `RemovedElement` (eleman silinmiş) | 12 | 3 | 9 | 3'te 3 yanlış |
-
-Uzlaşma, elemanın hayatta kalmasıyla birlikte hareket ediyor: gerçek bir halefin bulunduğu senaryoların **%86**'sında, elemanın silindiği senaryoların ise **%25**'inde sağlayıcılar aynı adayda buluştu. §5'teki dört sezgisel hipotezin hiçbiri bantları ayıramamıştı; dolayısıyla bu, projede herhangi bir ayrışma üreten ilk mekanizmadır.
+**Toplu ölçüm.** Uzlaşma, elemanın hayatta kalmasıyla birlikte hareket ediyor: gerçek bir halefin bulunduğu senaryoların **%94.5**'inde ($52/55$), elemanın silindiği senaryoların ise **%43.6**'sında ($34/78$) sağlayıcılar oybirliğine ulaştı. §5'teki dört sezgisel hipotezin hiçbiri bantları ayıramamıştı; dolayısıyla bu, projede herhangi bir ayrışma üreten tek mekanizma olmaya devam ediyor.
 
 ```mermaid
 xychart-beta
-    title "Senaryo tipine göre konsensüs uzlaşma oranı (n=19)"
+    title "Senaryo tipine göre konsensüs uzlaşma oranı (4 koşu, n=133)"
     x-axis ["CompoundDrift (halef mevcut)", "RemovedElement (silinmiş)"]
     y-axis "Oybirliği (%)" 0 --> 100
-    bar [86, 25]
+    bar [94.5, 43.6]
 ```
 
 > [!WARNING]
-> **Oybirliği güvenli bir kapı değildir.** 9 oybirliği kararının 3'ü var olmayan bir elemanı işaret etti. Uzlaşmayı "eleman duruyor" kanıtı saymak, silinmelerde **%33 yanlış iyileştirme oranı** demektir — heuristikten iyi, güvenli olmaktan uzak. Yüzdelerin altındaki örneklem büyüklüğüne dikkat: bu "%33" üç senaryodur.
+> **Oybirliği güvenli bir kapı değildir, ve tek koşunun gösterdiğinden daha kötüdür.** Hayatta kalan bir eleman üzerindeki 52 oybirliği kararının 52'si de doğruydu. Silinmiş bir eleman üzerindeki 34 oybirliği kararının 34'ü de yanlış iyileştirmeydi — **dört farklı sağlayıcı kümesiyle yapılan dört koşuda, iki yönde de sıfır istisna.** Bu bölümün önceki bir sürümü tek başına 31959334927 koşusundan "%33" bildirmişti; o sayı iki mutasyon tipini tek paydada topluyordu ($9$ toplam oybirliği kararının $3$'ü yanlış), ve bu, silinmiş-eleman oranını ilgisiz ve güvenilir biçimde doğru olan bileşik-kayma popülasyonuyla karıştırarak düşük gösteriyordu. Tipe göre okununca silinmiş-eleman oranı $\%100$'dür: uzlaşma, bir yokluk konusunda bir kez bile tesadüfen doğru çıkmadı.
 
 #### 5. Mekanizma Yokluğu Tanımak Değil, Anlaşmazlıktır
 
-Hipotez, silinmiş bir elemanda iki güvenli sonuç öngörüyordu: sağlayıcılar ya "yok" der ya da dağılır. **"Yok" diyen yarısı hiç gerçekleşmedi.** Cloudflare 42 istemin 42'sinde bir aday isimlendirdi ve bir kez bile "bunların hiçbiri" demedi; koşunun tamamında `AllDeclined` hiç oluşmadı.
+Hipotez, silinmiş bir elemanda iki güvenli sonuç öngörüyordu: sağlayıcılar ya "yok" der ya da dağılır. **"Yok" deme neredeyse hiç gerçekleşmiyor.** Dört koşudaki 78 kullanılabilir `RemovedElement` senaryosunun tamamında `AllDeclined` yalnızca **bir** kez oluştu. Cevap veren her diğer sağlayıcı belirli — ve yanlış — bir adayı işaret etti.
 
-Dolayısıyla 9 doğru reddin tamamı, sağlayıcıların *birbiriyle anlaşamamasından* doğdu; herhangi bir sağlayıcının elemanın gittiğini fark etmesinden değil. Modeller kontrolün silindiğini bilmiyor. Her biri güvenle farklı bir komşuyu işaret ediyor, motor da oylar tutmadığı için iyileştirmeyi reddediyor.
+Dört koşu boyunca her doğru red, sağlayıcıların *birbiriyle anlaşamamasından* doğdu; herhangi bir sağlayıcının elemanın gittiğini fark etmesinden değil. Modeller kontrolün silindiğini bilmiyor; her biri güvenle farklı bir komşuyu işaret ediyor, motor da oylar tutmadığı için iyileştirmeyi yalnızca bu yüzden reddediyor.
+
+**Sağlayıcı havuzunu genişletmek bu mekanizmayı kurtarmadı — sınırını daha net gösterdi.** 31961463762 koşusu 10 yanlış oybirliği kararı kaydetti; bunların 7'sinde **üç** bağımsız kaynaklı model ailesi aynı anda var olmayan aynı elemanda buluştu — Cloudflare (Qwen), Mistral ve OpenRouter (gpt-oss). Üç ayrı satıcı, üç ayrı mimari, tek yanlış cevap, oybirliğiyle. Bu dört koşu boyunca 3 yapılandırılmış sağlayıcıdan 7'ye çıkmak, silinmiş-eleman oybirliği oranını (%25 → %45 → %58 → %40, düşen bir eğilim yok) ya da doğruluğunu (baştan sona %100 yanlış) düşürmedi.
 
 Bu, sonucun ne kadar genellenebileceğini belirliyor:
 
-- Koruma, **bağımsızlığın yan ürünüdür**; sağlayıcılar birbirine benzedikçe zayıflar. Aynı ailenin iki modeli ya da tek modelin iki koşusu daha sık uzlaşır — aynı yanlış komşuda uzlaşmak dahil.
-- Daha yüksek güven eşiği istemekle güçlendirilemez, çünkü hata veren vakalar zaten güvenlidir. Yalnızca oy verenleri daha bağımsız kılarak güçlendirilebilir.
-- Hiç "yok" demeyen bir sağlayıcı yokluk tespitine katkı sunmaz. Oyu, ancak başka bir sağlayıcının çelişebileceği bir şey olarak değerlidir.
+- Koruma **bağımsızlığın yan ürünüdür**, ama dört koşunun toplamı bağımsızlığın tek başına §5'in ilk öngördüğü şekilde hata oranını sınırlamadığını gösteriyor — gerçekten bağımsız, yetkin bir akıl yürütücü, silinmiş bir kontrolün hayatta kalan komşusunu yeterince sık ikna edici buluyor; daha fazla bağımsız akıl yürütücü eklemek berabere durumu bozacağının garantisi değil.
+- Daha yüksek güven eşiği istemekle güçlendirilemez, çünkü hata veren vakalar zaten güvenlidir. Bu veride sağlayıcı eklemenin de güçlendirdiğine dair bir kanıt yok.
+- Neredeyse hiç "yok" demeyen bir sağlayıcı tek başına yokluk tespitine katkı sunmaz. Oyu, ancak başka bir sağlayıcının çelişebileceği bir şey olarak değerlidir — ve yukarıdaki paragrafa göre o çelişkiye de güvenilemez.
 
 > [!IMPORTANT]
-> **Resmi çıkarım.** Çoklu sağlayıcı konsensüsü, §5'teki her sezgisel sinyalin başarısız olduğu yerde hayatta kalan elemanları silinmiş olanlardan ayırır (%86'ya karşı %25 uzlaşma, $n=19$). Kabul kapısı olarak yeterli değildir: bu veri kümesinde oybirliği kararlarının üçte biri, silinmiş kontroller üzerinde yanlış iyileştirmedir. Ayrışma, herhangi bir modelin yokluğu tespit etmesinden değil bağımsız sağlayıcılar arasındaki anlaşmazlıktan doğar; bu nedenle sınırı model kalitesi ya da istem tasarımı değil, sağlayıcı kümesinin gerçekte ne kadar bağımsız olduğudur.
+> **Resmi çıkarım, dört koşu üzerinden gözden geçirildi ($n=133$, 2026-08-16 – 2026-08-18).** Çoklu sağlayıcı konsensüsü, §5'teki her sezgisel sinyalin başarısız olduğu yerde hayatta kalan elemanları silinmiş olanlardan ayırır (%94.5'e karşı %43.6 oybirliği uzlaşması). Kabul kapısı olarak yeterli değildir: dört koşunun tamamında silinmiş bir eleman üzerindeki **her** oybirliği kararı (34'te 34) yanlış iyileştirmeydi, üç bağımsız kaynaklı model ailesinin anlaştığı vakalar dahil. Ayrışma, herhangi bir modelin yokluğu tespit etmesinden değil sağlayıcılar arasındaki anlaşmazlıktan doğuyor — ve sağlayıcı havuzunu 3 yapılandırılmış sağlayıcıdan 7'ye genişletmek bu hata oranını düşürmedi. Daha fazla sağlayıcı eklemenin bunu düzelteceği varsayılmamalı; bu veri o varsayımın aleyhinedir.
 
 
