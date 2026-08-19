@@ -130,7 +130,7 @@ xychart-beta
 
 #### Trade-Off Mechanics:
 1. **Aggressive Auto-Healing ($\text{Threshold} = 0.50 - 0.70$):** Maximizes recall ($76.9\%$) by accepting compound and shifted elements, at the expense of a higher false heal rate on removed elements ($12.7\% - 15.6\%$).
-2. **Recommended Operating Point on This Dataset ($\text{Threshold} = 0.75 - 0.80$):** High precision ($90.4\% - 92.4\%$) and high recall ($72.4\% - 76.9\%$), cutting false heals on removed controls in half ($17 \rightarrow 6$). This is **not** the shipped default — `SimilarityWeights.MinimumConfidence` ships at `0.50` — and the range is derived from a single application, so treat it as provisional until a second application is measured.
+2. **Recommended Operating Point, Not a Guarantee ($\text{Threshold} = 0.75 - 0.80$):** On HandBrake, this range gives high precision ($90.4\% - 92.4\%$) and high recall ($72.4\% - 76.9\%$), cutting false heals on removed controls in half ($17 \rightarrow 6$). This is **not** the shipped default — `SimilarityWeights.MinimumConfidence` ships at `0.50`. §8 measured a second application (ShareX) at the same threshold range: the direction holds (raising the threshold still reduces false heals on both apps) but the magnitude does not transfer — the same $0.75-0.80$ range yields $20\%-23\%$ false heals on ShareX against HandBrake's $7.6\%-9.6\%$. Treat this as a starting point to calibrate per application, not a portable setting.
 3. **Strict Zero-Defect Policy ($\text{Threshold} = 0.90 - 0.95$):** Minimizes false heals ($2.4\% - 5.5\%$) and maximizes precision ($97.6\%$), but routes heavily drifted controls to manual review ($68.8\% - 76.1\%$).
 
 > [!NOTE]
@@ -456,7 +456,7 @@ xychart-beta
 
 #### Denge Mekaniği:
 1. **Agresif Otomatik İyileştirme (Eşik $= 0.50 - 0.70$):** Bileşik ve kaymış elemanları kabul ederek kapsamı en yükseğe çıkarır ($\%76.9$); bedeli silinmiş elemanlarda daha yüksek yanlış iyileştirme oranıdır ($\%12.7 - \%15.6$).
-2. **Bu Veri Kümesinde Önerilen Çalışma Noktası (Eşik $= 0.75 - 0.80$):** Yüksek kesinlik ($\%90.4 - \%92.4$) ve yüksek kapsam ($\%72.4 - \%76.9$); silinmiş kontrollerdeki yanlış iyileştirmeleri yarıya indirir ($17 \rightarrow 6$). Bu **ürünün varsayılanı değildir** — `SimilarityWeights.MinimumConfidence` `0.50` olarak gelir — ve tek bir uygulamadan türetildiği için ikinci bir uygulama ölçülene kadar geçici sayılmalıdır.
+2. **Önerilen Çalışma Noktası, Garanti Değil (Eşik $= 0.75 - 0.80$):** HandBrake'te bu aralık yüksek kesinlik ($\%90.4 - \%92.4$) ve yüksek kapsam ($\%72.4 - \%76.9$) veriyor; silinmiş kontrollerdeki yanlış iyileştirmeleri yarıya indiriyor ($17 \rightarrow 6$). Bu **ürünün varsayılanı değildir** — `SimilarityWeights.MinimumConfidence` `0.50` olarak gelir. §8 ikinci bir uygulamayı (ShareX) aynı eşik aralığında ölçtü: yön tutuyor (eşiği yükseltmek her iki uygulamada da yanlış iyileştirmeyi azaltıyor) ama büyüklük taşınmıyor — aynı $0.75-0.80$ aralığı ShareX'te $\%20-\%23$ yanlış iyileştirme veriyor, HandBrake'in $\%7.6-\%9.6$'sına karşı. Bunu taşınabilir bir ayar değil, uygulama başına kalibre edilmesi gereken bir başlangıç noktası say.
 3. **Katı Sıfır-Hata Politikası (Eşik $= 0.90 - 0.95$):** Yanlış iyileştirmeyi en aza indirir ($\%2.4 - \%5.5$) ve kesinliği en üste çıkarır ($\%97.6$), ancak ağır kaymış kontrolleri manuel incelemeye yönlendirir ($\%68.8 - \%76.1$).
 
 > [!NOTE]

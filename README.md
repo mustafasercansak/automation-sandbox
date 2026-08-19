@@ -604,33 +604,28 @@ The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-mem
 
 ## 🔬 Real-World Multi-Signal Benchmark & Calibration
 
-While synthetic benchmarks measure tree scaling, self-healing quality must be measured on real, organically evolved applications with known ground truth.
+While synthetic benchmarks measure tree scaling, self-healing quality must be measured on real, organically evolved applications with known ground truth. Every figure below names the application, the sample size, and the threshold it was measured at — a number without that context is not trustworthy, and this project has retracted headline claims before for exactly that reason.
 
-We benchmark against a real WPF application tree (**HandBrake 1.8.2**, 149 nodes, 42 unique authored locators) using controlled **multi-signal locator ablation** across 176 test scenarios spanning 5 distinct perturbation tiers:
-1. **`RenamedAutomationId` (42 scenarios):** Pure identifier rename with an opaque ID (`ablation-XXXXXXXX`).
-2. **`NameDrift` (25 scenarios):** Identifier rename + label text perturbation (Levenshtein distance).
-3. **`PositionShift` (42 scenarios):** Identifier rename + layout coordinate shift ($+140\text{px}$ X, $+80\text{px}$ Y).
-4. **`CompoundDrift` (25 scenarios):** Identifier rename + text drift + layout shift simultaneously.
-5. **`RemovedElement` (42 scenarios):** Target element and subtree completely deleted from the UI tree.
+We benchmark against two real application trees using controlled **multi-signal locator ablation**: a WPF app (**HandBrake 1.8.2**, 42 authored locators, 176 scenarios) and a WinForms app (**ShareX v21.0.0**, 29 authored locators, 131 scenarios), across 5 perturbation tiers — pure rename, text drift, position shift, compound drift, and element removal (see [full methodology](docs/benchmark-calibration.md#2-multi-signal-locator-ablation-methodology)).
 
-### Key Finding: Empirical Score Distribution Overlap
-- **False heals on removed elements score between $0.665$ and $0.955$** (mean $0.755$) because surviving neighbour elements share parent container, sibling proximity, or screen region with the deleted control.
-- **True compound-drifted elements score between $0.749$ and $0.874$** (mean $0.790$).
-- **The distributions naturally overlap.** No static heuristic score threshold can perfectly separate all relocated controls from all deleted controls whose neighbours look structurally similar.
+### Key Finding: The Heuristic's Accuracy Is a Range, Not a Number
+A single application cannot tell "this is how the engine behaves" from "this is how one app's structure happens to behave." Measured on two:
 
-### The "False Heal $\downarrow$ vs. Manual Review $\uparrow$" Trade-Off
-Varying `MinimumConfidence` illustrates the direct trade-off between auto-healing recall and human review intervention:
+| Metric (default weights, $\text{MinimumConfidence}=0.50$) | HandBrake | ShareX¹ |
+| :--- | ---: | ---: |
+| Precision | $84.4\%$ | $73.2\%$ |
+| Auto-heal recall | $76.9\%$ | $71.4\%$ |
+| **False heal rate on removed elements** | $40.5\%$ | $57.1\%$ |
+| Manual review rate | $30.7\%$ | $26.8\%$ |
 
-| `MinimumConfidence` | Precision | Auto-Heal Recall | False Heal Rate | Manual Review Rate | Correct Heals | False Heals (Removed) | Missed (Review) | Correct Declines |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`0.50`** (Default) | $84.4\%$ | $76.9\%$ | $15.6\%$ | $30.7\%$ | 103 | 17 | 29 | 25 |
-| **`0.70`** | $87.3\%$ | $76.9\%$ | $12.7\%$ | $33.0\%$ | 103 | 13 | 29 | 29 |
-| **`0.75`** | $90.4\%$ | $76.9\%$ | $9.6\%$ | $35.2\%$ | 103 | 9 | 29 | 33 |
-| **`0.80`** | $92.4\%$ | $72.4\%$ | $7.6\%$ | $40.3\%$ | 97 | 6 | 35 | 36 |
-| **`0.90`** | $94.5\%$ | $38.8\%$ | $5.5\%$ | $68.8\%$ | 52 | 3 | 82 | 39 |
-| **`0.95`** | $97.6\%$ | $30.6\%$ | $2.4\%$ | $76.1\%$ | 41 | 1 | 93 | 41 |
+¹ ShareX figures exclude 15 `DataItem` grid-row locators from a settings table that are structurally near-identical to their siblings and correctly decline regardless of threshold — see [§8](docs/benchmark-calibration.md#8-a-second-application-sharex-v2100-99-134) for why, and for the unfiltered numbers.
 
-For complete ablation methodologies, component breakdown analyses, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
+**The false-heal rate did not improve on a second application — it got worse.** No static score threshold separates every relocated control from every deleted one whose neighbour looks structurally similar (HandBrake: false heals on removed elements score $0.665$–$0.955$, true compound drifts score $0.749$–$0.874$ — the distributions overlap). Raising `MinimumConfidence` trades this down at the cost of recall; see the [full threshold sweep](docs/benchmark-calibration.md#4-the-false-heal-downarrow-vs-manual-review-uparrow-trade-off) for both applications, since the same threshold buys a different result on each ($7.6\%$–$9.6\%$ false heals on HandBrake vs. $20\%$–$23\%$ on ShareX at $0.75$–$0.80$).
+
+### Does Multi-Provider Consensus Fix This? Measured, Not Assumed
+Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, $n=133$ usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): consensus separates surviving elements from deleted ones better than any heuristic signal tested ($94.5\%$ vs. $43.6\%$ unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The mechanism is provider *disagreement*, not any model recognising the element is gone, and widening the provider pool from 3 to 7 did not reduce the failure rate. Consensus is not currently an acceptance gate against this failure mode — see the doc for why and what would have to be true to change that.
+
+For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
 
 ---
 
@@ -669,7 +664,7 @@ Work is now tracked through GitHub milestones rather than the original M1–M6 s
 
 - **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
 - **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
-- **Phase 3 — Post-Beta Measurement** *(in progress)*: the thresholds shipped so far are documented estimates, not values derived from data. This phase measures them — a real-world false-positive benchmark on an organic application, plus a nightly multi-provider run whose Gemini + Groq ground-truth scenario is now a failing gate rather than collection-only telemetry.
+- **Phase 3 — Post-Beta Measurement** *(in progress)*: the heuristic and LLM-consensus paths are now measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs, replacing the documented estimates the shipped thresholds started from — see the [benchmark section](#-real-world-multi-signal-benchmark--calibration) above. Open: whether joint, whole-tree locator reconciliation improves on the current per-locator scoring (tracked in [#132](https://github.com/mustafasercansak/automation-sandbox/issues/132), motivated by a 59%-favourable offline probe), and a nightly multi-provider run whose Gemini + Groq ground-truth scenario is now a failing gate rather than collection-only telemetry.
 
 ---
 
