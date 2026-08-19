@@ -302,6 +302,41 @@ The remaining 7 of 17 claimed untracked or incidental elements (an empty-named c
 
 ---
 
+### 8. A Second Application: ShareX v21.0.0 (#99, #134)
+
+Every number in §3–§7 comes from one WPF tree. #99 named that as a precondition for publishing anything: a single application cannot tell "this is how the heuristic behaves" from "this is how HandBrake's specific structure happens to behave." This section runs the identical pipeline — same generator, same harness, same default weights — against a real WinForms application, ShareX v21.0.0, captured via [survey run 32280934910](https://github.com/mustafasercansak/automation-sandbox/actions/runs/32280934910). 29 unique authored locators, 131 scenarios.
+
+```mermaid
+xychart-beta
+    title "Auto-heal recall at default weights: HandBrake vs ShareX"
+    x-axis ["HandBrake (raw)", "ShareX (raw)", "ShareX (grid rows excluded)"]
+    y-axis "Auto-heal recall" 0 --> 100
+    bar [76.9, 29.4, 71.4]
+```
+
+**The raw number looks alarming, and is partly an artefact.** At default weights, ShareX's auto-heal recall is 29.4% against HandBrake's 76.9% — a huge gap. 15 of ShareX's 29 authored locators (52%) are `DataItem` rows from a Hotkeys settings grid (`Hotkey Row 1`, `Description Row 2`, ...). HandBrake's fixture has zero elements of this kind. Every one of those rows is structurally near-identical to its siblings — same `ControlType`, same missing `ClassName`, position differing only by row index — so the engine declines them as `Ambiguous` even when the top candidate scores a perfect `1.000`. That is correct behaviour, not a defect: #78 already named `DataGrid`/`DataItem` as an inherently volatile locator class. Left in, they measure this one grid's density rather than the heuristic's general quality.
+
+**The fair comparison excludes them.** With grid rows removed (14 authored locators, 56 scenarios), recall converges toward HandBrake's: 71.4% vs 76.9%. But the number this whole benchmark exists to measure does not:
+
+| Application | False heal rate on removed elements | $n$ |
+| :--- | ---: | ---: |
+| HandBrake | 40.5% | 17/42 |
+| ShareX (grid rows excluded) | **57.1%** | 8/14 |
+
+A second real application does not make the false-heal problem look like a HandBrake quirk. It makes it look worse.
+
+| Metric (default weights, grid rows excluded) | HandBrake | ShareX |
+| :--- | ---: | ---: |
+| Precision | 84.4% | 73.2% |
+| Auto-heal recall | 76.9% | 71.4% |
+| False heal rate | 15.6% | 26.8% |
+| Manual review rate | 30.7% | 26.8% |
+
+> [!IMPORTANT]
+> **Formal finding.** A second application does not change the shape of the problem this project exists to solve, and does not improve it. Recall is roughly comparable once a confounding UI pattern (dense structurally-identical grid rows, absent from the first application) is controlled for. Precision and false-heal rate are both meaningfully worse on ShareX. Neither HandBrake's numbers nor ShareX's should be read as "the" accuracy of this engine — they are two data points bounding a range, and the range is wide: 40.5%–57.1% false heals on deleted elements at the shipped default, before any LLM consensus is applied. Regression guards: `ShareXAblationTests` (\`ShareXFixture_DefaultWeights_MatchesTheCommittedBaseline\`, \`ShareXFixture_MostMissedPerfectScoreRenames_AreDataGridRows\`, \`ShareXFixture_ExcludingDataGridRows_FalseHealOnRemovedRateIsWorseThanHandBrakes\`).
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
@@ -580,5 +615,40 @@ Kalan 17'de 7'si, başka hiçbir locator'ın da istemediği izlenmeyen ya da tes
 
 > [!NOTE]
 > **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumlu, ama mekanizmanın işlediğine dair bir kanıt değil. Mevcut tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemez: senaryo başına yalnızca bir locator kırıldığından, bir çözücünün kullanabileceği gerçek bir çakışma yok, yalnızca ikinci bir locator aynı anda kırılsaydı çakışmanın *var olacağı* yönünde geriye dönük bir gözlem var. O veri kümesini kurmak, ve eşleştirme tabanlı bir çözücünün %59'u gerçekten doğru retlere çevirip çevirmediğini ölçmek, ayrı ve henüz üstlenilmemiş bir iştir — burada başlatılmadı, ana issue'nun kendi koşulu gereği: prob onu desteklemeden `SelfHealingResolver` API'sinde hiçbir değişiklik önerilmeyecek.
+
+---
+
+### 8. İkinci Bir Uygulama: ShareX v21.0.0 (#99, #134)
+
+§3–§7'deki her sayı tek bir WPF ağacından geliyor. #99 bunu bir yayınlama ön koşulu olarak adlandırmıştı: tek bir uygulama, "heuristik böyle davranıyor" ile "HandBrake'in kendine özgü yapısı böyle davranıyor"u birbirinden ayıramaz. Bu bölüm aynı işlem hattını — aynı jeneratör, aynı harness, aynı varsayılan ağırlıklar — gerçek bir WinForms uygulamasına, ShareX v21.0.0'a karşı koşturuyor; [survey koşusu 32280934910](https://github.com/mustafasercansak/automation-sandbox/actions/runs/32280934910) ile yakalandı. 29 özgün locator, 131 senaryo.
+
+```mermaid
+xychart-beta
+    title "Varsayılan ağırlıklarda otomatik iyileştirme kapsamı: HandBrake vs ShareX"
+    x-axis ["HandBrake (ham)", "ShareX (ham)", "ShareX (grid satırları hariç)"]
+    y-axis "Otomatik iyileştirme kapsamı" 0 --> 100
+    bar [76.9, 29.4, 71.4]
+```
+
+**Ham sayı endişe verici görünüyor, ve kısmen bir yapı yapaylığı.** Varsayılan ağırlıklarda ShareX'in otomatik iyileştirme kapsamı %29.4, HandBrake'in %76.9'una karşı — büyük bir fark. ShareX'in 29 özgün locator'ının 15'i (%52) bir Kısayol Tuşları (Hotkeys) ayar ızgarasının `DataItem` satırları (`Hotkey Row 1`, `Description Row 2`, ...). HandBrake'in fixture'ında bu türden hiçbir eleman yok. Bu satırların her biri kardeşlerine yapısal olarak neredeyse özdeş — aynı `ControlType`, aynı eksik `ClassName`, konum yalnızca satır numarasıyla farklılaşıyor — bu yüzden motor, en iyi aday tam `1.000` skor alsa bile bunları `Ambiguous` diye reddediyor. Bu bir kusur değil, doğru davranış: #78 zaten `DataGrid`/`DataItem`'ı doğası gereği oynak bir locator sınıfı olarak adlandırmıştı. İçeride bırakılırsa, bunlar heuristik'in genel kalitesini değil, tek bir ızgaranın yoğunluğunu ölçer.
+
+**Adil karşılaştırma bunları hariç tutar.** Izgara satırları çıkarılınca (14 özgün locator, 56 senaryo), kapsam HandBrake'e yakınsıyor: %71.4'e karşı %76.9. Ama bu benchmark'ın var olma sebebi olan sayı yakınsamıyor:
+
+| Uygulama | Silinen elemanlarda yanlış iyileştirme oranı | $n$ |
+| :--- | ---: | ---: |
+| HandBrake | %40.5 | 17/42 |
+| ShareX (grid satırları hariç) | **%57.1** | 8/14 |
+
+İkinci gerçek bir uygulama, yanlış iyileştirme sorununu HandBrake'e özgü bir tuhaflık gibi göstermiyor. Daha kötü gösteriyor.
+
+| Metrik (varsayılan ağırlıklar, grid satırları hariç) | HandBrake | ShareX |
+| :--- | ---: | ---: |
+| Kesinlik | %84.4 | %73.2 |
+| Otomatik iyileştirme kapsamı | %76.9 | %71.4 |
+| Yanlış iyileştirme oranı | %15.6 | %26.8 |
+| Manuel inceleme oranı | %30.7 | %26.8 |
+
+> [!IMPORTANT]
+> **Resmi çıkarım.** İkinci bir uygulama, bu projenin çözmeye çalıştığı sorunun şeklini değiştirmiyor, ve onu iyileştirmiyor. Karıştırıcı bir UI örüntüsü (ilk uygulamada bulunmayan, yoğun yapısal olarak özdeş grid satırları) kontrol altına alındığında kapsam kabaca karşılaştırılabilir hale geliyor. Kesinlik ve yanlış iyileştirme oranının ikisi de ShareX'te belirgin şekilde daha kötü. Ne HandBrake'in sayıları ne de ShareX'inki bu motorun "gerçek" doğruluğu olarak okunmamalı — bunlar bir aralığı sınırlayan iki veri noktası, ve aralık geniş: gönderilen varsayılanda, herhangi bir LLM konsensüsü uygulanmadan önce, silinmiş elemanlarda %40.5–%57.1 yanlış iyileştirme. Doğrulama testleri: \`ShareXAblationTests\` (\`ShareXFixture_DefaultWeights_MatchesTheCommittedBaseline\`, \`ShareXFixture_MostMissedPerfectScoreRenames_AreDataGridRows\`, \`ShareXFixture_ExcludingDataGridRows_FalseHealOnRemovedRateIsWorseThanHandBrakes\`).
 
 
