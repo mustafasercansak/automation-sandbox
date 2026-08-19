@@ -1,0 +1,1276 @@
+{
+  "ControlType": "Window",
+  "Name": "ShareX 21.0 Portable",
+  "AutomationId": "MainForm",
+  "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+  "BoundingRectangle": {
+    "X": 64,
+    "Y": 75,
+    "Width": 895,
+    "Height": 590,
+    "IsUsable": true,
+    "IsEmpty": false
+  },
+  "ParentControlType": "",
+  "ParentAutomationId": "",
+  "SiblingIndex": 0,
+  "SiblingCount": 1,
+  "TestIntent": "",
+  "Children": [
+    {
+      "ControlType": "Pane",
+      "Name": "",
+      "AutomationId": "pMain",
+      "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+      "BoundingRectangle": {
+        "X": 275,
+        "Y": 106,
+        "Width": 676,
+        "Height": 551,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 0,
+      "SiblingCount": 3,
+      "TestIntent": "",
+      "Children": [
+        {
+          "ControlType": "Pane",
+          "Name": "",
+          "AutomationId": "pHotkeys",
+          "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+          "BoundingRectangle": {
+            "X": 275,
+            "Y": 106,
+            "Width": 676,
+            "Height": 551,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Pane",
+          "ParentAutomationId": "pMain",
+          "SiblingIndex": 0,
+          "SiblingCount": 2,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "DataGrid",
+              "Name": "",
+              "AutomationId": "dgvHotkeys",
+              "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+              "BoundingRectangle": {
+                "X": 291,
+                "Y": 122,
+                "Width": 660,
+                "Height": 535,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Pane",
+              "ParentAutomationId": "pHotkeys",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Top Row",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 291,
+                    "Y": 122,
+                    "Width": 660,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "Header",
+                      "Name": "cHotkeyStatus",
+                      "AutomationId": "4267017949",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 122,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Header",
+                      "Name": "Hotkey",
+                      "AutomationId": "4265926980",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 122,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "Header",
+                      "Name": "Description",
+                      "AutomationId": "4251744379",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 122,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                },
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Row 1",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 155,
+                    "Width": 659,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 1,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "cHotkeyStatus Row 1, Not sorted.",
+                      "AutomationId": "421588296",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 155,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Hotkey Row 1",
+                      "AutomationId": "4220647855",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 155,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Description Row 1",
+                      "AutomationId": "4267095527",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 155,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                },
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Row 2",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 188,
+                    "Width": 659,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 2,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "cHotkeyStatus Row 2, Not sorted.",
+                      "AutomationId": "4266935486",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 188,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Hotkey Row 2",
+                      "AutomationId": "4264854958",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 188,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Description Row 2",
+                      "AutomationId": "4237808095",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 188,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                },
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Row 3",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 221,
+                    "Width": 659,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 3,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "cHotkeyStatus Row 3, Not sorted.",
+                      "AutomationId": "4221743196",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 221,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Hotkey Row 3",
+                      "AutomationId": "4214226104",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 221,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Description Row 3",
+                      "AutomationId": "4250721631",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 221,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                },
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Row 4",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 254,
+                    "Width": 659,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 4,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "cHotkeyStatus Row 4, Not sorted.",
+                      "AutomationId": "4255401439",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 254,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Hotkey Row 4",
+                      "AutomationId": "4249130069",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 254,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Description Row 4",
+                      "AutomationId": "4234711129",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 254,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                },
+                {
+                  "ControlType": "Unknown",
+                  "Name": "Row 5",
+                  "AutomationId": "",
+                  "ClassName": "",
+                  "BoundingRectangle": {
+                    "X": 292,
+                    "Y": 287,
+                    "Width": 659,
+                    "Height": 33,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "DataGrid",
+                  "ParentAutomationId": "dgvHotkeys",
+                  "SiblingIndex": 5,
+                  "SiblingCount": 6,
+                  "TestIntent": "",
+                  "Children": [
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "cHotkeyStatus Row 5, Not sorted.",
+                      "AutomationId": "4248591500",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 292,
+                        "Y": 287,
+                        "Width": 8,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 0,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Hotkey Row 5",
+                      "AutomationId": "4227709725",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 300,
+                        "Y": 287,
+                        "Width": 206,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 1,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    },
+                    {
+                      "ControlType": "DataItem",
+                      "Name": "Description Row 5",
+                      "AutomationId": "4224682113",
+                      "ClassName": "",
+                      "BoundingRectangle": {
+                        "X": 506,
+                        "Y": 287,
+                        "Width": 253,
+                        "Height": 33,
+                        "IsUsable": true,
+                        "IsEmpty": false
+                      },
+                      "ParentControlType": "Unknown",
+                      "ParentAutomationId": "",
+                      "SiblingIndex": 2,
+                      "SiblingCount": 3,
+                      "TestIntent": "",
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ControlType": "Pane",
+          "Name": "",
+          "AutomationId": "ucTaskThumbnailView",
+          "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+          "BoundingRectangle": {
+            "X": 275,
+            "Y": 106,
+            "Width": 676,
+            "Height": 551,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Pane",
+          "ParentAutomationId": "pMain",
+          "SiblingIndex": 1,
+          "SiblingCount": 2,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Pane",
+              "Name": "",
+              "AutomationId": "pMain",
+              "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+              "BoundingRectangle": {
+                "X": 275,
+                "Y": 106,
+                "Width": 676,
+                "Height": 551,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "Pane",
+              "ParentAutomationId": "ucTaskThumbnailView",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": [
+                {
+                  "ControlType": "Pane",
+                  "Name": "",
+                  "AutomationId": "flpMain",
+                  "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+                  "BoundingRectangle": {
+                    "X": 275,
+                    "Y": 106,
+                    "Width": 676,
+                    "Height": 8,
+                    "IsUsable": true,
+                    "IsEmpty": false
+                  },
+                  "ParentControlType": "Pane",
+                  "ParentAutomationId": "pMain",
+                  "SiblingIndex": 0,
+                  "SiblingCount": 1,
+                  "TestIntent": "",
+                  "Children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ControlType": "Pane",
+      "Name": "",
+      "AutomationId": "pToolbars",
+      "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+      "BoundingRectangle": {
+        "X": 72,
+        "Y": 106,
+        "Width": 203,
+        "Height": 551,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 1,
+      "SiblingCount": 3,
+      "TestIntent": "",
+      "Children": [
+        {
+          "ControlType": "ToolBar",
+          "Name": "",
+          "AutomationId": "tsMain",
+          "ClassName": "WindowsForms10.Window.8.app.0.37a9c05_r3_ad1",
+          "BoundingRectangle": {
+            "X": 72,
+            "Y": 106,
+            "Width": 203,
+            "Height": 551,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "Pane",
+          "ParentAutomationId": "pToolbars",
+          "SiblingIndex": 0,
+          "SiblingCount": 1,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "Button",
+              "Name": "Capture",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 113,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 0,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Upload",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 137,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 1,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Workflows",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 161,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 2,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Tools",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 185,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 3,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 211,
+                "Width": 186,
+                "Height": 6,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 4,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "After capture tasks",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 224,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 5,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "After upload tasks",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 248,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 6,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Destinations",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 272,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 7,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 298,
+                "Width": 186,
+                "Height": 6,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 8,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Application settings...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 311,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 9,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Task settings...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 335,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 10,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Hotkey settings...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 359,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 11,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Destination settings...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 383,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 12,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Custom uploader settings...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 407,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 13,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 433,
+                "Width": 186,
+                "Height": 6,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 14,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Screenshots folder...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 446,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 15,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "History...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 470,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 16,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Image history...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 494,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 17,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Separator",
+              "Name": "",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 520,
+                "Width": 186,
+                "Height": 6,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 18,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Debug",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 533,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 19,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Donate...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 557,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 20,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Follow @ShareX...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 581,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 21,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "Discord...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 605,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 22,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            },
+            {
+              "ControlType": "Button",
+              "Name": "About...",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 80,
+                "Y": 629,
+                "Width": 186,
+                "Height": 21,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "ToolBar",
+              "ParentAutomationId": "tsMain",
+              "SiblingIndex": 23,
+              "SiblingCount": 24,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ControlType": "TitleBar",
+      "Name": "",
+      "AutomationId": "TitleBar",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 88,
+        "Y": 78,
+        "Width": 863,
+        "Height": 28,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 2,
+      "SiblingCount": 3,
+      "TestIntent": "",
+      "Children": [
+        {
+          "ControlType": "MenuBar",
+          "Name": "System",
+          "AutomationId": "SystemMenuBar",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 72,
+            "Y": 83,
+            "Width": 22,
+            "Height": 22,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 0,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": [
+            {
+              "ControlType": "MenuItem",
+              "Name": "System",
+              "AutomationId": "",
+              "ClassName": "",
+              "BoundingRectangle": {
+                "X": 72,
+                "Y": 83,
+                "Width": 22,
+                "Height": 22,
+                "IsUsable": true,
+                "IsEmpty": false
+              },
+              "ParentControlType": "MenuBar",
+              "ParentAutomationId": "SystemMenuBar",
+              "SiblingIndex": 0,
+              "SiblingCount": 1,
+              "TestIntent": "",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Minimize",
+          "AutomationId": "Minimize-Restore",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 812,
+            "Y": 76,
+            "Width": 47,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 1,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Maximize",
+          "AutomationId": "Maximize-Restore",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 859,
+            "Y": 76,
+            "Width": 46,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 2,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        },
+        {
+          "ControlType": "Button",
+          "Name": "Close",
+          "AutomationId": "Close",
+          "ClassName": "",
+          "BoundingRectangle": {
+            "X": 905,
+            "Y": 76,
+            "Width": 47,
+            "Height": 30,
+            "IsUsable": true,
+            "IsEmpty": false
+          },
+          "ParentControlType": "TitleBar",
+          "ParentAutomationId": "TitleBar",
+          "SiblingIndex": 3,
+          "SiblingCount": 4,
+          "TestIntent": "",
+          "Children": []
+        }
+      ]
+    }
+  ]
+}
