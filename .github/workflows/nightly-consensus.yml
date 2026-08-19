@@ -55,6 +55,14 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # #121. Checked against the full LlmProviderFactory list, not just the two providers
+          # this issue named - NVIDIA (#122) was wired in after this workflow was last touched and
+          # was missing here too. OLLAMA_CLOUD_MODEL is presently unset (#119: no free-tier model
+          # found), so passing it through is a no-op today and picks up a value automatically if
+          # one is ever configured, without another workflow edit.
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -69,6 +77,9 @@ jobs:
           OPENROUTER_ENDPOINT: ${{ vars.OPENROUTER_ENDPOINT }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_MODEL: ${{ vars.OLLAMA_CLOUD_MODEL }}
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
 
       - name: Upload Consensus Evaluation Report
