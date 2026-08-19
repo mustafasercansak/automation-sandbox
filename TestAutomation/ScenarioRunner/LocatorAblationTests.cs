@@ -486,6 +486,93 @@ namespace ScenarioRunner
             });
         }
 
+        [Fact]
+        public void HandBrakeFixture_WholeTreeReconciliationProbe()
+        {
+            // #98's cheap first probe, before any implementation: of the heuristic's false heals on
+            // removed elements, how often was the wrongly-chosen neighbour itself one of the tree's
+            // other 42 authored locators - something a real refactor could plausibly break too and
+            // that a joint solver could therefore recognise as "already claimed"?
+            var falseHeals = RunWholeTreeReconciliationProbe();
+
+            Console.WriteLine("=======================================================");
+            Console.WriteLine("WHOLE-TREE RECONCILIATION PROBE (#98)");
+            Console.WriteLine("=======================================================");
+            Console.WriteLine($"False heals on removed elements: {falseHeals.Count}");
+            var claimedElsewhere = falseHeals.Count(f => f.IsAnotherAuthoredLocator);
+            Console.WriteLine($"Wrongly-matched neighbour was itself another authored locator's true identity: {claimedElsewhere}/{falseHeals.Count}");
+            foreach (var f in falseHeals)
+            {
+                Console.WriteLine($"  {f.ScenarioId}: matched real id '{f.RealMatchedId}' -> {(f.IsAnotherAuthoredLocator ? "IS another authored locator (contention exploitable)" : "is an untracked/incidental element (no claim to exploit)")}");
+            }
+        }
+
+        [Fact]
+        public void HandBrakeFixture_WholeTreeReconciliationProbe_MostFalseHealsClaimAnotherLocatorsIdentity()
+        {
+            // The permanent record of the #98 probe's result, so the finding cannot silently drift
+            // as the fixture or the heuristic change. 10 of 17 false heals on removed elements (59%)
+            // picked a neighbour that was itself another authored locator's real identity - including
+            // reciprocal pairs (Minimize-Restore <-> Maximize-Restore, Destination <-> statusBar,
+            // tabControl <-> sourceSelection) where each element is the other's best-scoring decoy.
+            // That is favourable enough to justify building multi-locator mutation scenarios (the
+            // dataset needed to actually test joint assignment), not proof the mechanism works: the
+            // other 41% claim untracked/incidental elements no joint solver could help with.
+            var falseHeals = RunWholeTreeReconciliationProbe();
+
+            Assert.Equal(17, falseHeals.Count);
+            Assert.Equal(10, falseHeals.Count(f => f.IsAnotherAuthoredLocator));
+        }
+
+        private List<(string ScenarioId, string? RealMatchedId, bool IsAnotherAuthoredLocator)> RunWholeTreeReconciliationProbe()
+        {
+            // Cannot match by AutomationId: ApplyMutation opaques every element's AutomationId in the
+            // mutated tree, not just the target's (#97's leakage fix), so the matched candidate's id
+            // is always an "ablation-XXXXXXXX" hash with no relation to its real identity. Structural
+            // fingerprint (ControlType + Name + ClassName + ancestor path) survives the mutation for
+            // every element except the removed one, so it is used to recover the matched candidate's
+            // real, pristine-tree AutomationId instead - the same technique the harness itself uses
+            // to identify ground truth once AutomationId is gone.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var authoredIds = new HashSet<string>(dataset.Scenarios.Select(s => s.OriginalAutomationId), StringComparer.Ordinal);
+
+            // Grouped, not a straight ToDictionary: HandBrake's real tree has structurally identical
+            // siblings (e.g. multiple unnamed toolbar separators under the same parent) whose
+            // fingerprint alone cannot tell them apart. A fingerprint with more than one owner is
+            // treated as unresolvable rather than arbitrarily picking one - itself a data point about
+            // the limits of structural identity, worth carrying into #98's larger design if pursued.
+            var pristineByFingerprint = Flatten(root)
+                .GroupBy(e => FingerprintKey(e.ControlType, e.Name, e.ClassName, LocatorAblationGenerator.AncestorPathOf(root, e)), StringComparer.Ordinal)
+                .Where(g => g.Count() == 1)
+                .ToDictionary(g => g.Key, g => g.Single().AutomationId, StringComparer.Ordinal);
+
+            var falseHeals = new List<(string ScenarioId, string? RealMatchedId, bool IsAnotherAuthoredLocator)>();
+            foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement))
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId);
+                Assert.NotNull(expected);
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                var heal = SelfHealingResolver.Resolve(expected!, mutatedRoot, new SimilarityWeights { MinimumConfidence = 0.50 }, log: _ => { });
+
+                if (heal.IsConfident && heal.Matched != null)
+                {
+                    var key = FingerprintKey(
+                        heal.Matched.ControlType,
+                        heal.Matched.Name,
+                        heal.Matched.ClassName,
+                        LocatorAblationGenerator.AncestorPathOf(mutatedRoot, heal.Matched));
+                    var realId = pristineByFingerprint.TryGetValue(key, out var id) ? id : null;
+                    falseHeals.Add((scenario.ScenarioId, realId, realId != null && authoredIds.Contains(realId)));
+                }
+            }
+
+            return falseHeals;
+        }
+
+        private static string FingerprintKey(string? controlType, string? name, string? className, string ancestorPath) =>
+            $"{controlType}|{name}|{className}|{ancestorPath}";
+
         // Overridable from the workflow so a run that turns out to be rate-limited differently can be
         // retuned without a code change. A malformed or negative value falls back to the default
         // rather than silently disabling pacing.

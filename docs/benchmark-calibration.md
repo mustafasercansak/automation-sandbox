@@ -274,6 +274,34 @@ This matters for how far the result generalises:
 
 ---
 
+### 7. Whole-Tree Reconciliation: the Offline Probe (#98)
+
+§5's finding and §6's both point at the same structural gap: every mechanism measured so far resolves one locator at a time, in isolation. §98 asked a narrower question before proposing to fix that: when the heuristic wrongly heals a removed element onto a neighbour, is that neighbour usually *another authored locator's real identity* — something a joint solver, resolving every locator on the page at once, could recognise as "already claimed" and therefore refuse to hand to the removed one too?
+
+**The probe, run against the existing 42 `RemovedElement` scenarios at default weights (no new mutation kind needed for this step).** Of the 17 false heals, **10 (59%) picked a neighbour that was itself one of the tree's other 41 authored locators**, recovered by structural fingerprint since `RemovedElement`'s AutomationId-opaquing mutation destroys the identifier every candidate is normally matched on.
+
+| Removed locator | Wrongly matched onto | Reciprocal? |
+| :--- | :--- | :---: |
+| `Minimize-Restore` | `Maximize-Restore` | ✓ |
+| `Maximize-Restore` | `Minimize-Restore` | ✓ |
+| `Close` | `Maximize-Restore` | |
+| `ShowQueue` | `Preview` | |
+| `tabControl` | `sourceSelection` | ✓ |
+| `sourceSelection` | `tabControl` | ✓ |
+| `summaryTab` | `pictureTab` | |
+| `chaptersTab` | `subtitlesTab` | |
+| `Destination` | `statusBar` | ✓ |
+| `statusBar` | `Destination` | ✓ |
+
+Three of these are **reciprocal pairs**: remove either element and the heuristic heals it onto the other, in both directions. `Minimize-Restore` and `Maximize-Restore` are each other's best-scoring decoy; so are `Destination`/`statusBar` and `tabControl`/`sourceSelection`. That is precisely the shape a bipartite assignment is built to resolve — if both locators are being placed in the same joint solve, at most one of them can claim the shared slot, and the loser has nothing left to match, which is the "gone" signal the current per-locator scorer cannot produce.
+
+The remaining 7 of 17 claimed untracked or incidental elements (an empty-named container, a toolbar element with no test relying on it) that no other locator wants either. A joint solver would have nothing to exploit there — its ceiling on this dataset is bounded by the 59%, not by the full 17.
+
+> [!NOTE]
+> **Reading this number honestly.** 59% is favourable enough to justify the next step the original issue named — building scenarios where multiple locators break together, which is also the more realistic failure mode — but it is not evidence the mechanism works. The existing single-mutation dataset cannot test joint assignment directly: with only one locator ever broken per scenario, there is no real contention for a solver to exploit, only the retrospective observation that contention *would exist* if a second locator broke at the same time. Building that dataset, and measuring whether a matching-based resolver actually converts the 59% into correct declines, is separate, uncommitted work — tracked as a follow-up rather than started here, per the parent issue's own condition that no `SelfHealingResolver` API change be proposed before the probe supports it.
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
@@ -524,5 +552,33 @@ Bu, sonucun ne kadar genellenebileceğini belirliyor:
 
 > [!IMPORTANT]
 > **Resmi çıkarım, dört koşu üzerinden gözden geçirildi ($n=133$, 2026-08-16 – 2026-08-18).** Çoklu sağlayıcı konsensüsü, §5'teki her sezgisel sinyalin başarısız olduğu yerde hayatta kalan elemanları silinmiş olanlardan ayırır (%94.5'e karşı %43.6 oybirliği uzlaşması). Kabul kapısı olarak yeterli değildir: dört koşunun tamamında silinmiş bir eleman üzerindeki **her** oybirliği kararı (34'te 34) yanlış iyileştirmeydi, üç bağımsız kaynaklı model ailesinin anlaştığı vakalar dahil. Ayrışma, herhangi bir modelin yokluğu tespit etmesinden değil sağlayıcılar arasındaki anlaşmazlıktan doğuyor — ve sağlayıcı havuzunu 3 yapılandırılmış sağlayıcıdan 7'ye genişletmek bu hata oranını düşürmedi. Daha fazla sağlayıcı eklemenin bunu düzelteceği varsayılmamalı; bu veri o varsayımın aleyhinedir.
+
+---
+
+### 7. Bütün Ağaç Uzlaştırması: Çevrimdışı Prob (#98)
+
+§5'in ve §6'nın bulgusu aynı yapısal boşluğu işaret ediyor: şimdiye kadar ölçülen her mekanizma lokatörleri tek tek, birbirinden habersiz çözüyor. #98, bunu düzeltmeyi önermeden önce daha dar bir soru sordu: heuristik silinmiş bir elemanı yanlışlıkla bir komşuya iyileştirdiğinde, o komşu genellikle *başka bir lokatörün gerçek kimliği* mi — sayfadaki tüm lokatörleri aynı anda çözen ortak bir çözücünün "zaten talep edildi" diye tanıyıp silinen elemana da vermeyi reddedebileceği bir şey mi?
+
+**Prob, mevcut 42 `RemovedElement` senaryosuna karşı varsayılan ağırlıklarla koşturuldu (bu adım için yeni bir mutasyon türü gerekmedi).** 17 yanlış iyileştirmenin **10'u (%59), ağacın diğer 41 özgün locator'ından birinin gerçek kimliği olan bir komşuyu işaret etti** — bu, yapısal parmak iziyle geri kazanıldı, çünkü `RemovedElement`'in AutomationId'yi opaklaştıran mutasyonu, adayların normalde eşleştiği kimliği yok ediyor.
+
+| Silinen locator | Yanlışlıkla eşleştiği | Karşılıklı mı? |
+| :--- | :--- | :---: |
+| `Minimize-Restore` | `Maximize-Restore` | ✓ |
+| `Maximize-Restore` | `Minimize-Restore` | ✓ |
+| `Close` | `Maximize-Restore` | |
+| `ShowQueue` | `Preview` | |
+| `tabControl` | `sourceSelection` | ✓ |
+| `sourceSelection` | `tabControl` | ✓ |
+| `summaryTab` | `pictureTab` | |
+| `chaptersTab` | `subtitlesTab` | |
+| `Destination` | `statusBar` | ✓ |
+| `statusBar` | `Destination` | ✓ |
+
+Bunların üçü **karşılıklı çift**: iki elemandan hangisi silinirse silinsin, heuristik onu diğerine iyileştiriyor, iki yönde de. `Minimize-Restore` ile `Maximize-Restore` birbirinin en yüksek skorlu yem adayı; `Destination`/`statusBar` ve `tabControl`/`sourceSelection` de öyle. Bu, tam olarak ikili eşleştirmenin (bipartite assignment) çözmek için tasarlandığı şekil — iki locator da aynı ortak çözüme dahil edilirse, paylaşılan slotu en fazla biri talep edebilir, ve kaybeden için eşleşecek başka bir şey kalmaz — bu da mevcut tek-locator skorlayıcısının üretemediği "gitti" sinyalinin ta kendisi.
+
+Kalan 17'de 7'si, başka hiçbir locator'ın da istemediği izlenmeyen ya da tesadüfi elemanları işaret etti (adsız bir kapsayıcı, hiçbir testin dayanmadığı bir araç çubuğu elemanı gibi). Ortak bir çözücünün orada kullanabileceği bir şey yok — bu veri kümesindeki tavanı %59 ile sınırlı, 17'nin tamamıyla değil.
+
+> [!NOTE]
+> **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumlu, ama mekanizmanın işlediğine dair bir kanıt değil. Mevcut tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemez: senaryo başına yalnızca bir locator kırıldığından, bir çözücünün kullanabileceği gerçek bir çakışma yok, yalnızca ikinci bir locator aynı anda kırılsaydı çakışmanın *var olacağı* yönünde geriye dönük bir gözlem var. O veri kümesini kurmak, ve eşleştirme tabanlı bir çözücünün %59'u gerçekten doğru retlere çevirip çevirmediğini ölçmek, ayrı ve henüz üstlenilmemiş bir iştir — burada başlatılmadı, ana issue'nun kendi koşulu gereği: prob onu desteklemeden `SelfHealingResolver` API'sinde hiçbir değişiklik önerilmeyecek.
 
 
