@@ -158,7 +158,7 @@ namespace ScenarioRunner
             Assert.Equal("https://api.cloudflare.com/client/v4/accounts/0123456789abcdef/ai/v1/chat/completions", requestUrl);
             Assert.Equal("Bearer cloudflare-test-token", authorization);
             Assert.Contains("\"model\":\"@cf/zai-org/glm-4.7-flash\"", requestBody);
-            Assert.Contains("\"max_tokens\":1024", requestBody);
+            Assert.Contains("\"max_tokens\":2000", requestBody);
             Assert.Contains("\"response_format\":{\"type\":\"json_object\"}", requestBody);
         }
 

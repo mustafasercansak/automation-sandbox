@@ -21,6 +21,7 @@ namespace LlmHealing
         private readonly string _model;
         private readonly string _apiUrl;
         private readonly bool _requestJsonResponse;
+        private readonly int _maxOutputTokens;
 
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
@@ -39,6 +40,7 @@ namespace LlmHealing
             string? endpoint = null,
             string? name = null,
             bool requestJsonResponse = false,
+            int? maxOutputTokens = null,
             int? maxRetries = null,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
             : base(
@@ -68,6 +70,7 @@ namespace LlmHealing
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
             _requestJsonResponse = requestJsonResponse;
+            _maxOutputTokens = maxOutputTokens ?? DefaultMaxOutputTokens;
 
             var rawEndpoint = NullIfEmpty(endpoint)
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
@@ -98,7 +101,7 @@ namespace LlmHealing
                         new { role = "user", content = prompt }
                     },
                     temperature = 0.0,
-                    max_tokens = DefaultMaxOutputTokens,
+                    max_tokens = _maxOutputTokens,
                     response_format = new { type = "json_object" },
                 }
                 : new
@@ -109,7 +112,7 @@ namespace LlmHealing
                         new { role = "user", content = prompt }
                     },
                     temperature = 0.0,
-                    max_tokens = DefaultMaxOutputTokens,
+                    max_tokens = _maxOutputTokens,
                 };
 
             var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
