@@ -253,7 +253,8 @@ namespace ScenarioRunner
             CancellationToken cancellationToken = default,
             TimeSpan? scenarioPacing = null,
             TimeSpan? maxRetryAfter = null,
-            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+            TimeSpan? perAttemptTimeout = null)
         {
             if (dataset == null)
             {
@@ -273,15 +274,20 @@ namespace ScenarioRunner
             // endpoint. TotalTimeoutOverride must widen in step, sized from each provider's own
             // per-attempt timeout and retry count so a fully rate-limited run of retries still fits:
             // (attempts * per-attempt timeout) + (retries * honoured wait) + margin.
-            if (maxRetryAfter.HasValue && providersList != null)
+            if ((maxRetryAfter.HasValue || perAttemptTimeout.HasValue) && providersList != null)
             {
                 foreach (var http in providersList.OfType<HttpLlmHealingProvider>())
                 {
-                    http.MaxRetryAfterOverride = maxRetryAfter;
+                    if (maxRetryAfter.HasValue)
+                    {
+                        http.MaxRetryAfterOverride = maxRetryAfter;
+                    }
+
+                    http.PerAttemptTimeoutOverride = perAttemptTimeout ?? http.Timeout;
 
                     var attempts = http.MaxRetries + 1;
-                    var worstCase = TimeSpan.FromTicks(http.Timeout.Ticks * attempts)
-                        + TimeSpan.FromTicks(maxRetryAfter.Value.Ticks * http.MaxRetries)
+                    var worstCase = TimeSpan.FromTicks((http.PerAttemptTimeoutOverride ?? http.Timeout).Ticks * attempts)
+                        + TimeSpan.FromTicks((maxRetryAfter ?? TimeSpan.Zero).Ticks * http.MaxRetries)
                         + TimeSpan.FromSeconds(10);
                     http.TotalTimeoutOverride = worstCase;
                 }

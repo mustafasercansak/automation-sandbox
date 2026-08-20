@@ -14,6 +14,18 @@ namespace ScenarioRunner
 {
     public class ConsensusEvaluationTests
     {
+        private static readonly TimeSpan BatchPerAttemptTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan BatchTotalTimeout = TimeSpan.FromSeconds(120);
+
+        private static void ConfigureBatchTimeouts(IEnumerable<ILlmHealingProvider> providers)
+        {
+            foreach (var http in providers.OfType<HttpLlmHealingProvider>())
+            {
+                http.PerAttemptTimeoutOverride = BatchPerAttemptTimeout;
+                http.TotalTimeoutOverride = BatchTotalTimeout;
+            }
+        }
+
         [Fact]
         public void AllEvaluationFixtures_MustBeHeuristicallyNonConfidentAndProduceCandidates()
         {
@@ -435,6 +447,8 @@ namespace ScenarioRunner
             }
 
             Console.WriteLine($"[ConsensusEvaluation] Running nightly consensus evaluation with {providers.Count} providers: {string.Join(", ", providers.Select(p => p.Name))}");
+
+            ConfigureBatchTimeouts(providers);
 
             var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: true);
 

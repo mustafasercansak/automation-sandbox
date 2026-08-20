@@ -41,6 +41,10 @@ namespace LlmHealing
         // raise this one too.
         public TimeSpan? TotalTimeoutOverride { get; set; }
 
+        // Batch evaluations may tolerate a slower individual model response than interactive
+        // healing. Null preserves the provider's interactive per-attempt ceiling.
+        public TimeSpan? PerAttemptTimeoutOverride { get; set; }
+
         public TimeSpan Timeout => _timeout;
         public TimeSpan TotalTimeout => _totalTimeout;
         public int MaxRetries => _maxRetries;
@@ -117,7 +121,7 @@ namespace LlmHealing
             var httpResponse = await LlmHttpTransport.SendWithRetryAsync(
                 _httpClient,
                 () => CreateRequest(prompt),
-                _timeout,
+                PerAttemptTimeoutOverride ?? _timeout,
                 TotalTimeoutOverride ?? _totalTimeout,
                 _maxRetries,
                 _delayAsync,

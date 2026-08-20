@@ -83,6 +83,8 @@ All LLM providers derive from `HttpLlmHealingProvider` and support configurable 
 - **Fail-Fast on Permanent Errors**: HTTP 400, 401, 403, and 404 fail immediately without wasting retry attempts.
 - **`Retry-After` Header & Quota Guard**: If a response includes a `Retry-After` header $\le 10\text{s}$, the transport pauses for the requested delay. If `Retry-After` $> 10\text{s}$ (e.g. daily quota exhaustion), the provider fails fast immediately.
 
+The nightly batch evaluation raises the per-attempt timeout to `30s` and the total provider timeout to `120s`. Interactive healing keeps the shorter defaults above; the wider batch ceiling prevents a slow reasoning model from being recorded as a transport failure.
+
 ### 🤝 Consensus Acceptance
 
 An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
@@ -195,6 +197,8 @@ Tüm sağlayıcılar `HttpLlmHealingProvider` tabanından türer; deneme başın
 - **Yeniden denenen geçici hatalar**: HTTP 429 (kota aşımı), 500, 502, 503, 504 ve `HttpRequestException` (geçici ağ kopmaları) üstel geri çekilme ve jitter ile otomatik olarak yeniden denenir.
 - **Kalıcı hatalarda hızlı başarısızlık**: HTTP 400, 401, 403 ve 404 yeniden deneme hakkı harcamadan anında başarısız döner.
 - **`Retry-After` Başlığı ve Kota Koruması**: Yanıtta `Retry-After` başlığı $\le 10\text{s}$ ise belirtilen süre kadar beklenir. $> 10\text{s}$ ise (ör. günlük kota tükenmesi) boşuna beklenmez, doğrudan başarısız dönülür.
+
+Nightly batch değerlendirmesi deneme başına zaman aşımını `30s`, sağlayıcı toplam zaman aşımını `120s` yapar. Etkileşimli healing kısa varsayılanları kullanmaya devam eder; geniş batch sınırı yavaş reasoning modellerinin transport hatası olarak kaydedilmesini önler.
 
 ### 🤝 Mutabakat (Consensus) Kabul Kuralı
 
