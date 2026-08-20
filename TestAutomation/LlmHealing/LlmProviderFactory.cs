@@ -134,7 +134,7 @@ namespace LlmHealing
                     model: cloudflareModel,
                     endpoint: $"https://api.cloudflare.com/client/v4/accounts/{cloudflareAccountId}/ai/v1",
                     name: "Cloudflare",
-                    disableReasoning: true));
+                    requestJsonResponse: true));
             }
 
             // 9. Mistral - OpenAI-compatible, so no provider class of its own. Both values are

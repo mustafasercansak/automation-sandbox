@@ -20,7 +20,7 @@ namespace LlmHealing
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly string _apiUrl;
-        private readonly bool _disableReasoning;
+        private readonly bool _requestJsonResponse;
 
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
@@ -38,7 +38,7 @@ namespace LlmHealing
             TimeSpan? totalTimeout = null,
             string? endpoint = null,
             string? name = null,
-            bool disableReasoning = false,
+            bool requestJsonResponse = false,
             int? maxRetries = null,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
             : base(
@@ -67,7 +67,7 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
-            _disableReasoning = disableReasoning;
+            _requestJsonResponse = requestJsonResponse;
 
             var rawEndpoint = NullIfEmpty(endpoint)
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
@@ -89,7 +89,7 @@ namespace LlmHealing
 
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
-            object requestBody = _disableReasoning
+            object requestBody = _requestJsonResponse
                 ? new
                 {
                     model = _model,
@@ -99,7 +99,7 @@ namespace LlmHealing
                     },
                     temperature = 0.0,
                     max_tokens = DefaultMaxOutputTokens,
-                    chat_template_kwargs = new { enable_thinking = false },
+                    response_format = new { type = "json_object" },
                 }
                 : new
                 {
