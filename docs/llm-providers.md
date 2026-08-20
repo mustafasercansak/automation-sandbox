@@ -97,7 +97,7 @@ An LLM pick is accepted only when **at least two providers independently name th
 
 > **Independence is the point.** Two `OpenAiHealingProvider` instances pointed at the same endpoint and model are the same model voting twice, not a consensus. Prefer providers backed by genuinely different models.
 
-The nightly workflow enforces this rule with a live gate using Gemini and Groq/Llama on the known `Desktop_AmbiguousSiblingTabs` scenario. Both raw votes must remain inside the shortlist, name the same ground-truth `CandidateId`, and appear in `HealResult.AgreedProviders`; otherwise the workflow fails. The broader multi-provider evaluation still runs afterward as non-gating telemetry. With no credentials the opt-in test skips cleanly, while a deliberate one-provider configuration fails before making an API call. Releases are not gated on third-party availability; this gate belongs to the nightly workflow only.
+The nightly workflow enforces this rule with a live gate using Groq and Mistral on the known `Desktop_AmbiguousSiblingTabs` scenario. Both raw votes must remain inside the shortlist, name the same ground-truth `CandidateId`, and appear in `HealResult.AgreedProviders`; otherwise the workflow fails. The broader multi-provider evaluation still runs afterward as non-gating telemetry. With no credentials the opt-in test skips cleanly, while a deliberate one-provider configuration fails before making an API call. Releases are not gated on third-party availability; this gate belongs to the nightly workflow only.
 
 #### Naming providers
 
@@ -136,7 +136,7 @@ CLOUDFLARE_ACCOUNT_ID=<repository variable>
 CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
+The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. The Cloudflare request uses `response_format: { "type": "json_object" }` and `max_tokens: 2000`, leaving room for Qwen reasoning plus the complete JSON response without depending on a provider-specific output default. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
 
 Choose a model family different from the other voters. Two endpoints serving the same underlying model do not provide independent consensus. The free allocation is appropriate for low-volume nightly or manual evaluation, not a guaranteed per-PR release gate.
 
@@ -210,7 +210,7 @@ Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seç
 
 > **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, mutabakat değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin.
 
-Nightly workflow bu kuralı bilinen `Desktop_AmbiguousSiblingTabs` senaryosunda Gemini ve Groq/Llama kullanan canlı bir gate ile uygular. İki ham oyun da shortlist içinde kalması, aynı ground-truth `CandidateId` değerini seçmesi ve `HealResult.AgreedProviders` içinde görünmesi gerekir; aksi halde workflow başarısız olur. Daha geniş çok-sağlayıcılı değerlendirme bunun ardından gate olmayan telemetri olarak çalışmaya devam eder. Hiç credential yoksa opt-in test temiz biçimde atlanır; bilinçli tek-sağlayıcı yapılandırması ise API çağrısı yapmadan başarısız olur. Üçüncü taraf erişilebilirliği release'i engellemesin diye gate yalnızca nightly workflow'dadır.
+Nightly workflow bu kuralı bilinen `Desktop_AmbiguousSiblingTabs` senaryosunda Groq ve Mistral kullanan canlı bir gate ile uygular. İki ham oyun da shortlist içinde kalması, aynı ground-truth `CandidateId` değerini seçmesi ve `HealResult.AgreedProviders` içinde görünmesi gerekir; aksi halde workflow başarısız olur. Daha geniş çok-sağlayıcılı değerlendirme bunun ardından gate olmayan telemetri olarak çalışmaya devam eder. Hiç credential yoksa opt-in test temiz biçimde atlanır; bilinçli tek-sağlayıcı yapılandırması ise API çağrısı yapmadan başarısız olur. Üçüncü taraf erişilebilirliği release'i engellemesin diye gate yalnızca nightly workflow'dadır.
 
 #### Sağlayıcılara isim verme
 
@@ -249,7 +249,7 @@ CLOUDFLARE_ACCOUNT_ID=<repository variable>
 CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions` olur. Model erişilebilirliği ve ücretsiz plan uygunluğu değişebilir; model seçmeden önce `provider-diagnostics.yml` çalıştırın ve [Workers AI fiyatlandırmasını](https://developers.cloudflare.com/workers-ai/platform/pricing/) kontrol edin. Model kimlikleri secret değil repository variable olarak tutulmalıdır.
+Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions` olur. Cloudflare isteği `response_format: { "type": "json_object" }` ve `max_tokens: 2000` gönderir; böylece Qwen reasoning çıktısı ve tamamlanmış JSON yanıtı için yeterli alan bırakılır, çıktı sağlayıcı varsayılanına bırakılmaz. Model erişilebilirliği ve ücretsiz plan uygunluğu değişebilir; model seçmeden önce `provider-diagnostics.yml` çalıştırın ve [Workers AI fiyatlandırmasını](https://developers.cloudflare.com/workers-ai/platform/pricing/) kontrol edin. Model kimlikleri secret değil repository variable olarak tutulmalıdır.
 
 Diğer oy verenlerden farklı bir model ailesi seçin. Aynı temel modeli sunan iki uç nokta bağımsız mutabakat oluşturmaz. Ücretsiz kota düşük hacimli nightly veya manuel değerlendirmeye uygundur; her PR için garantili release gate olarak kullanılmamalıdır.
 

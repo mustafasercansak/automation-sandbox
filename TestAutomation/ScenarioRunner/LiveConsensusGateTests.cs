@@ -15,7 +15,7 @@ namespace ScenarioRunner
     {
         private const string GateEnvironmentVariable = "LIVE_CONSENSUS_GATE";
         private const string ScenarioName = "Desktop_AmbiguousSiblingTabs";
-        private static readonly string[] RequiredProviderNames = { "Gemini", "Groq" };
+        private static readonly string[] RequiredProviderNames = { "Groq", "Mistral" };
 
         [Fact]
         public void LiveConsensusGateFixture_ExistsAndHasGroundTruth()
@@ -25,7 +25,7 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public async Task LiveConsensusGate_GeminiAndGroqAgreeOnCorrectCandidate()
+        public async Task LiveConsensusGate_GroqAndMistralAgreeOnCorrectCandidate()
         {
             if (!IsGateEnabled())
             {
@@ -36,8 +36,8 @@ namespace ScenarioRunner
             var configured = LlmProviderFactory.CreateConfiguredProviders();
             if (configured.Count == 0)
             {
-                Console.WriteLine("[LiveConsensusGate] Gemini and Groq credentials are not configured - skipping live consensus gate.");
-                AppendStepSummary("⏭️ Skipped", configured, null, "Gemini and Groq credentials are absent.");
+                Console.WriteLine("[LiveConsensusGate] Groq and Mistral credentials are not configured - skipping live consensus gate.");
+                AppendStepSummary("⏭️ Skipped", configured, null, "Groq and Mistral credentials are absent.");
                 return;
             }
 
@@ -53,9 +53,10 @@ namespace ScenarioRunner
             }
 
             var scenario = Assert.Single(EvaluationScenarios.All, s => s.Name == ScenarioName);
-            Assert.IsType<GeminiHealingProvider>(Assert.Single(selected, p => p.Name == "Gemini"));
             var groqProvider = Assert.IsType<OpenAiHealingProvider>(Assert.Single(selected, p => p.Name == "Groq"));
             Assert.StartsWith("https://api.groq.com/", groqProvider.ApiUrl);
+            var mistralProvider = Assert.IsType<OpenAiHealingProvider>(Assert.Single(selected, p => p.Name == "Mistral"));
+            Assert.StartsWith("https://api.mistral.ai/", mistralProvider.ApiUrl);
 
             // This intentionally mirrors SelfHealingResolver's deterministic shortlist order and
             // synthetic "c" + index ids so the raw live votes can be audited. A resolver change
@@ -108,31 +109,31 @@ namespace ScenarioRunner
             Assert.Equal(expectedCandidate.CandidateId, agreedCandidateId);
             Assert.Equal(HealSource.Llm, result.Source);
             Assert.True(result.AgreedProviders.Count >= 2, "Live consensus requires at least two agreeing providers. " + detail);
-            Assert.Contains("Gemini", result.AgreedProviders);
             Assert.Contains("Groq", result.AgreedProviders);
+            Assert.Contains("Mistral", result.AgreedProviders);
             Assert.Equal(scenario.GroundTruthAutomationId, result.Matched!.AutomationId);
         }
 
         [Fact]
         public void LiveConsensusGate_DeliberateSingleProviderConfigurationFailsValidation()
         {
-            var providers = new ILlmHealingProvider[] { new StubProvider("Gemini") };
+            var providers = new ILlmHealingProvider[] { new StubProvider("Groq") };
 
             var exception = Assert.Throws<InvalidOperationException>(() => SelectRequiredProviders(providers));
 
-            Assert.Contains("Gemini", exception.Message);
             Assert.Contains("Groq", exception.Message);
+            Assert.Contains("Mistral", exception.Message);
             Assert.Contains("exactly two", exception.Message);
         }
 
         [Fact]
         public void LiveConsensusGate_StepSummaryNamesBothIndependentProviders()
         {
-            var providers = new ILlmHealingProvider[] { new StubProvider("Gemini"), new StubProvider("Groq") };
+            var providers = new ILlmHealingProvider[] { new StubProvider("Groq"), new StubProvider("Mistral") };
 
             var markdown = BuildStepSummary("✅ Passed", providers, "c0", "Both votes were shortlist-valid.");
 
-            Assert.Contains("Gemini + Groq", markdown);
+            Assert.Contains("Groq + Mistral", markdown);
             Assert.Contains("Desktop_AmbiguousSiblingTabs", markdown);
             Assert.Contains("`c0`", markdown);
             Assert.Contains("✅ Passed", markdown);
@@ -157,7 +158,7 @@ namespace ScenarioRunner
                     ? "none"
                     : string.Join(", ", configured.Select(p => p.Name).OrderBy(name => name, StringComparer.Ordinal));
                 throw new InvalidOperationException(
-                    $"Live consensus gate requires exactly two independent providers (Gemini and Groq); configured providers: {configuredNames}.");
+                    $"Live consensus gate requires exactly two independent providers (Groq and Mistral); configured providers: {configuredNames}.");
             }
 
             return selected;
@@ -209,7 +210,7 @@ namespace ScenarioRunner
             return Environment.NewLine +
                 "## Live Two-Provider Consensus Gate" + Environment.NewLine + Environment.NewLine +
                 $"- **Status:** {status}" + Environment.NewLine +
-                $"- **Required providers:** Gemini + Groq" + Environment.NewLine +
+                $"- **Required providers:** Groq + Mistral" + Environment.NewLine +
                 $"- **Configured/selected providers:** {providerNames}" + Environment.NewLine +
                 $"- **Scenario:** `{ScenarioName}`" + Environment.NewLine +
                 $"- **Agreed candidate:** `{candidateId ?? "none"}`" + Environment.NewLine +

@@ -12,6 +12,7 @@ namespace LlmHealing
     {
         private const string DefaultApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
+        private const int DefaultMaxOutputTokens = 1024;
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
         public static readonly int DefaultMaxRetries = 2;
@@ -19,6 +20,8 @@ namespace LlmHealing
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly string _apiUrl;
+        private readonly bool _requestJsonResponse;
+        private readonly int _maxOutputTokens;
 
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
@@ -36,6 +39,8 @@ namespace LlmHealing
             TimeSpan? totalTimeout = null,
             string? endpoint = null,
             string? name = null,
+            bool requestJsonResponse = false,
+            int? maxOutputTokens = null,
             int? maxRetries = null,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
             : base(
@@ -64,6 +69,8 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
+            _requestJsonResponse = requestJsonResponse;
+            _maxOutputTokens = maxOutputTokens ?? DefaultMaxOutputTokens;
 
             var rawEndpoint = NullIfEmpty(endpoint)
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
@@ -85,15 +92,28 @@ namespace LlmHealing
 
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
-            var requestBody = new
-            {
-                model = _model,
-                messages = new[]
+            object requestBody = _requestJsonResponse
+                ? new
                 {
-                    new { role = "user", content = prompt }
-                },
-                temperature = 0.0,
-            };
+                    model = _model,
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0.0,
+                    max_tokens = _maxOutputTokens,
+                    response_format = new { type = "json_object" },
+                }
+                : new
+                {
+                    model = _model,
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0.0,
+                    max_tokens = _maxOutputTokens,
+                };
 
             var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
             {
