@@ -12,6 +12,7 @@ namespace LlmHealing
     {
         private const string DefaultApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
+        private const int DefaultMaxOutputTokens = 1024;
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
         public static readonly int DefaultMaxRetries = 2;
@@ -93,6 +94,7 @@ namespace LlmHealing
                     new { role = "user", content = prompt }
                 },
                 temperature = 0.0,
+                max_tokens = DefaultMaxOutputTokens,
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)

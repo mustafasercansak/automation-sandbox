@@ -117,7 +117,7 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public async Task LlmProviderFactory_ConfiguresCloudflare_WhenTokenAccountAndModelAreSet()
+        public async Task LlmProviderFactory_BuildsCloudflareProvider_WhenAllThreeVariablesPresent()
         {
             string? requestUrl = null;
             string? authorization = null;
@@ -158,6 +158,7 @@ namespace ScenarioRunner
             Assert.Equal("https://api.cloudflare.com/client/v4/accounts/0123456789abcdef/ai/v1/chat/completions", requestUrl);
             Assert.Equal("Bearer cloudflare-test-token", authorization);
             Assert.Contains("\"model\":\"@cf/zai-org/glm-4.7-flash\"", requestBody);
+            Assert.Contains("\"max_tokens\":1024", requestBody);
         }
 
         [Theory]
