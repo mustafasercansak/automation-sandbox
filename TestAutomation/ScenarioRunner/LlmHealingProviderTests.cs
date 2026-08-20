@@ -806,6 +806,28 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task CloudflareParseFailure_RecordsBoundedRawResponseDiagnostic()
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"choices\":[{\"message\":{\"content\":\"not-json-response\"}}]}"),
+            });
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-cloudflare-key",
+                name: "Cloudflare",
+                maxOutputTokens: 2000);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("No JSON object found", result.ErrorMessage);
+            Assert.Contains("Raw response:", result.ErrorMessage);
+            Assert.Contains("not-json-response", result.ErrorMessage);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_CallerCancellation_TakesPrecedence()
         {
             var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));
