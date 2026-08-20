@@ -806,6 +806,57 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task PerAttemptTimeoutOverride_Set_AllowsSlowBatchResponse()
+        {
+            var handler = new FakeHttpMessageHandler(async (_, ct) =>
+            {
+                await Task.Delay(100, ct);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"candidateId\\\":\\\"c1\\\",\\\"confidence\\\":0.9,\\\"reasoning\\\":\\\"ok\\\"}\"}]}"),
+                };
+            });
+
+            var provider = new ClaudeHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "sk-test-key",
+                timeout: TimeSpan.FromMilliseconds(50),
+                totalTimeout: TimeSpan.FromMilliseconds(500),
+                maxRetries: 0)
+            {
+                PerAttemptTimeoutOverride = TimeSpan.FromMilliseconds(250),
+            };
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.Equal("c1", result.MatchedCandidateId);
+        }
+
+        [Fact]
+        public async Task CloudflareParseFailure_RecordsBoundedRawResponseDiagnostic()
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"choices\":[{\"message\":{\"content\":\"not-json-response\"}}]}"),
+            });
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: "test-cloudflare-key",
+                name: "Cloudflare",
+                maxOutputTokens: 2000);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("No JSON object found", result.ErrorMessage);
+            Assert.Contains("Raw response:", result.ErrorMessage);
+            Assert.Contains("not-json-response", result.ErrorMessage);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_CallerCancellation_TakesPrecedence()
         {
             var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));

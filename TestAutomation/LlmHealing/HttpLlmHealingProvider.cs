@@ -158,15 +158,25 @@ namespace LlmHealing
             }
             catch (Exception ex)
             {
+                var diagnostic = Name == "Cloudflare"
+                    ? $" Raw response: {TruncateForDiagnostics(httpResponse.Body)}"
+                    : "";
                 return new LlmHealingResult
                 {
                     ProviderName = Name,
                     Success = false,
-                    ErrorMessage = ex.Message,
+                    ErrorMessage = ex.Message + diagnostic,
                     Elapsed = stopwatch.Elapsed,
                     AttemptCount = httpResponse.AttemptsMade,
                 };
             }
+        }
+
+        private static string TruncateForDiagnostics(string? body)
+        {
+            const int maxLength = 4096;
+            var value = body ?? "<empty>";
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...<truncated>";
         }
     }
 }
