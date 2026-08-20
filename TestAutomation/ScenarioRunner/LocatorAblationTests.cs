@@ -621,6 +621,105 @@ namespace ScenarioRunner
                 r => r.MutationKind == LocatorMutationKind.PositionShift);
         }
 
+        [Fact]
+        public void JointAssignment_DeclinesEveryClaimant_WhenOwnershipMarginIsAmbiguous()
+        {
+            var baseline = new MultiLocatorBaselineReport
+            {
+                Scenarios = new List<MultiLocatorScenarioResult>
+                {
+                    new MultiLocatorScenarioResult
+                    {
+                        ScenarioId = "ambiguous",
+                        SharedCandidateClaims = 1,
+                        LocatorResults = new List<AblationScenarioResult>
+                        {
+                            AcceptedClaim("removed", LocatorMutationKind.RemovedElement, AblationOutcome.FalseHealOnRemoved, "candidate", 0.90),
+                            AcceptedClaim("survivor", LocatorMutationKind.RenamedAutomationId, AblationOutcome.CorrectHeal, "candidate", 0.87),
+                        },
+                    },
+                },
+            };
+
+            var report = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            var results = Assert.Single(report.Scenarios).LocatorResults;
+            Assert.All(results, r => Assert.False(r.Joint.EngineAccepted));
+            Assert.All(results, r => Assert.Equal(JointAssignmentDisposition.DeclinedAmbiguousContention, r.Disposition));
+            Assert.Contains(results, r => r.Joint.Outcome == AblationOutcome.CorrectDecline);
+            Assert.Contains(results, r => r.Joint.Outcome == AblationOutcome.MissedHeal);
+            Assert.Equal(0, report.UnresolvedSharedCandidateCollisions);
+
+            // Evaluation is a comparison, not an in-place rewrite of the measured baseline.
+            Assert.All(baseline.Scenarios[0].LocatorResults, r => Assert.True(r.EngineAccepted));
+        }
+
+        [Fact]
+        public void HandBrakeFixture_JointAssignment_ResolvesReciprocalContentionButNotIncidentalFalseHeal()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.GenerateMultiLocator(
+                root,
+                "HandBrake",
+                "1.8.2",
+                FixtureFileName,
+                HandBrakeMultiLocatorGroups());
+            var baseline = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+
+            var joint = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            Console.WriteLine("=======================================================");
+            Console.WriteLine("JOINT TOP-CLAIM ASSIGNMENT EXPERIMENT (#141)");
+            Console.WriteLine("=======================================================");
+            Console.WriteLine($"Scenarios: {joint.Scenarios.Count}");
+            Console.WriteLine($"Locator resolutions: {joint.Scenarios.Sum(s => s.LocatorResults.Count)}");
+            Console.WriteLine($"Input contention scenarios: {joint.InputScenariosWithContention}");
+            Console.WriteLine($"Unresolved shared-candidate collisions: {joint.UnresolvedSharedCandidateCollisions}");
+            Console.WriteLine($"Baseline: correct={joint.BaselineMetrics.CorrectHeals}, removed false={joint.BaselineMetrics.FalseHealsOnRemoved}, correct declines={joint.BaselineMetrics.CorrectDeclines}, manual={joint.BaselineMetrics.ManualReviewRate:P1}");
+            Console.WriteLine($"Joint: correct={joint.JointMetrics.CorrectHeals}, removed false={joint.JointMetrics.FalseHealsOnRemoved}, correct declines={joint.JointMetrics.CorrectDeclines}, manual={joint.JointMetrics.ManualReviewRate:P1}");
+            foreach (var scenario in joint.Scenarios)
+            {
+                Console.WriteLine($"  {scenario.ScenarioId}: input-shared={scenario.InputSharedCandidateClaims}, unresolved={scenario.UnresolvedSharedCandidateClaims}");
+                foreach (var locator in scenario.LocatorResults)
+                {
+                    Console.WriteLine($"    {locator.Joint.OriginalAutomationId}: {locator.Baseline.Outcome} -> {locator.Joint.Outcome} ({locator.Disposition})");
+                }
+            }
+
+            Assert.Equal(dataset.Scenarios.Select(s => s.ScenarioId), joint.Scenarios.Select(s => s.ScenarioId));
+            Assert.Equal(16, joint.Scenarios.Sum(s => s.LocatorResults.Count));
+            Assert.Equal(6, joint.InputScenariosWithContention);
+            Assert.Equal(0, joint.UnresolvedSharedCandidateCollisions);
+
+            Assert.Equal(9, joint.BaselineMetrics.CorrectHeals);
+            Assert.Equal(7, joint.BaselineMetrics.FalseHealsOnRemoved);
+            Assert.Equal(0, joint.BaselineMetrics.CorrectDeclines);
+            Assert.Equal(0.0, joint.BaselineMetrics.ManualReviewRate, 5);
+
+            Assert.Equal(9, joint.JointMetrics.CorrectHeals);
+            Assert.Equal(1, joint.JointMetrics.FalseHealsOnRemoved);
+            Assert.Equal(6, joint.JointMetrics.CorrectDeclines);
+            Assert.Equal(6.0 / 16.0, joint.JointMetrics.ManualReviewRate, 5);
+            Assert.Equal(6.0 / 7.0, joint.RemovedLocatorCorrectDeclineRate, 5);
+
+            var reciprocalScenarios = joint.Scenarios.Take(6).ToList();
+            Assert.All(reciprocalScenarios, scenario =>
+            {
+                Assert.Contains(scenario.LocatorResults, r =>
+                    r.Baseline.Outcome == AblationOutcome.FalseHealOnRemoved &&
+                    r.Joint.Outcome == AblationOutcome.CorrectDecline &&
+                    r.Disposition == JointAssignmentDisposition.DeclinedByStrongerClaim);
+                Assert.Contains(scenario.LocatorResults, r =>
+                    r.Joint.Outcome == AblationOutcome.CorrectHeal &&
+                    r.Disposition == JointAssignmentDisposition.WonContention);
+            });
+
+            var mixed = joint.Scenarios[6];
+            var close = Assert.Single(mixed.LocatorResults, r => r.Joint.OriginalAutomationId == "Close");
+            Assert.Equal(AblationOutcome.FalseHealOnRemoved, close.Joint.Outcome);
+            Assert.Equal(JointAssignmentDisposition.PreservedUncontested, close.Disposition);
+        }
+
         private List<(string ScenarioId, string? RealMatchedId, bool IsAnotherAuthoredLocator)> RunWholeTreeReconciliationProbe()
         {
             // Cannot match by AutomationId: ApplyMutation opaques every element's AutomationId in the
@@ -1302,6 +1401,25 @@ namespace ScenarioRunner
 
         private static AblationScenarioResult Result(LocatorMutationKind kind, AblationOutcome outcome) =>
             new AblationScenarioResult { MutationKind = kind, Outcome = outcome };
+
+        private static AblationScenarioResult AcceptedClaim(
+            string originalAutomationId,
+            LocatorMutationKind kind,
+            AblationOutcome outcome,
+            string matchedAutomationId,
+            double score) =>
+            new AblationScenarioResult
+            {
+                ScenarioId = "scenario#" + originalAutomationId,
+                OriginalAutomationId = originalAutomationId,
+                MutationKind = kind,
+                Outcome = outcome,
+                EngineAccepted = true,
+                ResolutionStatus = HealResolutionStatus.Confident,
+                MatchedAutomationId = matchedAutomationId,
+                MatchedElement = matchedAutomationId,
+                Score = score,
+            };
 
         private static UiElementInfo SmallTree()
         {
