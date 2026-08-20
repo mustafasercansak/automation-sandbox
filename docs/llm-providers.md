@@ -136,7 +136,7 @@ CLOUDFLARE_ACCOUNT_ID=<repository variable>
 CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. The shared OpenAI-compatible request sets `max_tokens` to `1024`, leaving room for a reasoning preamble and the required JSON response instead of relying on a provider-specific output default. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
+The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. For Qwen reasoning models, the request also sets `chat_template_kwargs.enable_thinking` to `false`; the shared request sets `max_tokens` to `1024` so the required JSON response does not depend on a provider-specific output default. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
 
 Choose a model family different from the other voters. Two endpoints serving the same underlying model do not provide independent consensus. The free allocation is appropriate for low-volume nightly or manual evaluation, not a guaranteed per-PR release gate.
 
@@ -249,7 +249,7 @@ CLOUDFLARE_ACCOUNT_ID=<repository variable>
 CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 ```
 
-Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions` olur. OpenAI uyumlu ortak istek `max_tokens` değerini `1024` olarak gönderir; böylece reasoning önsözü ve gerekli JSON yanıtı sağlayıcı varsayılanına takılmadan aynı çıktı bütçesini kullanır. Model erişilebilirliği ve ücretsiz plan uygunluğu değişebilir; model seçmeden önce `provider-diagnostics.yml` çalıştırın ve [Workers AI fiyatlandırmasını](https://developers.cloudflare.com/workers-ai/platform/pricing/) kontrol edin. Model kimlikleri secret değil repository variable olarak tutulmalıdır.
+Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions` olur. Qwen reasoning modelleri için istekte `chat_template_kwargs.enable_thinking` değeri `false` gönderilir; ayrıca OpenAI uyumlu ortak istek `max_tokens` değerini `1024` olarak belirler. Böylece gerekli JSON yanıtı reasoning çıktısı tarafından tüketilen sağlayıcı varsayılan bütçesine bağlı kalmaz. Model erişilebilirliği ve ücretsiz plan uygunluğu değişebilir; model seçmeden önce `provider-diagnostics.yml` çalıştırın ve [Workers AI fiyatlandırmasını](https://developers.cloudflare.com/workers-ai/platform/pricing/) kontrol edin. Model kimlikleri secret değil repository variable olarak tutulmalıdır.
 
 Diğer oy verenlerden farklı bir model ailesi seçin. Aynı temel modeli sunan iki uç nokta bağımsız mutabakat oluşturmaz. Ücretsiz kota düşük hacimli nightly veya manuel değerlendirmeye uygundur; her PR için garantili release gate olarak kullanılmamalıdır.
 

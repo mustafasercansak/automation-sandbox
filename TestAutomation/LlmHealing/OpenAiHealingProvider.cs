@@ -20,6 +20,7 @@ namespace LlmHealing
         private readonly string? _apiKey;
         private readonly string _model;
         private readonly string _apiUrl;
+        private readonly bool _disableReasoning;
 
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
         protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
@@ -37,6 +38,7 @@ namespace LlmHealing
             TimeSpan? totalTimeout = null,
             string? endpoint = null,
             string? name = null,
+            bool disableReasoning = false,
             int? maxRetries = null,
             Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
             : base(
@@ -65,6 +67,7 @@ namespace LlmHealing
             // missing env var - a plain ?? wouldn't fall through to DefaultModel in that case
             // (see ClaudeHealingProvider/GeminiHealingProvider, which hit this live in CI).
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_MODEL")) ?? DefaultModel;
+            _disableReasoning = disableReasoning;
 
             var rawEndpoint = NullIfEmpty(endpoint)
                 ?? NullIfEmpty(Environment.GetEnvironmentVariable("OPENAI_ENDPOINT"))
@@ -86,16 +89,28 @@ namespace LlmHealing
 
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
-            var requestBody = new
-            {
-                model = _model,
-                messages = new[]
+            object requestBody = _disableReasoning
+                ? new
                 {
-                    new { role = "user", content = prompt }
-                },
-                temperature = 0.0,
-                max_tokens = DefaultMaxOutputTokens,
-            };
+                    model = _model,
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0.0,
+                    max_tokens = DefaultMaxOutputTokens,
+                    chat_template_kwargs = new { enable_thinking = false },
+                }
+                : new
+                {
+                    model = _model,
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0.0,
+                    max_tokens = DefaultMaxOutputTokens,
+                };
 
             var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl)
             {

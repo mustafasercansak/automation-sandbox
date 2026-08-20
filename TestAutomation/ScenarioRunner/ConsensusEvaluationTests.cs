@@ -159,6 +159,7 @@ namespace ScenarioRunner
             Assert.Equal("Bearer cloudflare-test-token", authorization);
             Assert.Contains("\"model\":\"@cf/zai-org/glm-4.7-flash\"", requestBody);
             Assert.Contains("\"max_tokens\":1024", requestBody);
+            Assert.Contains("\"chat_template_kwargs\":{\"enable_thinking\":false}", requestBody);
         }
 
         [Theory]
