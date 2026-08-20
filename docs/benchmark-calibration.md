@@ -298,7 +298,7 @@ Three of these are **reciprocal pairs**: remove either element and the heuristic
 The remaining 7 of 17 claimed untracked or incidental elements (an empty-named container, a toolbar element with no test relying on it) that no other locator wants either. A joint solver would have nothing to exploit there — its ceiling on this dataset is bounded by the 59%, not by the full 17.
 
 > [!NOTE]
-> **Reading this number honestly.** 59% was favourable enough to justify the next step the original issue named — building scenarios where multiple locators break together, which is also the more realistic failure mode — but it was not evidence the mechanism worked. The original single-mutation dataset could not test joint assignment directly: with only one locator broken per scenario, there was no real contention for a solver to exploit. §9 now supplies that multi-locator baseline; it confirms the predicted contention exists, while deliberately stopping before a matching-based resolver is built.
+> **Reading this number honestly.** 59% was favourable enough to justify the next step the original issue named — building scenarios where multiple locators break together, which is also the more realistic failure mode — but it was not evidence the mechanism worked. The original single-mutation dataset could not test joint assignment directly: with only one locator broken per scenario, there was no real contention for a solver to exploit. §9 supplies that multi-locator baseline, and §10 evaluates the deliberately narrow top-claim assignment experiment against it.
 
 ---
 
@@ -358,6 +358,39 @@ The six targeted cases reproduced exactly. For example, after `Minimize-Restore`
 
 > [!IMPORTANT]
 > **Formal finding.** The favourable 59% offline probe was not an artefact of looking backward at isolated mutations: all six reciprocal directions produce real candidate contention when both locators break in the same tree. This clears the evidence precondition for separately evaluating a joint assignment algorithm. It does **not** show that such an algorithm will safely decline the losing locator; no joint resolver exists in this change, and the seventh mixed scenario still false-heals a removed `Close` onto an unclaimed incidental element. Regression guard: `LocatorAblationTests.HandBrakeFixture_MultiLocatorBaseline_ReproducesReciprocalPairContention`.
+
+---
+
+### 10. Joint Top-Claim Assignment Experiment (#141)
+
+The experiment reconciles only claims that the existing resolver already accepted after its confidence, evidence, and candidate-margin gates. For locator $i$ and its accepted top candidate $c$, the assignment utility is $score(i,c)-MinimumConfidence$; leaving a locator unmatched has utility $0$. Each locator and candidate can participate in at most one assignment. A sole claim is preserved. When several locators claim one candidate, the highest-utility claim wins only if its lead is at least `MinimumCandidateMargin`; otherwise every claimant is left unmatched. No runner-up is promoted, so the experiment cannot create a new match that the production resolver did not already accept.
+
+This is an offline `ScenarioRunner` evaluator, not a production resolver. It changes neither the `SelfHealingResolver` API nor the healing-report schema.
+
+| Metric across all 16 locator resolutions | Independent baseline | Joint top-claim assignment |
+| :--- | ---: | ---: |
+| Surviving-locator correct heals | **9 / 9** | **9 / 9** |
+| Removed-locator correct declines | 0 / 7 | **6 / 7 (85.7%)** |
+| Removed-locator false heals | 7 / 7 | **1 / 7** |
+| Precision among accepted matches | 56.3% | **90.0%** |
+| Manual-review rate | 0.0% | 37.5% |
+| Shared-candidate collisions | 6 | **0** |
+
+Every reciprocal direction produced the same result: the surviving locator's $1.000$ claim won, while the removed locator's weaker claim was declined.
+
+| Removed locator | Surviving locator | Removed claim score | Result |
+| :--- | :--- | ---: | :--- |
+| `Minimize-Restore` | `Maximize-Restore` | 0.874 | Declined; survivor preserved |
+| `Maximize-Restore` | `Minimize-Restore` | 0.874 | Declined; survivor preserved |
+| `Destination` | `statusBar` | 0.690 | Declined; survivor preserved |
+| `statusBar` | `Destination` | 0.690 | Declined; survivor preserved |
+| `tabControl` | `sourceSelection` | 0.665 | Declined; survivor preserved |
+| `sourceSelection` | `tabControl` | 0.665 | Declined; survivor preserved |
+
+The mixed four-locator scenario exposes the boundary: the renamed `ShowQueue`, name-drifted `Preview`, and shifted `Destination` remain correct, but removed `Close` still false-heals onto an unclaimed incidental element. One-to-one ownership supplies an absence signal only when another locator contests the candidate.
+
+> [!IMPORTANT]
+> **Formal finding.** On this targeted HandBrake baseline, joint top-claim ownership converts all 6 contention-driven false heals into correct declines without losing any of the 9 surviving-locator heals, but it leaves the 1 uncontested false heal untouched and raises manual review from 0.0% to 37.5%. This supports joint reconciliation as a promising targeted guard, not as a general deleted-element solution or production-ready design: the sample contains one application and deliberately constructed reciprocal pairs. Regression guards: `LocatorAblationTests.JointAssignment_DeclinesEveryClaimant_WhenOwnershipMarginIsAmbiguous` and `LocatorAblationTests.HandBrakeFixture_JointAssignment_ResolvesReciprocalContentionButNotIncidentalFalseHeal`.
 
 ---
 
@@ -638,7 +671,7 @@ Bunların üçü **karşılıklı çift**: iki elemandan hangisi silinirse silin
 Kalan 17'de 7'si, başka hiçbir locator'ın da istemediği izlenmeyen ya da tesadüfi elemanları işaret etti (adsız bir kapsayıcı, hiçbir testin dayanmadığı bir araç çubuğu elemanı gibi). Ortak bir çözücünün orada kullanabileceği bir şey yok — bu veri kümesindeki tavanı %59 ile sınırlı, 17'nin tamamıyla değil.
 
 > [!NOTE]
-> **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumluydu, fakat mekanizmanın çalıştığına dair kanıt değildi. İlk tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemiyordu: senaryo başına yalnızca bir locator kırıldığından çözücünün kullanabileceği gerçek bir çakışma yoktu. §9 artık bu multi-locator baseline'ını sağlıyor; öngörülen çakışmanın varlığını doğruluyor, fakat eşleştirme tabanlı bir çözücü kurmadan bilinçli olarak duruyor.
+> **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumluydu, fakat mekanizmanın çalıştığına dair kanıt değildi. İlk tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemiyordu: senaryo başına yalnızca bir locator kırıldığından çözücünün kullanabileceği gerçek bir çakışma yoktu. §9 bu multi-locator baseline'ını sağlıyor, §10 ise bilinçli olarak dar tutulan top-claim atama deneyini ona karşı değerlendiriyor.
 
 ---
 
@@ -699,3 +732,35 @@ Hedeflenen altı vaka eksiksiz tekrarlandı. Örneğin `Minimize-Restore` silini
 > [!IMPORTANT]
 > **Resmi çıkarım.** Olumlu %59 çevrimdışı probu, yalıtılmış mutasyonlara geriye dönük bakmanın bir yapaylığı değildi: altı karşılıklı yönün tamamı, iki locator aynı ağaçta kırıldığında gerçek aday çakışması üretiyor. Bu, ortak atama algoritmasını ayrı bir işte değerlendirmek için kanıt ön koşulunu karşılıyor. Böyle bir algoritmanın kaybeden locator'ı güvenle reddedeceğini **göstermiyor**; bu değişiklikte ortak çözücü yok ve yedinci karışık senaryoda silinen `Close` hâlâ kimsenin talep etmediği tesadüfi bir elemana yanlış iyileştiriliyor. Regresyon koruması: `LocatorAblationTests.HandBrakeFixture_MultiLocatorBaseline_ReproducesReciprocalPairContention`.
 
+---
+
+### 10. Ortak Top-Claim Atama Deneyi (#141)
+
+Deney yalnızca mevcut çözücünün güven, kanıt ve aday-marjı kapılarından sonra zaten kabul ettiği talepleri uzlaştırıyor. Locator $i$ ve kabul edilmiş en iyi adayı $c$ için atama faydası $score(i,c)-MinimumConfidence$; locator'ı eşleşmemiş bırakmanın faydası $0$. Her locator ve aday en fazla bir atamada yer alabilir. Tek başına kalan talep korunur. Bir adayı birden fazla locator talep ettiğinde, en yüksek faydalı talep yalnızca farkı en az `MinimumCandidateMargin` ise kazanır; aksi halde tüm talep sahipleri eşleşmemiş bırakılır. İkinci aday terfi ettirilmez; dolayısıyla deney üretim çözücüsünün zaten kabul etmediği yeni bir eşleşme oluşturamaz.
+
+Bu, çevrimdışı bir `ScenarioRunner` değerlendiricisidir; üretim çözücüsü değildir. `SelfHealingResolver` API'sini veya healing-report şemasını değiştirmez.
+
+| 16 locator çözümünün tamamındaki metrik | Bağımsız baseline | Ortak top-claim ataması |
+| :--- | ---: | ---: |
+| Hayatta kalan locator doğru iyileştirmesi | **9 / 9** | **9 / 9** |
+| Silinen locator doğru reddi | 0 / 7 | **6 / 7 (%85.7)** |
+| Silinen locator yanlış iyileştirmesi | 7 / 7 | **1 / 7** |
+| Kabul edilen eşleşmelerde kesinlik | %56.3 | **%90.0** |
+| Manuel inceleme oranı | %0.0 | %37.5 |
+| Paylaşılan-aday çakışması | 6 | **0** |
+
+Altı karşılıklı yönün tamamı aynı sonucu verdi: hayatta kalan locator'ın $1.000$ talebi kazanırken silinen locator'ın daha zayıf talebi reddedildi.
+
+| Silinen locator | Hayatta kalan locator | Silinen talebin skoru | Sonuç |
+| :--- | :--- | ---: | :--- |
+| `Minimize-Restore` | `Maximize-Restore` | 0.874 | Reddedildi; hayatta kalan korundu |
+| `Maximize-Restore` | `Minimize-Restore` | 0.874 | Reddedildi; hayatta kalan korundu |
+| `Destination` | `statusBar` | 0.690 | Reddedildi; hayatta kalan korundu |
+| `statusBar` | `Destination` | 0.690 | Reddedildi; hayatta kalan korundu |
+| `tabControl` | `sourceSelection` | 0.665 | Reddedildi; hayatta kalan korundu |
+| `sourceSelection` | `tabControl` | 0.665 | Reddedildi; hayatta kalan korundu |
+
+Karışık dört-locator senaryosu sınırı görünür kılıyor: yeniden adlandırılan `ShowQueue`, isim kayması yaşayan `Preview` ve konumu değişen `Destination` doğru kalırken, silinen `Close` hâlâ kimsenin talep etmediği tesadüfi bir elemana yanlış iyileştiriliyor. Bire-bir sahiplik yalnızca başka bir locator adaya itiraz ettiğinde yokluk sinyali sağlıyor.
+
+> [!IMPORTANT]
+> **Resmi çıkarım.** Bu hedefli HandBrake baseline'ında ortak top-claim sahipliği, çakışmadan doğan 6 yanlış iyileştirmenin tamamını 9 hayatta-kalan locator iyileştirmesinden hiçbirini kaybetmeden doğru redde çeviriyor; fakat itiraz edilmeyen 1 yanlış iyileştirmeyi değiştirmiyor ve manuel incelemeyi %0.0'dan %37.5'e çıkarıyor. Bu sonuç ortak uzlaştırmayı umut verici, hedefli bir koruma olarak destekliyor; genel bir silinmiş-eleman çözümü veya üretime hazır tasarım olarak değil: örneklem tek uygulamadan ve bilinçli olarak kurulmuş karşılıklı çiftlerden oluşuyor. Regresyon korumaları: `LocatorAblationTests.JointAssignment_DeclinesEveryClaimant_WhenOwnershipMarginIsAmbiguous` ve `LocatorAblationTests.HandBrakeFixture_JointAssignment_ResolvesReciprocalContentionButNotIncidentalFalseHeal`.
