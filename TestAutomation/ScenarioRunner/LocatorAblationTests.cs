@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -108,6 +109,57 @@ namespace ScenarioRunner
 
             Assert.DoesNotContain(Flatten(mutated), e => e.AutomationId == "btnSave");
             Assert.DoesNotContain(Flatten(mutated), e => e.Name == "Save icon");
+        }
+
+        [Fact]
+        public void GenerateMultiLocator_AppliesEveryRecipeToOneSharedTreeAndRoundTrips()
+        {
+            var root = SmallTree();
+            var dataset = LocatorAblationGenerator.GenerateMultiLocator(
+                root,
+                "StubApp",
+                "1.0",
+                "stub.json",
+                new[]
+                {
+                    new[]
+                    {
+                        Mutation("btnSave", LocatorMutationKind.RemovedElement),
+                        Mutation("lblTitle", LocatorMutationKind.PositionShift),
+                    },
+                });
+
+            var scenario = Assert.Single(dataset.Scenarios);
+            Assert.Equal(LocatorMutationKind.MultiLocator, scenario.MutationKind);
+            Assert.Equal(2, scenario.Mutations!.Count);
+            Assert.Equal(
+                new[] { LocatorExpectedOutcome.NoSuccessor, LocatorExpectedOutcome.Successor },
+                scenario.Mutations.Select(m => m.ExpectedOutcome));
+
+            var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
+            Assert.DoesNotContain(Flatten(mutated), e => e.Name == "Save");
+            Assert.Contains(Flatten(mutated), e => e.AutomationId == scenario.Mutations[1].MutatedAutomationId);
+            Assert.Contains(Flatten(root), e => e.AutomationId == "btnSave");
+
+            var restored = LocatorAblationDatasetSerializer.FromJson(LocatorAblationDatasetSerializer.ToJson(dataset));
+            Assert.Equal(LocatorAblationDataset.CurrentSchemaVersion, restored.SchemaVersion);
+            Assert.Equal(2, Assert.Single(restored.Scenarios).Mutations!.Count);
+
+            var wrongRunner = Assert.Throws<InvalidOperationException>(() => LocatorAblationHarness.Run(dataset, root));
+            Assert.Contains(nameof(LocatorAblationHarness.RunMultiLocatorBaseline), wrongRunner.Message);
+        }
+
+        [Fact]
+        public void GenerateMultiLocator_RejectsAGroupWithFewerThanTwoLocators()
+        {
+            var root = SmallTree();
+
+            Assert.Throws<ArgumentException>(() => LocatorAblationGenerator.GenerateMultiLocator(
+                root,
+                "StubApp",
+                "1.0",
+                "stub.json",
+                new[] { new[] { Mutation("btnSave", LocatorMutationKind.RenamedAutomationId) } }));
         }
 
         [Fact]
@@ -524,6 +576,51 @@ namespace ScenarioRunner
             Assert.Equal(10, falseHeals.Count(f => f.IsAnotherAuthoredLocator));
         }
 
+        [Fact]
+        public void HandBrakeFixture_MultiLocatorBaseline_ReproducesReciprocalPairContention()
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.GenerateMultiLocator(
+                root,
+                "HandBrake",
+                "1.8.2",
+                FixtureFileName,
+                HandBrakeMultiLocatorGroups());
+
+            var report = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+
+            Console.WriteLine("=======================================================");
+            Console.WriteLine("MULTI-LOCATOR PER-LOCATOR BASELINE (#132)");
+            Console.WriteLine("=======================================================");
+            Console.WriteLine($"Scenarios: {report.Scenarios.Count}");
+            Console.WriteLine($"Locator resolutions: {report.Scenarios.Sum(s => s.LocatorResults.Count)}");
+            Console.WriteLine($"Scenarios with shared-candidate contention: {report.ScenariosWithCandidateContention}");
+            Console.WriteLine($"Removed false heals claiming a competing successor: {report.RemovedFalseHealsClaimingCompetingSuccessor}");
+            foreach (var scenario in report.Scenarios)
+            {
+                Console.WriteLine($"  {scenario.ScenarioId}: shared={scenario.SharedCandidateClaims}, removed-claim={scenario.RemovedFalseHealsClaimingCompetingSuccessor}");
+                foreach (var result in scenario.LocatorResults)
+                {
+                    Console.WriteLine($"    {result.OriginalAutomationId} ({result.MutationKind}) -> {result.Outcome}, matched={result.MatchedAutomationId ?? "<declined>"}, score={result.Score:F3}");
+                }
+            }
+
+            // The first six scenarios are both directions of #98's three reciprocal pairs. The
+            // seventh deliberately mixes rename, name drift, position shift, and removal so the
+            // dataset is not tailored to one mutation shape. This pins the baseline, not a future
+            // joint solver: the current resolver sees every locator independently.
+            Assert.Equal(7, report.Scenarios.Count);
+            Assert.Equal(16, report.Scenarios.Sum(s => s.LocatorResults.Count));
+            Assert.Equal(6, report.ScenariosWithCandidateContention);
+            Assert.Equal(6, report.RemovedFalseHealsClaimingCompetingSuccessor);
+            Assert.Contains(
+                report.Scenarios.SelectMany(s => s.LocatorResults),
+                r => r.MutationKind == LocatorMutationKind.NameDrift);
+            Assert.Contains(
+                report.Scenarios.SelectMany(s => s.LocatorResults),
+                r => r.MutationKind == LocatorMutationKind.PositionShift);
+        }
+
         private List<(string ScenarioId, string? RealMatchedId, bool IsAnotherAuthoredLocator)> RunWholeTreeReconciliationProbe()
         {
             // Cannot match by AutomationId: ApplyMutation opaques every element's AutomationId in the
@@ -572,6 +669,36 @@ namespace ScenarioRunner
 
         private static string FingerprintKey(string? controlType, string? name, string? className, string ancestorPath) =>
             $"{controlType}|{name}|{className}|{ancestorPath}";
+
+        private static IEnumerable<IEnumerable<MultiLocatorMutationRequest>> HandBrakeMultiLocatorGroups()
+        {
+            // Both directions of the three reciprocal pairs found by #98. Renaming the surviving
+            // counterpart preserves the structural evidence that made it the removed locator's
+            // strongest decoy while ensuring both locators really are broken in the shared tree.
+            yield return new[] { Mutation("Minimize-Restore", LocatorMutationKind.RemovedElement), Mutation("Maximize-Restore", LocatorMutationKind.RenamedAutomationId) };
+            yield return new[] { Mutation("Maximize-Restore", LocatorMutationKind.RemovedElement), Mutation("Minimize-Restore", LocatorMutationKind.RenamedAutomationId) };
+            yield return new[] { Mutation("Destination", LocatorMutationKind.RemovedElement), Mutation("statusBar", LocatorMutationKind.RenamedAutomationId) };
+            yield return new[] { Mutation("statusBar", LocatorMutationKind.RemovedElement), Mutation("Destination", LocatorMutationKind.RenamedAutomationId) };
+            yield return new[] { Mutation("tabControl", LocatorMutationKind.RemovedElement), Mutation("sourceSelection", LocatorMutationKind.RenamedAutomationId) };
+            yield return new[] { Mutation("sourceSelection", LocatorMutationKind.RemovedElement), Mutation("tabControl", LocatorMutationKind.RenamedAutomationId) };
+
+            // A broader refactor-shaped group proves the schema and runner handle 2+ locators and a
+            // mix of all concrete mutation families, not only the targeted two-locator rename/remove case.
+            yield return new[]
+            {
+                Mutation("ShowQueue", LocatorMutationKind.RenamedAutomationId),
+                Mutation("Preview", LocatorMutationKind.NameDrift),
+                Mutation("Destination", LocatorMutationKind.PositionShift),
+                Mutation("Close", LocatorMutationKind.RemovedElement),
+            };
+        }
+
+        private static MultiLocatorMutationRequest Mutation(string automationId, LocatorMutationKind kind) =>
+            new MultiLocatorMutationRequest
+            {
+                OriginalAutomationId = automationId,
+                MutationKind = kind,
+            };
 
         // Overridable from the workflow so a run that turns out to be rate-limited differently can be
         // retuned without a code change. A malformed or negative value falls back to the default

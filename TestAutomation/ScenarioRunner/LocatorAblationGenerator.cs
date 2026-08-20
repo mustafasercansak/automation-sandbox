@@ -121,6 +121,76 @@ namespace ScenarioRunner
             return dataset;
         }
 
+        public static LocatorAblationDataset GenerateMultiLocator(
+            UiElementInfo sourceRoot,
+            string applicationName,
+            string sourceVersion,
+            string sourceTreeFileName,
+            IEnumerable<IEnumerable<MultiLocatorMutationRequest>> groups)
+        {
+            if (sourceRoot == null)
+            {
+                throw new ArgumentNullException(nameof(sourceRoot));
+            }
+
+            if (groups == null)
+            {
+                throw new ArgumentNullException(nameof(groups));
+            }
+
+            var targets = EnumerateLocatorTargets(sourceRoot)
+                .ToDictionary(t => t.AutomationId, StringComparer.Ordinal);
+            var dataset = new LocatorAblationDataset();
+            var groupIndex = 0;
+
+            foreach (var group in groups)
+            {
+                var requests = group?.ToList()
+                    ?? throw new ArgumentException("A multi-locator mutation group cannot be null.", nameof(groups));
+                if (requests.Count < 2)
+                {
+                    throw new ArgumentException("A multi-locator mutation group must contain at least two locators.", nameof(groups));
+                }
+
+                var duplicate = requests
+                    .GroupBy(r => r.OriginalAutomationId, StringComparer.Ordinal)
+                    .FirstOrDefault(g => g.Count() > 1);
+                if (duplicate != null)
+                {
+                    throw new ArgumentException(
+                        $"Multi-locator mutation group {groupIndex} repeats AutomationId '{duplicate.Key}'.",
+                        nameof(groups));
+                }
+
+                var scenarioId = BuildMultiScenarioId(applicationName, sourceVersion, groupIndex, requests);
+                var mutations = new List<LocatorAblationMutation>();
+                foreach (var request in requests)
+                {
+                    if (!targets.TryGetValue(request.OriginalAutomationId, out var target))
+                    {
+                        throw new ArgumentException(
+                            $"Multi-locator mutation group {groupIndex} references AutomationId '{request.OriginalAutomationId}', absent or ambiguous in the source tree.",
+                            nameof(groups));
+                    }
+
+                    mutations.Add(BuildMutation(target, request.MutationKind, scenarioId));
+                }
+
+                dataset.Scenarios.Add(new LocatorAblationScenario
+                {
+                    ScenarioId = scenarioId,
+                    ApplicationName = applicationName,
+                    SourceVersion = sourceVersion,
+                    SourceTreeFileName = sourceTreeFileName,
+                    MutationKind = LocatorMutationKind.MultiLocator,
+                    Mutations = mutations,
+                });
+                groupIndex++;
+            }
+
+            return dataset;
+        }
+
         // The element as the test knew it before the break: the snapshot a locator repository would hold.
         public static UiElementInfo? FindExpectedElement(UiElementInfo sourceRoot, string automationId)
         {
@@ -145,58 +215,85 @@ namespace ScenarioRunner
             }
 
             var clone = Clone(sourceRoot);
+            var mutations = scenario.MutationKind == LocatorMutationKind.MultiLocator
+                ? scenario.Mutations
+                : new List<LocatorAblationMutation> { ToMutation(scenario) };
 
-            switch (scenario.MutationKind)
+            if (mutations == null || mutations.Count < 2 && scenario.MutationKind == LocatorMutationKind.MultiLocator)
             {
-                case LocatorMutationKind.RenamedAutomationId:
-                case LocatorMutationKind.NameDrift:
-                case LocatorMutationKind.PositionShift:
-                case LocatorMutationKind.CompoundDrift:
-                    var mutated = MutateFirst(clone, scenario);
-                    if (!mutated)
-                    {
-                        throw new InvalidOperationException(
-                            $"Scenario '{scenario.ScenarioId}' targets AutomationId '{scenario.OriginalAutomationId}', which is not in the source tree.");
-                    }
-                    break;
+                throw new InvalidOperationException(
+                    $"Multi-locator scenario '{scenario.ScenarioId}' must contain at least two mutation recipes.");
+            }
 
-                case LocatorMutationKind.RemovedElement:
-                    if (string.Equals(clone.AutomationId, scenario.OriginalAutomationId, StringComparison.Ordinal))
-                    {
-                        throw new InvalidOperationException(
-                            $"Scenario '{scenario.ScenarioId}' would remove the root element, leaving no tree to search.");
-                    }
-
-                    if (!RemoveFirst(clone, scenario.OriginalAutomationId))
-                    {
-                        throw new InvalidOperationException(
-                            $"Scenario '{scenario.ScenarioId}' targets AutomationId '{scenario.OriginalAutomationId}', which is not in the source tree.");
-                    }
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(scenario), scenario.MutationKind, "Unknown mutation kind.");
+            foreach (var mutation in mutations)
+            {
+                ApplyOneMutation(clone, scenario.ScenarioId, mutation);
             }
 
             // Anonymize all candidate AutomationIds in the mutated tree to the exact same opaque format
             // (ablation-XXXXXXXX) so that the target element cannot be distinguished by its identifier format (#97).
             // The target element retains scenario.MutatedAutomationId.
-            MakeAllAutomationIdsOpaque(clone, scenario);
+            MakeAllAutomationIdsOpaque(clone, scenario.ScenarioId, mutations);
 
             return clone;
         }
 
-        private static void MakeAllAutomationIdsOpaque(UiElementInfo root, LocatorAblationScenario scenario)
+        private static void ApplyOneMutation(
+            UiElementInfo clone,
+            string scenarioId,
+            LocatorAblationMutation mutation)
         {
+            switch (mutation.MutationKind)
+            {
+                case LocatorMutationKind.RenamedAutomationId:
+                case LocatorMutationKind.NameDrift:
+                case LocatorMutationKind.PositionShift:
+                case LocatorMutationKind.CompoundDrift:
+                    if (!MutateFirst(clone, mutation))
+                    {
+                        throw new InvalidOperationException(
+                            $"Scenario '{scenarioId}' targets AutomationId '{mutation.OriginalAutomationId}', which is not in the source tree.");
+                    }
+                    break;
+
+                case LocatorMutationKind.RemovedElement:
+                    if (string.Equals(clone.AutomationId, mutation.OriginalAutomationId, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Scenario '{scenarioId}' would remove the root element, leaving no tree to search.");
+                    }
+
+                    if (!RemoveFirst(clone, mutation.OriginalAutomationId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Scenario '{scenarioId}' targets AutomationId '{mutation.OriginalAutomationId}', which is not in the source tree.");
+                    }
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(mutation), mutation.MutationKind, "A member recipe must use a concrete mutation kind.");
+            }
+        }
+
+        private static void MakeAllAutomationIdsOpaque(
+            UiElementInfo root,
+            string scenarioId,
+            IReadOnlyCollection<LocatorAblationMutation> mutations)
+        {
+            var mutatedIds = new HashSet<string>(
+                mutations.Where(m => !string.IsNullOrEmpty(m.MutatedAutomationId)).Select(m => m.MutatedAutomationId!),
+                StringComparer.Ordinal);
+
             void Walk(UiElementInfo node, string path)
             {
                 if (!string.IsNullOrEmpty(node.AutomationId))
                 {
-                    // Target element already has scenario.MutatedAutomationId (e.g. ablation-XXXXXXXX).
-                    // All other elements are mapped to the exact same ablation-XXXXXXXX format.
-                    if (!string.Equals(node.AutomationId, scenario.MutatedAutomationId, StringComparison.Ordinal))
+                    // Target elements already have their scenario-specific opaque ids. All other
+                    // elements use the same format so identifier shape cannot leak ground truth.
+                    if (!mutatedIds.Contains(node.AutomationId))
                     {
-                        node.AutomationId = OpaqueId(scenario.ScenarioId + "#" + path + "#" + node.AutomationId);
+                        node.AutomationId = OpaqueId(scenarioId + "#" + path + "#" + node.AutomationId);
                     }
                 }
 
@@ -209,6 +306,19 @@ namespace ScenarioRunner
 
             Walk(root, "");
         }
+
+        private static LocatorAblationMutation ToMutation(LocatorAblationScenario scenario) =>
+            new LocatorAblationMutation
+            {
+                MutationKind = scenario.MutationKind,
+                ExpectedOutcome = scenario.ExpectedOutcome,
+                OriginalAutomationId = scenario.OriginalAutomationId,
+                MutatedAutomationId = scenario.MutatedAutomationId,
+                MutatedName = scenario.MutatedName,
+                ShiftX = scenario.ShiftX,
+                ShiftY = scenario.ShiftY,
+                GroundTruth = scenario.GroundTruth,
+            };
 
         // Walks the mutated tree the same way the generator walked the source, so a fingerprint recorded
         // at generation time can be compared against a candidate the resolver returned.
@@ -310,6 +420,63 @@ namespace ScenarioRunner
                 kindTag);
         }
 
+        private static string BuildMultiScenarioId(
+            string app,
+            string version,
+            int groupIndex,
+            IReadOnlyList<MultiLocatorMutationRequest> requests)
+        {
+            var members = string.Join(",", requests.Select(r => r.OriginalAutomationId + ":" + r.MutationKind));
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}@{1}#multi-{2:D2}-{3}",
+                app,
+                version,
+                groupIndex,
+                OpaqueId(members).Substring("ablation-".Length));
+        }
+
+        private static LocatorAblationMutation BuildMutation(
+            LocatorTarget target,
+            LocatorMutationKind kind,
+            string scenarioId)
+        {
+            if (kind == LocatorMutationKind.MultiLocator)
+            {
+                throw new ArgumentException("A multi-locator member must use a concrete mutation kind.", nameof(kind));
+            }
+
+            var hasName = !string.IsNullOrWhiteSpace(target.Element.Name);
+            if ((kind == LocatorMutationKind.NameDrift || kind == LocatorMutationKind.CompoundDrift) && !hasName)
+            {
+                throw new ArgumentException(
+                    $"AutomationId '{target.AutomationId}' cannot use {kind} because its Name is empty.",
+                    nameof(kind));
+            }
+
+            var mutatedName = kind == LocatorMutationKind.NameDrift || kind == LocatorMutationKind.CompoundDrift
+                ? PerturbName(target.Element.Name!)
+                : null;
+            var removed = kind == LocatorMutationKind.RemovedElement;
+            var shifted = kind == LocatorMutationKind.PositionShift || kind == LocatorMutationKind.CompoundDrift;
+
+            return new LocatorAblationMutation
+            {
+                MutationKind = kind,
+                ExpectedOutcome = removed ? LocatorExpectedOutcome.NoSuccessor : LocatorExpectedOutcome.Successor,
+                OriginalAutomationId = target.AutomationId,
+                MutatedAutomationId = removed ? null : OpaqueId(scenarioId + "#" + target.AutomationId),
+                MutatedName = mutatedName,
+                ShiftX = shifted ? 140.0 : 0.0,
+                ShiftY = shifted ? 80.0 : 0.0,
+                GroundTruth = removed
+                    ? null
+                    : mutatedName == null
+                        ? Fingerprint(target.Element, target.AncestorPath)
+                        : FingerprintWithName(target.Element, target.AncestorPath, mutatedName),
+            };
+        }
+
         private sealed class LocatorTarget
         {
             public UiElementInfo Element { get; set; } = new UiElementInfo();
@@ -359,21 +526,21 @@ namespace ScenarioRunner
             return string.IsNullOrEmpty(path) ? descriptor : path + " > " + descriptor;
         }
 
-        private static bool MutateFirst(UiElementInfo node, LocatorAblationScenario scenario)
+        private static bool MutateFirst(UiElementInfo node, LocatorAblationMutation mutation)
         {
-            if (string.Equals(node.AutomationId ?? "", scenario.OriginalAutomationId, StringComparison.Ordinal))
+            if (string.Equals(node.AutomationId ?? "", mutation.OriginalAutomationId, StringComparison.Ordinal))
             {
-                node.AutomationId = scenario.MutatedAutomationId ?? "";
-                if (scenario.MutatedName != null)
+                node.AutomationId = mutation.MutatedAutomationId ?? "";
+                if (mutation.MutatedName != null)
                 {
-                    node.Name = scenario.MutatedName;
+                    node.Name = mutation.MutatedName;
                 }
-                if (scenario.ShiftX != 0.0 || scenario.ShiftY != 0.0)
+                if (mutation.ShiftX != 0.0 || mutation.ShiftY != 0.0)
                 {
                     var r = node.BoundingRectangle;
                     if (r.IsUsable)
                     {
-                        node.BoundingRectangle = new BoundingRectangle(r.X + scenario.ShiftX, r.Y + scenario.ShiftY, r.Width, r.Height);
+                        node.BoundingRectangle = new BoundingRectangle(r.X + mutation.ShiftX, r.Y + mutation.ShiftY, r.Width, r.Height);
                     }
                 }
                 return true;
@@ -381,7 +548,7 @@ namespace ScenarioRunner
 
             foreach (var child in node.Children)
             {
-                if (MutateFirst(child, scenario))
+                if (MutateFirst(child, mutation))
                 {
                     return true;
                 }

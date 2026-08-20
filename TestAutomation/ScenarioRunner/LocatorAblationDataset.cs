@@ -27,6 +27,11 @@ namespace ScenarioRunner
 
         // The element and its subtree are gone. The engine should decline rather than pick a neighbour.
         RemovedElement,
+
+        // Two or more locator mutations applied to one shared tree. The member recipes carry their
+        // own concrete mutation kinds and ground truth; this container exists so contention can be
+        // measured without changing the production resolver into a batch API.
+        MultiLocator,
     }
 
     public enum LocatorExpectedOutcome
@@ -91,11 +96,35 @@ namespace ScenarioRunner
         // a hand-labelled scenario must carry the rationale for the label.
         public string Provenance { get; set; } = "ablation";
         public string? LabelRationale { get; set; }
+
+        // Present only for MultiLocator scenarios. Kept nullable so v1 datasets, whose scenarios
+        // carry the single mutation in the fields above, upgrade without inventing empty evidence.
+        public List<LocatorAblationMutation>? Mutations { get; set; }
+    }
+
+    public sealed class LocatorAblationMutation
+    {
+        public LocatorMutationKind MutationKind { get; set; }
+        public LocatorExpectedOutcome ExpectedOutcome { get; set; }
+        public string OriginalAutomationId { get; set; } = "";
+        public string? MutatedAutomationId { get; set; }
+        public string? MutatedName { get; set; }
+        public double ShiftX { get; set; }
+        public double ShiftY { get; set; }
+        public ElementFingerprint? GroundTruth { get; set; }
+    }
+
+    // Input contract for constructing a deterministic multi-locator scenario. Keeping the request
+    // separate from the persisted recipe prevents callers from supplying contradictory ground truth.
+    public sealed class MultiLocatorMutationRequest
+    {
+        public string OriginalAutomationId { get; set; } = "";
+        public LocatorMutationKind MutationKind { get; set; }
     }
 
     public sealed class LocatorAblationDataset
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
