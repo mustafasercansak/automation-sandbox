@@ -298,7 +298,7 @@ Three of these are **reciprocal pairs**: remove either element and the heuristic
 The remaining 7 of 17 claimed untracked or incidental elements (an empty-named container, a toolbar element with no test relying on it) that no other locator wants either. A joint solver would have nothing to exploit there — its ceiling on this dataset is bounded by the 59%, not by the full 17.
 
 > [!NOTE]
-> **Reading this number honestly.** 59% is favourable enough to justify the next step the original issue named — building scenarios where multiple locators break together, which is also the more realistic failure mode — but it is not evidence the mechanism works. The existing single-mutation dataset cannot test joint assignment directly: with only one locator ever broken per scenario, there is no real contention for a solver to exploit, only the retrospective observation that contention *would exist* if a second locator broke at the same time. Building that dataset, and measuring whether a matching-based resolver actually converts the 59% into correct declines, is separate, uncommitted work — tracked as a follow-up rather than started here, per the parent issue's own condition that no `SelfHealingResolver` API change be proposed before the probe supports it.
+> **Reading this number honestly.** 59% was favourable enough to justify the next step the original issue named — building scenarios where multiple locators break together, which is also the more realistic failure mode — but it was not evidence the mechanism worked. The original single-mutation dataset could not test joint assignment directly: with only one locator broken per scenario, there was no real contention for a solver to exploit. §9 now supplies that multi-locator baseline; it confirms the predicted contention exists, while deliberately stopping before a matching-based resolver is built.
 
 ---
 
@@ -334,6 +334,30 @@ A second real application does not make the false-heal problem look like a HandB
 
 > [!IMPORTANT]
 > **Formal finding.** A second application does not change the shape of the problem this project exists to solve, and does not improve it. Recall is roughly comparable once a confounding UI pattern (dense structurally-identical grid rows, absent from the first application) is controlled for. Precision and false-heal rate are both meaningfully worse on ShareX. Neither HandBrake's numbers nor ShareX's should be read as "the" accuracy of this engine — they are two data points bounding a range, and the range is wide: 40.5%–57.1% false heals on deleted elements at the shipped default, before any LLM consensus is applied. Regression guards: `ShareXAblationTests` (\`ShareXFixture_DefaultWeights_MatchesTheCommittedBaseline\`, \`ShareXFixture_MostMissedPerfectScoreRenames_AreDataGridRows\`, \`ShareXFixture_ExcludingDataGridRows_FalseHealOnRemovedRateIsWorseThanHandBrakes\`).
+
+---
+
+### 9. Multi-Locator Baseline: Real Contention Exists (#132)
+
+The v2 ablation dataset can now describe two or more locator mutations against one shared tree, with a separate mutation recipe and ground truth for every locator. `RunMultiLocatorBaseline` applies that shared mutation once and then invokes the existing per-locator heuristic independently for each expected locator. It does **not** implement joint matching or change `SelfHealingResolver`; this is the baseline that any later batch design must improve upon.
+
+Seven HandBrake scenarios were measured at the shipped default weights:
+
+- Six two-locator scenarios cover both directions of the three reciprocal pairs from §7. In each, one locator is removed and its counterpart is renamed, so both stored locators are genuinely broken while the counterpart's structural identity survives.
+- One four-locator scenario mixes rename, name drift, position shift, and removal, proving the dataset is not restricted to a tailored rename/removal pair.
+- The result is 16 locator resolutions across 7 shared trees.
+
+| Baseline observation | Result |
+| :--- | ---: |
+| Shared-tree scenarios | 7 |
+| Locator resolutions | 16 |
+| Scenarios where two locators claimed the same candidate | **6 / 7** |
+| Removed-locator false heals that claimed the surviving locator's correct successor | **6 / 6 reciprocal directions** |
+
+The six targeted cases reproduced exactly. For example, after `Minimize-Restore` is removed and `Maximize-Restore` is renamed, the current resolver gives both stored locators the renamed `Maximize-Restore` element: the surviving locator scores $1.000$, while the removed locator still accepts it at $0.874$. The same collision occurs in reverse and for `Destination`/`statusBar` ($0.690$ for the removed locator) and `tabControl`/`sourceSelection` ($0.665$).
+
+> [!IMPORTANT]
+> **Formal finding.** The favourable 59% offline probe was not an artefact of looking backward at isolated mutations: all six reciprocal directions produce real candidate contention when both locators break in the same tree. This clears the evidence precondition for separately evaluating a joint assignment algorithm. It does **not** show that such an algorithm will safely decline the losing locator; no joint resolver exists in this change, and the seventh mixed scenario still false-heals a removed `Close` onto an unclaimed incidental element. Regression guard: `LocatorAblationTests.HandBrakeFixture_MultiLocatorBaseline_ReproducesReciprocalPairContention`.
 
 ---
 
@@ -614,7 +638,7 @@ Bunların üçü **karşılıklı çift**: iki elemandan hangisi silinirse silin
 Kalan 17'de 7'si, başka hiçbir locator'ın da istemediği izlenmeyen ya da tesadüfi elemanları işaret etti (adsız bir kapsayıcı, hiçbir testin dayanmadığı bir araç çubuğu elemanı gibi). Ortak bir çözücünün orada kullanabileceği bir şey yok — bu veri kümesindeki tavanı %59 ile sınırlı, 17'nin tamamıyla değil.
 
 > [!NOTE]
-> **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumlu, ama mekanizmanın işlediğine dair bir kanıt değil. Mevcut tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemez: senaryo başına yalnızca bir locator kırıldığından, bir çözücünün kullanabileceği gerçek bir çakışma yok, yalnızca ikinci bir locator aynı anda kırılsaydı çakışmanın *var olacağı* yönünde geriye dönük bir gözlem var. O veri kümesini kurmak, ve eşleştirme tabanlı bir çözücünün %59'u gerçekten doğru retlere çevirip çevirmediğini ölçmek, ayrı ve henüz üstlenilmemiş bir iştir — burada başlatılmadı, ana issue'nun kendi koşulu gereği: prob onu desteklemeden `SelfHealingResolver` API'sinde hiçbir değişiklik önerilmeyecek.
+> **Bu sayıyı dürüstçe okumak.** %59, orijinal issue'nun adlandırdığı sonraki adımı — birden fazla locator'ın birlikte kırıldığı senaryolar kurmayı, ki bu aynı zamanda daha gerçekçi bozulma biçimi — haklı çıkaracak kadar olumluydu, fakat mekanizmanın çalıştığına dair kanıt değildi. İlk tek-mutasyonlu veri kümesi ortak atamayı doğrudan test edemiyordu: senaryo başına yalnızca bir locator kırıldığından çözücünün kullanabileceği gerçek bir çakışma yoktu. §9 artık bu multi-locator baseline'ını sağlıyor; öngörülen çakışmanın varlığını doğruluyor, fakat eşleştirme tabanlı bir çözücü kurmadan bilinçli olarak duruyor.
 
 ---
 
@@ -651,4 +675,27 @@ xychart-beta
 > [!IMPORTANT]
 > **Resmi çıkarım.** İkinci bir uygulama, bu projenin çözmeye çalıştığı sorunun şeklini değiştirmiyor, ve onu iyileştirmiyor. Karıştırıcı bir UI örüntüsü (ilk uygulamada bulunmayan, yoğun yapısal olarak özdeş grid satırları) kontrol altına alındığında kapsam kabaca karşılaştırılabilir hale geliyor. Kesinlik ve yanlış iyileştirme oranının ikisi de ShareX'te belirgin şekilde daha kötü. Ne HandBrake'in sayıları ne de ShareX'inki bu motorun "gerçek" doğruluğu olarak okunmamalı — bunlar bir aralığı sınırlayan iki veri noktası, ve aralık geniş: gönderilen varsayılanda, herhangi bir LLM konsensüsü uygulanmadan önce, silinmiş elemanlarda %40.5–%57.1 yanlış iyileştirme. Doğrulama testleri: \`ShareXAblationTests\` (\`ShareXFixture_DefaultWeights_MatchesTheCommittedBaseline\`, \`ShareXFixture_MostMissedPerfectScoreRenames_AreDataGridRows\`, \`ShareXFixture_ExcludingDataGridRows_FalseHealOnRemovedRateIsWorseThanHandBrakes\`).
 
+---
+
+### 9. Multi-Locator Baseline: Gerçek Çakışma Var (#132)
+
+v2 ablasyon veri kümesi artık tek bir ortak ağaç üzerinde iki veya daha fazla locator mutasyonunu, her locator için ayrı mutasyon tarifi ve ground truth ile tanımlayabiliyor. `RunMultiLocatorBaseline` ortak mutasyonu bir kez uyguluyor, ardından mevcut tek-locator heuristiğini her beklenen locator için bağımsız çalıştırıyor. Ortak eşleştirme uygulamıyor ve `SelfHealingResolver`'ı değiştirmiyor; ilerideki herhangi bir batch tasarımının iyileştirmesi gereken baseline budur.
+
+Gönderilen varsayılan ağırlıklarla yedi HandBrake senaryosu ölçüldü:
+
+- Altı iki-locator senaryosu §7'deki üç karşılıklı çiftin iki yönünü de kapsıyor. Her birinde bir locator siliniyor, karşılığı yeniden adlandırılıyor; böylece kayıtlı iki locator da gerçekten kırılırken karşı locator'ın yapısal kimliği hayatta kalıyor.
+- Bir dört-locator senaryosu yeniden adlandırma, isim kayması, konum kayması ve silmeyi karıştırıyor; veri kümesinin yalnızca özel hazırlanmış yeniden-adlandırma/silme çiftlerine bağlı olmadığını gösteriyor.
+- Sonuç, 7 ortak ağaç üzerinde 16 locator çözümü.
+
+| Baseline gözlemi | Sonuç |
+| :--- | ---: |
+| Ortak-ağaç senaryosu | 7 |
+| Locator çözümü | 16 |
+| İki locator'ın aynı adayı talep ettiği senaryo | **6 / 7** |
+| Hayatta kalan locator'ın doğru halefini talep eden silinmiş-locator yanlış iyileştirmesi | **6 / 6 karşılıklı yön** |
+
+Hedeflenen altı vaka eksiksiz tekrarlandı. Örneğin `Minimize-Restore` silinip `Maximize-Restore` yeniden adlandırıldığında mevcut çözücü, kayıtlı iki locator'a da yeniden adlandırılmış `Maximize-Restore` elemanını veriyor: hayatta kalan locator $1.000$, silinen locator ise aynı elemanı $0.874$ ile kabul ediyor. Aynı çakışma ters yönde ve `Destination`/`statusBar` (silinen locator için $0.690$) ile `tabControl`/`sourceSelection` ($0.665$) çiftlerinde de oluşuyor.
+
+> [!IMPORTANT]
+> **Resmi çıkarım.** Olumlu %59 çevrimdışı probu, yalıtılmış mutasyonlara geriye dönük bakmanın bir yapaylığı değildi: altı karşılıklı yönün tamamı, iki locator aynı ağaçta kırıldığında gerçek aday çakışması üretiyor. Bu, ortak atama algoritmasını ayrı bir işte değerlendirmek için kanıt ön koşulunu karşılıyor. Böyle bir algoritmanın kaybeden locator'ı güvenle reddedeceğini **göstermiyor**; bu değişiklikte ortak çözücü yok ve yedinci karışık senaryoda silinen `Close` hâlâ kimsenin talep etmediği tesadüfi bir elemana yanlış iyileştiriliyor. Regresyon koruması: `LocatorAblationTests.HandBrakeFixture_MultiLocatorBaseline_ReproducesReciprocalPairContention`.
 

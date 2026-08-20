@@ -94,6 +94,7 @@ namespace ScenarioRunner
 
         public string? ExpectedElement { get; set; }
         public string? MatchedElement { get; set; }
+        public string? MatchedAutomationId { get; set; }
     }
 
     public sealed class ProviderParticipation
@@ -176,6 +177,23 @@ namespace ScenarioRunner
         public AblationMetrics Metrics { get; set; } = new();
     }
 
+    public sealed class MultiLocatorScenarioResult
+    {
+        public string ScenarioId { get; set; } = "";
+        public List<AblationScenarioResult> LocatorResults { get; set; } = new();
+        public int SharedCandidateClaims { get; set; }
+        public int RemovedFalseHealsClaimingCompetingSuccessor { get; set; }
+    }
+
+    public sealed class MultiLocatorBaselineReport
+    {
+        public List<MultiLocatorScenarioResult> Scenarios { get; set; } = new();
+        public AblationMetrics Metrics { get; set; } = new();
+        public int ScenariosWithCandidateContention => Scenarios.Count(s => s.SharedCandidateClaims > 0);
+        public int RemovedFalseHealsClaimingCompetingSuccessor =>
+            Scenarios.Sum(s => s.RemovedFalseHealsClaimingCompetingSuccessor);
+    }
+
     public static class LocatorAblationHarness
     {
         // Matches the engine's own acceptance rule (#10, #19): consensus needs two independent
@@ -192,6 +210,8 @@ namespace ScenarioRunner
             {
                 throw new ArgumentNullException(nameof(dataset));
             }
+
+            RejectMultiLocatorScenarios(dataset, nameof(RunMultiLocatorBaseline));
 
             var report = new AblationRunReport();
 
@@ -243,6 +263,115 @@ namespace ScenarioRunner
             return report;
         }
 
+        // Applies every mutation in a group to one shared tree, then invokes today's per-locator
+        // resolver independently for each expected locator. This is the #132 baseline: it measures
+        // contention that a future joint solver could exploit without implementing that solver or
+        // changing SelfHealingResolver's public contract.
+        public static MultiLocatorBaselineReport RunMultiLocatorBaseline(
+            LocatorAblationDataset dataset,
+            UiElementInfo sourceRoot,
+            SimilarityWeights? weights = null)
+        {
+            if (dataset == null)
+            {
+                throw new ArgumentNullException(nameof(dataset));
+            }
+
+            if (sourceRoot == null)
+            {
+                throw new ArgumentNullException(nameof(sourceRoot));
+            }
+
+            var report = new MultiLocatorBaselineReport();
+            foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.MultiLocator))
+            {
+                if (scenario.Mutations == null || scenario.Mutations.Count < 2)
+                {
+                    throw new InvalidOperationException(
+                        $"Multi-locator scenario '{scenario.ScenarioId}' must contain at least two mutation recipes.");
+                }
+
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(sourceRoot, scenario);
+                var scenarioResult = new MultiLocatorScenarioResult { ScenarioId = scenario.ScenarioId };
+
+                foreach (var mutation in scenario.Mutations)
+                {
+                    var expected = LocatorAblationGenerator.FindExpectedElement(sourceRoot, mutation.OriginalAutomationId);
+                    if (expected == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Scenario '{scenario.ScenarioId}' references AutomationId '{mutation.OriginalAutomationId}', absent from the source tree.");
+                    }
+
+                    var heal = SelfHealingResolver.Resolve(expected, mutatedRoot, weights, log: _ => { });
+                    var accepted = heal.IsConfident && heal.Matched != null;
+                    var matchedPath = heal.Matched == null
+                        ? null
+                        : LocatorAblationGenerator.AncestorPathOf(mutatedRoot, heal.Matched);
+                    var memberScenario = ToSingleScenario(scenario, mutation);
+
+                    scenarioResult.LocatorResults.Add(new AblationScenarioResult
+                    {
+                        ScenarioId = scenario.ScenarioId + "#" + mutation.OriginalAutomationId,
+                        MutationKind = mutation.MutationKind,
+                        OriginalAutomationId = mutation.OriginalAutomationId,
+                        EngineAccepted = accepted,
+                        Score = heal.Score,
+                        EvidenceCoverage = heal.EvidenceCoverage,
+                        CandidateCount = heal.CandidateCount,
+                        ResolutionStatus = heal.ResolutionStatus,
+                        Source = heal.Source,
+                        AgreedProviders = heal.AgreedProviders ?? Array.Empty<string>(),
+                        ProviderAttempts = heal.ProviderAttempts ?? new Dictionary<string, int>(),
+                        ProviderErrors = heal.ProviderErrors ?? new Dictionary<string, string>(),
+                        Candidates = heal.Candidates ?? new List<CandidateScore>(),
+                        ExpectedElement = mutation.GroundTruth?.ToString(),
+                        MatchedElement = heal.Matched == null
+                            ? null
+                            : LocatorAblationGenerator.Fingerprint(heal.Matched, matchedPath ?? "").ToString(),
+                        MatchedAutomationId = heal.Matched?.AutomationId,
+                        Outcome = Classify(memberScenario, heal, accepted, matchedPath),
+                    });
+                }
+
+                var acceptedClaims = scenarioResult.LocatorResults
+                    .Where(r => r.EngineAccepted && !string.IsNullOrEmpty(r.MatchedAutomationId))
+                    .GroupBy(r => r.MatchedAutomationId!, StringComparer.Ordinal)
+                    .Where(g => g.Count() > 1)
+                    .ToList();
+                scenarioResult.SharedCandidateClaims = acceptedClaims.Count;
+                scenarioResult.RemovedFalseHealsClaimingCompetingSuccessor = acceptedClaims.Sum(g =>
+                    g.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved) > 0 &&
+                    g.Count(r => r.MutationKind != LocatorMutationKind.RemovedElement && r.Outcome == AblationOutcome.CorrectHeal) > 0
+                        ? g.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                        : 0);
+                report.Scenarios.Add(scenarioResult);
+            }
+
+            report.Metrics = Summarize(report.Scenarios.SelectMany(s => s.LocatorResults));
+            return report;
+        }
+
+        private static LocatorAblationScenario ToSingleScenario(
+            LocatorAblationScenario group,
+            LocatorAblationMutation mutation) =>
+            new LocatorAblationScenario
+            {
+                ScenarioId = group.ScenarioId + "#" + mutation.OriginalAutomationId,
+                ApplicationName = group.ApplicationName,
+                SourceVersion = group.SourceVersion,
+                SourceTreeFileName = group.SourceTreeFileName,
+                MutationKind = mutation.MutationKind,
+                ExpectedOutcome = mutation.ExpectedOutcome,
+                OriginalAutomationId = mutation.OriginalAutomationId,
+                MutatedAutomationId = mutation.MutatedAutomationId,
+                MutatedName = mutation.MutatedName,
+                ShiftX = mutation.ShiftX,
+                ShiftY = mutation.ShiftY,
+                GroundTruth = mutation.GroundTruth,
+                Provenance = group.Provenance,
+            };
+
         public static async Task<AblationRunReport> RunAsync(
             LocatorAblationDataset dataset,
             UiElementInfo sourceRoot,
@@ -259,6 +388,8 @@ namespace ScenarioRunner
             {
                 throw new ArgumentNullException(nameof(dataset));
             }
+
+            RejectMultiLocatorScenarios(dataset, nameof(RunMultiLocatorBaseline));
 
             var report = new AblationRunReport();
             var providersList = llmProviders?.ToList();
@@ -377,6 +508,16 @@ namespace ScenarioRunner
 
             report.Metrics = Summarize(report.Results);
             return report;
+        }
+
+        private static void RejectMultiLocatorScenarios(LocatorAblationDataset dataset, string alternative)
+        {
+            var multi = dataset.Scenarios.FirstOrDefault(s => s.MutationKind == LocatorMutationKind.MultiLocator);
+            if (multi != null)
+            {
+                throw new InvalidOperationException(
+                    $"Dataset contains multi-locator scenario '{multi.ScenarioId}'; use {alternative} for shared-tree baseline evaluation.");
+            }
         }
 
         private sealed class RecordingProvider : ILlmHealingProvider
