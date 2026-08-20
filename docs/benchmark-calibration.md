@@ -394,6 +394,27 @@ The mixed four-locator scenario exposes the boundary: the renamed `ShowQueue`, n
 
 ---
 
+### 11. Cross-Application Generalization (#143)
+
+The scenario protocol was posted before the dataset or results existed. From each pristine tree it selects every unique, non-`DataItem` authored leaf, sorts by `AutomationId` ordinally, and creates one cyclic three-locator scenario per leaf: remove locator $i$, rename $i+1$, and position-shift $i+2$. Leaf-only membership prevents one removal from deleting another member's ground truth. The rule uses no score, candidate identity, contention, or outcome. The committed eligible-ID lists and scenario-ID digests freeze 36 HandBrake and 9 ShareX scenarios: 45 shared trees and 135 locator resolutions.
+
+The shipped default weights and unchanged §10 evaluator produced:
+
+| Application | Survivor correct (baseline → joint) | Removed correct decline | Removed false heal | Manual review | Input → unresolved collisions |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| HandBrake (36 scenarios) | 63 → **63** | 22 → **23** | 14 → **13** | 28.7% → 29.6% | 1 → **0** |
+| ShareX (9 scenarios) | 16 → **16** | 4 → **7** | 5 → **2** | 22.2% → 33.3% | 3 → **0** |
+| **Aggregate (45 scenarios)** | 79 → **79** | 26 → **30** | 19 → **15** | 27.4% → 30.4% | 4 → **0** |
+
+All four contested removed-locator false heals became correct declines; none of the 79 correct survivor heals regressed, no new accepted match appeared, and no ownership contest was close enough to trigger the ambiguous-all-decline rule. The independently selected ShareX cases include non-targeted contention: removed `Close` claimed the renamed `Maximize-Restore`, and removed header `4265926980` claimed surviving header `4267017949`.
+
+The larger sample also confirms the limit more strongly than §10: **15 uncontested false heals remain unchanged** (13 HandBrake, 2 ShareX). Two HandBrake incidental matches have an empty `AutomationId`, which means a production ownership key cannot safely be `MatchedAutomationId`; it must identify candidates independently of locator availability.
+
+> [!IMPORTANT]
+> **Formal finding and decision.** The predeclared production-design threshold passed independently on both applications: every baseline correct survivor was preserved, each application gained at least one correct removed-element decline, no new match was introduced, and all shared-candidate collisions were eliminated. This justifies the separate production-design issue #144; it does **not** justify shipping the offline evaluator unchanged. One-to-one ownership is a targeted contention guard, not an absence detector, and the 15 uncontested false heals remain out of reach. `SelfHealingResolver` and the healing-report schema are unchanged. Regression guards: `JointAssignmentGeneralizationDatasetTests.FrozenSelection_GeneratesOneRotationPerEligibleLeaf` and `JointAssignmentGeneralizationTests.FrozenCrossApplicationDataset_ReportsJointAssignmentGeneralization`.
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
@@ -764,3 +785,24 @@ Karışık dört-locator senaryosu sınırı görünür kılıyor: yeniden adlan
 
 > [!IMPORTANT]
 > **Resmi çıkarım.** Bu hedefli HandBrake baseline'ında ortak top-claim sahipliği, çakışmadan doğan 6 yanlış iyileştirmenin tamamını 9 hayatta-kalan locator iyileştirmesinden hiçbirini kaybetmeden doğru redde çeviriyor; fakat itiraz edilmeyen 1 yanlış iyileştirmeyi değiştirmiyor ve manuel incelemeyi %0.0'dan %37.5'e çıkarıyor. Bu sonuç ortak uzlaştırmayı umut verici, hedefli bir koruma olarak destekliyor; genel bir silinmiş-eleman çözümü veya üretime hazır tasarım olarak değil: örneklem tek uygulamadan ve bilinçli olarak kurulmuş karşılıklı çiftlerden oluşuyor. Regresyon korumaları: `LocatorAblationTests.JointAssignment_DeclinesEveryClaimant_WhenOwnershipMarginIsAmbiguous` ve `LocatorAblationTests.HandBrakeFixture_JointAssignment_ResolvesReciprocalContentionButNotIncidentalFalseHeal`.
+
+---
+
+### 11. Uygulamalar Arası Genelleme (#143)
+
+Senaryo protokolü veri kümesi veya sonuçlar oluşmadan önce yayımlandı. Her bozulmamış ağaçtan benzersiz, `DataItem` olmayan authored yaprakların tamamını seçiyor, `AutomationId` ile ordinal sıralıyor ve yaprak başına bir döngüsel üç-locator senaryosu kuruyor: locator $i$ siliniyor, $i+1$ yeniden adlandırılıyor ve $i+2$ konum kaymasına uğruyor. Yalnızca yaprakların kullanılması, bir elemanın silinmesinin başka üyenin ground truth'unu yok etmesini engelliyor. Kural hiçbir skor, aday kimliği, çakışma veya sonuç kullanmıyor. Commit edilen uygun-ID listeleri ve scenario-ID özetleri 36 HandBrake ve 9 ShareX senaryosunu sabitliyor: 45 ortak ağaç ve 135 locator çözümü.
+
+Gönderilen varsayılan ağırlıklar ve §10'daki değiştirilmemiş değerlendirici şu sonucu üretti:
+
+| Uygulama | Hayatta kalan doğru (baseline → ortak) | Silinen doğru red | Silinen yanlış iyileştirme | Manuel inceleme | Girdi → çözümsüz çakışma |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| HandBrake (36 senaryo) | 63 → **63** | 22 → **23** | 14 → **13** | %28.7 → %29.6 | 1 → **0** |
+| ShareX (9 senaryo) | 16 → **16** | 4 → **7** | 5 → **2** | %22.2 → %33.3 | 3 → **0** |
+| **Toplam (45 senaryo)** | 79 → **79** | 26 → **30** | 19 → **15** | %27.4 → %30.4 | 4 → **0** |
+
+İtiraz edilen dört silinmiş-locator yanlış iyileştirmesinin tamamı doğru redde dönüştü; 79 doğru hayatta-kalan iyileştirmesinin hiçbiri gerilemedi, yeni kabul edilen eşleşme oluşmadı ve hiçbir sahiplik çakışması belirsiz-tümünü-reddet kuralını tetikleyecek kadar yakın değildi. Bağımsız seçilen ShareX vakaları hedeflenmemiş çakışma da içeriyor: silinen `Close`, yeniden adlandırılan `Maximize-Restore`'u; silinen `4265926980` başlığı ise hayatta kalan `4267017949` başlığını talep etti.
+
+Daha büyük örnek sınırı §10'dan daha güçlü doğruluyor: **itiraz edilmeyen 15 yanlış iyileştirme değişmeden kaldı** (13 HandBrake, 2 ShareX). İki HandBrake tesadüfi eşleşmesinin `AutomationId`'si boş; bu nedenle üretimde sahiplik anahtarı güvenle `MatchedAutomationId` olamaz, adayları locator bulunabilirliğinden bağımsız tanımlamalıdır.
+
+> [!IMPORTANT]
+> **Resmi çıkarım ve karar.** Önceden ilan edilen üretim-tasarım eşiği iki uygulamada da bağımsız olarak geçti: baseline'daki her doğru hayatta-kalan korundu, her uygulama en az bir yeni silinmiş-eleman doğru reddi kazandı, yeni eşleşme üretilmedi ve tüm paylaşılan-aday çakışmaları kaldırıldı. Bu, ayrı üretim-tasarım issue'su #144'ü haklı çıkarıyor; çevrimdışı değerlendiriciyi olduğu gibi yayımlamayı **haklı çıkarmıyor**. Bire-bir sahiplik hedefli bir çakışma korumasıdır, yokluk dedektörü değildir; itiraz edilmeyen 15 yanlış iyileştirme erişim dışında kalıyor. `SelfHealingResolver` ve healing-report şeması değişmedi. Regresyon korumaları: `JointAssignmentGeneralizationDatasetTests.FrozenSelection_GeneratesOneRotationPerEligibleLeaf` ve `JointAssignmentGeneralizationTests.FrozenCrossApplicationDataset_ReportsJointAssignmentGeneralization`.
