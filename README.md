@@ -358,6 +358,9 @@ locators). Offscreen elements retain their geometry, while hidden elements are m
 bounding rectangle. For cross-origin iframes (where browser Same-Origin Policy blocks parent
 DOM inspection), evaluate `PlaywrightDomCaptureScript.JavaScript` directly inside the target
 `IFrame` context via `frame.EvaluateAsync` — see [Web Automation Guide](docs/web-automation.md) for details.
+Locator string values are emitted as valid C# source literals: quotes, backslashes, and
+CR/LF/tab characters are escaped before the suggestions flow into generated tests. CSS
+attribute-string values keep their separate CSS escaping inside that C# literal.
 
 ### 7. Intent Automation Pipeline
 `IntentAutomationPipeline` ties the M6 flow together: plan intent steps, match them

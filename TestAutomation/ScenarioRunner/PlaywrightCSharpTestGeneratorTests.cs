@@ -305,6 +305,63 @@ namespace ScenarioRunner
             Assert.Contains(".ToHaveTextAsync(\"Line 1\\r\\nLine 2\");", code);
         }
 
+        [Fact]
+        public void Generate_EmitterAccessibleNameWithControlCharacters_ProducesEscapedLocatorSource()
+        {
+            var scenario = ClickScenario("Action.SaveDraft");
+            var suggestion = PlaywrightLocatorEmitter.Suggest(new WebElementInfo
+            {
+                Role = "button",
+                AccessibleName = "Save\r\nDraft\tNow",
+            }).Single(s => s.Strategy == "Role");
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Action.SaveDraft", "save-draft", suggestion.Expression),
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains(
+                "await Page.GetByRole(AriaRole.Button, new() { Name = \"Save\\r\\nDraft\\tNow\" }).ClickAsync();",
+                code);
+        }
+
+        [Fact]
+        public void Generate_EmitterNameAttributeWithDoubleQuote_ProducesEscapedLocatorSource()
+        {
+            var scenario = ClickScenario("Action.ProfileAlias");
+            var suggestion = PlaywrightLocatorEmitter.Suggest(new WebElementInfo
+            {
+                NameAttribute = "profile\"alias",
+            }).Single();
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Action.ProfileAlias", "profile-alias", suggestion.Expression),
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await Page.Locator(\"[name='profile\\\"alias']\").ClickAsync();", code);
+        }
+
+        private static IntentScenario ClickScenario(string locatorKey)
+        {
+            return new IntentScenario
+            {
+                Name = "Escaped locator",
+                Goal = "Click escaped locator",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Click,
+                        LocatorKey = locatorKey,
+                    }
+                }
+            };
+        }
+
         private static IntentLocatorRecordingResult Recorded(string locatorKey, string automationId, string expression)
         {
             return new IntentLocatorRecordingResult
