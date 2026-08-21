@@ -10,6 +10,24 @@ namespace ScenarioRunner
 {
     public class JointAssignmentGeneralizationTests
     {
+        [Theory]
+        [InlineData(false, null, "<declined>")]
+        [InlineData(true, "", "<empty AutomationId>")]
+        [InlineData(true, "txtEmail", "txtEmail")]
+        public void DisplayCandidate_FormatsDecisionAndAutomationId(
+            bool engineAccepted,
+            string? matchedAutomationId,
+            string expected)
+        {
+            var result = new AblationScenarioResult
+            {
+                EngineAccepted = engineAccepted,
+                MatchedAutomationId = matchedAutomationId,
+            };
+
+            Assert.Equal(expected, DisplayCandidate(result));
+        }
+
         [Fact]
         public void ProductionBatchResolver_FrozenCrossApplicationDatasetMatchesOfflineDesign()
         {
@@ -355,12 +373,21 @@ namespace ScenarioRunner
                 $"precision={metrics.Precision:P1}, manual={metrics.ManualReviewRate:P1}");
         }
 
-        private static string DisplayCandidate(AblationScenarioResult result) =>
-            !result.EngineAccepted
-                ? "<declined>"
-                : string.IsNullOrEmpty(result.MatchedAutomationId)
-                    ? "<empty AutomationId>"
-                    : result.MatchedAutomationId;
+        private static string DisplayCandidate(AblationScenarioResult result)
+        {
+            if (!result.EngineAccepted)
+            {
+                return "<declined>";
+            }
+
+            // The net48 reference assemblies do not annotate string.IsNullOrEmpty with
+            // the nullable postcondition modern targets expose. Normalizing once keeps
+            // the same display behavior while making the non-null return explicit.
+            var matchedAutomationId = result.MatchedAutomationId ?? "";
+            return matchedAutomationId.Length == 0
+                ? "<empty AutomationId>"
+                : matchedAutomationId;
+        }
 
         private static UiElementInfo LoadFixture(string fixtureFileName)
         {
