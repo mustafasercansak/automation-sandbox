@@ -1,7 +1,7 @@
 name: Pack
 # Manual trigger only - deliberately separate from ci.yml so ordinary pushes/PRs never
-# produce or publish a package. This only packs .nupkg files as a build artifact; there
-# is no `dotnet nuget push` step, since no publish feed has been chosen yet.
+# produce or publish a package. This only packs .nupkg files as a build artifact;
+# publishing to nuget.org is owned by the separate release workflow.
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       version:
         description: 'Package version to stamp into produced .nupkg files'
         required: true
-        default: '0.2.0-beta.2'
+        default: '0.2.0-beta.3'
 
 jobs:
   pack:

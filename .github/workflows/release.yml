@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'SemVer package version, for example 0.2.0-beta.2'
+        description: 'SemVer package version, for example 0.2.0-beta.3'
         required: true
-        default: '0.2.0-beta.2'
+        default: '0.2.0-beta.3'
       prerelease:
         description: 'Mark the GitHub Release as a prerelease'
         required: true
@@ -121,8 +121,8 @@ jobs:
 
           ## Known Limitations
 
-          - **Calibration:** The thresholds shipped in this release are initial estimates, not values derived from a real-world benchmark dataset: `MinimumEvidenceWeight` (0.40), `MinimumCandidateMargin` (0.05), `MinimumSemanticScore` (0.01), `MinimumConsensusVotes` (2), the 10s `Retry-After` ceiling, and default `AssertGenerationMode` (`Strict`). Each is documented with its rationale and is subject to recalibration under #15.
-          - **Accuracy:** Healing accuracy is 100% on the bundled WinForms and WPF demo case studies. The false-positive rate on organic, third-party applications has not been measured (#15).
+          - **Calibration:** Real-world HandBrake and ShareX measurements show that higher confidence thresholds reduce false heals, but the magnitude does not transfer cleanly between applications. The shipped `MinimumConfidence` remains `0.50`; applications should calibrate against their own UI history rather than treating the measured `0.75-0.80` range as portable.
+          - **Accuracy:** The opt-in batch ownership guard eliminated all observed shared-candidate collisions while preserving all 79 correct survivor heals in the frozen HandBrake/ShareX study. It is not an absence detector: 15 uncontested removed-element false heals remained unchanged.
           - **LLM Providers:** Provider integrations are covered by mocked-HTTP unit tests, while the nightly workflow gates a known ground-truth consensus scenario against independent Groq and Mistral providers. This still depends on third-party availability and free-tier quota, so release creation itself does not run the live gate. `llm-smoke.yml` remains a manual single-endpoint diagnostic after GitHub Models began returning HTTP 410 ahead of retirement (#21, #44).
           - **Platform:** Desktop automation is Windows-only (FlaUI / UIA3). The core heuristic engine and web automation path are cross-platform and verified on Linux in CI (#13).
 
