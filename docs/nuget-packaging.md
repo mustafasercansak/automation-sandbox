@@ -1,13 +1,16 @@
 # NuGet Packaging Guide / NuGet Paketleme Rehberi
 
 Automation Sandbox packages are prepared as preview artifacts first. The `Pack`
-workflow creates `.nupkg` and `.snupkg` files, but it does not publish to nuget.org
-until a package feed and API key policy are chosen.
+workflow creates `.nupkg` and `.snupkg` files without publishing anywhere. The
+`Release Preview Packages` workflow can optionally push to nuget.org via Trusted
+Publishing (OIDC, no stored API key) when its `publish_to_nuget` input is enabled.
 
 M5 preview packaging is implemented. Both packaging workflows build all seven packages,
 validate their package/symbol pairs and required contents, and expose the artifacts
-either as a workflow download or as GitHub prerelease assets. Publishing to a public
-feed remains a separate release-policy decision rather than part of M5.
+either as a workflow download or as GitHub prerelease assets. A nuget.org Trusted
+Publishing policy (owner `mustafasercansak`, repo `automation-sandbox`, workflow
+`release.yml`, glob `AutomationSandbox.*`) is registered; pushing is still opt-in
+per run via `publish_to_nuget` rather than automatic on every release.
 
 ## Packages
 
@@ -41,7 +44,9 @@ repository's **Releases** page without publishing to nuget.org:
 3. Click **Run workflow**.
 4. Enter a version such as `0.2.0-beta.2`.
 5. Keep `prerelease` enabled for preview builds.
-6. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
+6. Enable `publish_to_nuget` to also push the packages to nuget.org via Trusted
+   Publishing, or leave it disabled to keep the release as GitHub-only assets.
+7. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
 
 For the `0.2.0-beta.2` preview release, the package assets carry the Phase 2 hardening work
 on top of `0.2.0-beta.1`: consensus-based acceptance for LLM picks (at least two providers
@@ -72,8 +77,10 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.2 --source
 - GitHub Release assets include all seven packages and their symbol packages.
 - Package names, README, license, repository URL, and symbols are present.
 - Version follows prerelease SemVer, for example `0.2.0-beta.2`.
-- Publish target is decided: nuget.org, GitHub Packages, or internal feed.
-- API key is stored as a GitHub Actions secret before adding any push step.
+- Publish target is nuget.org, via a Trusted Publishing policy (no stored API key).
+  The `NUGET_USER` repo secret holds the nuget.org username the OIDC login step
+  presents; it is not a credential by itself and rotates automatically since the
+  API key it exchanges for expires after 1 hour.
 
 ---
 

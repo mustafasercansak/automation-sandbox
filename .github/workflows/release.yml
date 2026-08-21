@@ -17,9 +17,15 @@ on:
         required: false
         default: false
         type: boolean
+      publish_to_nuget:
+        description: 'Also push packages to nuget.org via Trusted Publishing (OIDC, no stored API key)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -130,10 +136,16 @@ jobs:
           - AutomationSandbox.IntentAutomation
           - AutomationSandbox.PlaywrightLiveExploration
 
-          This release publishes package files as GitHub Release assets only. It does not push to nuget.org or GitHub Packages.
+          This release publishes package files as GitHub Release assets. __NUGET_PUBLISH_LINE__
           '@
 
-          $notes.Replace('__TAG__', $env:TAG_NAME) | Out-File -FilePath release-notes.md -Encoding utf8
+          $nugetLine = if ("${{ inputs.publish_to_nuget }}" -eq "true") {
+            "They are also pushed to nuget.org via Trusted Publishing."
+          } else {
+            "It does not push to nuget.org or GitHub Packages."
+          }
+
+          $notes.Replace('__TAG__', $env:TAG_NAME).Replace('__NUGET_PUBLISH_LINE__', $nugetLine) | Out-File -FilePath release-notes.md -Encoding utf8
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
@@ -155,3 +167,20 @@ jobs:
           }
 
           gh @args
+
+      # The temporary API key nuget.org issues here is valid for 1 hour, so this login
+      # step runs immediately before the push rather than earlier in the job.
+      - name: NuGet login (OIDC -> temporary API key)
+        if: ${{ inputs.publish_to_nuget && !inputs.dry_run }}
+        uses: NuGet/login@v1
+        id: nuget_login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages to nuget.org
+        if: ${{ inputs.publish_to_nuget && !inputs.dry_run }}
+        shell: pwsh
+        run: |
+          Get-ChildItem ./nupkgs/*.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
