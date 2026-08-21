@@ -174,10 +174,10 @@ namespace IntentAutomation
             }
 
             var role = ExtractBetween(remaining, "GetByRole(AriaRole.", ", new()");
-            var name = ExtractBetween(remaining, "Name = \"", "\"");
+            var name = ExtractCSharpStringLiteral(remaining, "Name = \"");
             if (!string.IsNullOrWhiteSpace(role) && !string.IsNullOrWhiteSpace(name))
             {
-                tsBuilder.Append($".getByRole('{ToTypeScriptRole(role)}', {{ name: '{CodeGenerationUtilities.EscapeSingleQuoted(UnescapeCSharpString(name))}' }})");
+                tsBuilder.Append($".getByRole('{ToTypeScriptRole(role)}', {{ name: '{CodeGenerationUtilities.EscapeSingleQuoted(name)}' }})");
                 return tsBuilder.ToString();
             }
 
@@ -208,6 +208,63 @@ namespace IntentAutomation
             start += prefix.Length;
             var end = value.IndexOf(suffix, start, StringComparison.Ordinal);
             return end < 0 ? "" : value.Substring(start, end - start);
+        }
+
+        private static string ExtractCSharpStringLiteral(string value, string prefix)
+        {
+            var start = value.IndexOf(prefix, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                return "";
+            }
+
+            start += prefix.Length;
+            var result = new StringBuilder();
+            for (var index = start; index < value.Length; index++)
+            {
+                var current = value[index];
+                if (current == '"')
+                {
+                    return result.ToString();
+                }
+
+                if (current != '\\')
+                {
+                    result.Append(current);
+                    continue;
+                }
+
+                if (++index >= value.Length)
+                {
+                    return "";
+                }
+
+                var escaped = value[index];
+                switch (escaped)
+                {
+                    case '\\':
+                        result.Append('\\');
+                        break;
+                    case '"':
+                        result.Append('"');
+                        break;
+                    case 'r':
+                        result.Append('\r');
+                        break;
+                    case 'n':
+                        result.Append('\n');
+                        break;
+                    case 't':
+                        result.Append('\t');
+                        break;
+                    default:
+                        // Preserve unknown sequences instead of silently dropping a selector character.
+                        result.Append('\\').Append(escaped);
+                        break;
+                }
+            }
+
+            return "";
         }
 
         private static string FirstNonEmpty(params string[] values)

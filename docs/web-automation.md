@@ -24,6 +24,9 @@ C# test generator. String values therefore escape quotes, backslashes, and CR/LF
 characters before emission. A `[name='...']` locator applies CSS single-quoted-string
 escaping first and C# string-literal escaping second, so characters required by the CSS
 selector survive compilation instead of being consumed by the C# parser.
+When the same suggestion is converted to TypeScript, the generator reads the complete
+C# string literal before re-emitting it, so an escaped quote in an accessible name does
+not truncate the generated `getByRole(..., { name })` locator.
 
 ### Live Page Exploration
 
@@ -169,6 +172,9 @@ parçalarıdır. Bu nedenle tırnak, ters eğik çizgi ve CR/LF/tab karakterleri
 kaçırılır. `[name='...']` locator'ında önce CSS tek-tırnaklı string kaçışı, ardından C#
 string literal kaçışı uygulanır; böylece CSS seçicisinin gerektirdiği karakterler C# parser
 tarafından tüketilmeden derlenmiş koda ulaşır.
+Aynı öneri TypeScript'e dönüştürülürken üretici C# string literal'ının tamamını okur; bu
+sayede erişilebilir addaki kaçırılmış bir çift tırnak, üretilen
+`getByRole(..., { name })` locator'ını yarıda kesmez.
 
 ### Canlı Sayfa Keşfi
 
