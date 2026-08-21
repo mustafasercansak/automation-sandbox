@@ -147,8 +147,22 @@ jobs:
 
           $notes.Replace('__TAG__', $env:TAG_NAME).Replace('__NUGET_PUBLISH_LINE__', $nugetLine) | Out-File -FilePath release-notes.md -Encoding utf8
 
-      - name: Create GitHub Release
+      - name: Check for existing release
         if: ${{ !inputs.dry_run }}
+        id: check_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view $env:TAG_NAME *> $null
+          $exists = if ($LASTEXITCODE -eq 0) { "true" } else { "false" }
+          "exists=$exists" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      # Re-running a version that was already released (for example to push to nuget.org
+      # after verifying the GitHub Release) must not fail here - `gh release create` has
+      # no upsert mode, so creation is skipped once the release already exists.
+      - name: Create GitHub Release
+        if: ${{ !inputs.dry_run && steps.check_release.outputs.exists == 'false' }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
