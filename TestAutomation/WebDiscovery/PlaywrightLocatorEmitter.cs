@@ -20,7 +20,7 @@ namespace WebDiscovery
                 suggestions.Add(new PlaywrightLocatorSuggestion
                 {
                     Strategy = "TestId",
-                    Expression = $"{framePrefix}GetByTestId(\"{Escape(element.TestId)}\")",
+                    Expression = $"{framePrefix}GetByTestId(\"{EscapeCSharpString(element.TestId)}\")",
                     Confidence = 0.98,
                     Reason = "data-testid is stable when owned by tests",
                 });
@@ -31,7 +31,7 @@ namespace WebDiscovery
                 suggestions.Add(new PlaywrightLocatorSuggestion
                 {
                     Strategy = "Role",
-                    Expression = $"{framePrefix}GetByRole(AriaRole.{ToAriaRole(element.Role)}, new() {{ Name = \"{Escape(element.AccessibleName)}\" }})",
+                    Expression = $"{framePrefix}GetByRole(AriaRole.{ToAriaRole(element.Role)}, new() {{ Name = \"{EscapeCSharpString(element.AccessibleName)}\" }})",
                     Confidence = 0.90,
                     Reason = "role plus accessible name matches user-visible semantics",
                 });
@@ -64,7 +64,7 @@ namespace WebDiscovery
                 suggestions.Add(new PlaywrightLocatorSuggestion
                 {
                     Strategy = "Css",
-                    Expression = $"{framePrefix}Locator(\"{Escape(element.CssSelector)}\")",
+                    Expression = $"{framePrefix}Locator(\"{EscapeCSharpString(element.CssSelector)}\")",
                     Confidence = 0.55,
                     Reason = "CSS selector is a fallback when semantic locators are unavailable",
                 });
@@ -85,7 +85,7 @@ namespace WebDiscovery
             {
                 if (!string.IsNullOrWhiteSpace(frame))
                 {
-                    builder.Append($".FrameLocator(\"{Escape(frame)}\")");
+                    builder.Append($".FrameLocator(\"{EscapeCSharpString(frame)}\")");
                 }
             }
             builder.Append(".");
@@ -100,19 +100,37 @@ namespace WebDiscovery
                 : char.ToUpperInvariant(normalized[0]) + normalized.Substring(1).ToLowerInvariant();
         }
 
-        private static string Escape(string value)
+        // These expressions are C# source consumed directly by PlaywrightCSharpTestGenerator.
+        // This deliberately mirrors IntentAutomation.CodeGenerationUtilities rather than
+        // referencing it: WebDiscovery is the lower-level dependency of IntentAutomation, so
+        // calling upward would create a package cycle.
+        private static string EscapeCSharpString(string value)
         {
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            return value
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n")
+                .Replace("\t", "\\t");
         }
 
         private static string EscapeCssId(string value)
         {
-            return Escape(value.Replace(":", "\\:").Replace(".", "\\."));
+            return EscapeCSharpString(value.Replace(":", "\\:").Replace(".", "\\."));
         }
 
         private static string EscapeCssString(string value)
         {
-            return value.Replace("\\", "\\\\").Replace("'", "\\'");
+            // First encode the value for a single-quoted CSS attribute string. Then encode
+            // that complete selector fragment for the surrounding C# string literal. Keeping
+            // these layers separate is what preserves the CSS backslash at runtime.
+            var cssString = value
+                .Replace("\\", "\\\\")
+                .Replace("'", "\\'")
+                .Replace("\r", "\\D ")
+                .Replace("\n", "\\A ")
+                .Replace("\t", "\\9 ");
+            return EscapeCSharpString(cssString);
         }
     }
 }

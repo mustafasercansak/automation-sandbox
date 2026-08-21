@@ -146,6 +146,53 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void PlaywrightLocatorEmitter_EscapesControlCharactersForCSharpSource()
+        {
+            var element = new WebElementInfo
+            {
+                TagName = "input",
+                Role = "textbox",
+                AccessibleName = "Save\r\nDraft\tNow",
+                TestId = "save\r\n\tdraft",
+                NameAttribute = "profile\r\n\talias",
+                CssSelector = "input[data-label=\"Save\r\nDraft\tNow\"]",
+                FrameAncestry = new List<string> { "iframe\r\n\t#details" },
+            };
+
+            var suggestions = PlaywrightLocatorEmitter.Suggest(element);
+
+            Assert.All(suggestions, suggestion =>
+            {
+                Assert.DoesNotContain("\r", suggestion.Expression);
+                Assert.DoesNotContain("\n", suggestion.Expression);
+                Assert.DoesNotContain("\t", suggestion.Expression);
+            });
+            Assert.Equal(
+                "page.FrameLocator(\"iframe\\r\\n\\t#details\").GetByTestId(\"save\\r\\n\\tdraft\")",
+                suggestions.Single(s => s.Strategy == "TestId").Expression);
+            Assert.Contains(
+                "Name = \"Save\\r\\nDraft\\tNow\"",
+                suggestions.Single(s => s.Strategy == "Role").Expression);
+            Assert.Contains("\\\\D ", suggestions.Single(s => s.Strategy == "NameAttribute").Expression);
+            Assert.Contains("\\\\A ", suggestions.Single(s => s.Strategy == "NameAttribute").Expression);
+            Assert.Contains("\\\\9 ", suggestions.Single(s => s.Strategy == "NameAttribute").Expression);
+        }
+
+        [Fact]
+        public void PlaywrightLocatorEmitter_NameAttributeWithDoubleQuote_EscapesCSharpStringLiteral()
+        {
+            var element = new WebElementInfo
+            {
+                TagName = "input",
+                NameAttribute = "profile\"o'brien",
+            };
+
+            var suggestion = Assert.Single(PlaywrightLocatorEmitter.Suggest(element));
+
+            Assert.Equal("page.Locator(\"[name='profile\\\"o\\\\'brien']\")", suggestion.Expression);
+        }
+
+        [Fact]
         public void SelfHealingResolver_CanHealWebElementMappedThroughUiModel()
         {
             var expected = new WebElementInfo

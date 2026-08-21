@@ -19,6 +19,12 @@ This guide explains how to capture Web DOM trees with **Playwright**, support Sh
 2. Pass the returned DOM JSON to `PlaywrightApplicationConnector.ParseJson`.
 3. Use the resulting `UiElementInfo` tree for self-healing or locator generation with `PlaywrightLocatorEmitter`.
 
+`PlaywrightLocatorEmitter` expressions are C# source fragments consumed directly by the
+C# test generator. String values therefore escape quotes, backslashes, and CR/LF/tab
+characters before emission. A `[name='...']` locator applies CSS single-quoted-string
+escaping first and C# string-literal escaping second, so characters required by the CSS
+selector survive compilation instead of being consumed by the C# parser.
+
 ### Live Page Exploration
 
 `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) drives a browser,
@@ -157,6 +163,12 @@ if (paymentFrame != null)
 1. Playwright'ın `page.EvaluateAsync` fonksiyonu ile `PlaywrightDomCaptureScript.JavaScript` kodunu tarayıcıda çalıştırın.
 2. Dönen DOM JSON verisini `PlaywrightApplicationConnector.ParseJson` fonksiyonuna verin.
 3. Oluşan standart `UiElementInfo` ağacını iyileştirme motoruna verin veya `PlaywrightLocatorEmitter` ile önerilen Playwright kodlarını alın.
+
+`PlaywrightLocatorEmitter` ifadeleri C# test üreticisinin doğrudan kullandığı C# kaynak
+parçalarıdır. Bu nedenle tırnak, ters eğik çizgi ve CR/LF/tab karakterleri üretilmeden önce
+kaçırılır. `[name='...']` locator'ında önce CSS tek-tırnaklı string kaçışı, ardından C#
+string literal kaçışı uygulanır; böylece CSS seçicisinin gerektirdiği karakterler C# parser
+tarafından tüketilmeden derlenmiş koda ulaşır.
 
 ### Canlı Sayfa Keşfi
 
