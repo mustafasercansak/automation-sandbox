@@ -739,8 +739,9 @@ namespace ScenarioRunner
         [Fact]
         public void HealingReportFileSink_UpgradesV4Report_LeavingAgreedProvidersNull()
         {
-            // v5 (#10) added AgreedProviders, v6 (#11) added ProviderAttempts and v7 (#82)
-            // added outcome telemetry. An older v4 file upgrades with new fields left null.
+            // v5 (#10) added AgreedProviders, v6 (#11) added ProviderAttempts, v7 (#82)
+            // added outcome telemetry and v8 (#144) added reconciliation telemetry. An
+            // older v4 file upgrades with new fields left null.
             File.WriteAllText(_tempReportPath, @"{
   ""SchemaVersion"": 4,
   ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
@@ -767,7 +768,7 @@ namespace ScenarioRunner
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
             var root = doc.RootElement;
-            Assert.Equal(7, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(8, HealingReportDocument.CurrentSchemaVersion);
             Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
 
             var upgraded = root.GetProperty("Events")[0];
@@ -777,6 +778,8 @@ namespace ScenarioRunner
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Platform").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProposedSnapshot").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
 
             var recorded = root.GetProperty("Events")[1];
             var agreed = recorded.GetProperty("AgreedProviders").EnumerateArray().Select(e => e.GetString()).ToArray();
@@ -789,8 +792,8 @@ namespace ScenarioRunner
         [Fact]
         public void HealingReportFileSink_UpgradesV5Report_LeavingProviderAttemptsNull()
         {
-            // v6 (#11) adds ProviderAttempts and v7 (#82) adds outcome telemetry, so a v5
-            // file upgrades in place leaving fields that build never recorded null.
+            // v6 (#11) adds ProviderAttempts, v7 (#82) adds outcome telemetry and v8 (#144)
+            // adds reconciliation telemetry, so a v5 file upgrades in place with unknowns null.
             File.WriteAllText(_tempReportPath, @"{
   ""SchemaVersion"": 5,
   ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
@@ -817,18 +820,50 @@ namespace ScenarioRunner
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
             var root = doc.RootElement;
-            Assert.Equal(7, HealingReportDocument.CurrentSchemaVersion);
+            Assert.Equal(8, HealingReportDocument.CurrentSchemaVersion);
 
             var upgraded = root.GetProperty("Events")[0];
             Assert.Equal(JsonValueKind.Array, upgraded.GetProperty("AgreedProviders").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Outcome").ValueKind);
             Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
 
             var recorded = root.GetProperty("Events")[1];
             var attempts = recorded.GetProperty("ProviderAttempts");
             Assert.Equal(1, attempts.GetProperty("Claude").GetInt32());
             Assert.Equal(2, attempts.GetProperty("Gemini").GetInt32());
+        }
+
+        [Fact]
+        public void HealingReportFileSink_UpgradesV7Report_LeavingReconciliationTelemetryNull()
+        {
+            File.WriteAllText(_tempReportPath, @"{
+  ""SchemaVersion"": 7,
+  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
+  ""Events"": [
+    { ""LocatorKey"": ""old"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Outcome"": ""accepted"", ""Score"": 0.9, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 2 }
+  ]
+}");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            sink.Record(HealingReportEntry.FromHealResult(
+                "new",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                new HealResult
+                {
+                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
+                    Score = 0.9,
+                    ResolutionStatus = HealResolutionStatus.Confident,
+                }));
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
+            Assert.Equal(8, doc.RootElement.GetProperty("SchemaVersion").GetInt32());
+            var upgraded = doc.RootElement.GetProperty("Events")[0];
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
+            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
         }
 
         [Fact]

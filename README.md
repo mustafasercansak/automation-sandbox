@@ -39,10 +39,11 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
 | **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI-compatible cloud providers (including Groq, Kimi, OpenRouter, and Cloudflare Workers AI), and offline Ollama behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
 | **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, nightly multi-model evaluation, and a gating live Groq + Mistral assertion on a known ground-truth candidate. |
+| **Joint Locator Reconciliation** | ✅ Implemented | Opt-in `ResolveBatch` / `ResolveBatchAsync` ownership guard prevents independently accepted locators from claiming the same live element; it is a targeted collision guard, not an absence detector. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only). A proposed locator is persisted and reported as accepted only after the retried action succeeds. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
-| **Healing Reports & CI Artifacts** | ✅ Implemented | Schema-v7 JSON + HTML telemetry for every resolution attempt, including accepted, ambiguous, no-consensus, provider-error, and retry-failed outcomes. `AcceptedEvents` preserves an accepted-only compatibility view. |
+| **Healing Reports & CI Artifacts** | ✅ Implemented | Schema-v8 JSON + HTML telemetry for every resolution attempt, including accepted, ambiguous, ownership-conflict, no-consensus, provider-error, and retry-failed outcomes. `AcceptedEvents` preserves an accepted-only compatibility view. |
 | **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees; core targets `netstandard2.0` / `net8.0` and runs cross-platform across Windows and Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
@@ -524,6 +525,33 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 
 See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and consensus details.
 
+### 11. Joint Locator Reconciliation (Opt-In)
+
+When several stale locators are resolved against the same captured tree, use the batch API
+to prevent two independently accepted heals from taking ownership of one live element:
+
+```csharp
+var batch = await SelfHealingResolver.ResolveBatchAsync(
+    new[]
+    {
+        new BatchHealingRequest("checkout.submit", staleSubmit),
+        new BatchHealingRequest("checkout.cancel", staleCancel),
+    },
+    liveTree,
+    providers);
+
+foreach (var item in batch.Items.Where(item => item.Result.IsConfident))
+{
+    Console.WriteLine($"{item.Request.LocatorKey} -> {item.CandidateIdentity}");
+}
+```
+
+The API reconciles only candidates the existing heuristic or LLM-consensus gates already
+accepted; it never promotes runner-ups. Candidate ownership uses a snapshot-local tree path,
+not `AutomationId`, so empty and duplicate IDs remain distinguishable. Uncontested false
+heals are preserved by design: this is a collision guard, not an absence detector. See the
+[Joint Locator Reconciliation guide](docs/joint-locator-reconciliation.md).
+
 ---
 
 ## 🧪 Test Coverage & Code Metrics
@@ -539,6 +567,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Self-Healing Engine & Intent Metadata** | Repository auto-upsert, action retry, `TestIntent`-guided healing, JSON/HTML report emission | [SelfHealingEngineTests](TestAutomation/ScenarioRunner/SelfHealingEngineTests.cs), [TestIntentHealingTests](TestAutomation/ScenarioRunner/TestIntentHealingTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, Hallucination Guard, and provider resilience: retry on transient 429/5xx, fail-fast on 4xx, `Retry-After` quota ceiling, per-attempt and total timeout budgets, attempt telemetry | [LlmHealingProviderTests](TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |
 | **Multi-Provider Consensus** | Quorum acceptance, split votes and ties treated as disagreement, single-provider rejection, hallucinated votes dropped before counting, `AgreedProviders` ordering, `LlmProviderFactory` discovery, non-confident evaluation fixtures | [SelfHealingResolverTests](TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [ConsensusEvaluationTests](TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs), [EvaluationScenarios](TestAutomation/ScenarioRunner/EvaluationScenarios.cs) |
+| **Joint Locator Reconciliation** | Stronger ownership, ambiguous ties, empty-ID identity, uncontested limitation, provider partial failure, report telemetry, single-locator compatibility | [BatchHealingResolverTests](TestAutomation/ScenarioRunner/BatchHealingResolverTests.cs), [JointAssignmentGeneralizationTests](TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs) |
 | **Real-Tree Locator Ablation** | Versioned single- and multi-locator mutation recipes, per-locator ground truth, threshold sweeps, and frozen cross-application joint top-claim evaluation | [LocatorAblationTests](TestAutomation/ScenarioRunner/LocatorAblationTests.cs), [ShareXAblationTests](TestAutomation/ScenarioRunner/ShareXAblationTests.cs), [JointAssignmentGeneralizationTests](TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs) |
 | **Web Discovery** | DOM snapshot mapping, Shadow DOM / iframe traversal, hidden/offscreen handling | [WebDiscoveryTests](TestAutomation/ScenarioRunner/WebDiscoveryTests.cs) |
 | **Intent Automation (Web)** | Deterministic + LLM-backed planning (with guarded fallback), DOM candidate matching/exploration, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs), [IntentPlannerTests](TestAutomation/ScenarioRunner/IntentPlannerTests.cs), [LlmIntentPlannerTests](TestAutomation/ScenarioRunner/LlmIntentPlannerTests.cs), [IntentExplorationBridgeTests](TestAutomation/ScenarioRunner/IntentExplorationBridgeTests.cs), [IntentLocatorRepositoryRecorderTests](TestAutomation/ScenarioRunner/IntentLocatorRepositoryRecorderTests.cs), [IntentFlowReportTests](TestAutomation/ScenarioRunner/IntentFlowReportTests.cs), [PlaywrightCSharpTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightCSharpTestGeneratorTests.cs), [PlaywrightTypeScriptTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightTypeScriptTestGeneratorTests.cs) |
@@ -577,7 +606,7 @@ AutomationSandbox.sln
 └── TestAutomation/
     ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
     ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
-    ├── SelfHealing/        Heuristic resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
+    ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
     ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net8.0, net10.0)
     ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
     ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
@@ -665,7 +694,7 @@ Work is now tracked through GitHub milestones rather than the original M1–M6 s
 
 - **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
 - **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
-- **Phase 3 — Post-Beta Measurement** *(in progress)*: the heuristic and LLM-consensus paths are now measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs, replacing the documented estimates the shipped thresholds started from — see the [benchmark section](#-real-world-multi-signal-benchmark--calibration) above. After #141's targeted experiment, #143 froze an outcome-independent 45-scenario HandBrake/ShareX dataset: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but left 15 uncontested removed-element false heals unchanged. That passes the predeclared threshold for a separate production design (#144), while remaining a targeted guard rather than a general absence detector. The nightly Groq + Mistral ground-truth scenario is now a failing gate rather than collection-only telemetry.
+- **Phase 3 — Post-Beta Measurement** *(in progress)*: the heuristic and LLM-consensus paths are measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs. The #141/#143 frozen study led to #144's opt-in production batch guard: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but its explicit limit is that 15 uncontested removed-element false heals remain unchanged. The nightly Groq + Mistral ground-truth scenario remains a failing gate rather than collection-only telemetry.
 
 ---
 

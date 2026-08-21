@@ -17,6 +17,7 @@ namespace SelfHealing
         Ambiguous,
         NoConsensus,
         ProviderError,
+        OwnershipConflict,
     }
 
     public sealed class HealResult
@@ -77,7 +78,16 @@ namespace SelfHealing
         public UiElementInfo? HeuristicMatched { get; set; }
         public double? HeuristicScore { get; set; }
         public bool DivergedFromHeuristic { get; set; }
+
+        // Populated only by the opt-in batch resolver. CandidateIdentity is an opaque,
+        // snapshot-local tree path and deliberately does not depend on AutomationId.
+        // RejectedByReconciliation keeps the independently proposed match available for
+        // diagnostics while preventing callers from accepting it through IsConfident.
+        public string? CandidateIdentity { get; set; }
+        public BatchReconciliationDisposition? ReconciliationDisposition { get; set; }
+        public bool RejectedByReconciliation { get; set; }
         public bool IsConfident =>
+            !RejectedByReconciliation &&
             Matched is not null &&
             // The evidence gate applies to LLM picks too: otherwise a candidate the
             // heuristic rejected as thin-evidence (e.g. ControlType-only, coverage 0.20)

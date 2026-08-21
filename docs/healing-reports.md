@@ -13,7 +13,7 @@ This guide explains how **Automation Sandbox** generates JSON and HTML visual re
 ### 💡 Overview
 When running automated tests in CI/CD pipelines (e.g. GitHub Actions, Azure DevOps, Jenkins), knowing **which locators healed**, **what changed**, and **whether AI was used** is essential for test maintenance.
 
-`SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically. Schema v7 records accepted heals and declined or failed attempts, so the report no longer implies a 100% success rate by construction.
+`SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically. Schema v8 records accepted heals and declined or failed attempts, including opt-in batch ownership conflicts, so the report no longer implies a 100% success rate by construction.
 
 For `ExecuteWithHealingAsync`, an accepted event is written only after the action retry with the proposed element succeeds. If that retry fails, the proposal is not reported as accepted and the locator repository remains unchanged.
 
@@ -39,8 +39,9 @@ By default, an interactive **HTML Dashboard** (`healing-report.html`) is written
 
 Each event in the report contains:
 - **`LocatorKey`**: The test locator key (e.g. `RegistrationPage.SubmitButton`).
-- **`Outcome`** (schema v7+): The resolution result: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error`, or `unspecified`. `unspecified` exposes a missing decision classification without miscounting it as measured low confidence. `null` on upgraded legacy entries means the older build did not record an outcome; pre-v7 reports contained accepted heals only.
+- **`Outcome`** (schema v7+): The resolution result: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `ownership-conflict`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error`, or `unspecified`. `ownership-conflict` means an independently accepted batch claim lost or tied the one-to-one ownership decision. `unspecified` exposes a missing decision classification without miscounting it as measured low confidence. `null` on upgraded legacy entries means the older build did not record an outcome; pre-v7 reports contained accepted heals only.
 - **`Platform`** (schema v7+): The caller-provided platform identifier, such as `web-playwright` or `windows-uia`.
+- **`CandidateIdentity` & `ReconciliationDisposition`** (schema v8+): Nullable batch-only ownership telemetry. The identity is an opaque path within one captured tree, not a reusable locator; `null` on older or single-locator entries means reconciliation was not observed by that writer.
 - **`ReviewStatus`**:
   - `accepted`: High-confidence heuristic match ($\ge 50\%$).
   - `accepted-with-llm`: Matches resolved via Gemini, Claude, OpenAI, or Ollama.
@@ -65,7 +66,7 @@ Each event in the report contains:
 ### 💡 Genel Bakış
 CI/CD süreçlerinde (GitHub Actions, Azure DevOps vb.) testleriniz çalışırken **hangi elemanların iyileştirildiği**, **neye dönüştüğü** ve **yapay zekanın devreye girip girmediği** raporlanmalıdır.
 
-`SelfHealingEngine` motoru çözüm denemelerini anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder. Şema v7 hem kabul edilen iyileştirmeleri hem de reddedilen veya başarısız denemeleri kaydeder; böylece rapor yapısı gereği %100 başarı izlenimi vermez.
+`SelfHealingEngine` motoru çözüm denemelerini anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder. Şema v8, isteğe bağlı batch sahiplik çakışmaları dahil kabul edilen iyileştirmeleri ve reddedilen veya başarısız denemeleri kaydeder; böylece rapor yapısı gereği %100 başarı izlenimi vermez.
 
 `ExecuteWithHealingAsync` kullanıldığında kabul edilmiş bir olay, yalnızca önerilen elemanla yapılan eylem tekrarı başarılı olduktan sonra yazılır. Bu tekrar başarısız olursa öneri kabul edilmiş olarak raporlanmaz ve locator repository değişmeden kalır.
 
@@ -91,8 +92,9 @@ JSON dosyası oluştuğunda yanında **etkileşimli HTML Rapor Paneli** (`healin
 
 Rapordaki her olay şu bilgileri içerir:
 - **`LocatorKey`**: Test elemanının anahtarı (örn: `KayitFormu.GonderButonu`).
-- **`Outcome`** (şema v7+): Çözüm sonucu: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error` veya `unspecified`. `unspecified`, eksik karar sınıflandırmasını ölçülmüş `low-confidence` verisi gibi saymadan görünür kılar. Eski raporlardan yükseltilen girdilerde `null`, önceki build'in sonucu kaydetmediği anlamına gelir; v7 öncesi raporlar yalnızca kabul edilen iyileştirmeleri içeriyordu.
+- **`Outcome`** (şema v7+): Çözüm sonucu: `accepted`, `accepted-unverified`, `retry-failed`, `ambiguous`, `ownership-conflict`, `low-evidence`, `low-confidence`, `no-candidates`, `no-consensus`, `provider-error` veya `unspecified`. `ownership-conflict`, bağımsız kabul edilen bir batch talebinin bire bir sahiplik kararını kaybettiğini veya berabere kaldığını gösterir. `unspecified`, eksik karar sınıflandırmasını ölçülmüş `low-confidence` verisi gibi saymadan görünür kılar. Eski raporlardan yükseltilen girdilerde `null`, önceki build'in sonucu kaydetmediği anlamına gelir; v7 öncesi raporlar yalnızca kabul edilen iyileştirmeleri içeriyordu.
 - **`Platform`** (şema v7+): Çağıranın verdiği `web-playwright` veya `windows-uia` gibi platform kimliği.
+- **`CandidateIdentity` & `ReconciliationDisposition`** (şema v8+): Nullable ve yalnızca batch sahiplik telemetrisi. Kimlik tek yakalanmış ağaç içindeki opak yoldur, yeniden kullanılabilir locator değildir; eski veya tek-locator girdilerindeki `null`, yazan sürümün uzlaştırma gözlemlemediğini belirtir.
 - **`ReviewStatus` (İnceleme Durumu):**
   - `accepted`: Yüksek güvenli sezgisel eşleşme ($\ge \%50$).
   - `accepted-with-llm`: Yapay zeka (Gemini, Claude, OpenAI, Ollama) ile çözülen eşleşme.
