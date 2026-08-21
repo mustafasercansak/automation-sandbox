@@ -16,10 +16,14 @@ jobs:
           - os: windows-latest
             framework: net48
             name: Windows (Full Suite + FlaUI Live Tests)
+            coverage-label: Windows net48
+            coverage-note: Includes the net48-only Discovery assembly and FlaUI live UIA paths.
             run-flaui: true
           - os: ubuntu-latest
             framework: net8.0
             name: Linux (Cross-Platform Core & Web Suite)
+            coverage-label: Linux net8.0
+            coverage-note: Discovery and FlaUI live UIA paths are absent by design because they are net48/Windows-only.
             run-flaui: false
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -71,6 +75,15 @@ jobs:
           SELF_HEALING_REPORT_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.json
           SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.html
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
+
+      - name: Summarize code coverage for ${{ matrix.coverage-label }}
+        if: always()
+        shell: pwsh
+        run: |
+          ./.github/scripts/write-coverage-summary.ps1 `
+            -CoverageSearchPath ./TestAutomation/ScenarioRunner/TestResults `
+            -LegLabel '${{ matrix.coverage-label }}' `
+            -PlatformNote '${{ matrix.coverage-note }}'
 
       - name: Upload test results
         if: always()
