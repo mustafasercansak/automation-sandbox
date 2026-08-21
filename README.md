@@ -310,6 +310,9 @@ dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration 
 
 By default, the HTML report is written next to the JSON file as
 `healing-report.html`. Override it with `SELF_HEALING_REPORT_HTML_PATH` when needed.
+Updates to an existing JSON report are committed with an atomic same-directory file
+replacement: a failed or interrupted commit leaves the previously recorded history in
+place instead of deleting it first. The HTML file is derived output written afterward.
 
 Each report event includes:
 

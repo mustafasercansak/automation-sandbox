@@ -13,6 +13,7 @@ namespace SelfHealing
     {
         public const string EnvironmentVariableName = "SELF_HEALING_REPORT_PATH";
         private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(10);
+        private readonly Action<string, string> _replaceExistingFile;
 
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions
         {
@@ -25,14 +26,28 @@ namespace SelfHealing
         }
 
         public HealingReportFileSink(string filePath, string? htmlFilePath)
+            : this(filePath, htmlFilePath, ReplaceExistingFile)
+        {
+        }
+
+        internal HealingReportFileSink(
+            string filePath,
+            string? htmlFilePath,
+            Action<string, string> replaceExistingFile)
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 throw new ArgumentException("filePath must not be null or empty.", nameof(filePath));
             }
 
+            if (replaceExistingFile == null)
+            {
+                throw new ArgumentNullException(nameof(replaceExistingFile));
+            }
+
             FilePath = filePath;
             HtmlFilePath = htmlFilePath;
+            _replaceExistingFile = replaceExistingFile;
         }
 
         public string FilePath { get; }
@@ -100,14 +115,30 @@ namespace SelfHealing
             }
 
             var tempPath = FilePath + ".tmp";
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(document, Options));
-
-            if (File.Exists(FilePath))
+            try
             {
-                File.Delete(FilePath);
-            }
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(document, Options));
 
-            File.Move(tempPath, FilePath);
+                // The temp file is adjacent to the destination, so File.Replace/File.Move stays
+                // on one volume and commits as one filesystem operation. If the process stops
+                // before that operation, the previous report remains intact; there is no
+                // delete-then-move window in which all recorded history is absent.
+                if (File.Exists(FilePath))
+                {
+                    _replaceExistingFile(tempPath, FilePath);
+                }
+                else
+                {
+                    File.Move(tempPath, FilePath);
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(HtmlFilePath))
             {
@@ -119,6 +150,11 @@ namespace SelfHealing
 
                 File.WriteAllText(HtmlFilePath, HealingReportHtmlRenderer.Render(document));
             }
+        }
+
+        private static void ReplaceExistingFile(string tempPath, string destinationPath)
+        {
+            File.Replace(tempPath, destinationPath, destinationBackupFileName: null);
         }
 
         private FileStream AcquireLock()
