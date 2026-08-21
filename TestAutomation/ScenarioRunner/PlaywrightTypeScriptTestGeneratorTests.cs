@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using IntentAutomation;
 using UiModel;
 using WebDiscovery;
@@ -76,6 +77,44 @@ namespace ScenarioRunner
 
             Assert.Contains("await page.frameLocator('iframe[name=\\'details\\']').getByTestId('email-input').fill('jane@example.com');", code);
             Assert.Contains("await page.frameLocator('iframe#parent').frameLocator('iframe#child').getByRole('button', { name: 'Save' }).click();", code);
+        }
+
+        [Fact]
+        public void Generate_EmitterAccessibleNameWithEscapedQuote_PreservesNameInCSharpAndTypeScript()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "Quoted accessible name",
+                Goal = "Click save draft",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Click,
+                        LocatorKey = "Action.SaveDraft",
+                    }
+                }
+            };
+            var suggestion = PlaywrightLocatorEmitter.Suggest(new WebElementInfo
+            {
+                Role = "button",
+                AccessibleName = "Save \"draft\"",
+            }).Single(item => item.Strategy == "Role");
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Action.SaveDraft", "save-draft", suggestion.Expression),
+            };
+
+            var csharpCode = new PlaywrightCSharpTestGenerator().Generate(scenario, recordings);
+            var typeScriptCode = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains(
+                "await Page.GetByRole(AriaRole.Button, new() { Name = \"Save \\\"draft\\\"\" }).ClickAsync();",
+                csharpCode);
+            Assert.Contains(
+                "await page.getByRole('button', { name: 'Save \"draft\"' }).click();",
+                typeScriptCode);
         }
 
         [Fact]
