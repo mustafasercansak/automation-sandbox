@@ -209,6 +209,9 @@ Configure traversal bounds, timeouts, cancellation tokens, and control filters:
 using Discovery;
 using System.Threading;
 
+using var connector = ApplicationConnector.Launch(@"C:\apps\MyApp.exe");
+var window = connector.GetMainWindow();
+
 var options = new DiscoveryOptions
 {
     MaxDepth = 15,
@@ -229,6 +232,13 @@ if (result.HitMaxElements) Console.WriteLine("Max element limit reached!");
 if (result.TimedOut) Console.WriteLine("Discovery timed out gracefully with partial tree.");
 if (result.WasCancelled) Console.WriteLine("Discovery was cancelled gracefully with partial tree.");
 ```
+
+`GetMainWindow()` allows 30 seconds by default for a desktop application to become
+UIA-ready. It fails immediately if the process exits, and its timeout exception
+classifies the failure as slow startup, UIA attachment failure, or ambiguous top-level
+windows. If the native main-window handle is temporarily unavailable, the connector can
+use the application's sole same-process UIA top-level window; it never guesses when
+multiple windows are present. Pass an explicit `TimeSpan` to override the default.
 
 > [!NOTE]
 > **Discovery Timeout & Filtering Semantics:**
@@ -562,7 +572,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | :--- | :--- | :--- |
 | **Heuristic Scorer** | Structural similarity, weight tuning, unusable `(0,0,0,0)` bounds | [SelfHealingResolverTests](TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [SelfHealingResolverExplainabilityTests](TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
 | **Candidate Pruner** | Candidate score filtering (`MinCandidateScore`), Top-N shortlist assembly | [SelfHealingResolverExplainabilityTests](TestAutomation/ScenarioRunner/SelfHealingResolverExplainabilityTests.cs) |
-| **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters & limits | [DiscoveryRobustnessTests](TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
+| **Discovery Robustness** | `DiscoveryOptions`, `DiscoveryResult` telemetry, filters and limits, plus actionable application-startup failure classification | [DiscoveryRobustnessTests](TestAutomation/ScenarioRunner/DiscoveryRobustnessTests.cs) |
 | **Locator Repository & Snapshots** | Versioned JSON persistence, file locking, `LocatorKey` stability, `UiElementSnapshot` round-tripping | [LocatorRepositoryTests](TestAutomation/ScenarioRunner/LocatorRepositoryTests.cs), [UiElementSnapshotTests](TestAutomation/ScenarioRunner/UiElementSnapshotTests.cs) |
 | **Self-Healing Engine & Intent Metadata** | Repository auto-upsert, action retry, `TestIntent`-guided healing, JSON/HTML report emission | [SelfHealingEngineTests](TestAutomation/ScenarioRunner/SelfHealingEngineTests.cs), [TestIntentHealingTests](TestAutomation/ScenarioRunner/TestIntentHealingTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, Hallucination Guard, and provider resilience: retry on transient 429/5xx, fail-fast on 4xx, `Retry-After` quota ceiling, per-attempt and total timeout budgets, attempt telemetry | [LlmHealingProviderTests](TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |

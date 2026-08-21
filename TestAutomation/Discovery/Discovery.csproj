@@ -12,7 +12,7 @@
 
     <PackageId>AutomationSandbox.Discovery</PackageId>
 
-    <Description>Live UI tree capture via FlaUI/UI Automation (net48-only, since FlaUI 5.0.0 ships .NET Framework binaries only).</Description>
+    <Description>Resilient live UI tree capture and application startup diagnostics via FlaUI/UI Automation (net48-only).</Description>
 
   </PropertyGroup>
 
