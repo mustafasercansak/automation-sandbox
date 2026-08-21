@@ -17,6 +17,14 @@ When running automated tests in CI/CD pipelines (e.g. GitHub Actions, Azure DevO
 
 For `ExecuteWithHealingAsync`, an accepted event is written only after the action retry with the proposed element succeeds. If that retry fails, the proposal is not reported as accepted and the locator repository remains unchanged.
 
+`HealingReportFileSink` writes the next JSON document to an adjacent temporary file and
+commits it with one atomic replace operation when a report already exists. It never
+deletes the previous JSON before the replacement. If serialization or the commit fails,
+the existing history remains readable and the temporary file is cleaned up during normal
+exception handling. A process or power loss before the atomic commit can leave a harmless
+temporary file, but not remove the previous report. The HTML dashboard is derived output
+written after the JSON commit and can be regenerated from that JSON.
+
 ---
 
 ### ⚙️ Enabling Reports via Environment Variables
@@ -69,6 +77,14 @@ CI/CD süreçlerinde (GitHub Actions, Azure DevOps vb.) testleriniz çalışırk
 `SelfHealingEngine` motoru çözüm denemelerini anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder. Şema v8, isteğe bağlı batch sahiplik çakışmaları dahil kabul edilen iyileştirmeleri ve reddedilen veya başarısız denemeleri kaydeder; böylece rapor yapısı gereği %100 başarı izlenimi vermez.
 
 `ExecuteWithHealingAsync` kullanıldığında kabul edilmiş bir olay, yalnızca önerilen elemanla yapılan eylem tekrarı başarılı olduktan sonra yazılır. Bu tekrar başarısız olursa öneri kabul edilmiş olarak raporlanmaz ve locator repository değişmeden kalır.
+
+`HealingReportFileSink`, sonraki JSON belgesini hedefle aynı dizindeki geçici dosyaya
+yazar ve mevcut raporu tek bir atomik değiştirme işlemiyle günceller. Önceki JSON dosyası
+değiştirmeden önce hiçbir zaman silinmez. Serileştirme veya commit başarısız olursa mevcut
+geçmiş okunabilir kalır ve normal exception işleyişinde geçici dosya temizlenir. Atomik
+commit'ten önce süreç ya da güç kesilirse zararsız bir geçici dosya kalabilir, ancak önceki
+rapor kaybolmaz. HTML paneli JSON commit'inden sonra yazılan türetilmiş çıktıdır ve JSON'dan
+yeniden üretilebilir.
 
 ---
 

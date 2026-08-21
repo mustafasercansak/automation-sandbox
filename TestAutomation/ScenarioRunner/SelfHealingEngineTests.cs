@@ -41,6 +41,12 @@ namespace ScenarioRunner
                 File.Delete(_tempReportPath);
             }
 
+            var reportTempPath = _tempReportPath + ".tmp";
+            if (File.Exists(reportTempPath))
+            {
+                File.Delete(reportTempPath);
+            }
+
             var reportLockPath = _tempReportPath + ".lock";
             if (File.Exists(reportLockPath))
             {
@@ -714,6 +720,39 @@ namespace ScenarioRunner
             // information the report must not lose.
             var newEvent = root.GetProperty("Events")[1];
             Assert.Equal(JsonValueKind.Null, newEvent.GetProperty("ScoreBreakdown").GetProperty("NameScore").ValueKind);
+        }
+
+        [Fact]
+        public void HealingReportFileSink_CommitFailure_PreservesExistingReport()
+        {
+            var originalJson = $@"{{
+  ""SchemaVersion"": {HealingReportDocument.CurrentSchemaVersion},
+  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
+  ""Events"": [
+    {{ ""LocatorKey"": ""existing-history"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Outcome"": ""accepted"" }}
+  ]
+}}";
+            File.WriteAllText(_tempReportPath, originalJson);
+            var commitAttempted = false;
+            var sink = new HealingReportFileSink(
+                _tempReportPath,
+                htmlFilePath: null,
+                replaceExistingFile: (tempPath, destinationPath) =>
+                {
+                    commitAttempted = true;
+                    Assert.True(File.Exists(tempPath));
+                    Assert.True(File.Exists(destinationPath));
+                    throw new IOException("Simulated interruption at the atomic commit boundary.");
+                });
+
+            Assert.Throws<IOException>(() => sink.Record(new HealingReportEntry { LocatorKey = "new-attempt" }));
+
+            Assert.True(commitAttempted);
+            Assert.Equal(originalJson, File.ReadAllText(_tempReportPath));
+            Assert.False(File.Exists(_tempReportPath + ".tmp"));
+            var preserved = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var entry = Assert.Single(preserved!.Events);
+            Assert.Equal("existing-history", entry.LocatorKey);
         }
 
         [Fact]
