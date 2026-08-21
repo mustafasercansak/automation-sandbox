@@ -531,7 +531,7 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 - `KIMI_API_KEY` (+ `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ Kimi (`moonshot-v1-8k`)
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ Cloudflare Workers AI (no guessed model)
 - `OLLAMA_HOST` / `OLLAMA_MODEL` / `OLLAMA_ENABLED=true` $\rightarrow$ Ollama (`llama3.2`)
-- `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.)
+- `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.); every entry requires an explicit `Name`, `Endpoint`, `Model`, and API key source. Malformed JSON or a missing endpoint/model is skipped with a credential-safe diagnostic instead of falling back to OpenAI defaults or disabling the built-in providers. Use the three-argument `CreateConfiguredProviders` overload to route diagnostics to an application logger; the existing overload writes them to standard error.
 
 See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and consensus details.
 
