@@ -575,6 +575,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
 | **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
 | **Live Page Exploration** | Real headless-Chromium browser launch, navigation, and DOM capture via `PlaywrightLiveExplorer` against a local HTML fixture | [PlaywrightLiveExplorerTests](TestAutomation/ScenarioRunner/PlaywrightLiveExplorerTests.cs) |
+| **CI Coverage Visibility** | Separate Windows `net48` and Linux `net8.0` step summaries, overall and per-assembly rows, missing-report handling, artifact retention | [CoverageSummaryWorkflowTests](TestAutomation/ScenarioRunner/CoverageSummaryWorkflowTests.cs) |
 
 ### Running Code Coverage Locally
 
@@ -583,6 +584,11 @@ To collect cross-platform code coverage (`coverage.cobertura.xml`):
 ```powershell
 dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --collect:"XPlat Code Coverage"
 ```
+
+CI renders the collected Cobertura data into each matrix job's GitHub Step Summary. Windows
+`net48` and Linux `net8.0` are labelled and reported separately, with overall and per-assembly
+line/branch coverage. The figures are visibility aids only: they are never combined into one
+headline percentage, published as a badge, or used as a threshold that can fail the build.
 
 ---
 
