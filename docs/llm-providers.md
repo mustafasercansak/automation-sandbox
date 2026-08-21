@@ -27,7 +27,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 `LlmProviderFactory.CreateConfiguredProviders()` automatically discovers and instantiates available providers based on active environment variables without needing code changes:
 
 > [!IMPORTANT]
-> **No provider is required, and none of these keys is mandatory.** A provider exists only when its own `*_API_KEY` is present; everything else is skipped silently. Consensus acceptance needs **two** independent providers, so two keys is the practical minimum.
+> **No provider is required, and none of these keys is mandatory.** A well-known provider exists only when its own `*_API_KEY` is present; everything else is skipped silently. Invalid `LLM_CUSTOM_PROVIDERS` input is skipped with a credential-safe diagnostic instead. Consensus acceptance needs **two** independent providers, so two keys is the practical minimum.
 >
 > **Never point one provider slot at another provider's endpoint.** `OpenAiHealingProvider` accepts any OpenAI-compatible URL, which makes it tempting to reuse the `OPENAI_*` slot for a different vendor. Two slots proxying the same model are one voter with two names: they agree because they are the same system, and consensus between them is meaningless (#19). If you need a second opinion, use a second vendor. The `OPENAI_*` slot is reserved for a genuine OpenAI credential; leave it unset otherwise.
 
@@ -59,6 +59,23 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
       "timeoutSeconds": 20
     }
   ]
+  ```
+
+  Every entry requires a non-empty `name`, `endpoint`, `model`, and either `apiKey`
+  or a resolvable `apiKeyEnvVar`. `endpoint` and `model` are never inherited from the
+  `OPENAI_*` variables: an entry missing either value is skipped so it cannot silently
+  send a custom credential to OpenAI or add a mislabeled vote to consensus. Malformed
+  JSON skips the custom array without discarding already discovered built-in providers.
+  If the array itself is valid but one entry has the wrong JSON shape, only that entry
+  is skipped and valid custom siblings are still constructed.
+  Diagnostics never echo the JSON or API key. They go to standard error by default, or
+  can be routed to the application's logger:
+
+  ```csharp
+  var providers = LlmProviderFactory.CreateConfiguredProviders(
+      httpClient: null,
+      getEnv: null,
+      log: message => logger.LogWarning("{Message}", message));
   ```
 
 ```csharp
@@ -163,7 +180,7 @@ Choose a model family different from the other voters. Two endpoints serving the
 `LlmProviderFactory.CreateConfiguredProviders()` ortamdaki anahtarları otomatik keşfeder ve kod değiştirmeden sağlayıcı listesini hazırlar:
 
 > [!IMPORTANT]
-> **Hiçbir sağlayıcı zorunlu değildir; bu anahtarların hiçbiri gerekli değildir.** Bir sağlayıcı yalnızca kendi `*_API_KEY` değeri varsa kurulur, aksi halde sessizce atlanır. Uzlaşma kabulü **iki** bağımsız sağlayıcı gerektirdiği için pratik alt sınır iki anahtardır.
+> **Hiçbir sağlayıcı zorunlu değildir; bu anahtarların hiçbiri gerekli değildir.** Bilinen bir sağlayıcı yalnızca kendi `*_API_KEY` değeri varsa kurulur, aksi halde sessizce atlanır. Geçersiz `LLM_CUSTOM_PROVIDERS` girdisi ise kimlik bilgilerini açığa çıkarmayan bir tanı mesajıyla atlanır. Uzlaşma kabulü **iki** bağımsız sağlayıcı gerektirdiği için pratik alt sınır iki anahtardır.
 >
 > **Bir sağlayıcı slotunu başka bir sağlayıcının uç noktasına yönlendirmeyin.** `OpenAiHealingProvider` herhangi bir OpenAI-uyumlu adresi kabul ettiği için `OPENAI_*` slotunu başka bir sağlayıcı için yeniden kullanmak cazip gelir. Aynı modeli çağıran iki slot, iki isimli tek bir oy demektir: aynı sistem oldukları için anlaşırlar ve aralarındaki uzlaşma anlamsızdır (#19). İkinci bir görüş gerekiyorsa ikinci bir sağlayıcı kullanın. `OPENAI_*` slotu gerçek bir OpenAI kimlik bilgisine ayrılmıştır; başka bir amaçla doldurmayın, boş bırakın.
 
@@ -173,6 +190,23 @@ Aynı kural Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral
 
 > [!WARNING]
 > `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.
+
+`LLM_CUSTOM_PROVIDERS` dizisindeki her giriş boş olmayan `name`, `endpoint`, `model`
+ve doğrudan `apiKey` ya da çözümlenebilir bir `apiKeyEnvVar` içermelidir. `endpoint`
+ve `model`, `OPENAI_*` değişkenlerinden devralınmaz. Bu alanlardan biri eksikse özel
+kimlik bilgisinin yanlışlıkla OpenAI'a gönderilmemesi ve mutabakata yanlış etiketli bir
+oy eklenmemesi için yalnızca ilgili giriş atlanır. JSON bütünüyle bozuksa daha önce
+keşfedilmiş yerleşik sağlayıcılar korunur. Dizinin kendisi geçerli olup bir elemanın JSON
+şekli bozuksa yalnızca o eleman atlanır ve geçerli özel sağlayıcı kardeşleri yine oluşturulur.
+Tanı mesajları ham JSON'u ve API anahtarını içermez; varsayılan olarak standart hataya
+yazılır veya uygulamanın logger'ına yönlendirilebilir:
+
+```csharp
+var providers = LlmProviderFactory.CreateConfiguredProviders(
+    httpClient: null,
+    getEnv: null,
+    log: message => logger.LogWarning("{Message}", message));
+```
 
 ```csharp
 // Ortamdaki tüm geçerli sağlayıcıları otomatik al:

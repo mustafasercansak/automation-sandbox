@@ -15,6 +15,19 @@ namespace LlmHealing
             HttpClient? httpClient = null,
             Func<string, string?>? getEnv = null)
         {
+            return CreateConfiguredProviders(httpClient, getEnv, Console.Error.WriteLine);
+        }
+
+        public static IReadOnlyList<ILlmHealingProvider> CreateConfiguredProviders(
+            HttpClient? httpClient,
+            Func<string, string?>? getEnv,
+            Action<string> log)
+        {
+            if (log == null)
+            {
+                throw new ArgumentNullException(nameof(log));
+            }
+
             getEnv ??= Environment.GetEnvironmentVariable;
 
             string? Env(string key)
@@ -202,12 +215,46 @@ namespace LlmHealing
             var customJson = Env("LLM_CUSTOM_PROVIDERS");
             if (customJson != null)
             {
-                var customConfigs = ParseCustomProviders(customJson);
+                List<LlmProviderConfiguration> customConfigs;
+                try
+                {
+                    customConfigs = ParseCustomProviders(customJson, log);
+                }
+                catch (JsonException)
+                {
+                    // The JSON may contain credentials, so diagnostics identify the setting but
+                    // never echo its value or the parser's input context. Built-in providers were
+                    // already constructed above and must remain usable when this optional setting
+                    // is malformed.
+                    log("[LlmProviderFactory] Skipped LLM_CUSTOM_PROVIDERS because it is not a valid JSON array.");
+                    customConfigs = new List<LlmProviderConfiguration>();
+                }
+
                 foreach (var config in customConfigs)
                 {
                     if (string.IsNullOrWhiteSpace(config.Name))
                     {
                         throw new ArgumentException("Custom LLM provider configuration must specify a non-empty Name.");
+                    }
+
+                    var providerName = config.Name.Trim();
+                    var missingSettings = new List<string>();
+                    if (string.IsNullOrWhiteSpace(config.Endpoint))
+                    {
+                        missingSettings.Add("Endpoint");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(config.Model))
+                    {
+                        missingSettings.Add("Model");
+                    }
+
+                    if (missingSettings.Count > 0)
+                    {
+                        log(
+                            $"[LlmProviderFactory] Skipped custom provider '{providerName}' because " +
+                            $"{string.Join(" and ", missingSettings)} must be configured explicitly.");
+                        continue;
                     }
 
                     var apiKey = config.ApiKey ?? (config.ApiKeyEnvVar != null ? Env(config.ApiKeyEnvVar) : null);
@@ -223,9 +270,9 @@ namespace LlmHealing
                         providers.Add(new OpenAiHealingProvider(
                             httpClient: httpClient,
                             apiKey: apiKey,
-                            model: config.Model,
-                            endpoint: config.Endpoint,
-                            name: config.Name.Trim(),
+                            model: config.Model!.Trim(),
+                            endpoint: config.Endpoint!.Trim(),
+                            name: providerName,
                             timeout: timeout,
                             totalTimeout: totalTimeout,
                             maxRetries: config.MaxRetries));
@@ -253,15 +300,48 @@ namespace LlmHealing
             return available;
         }
 
-        private static List<LlmProviderConfiguration> ParseCustomProviders(string json)
+        private static List<LlmProviderConfiguration> ParseCustomProviders(
+            string json,
+            Action<string> log)
         {
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
             };
 
-            return JsonSerializer.Deserialize<List<LlmProviderConfiguration>>(json, options)
-                ?? new List<LlmProviderConfiguration>();
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                throw new JsonException("LLM_CUSTOM_PROVIDERS must be a JSON array.");
+            }
+
+            var configurations = new List<LlmProviderConfiguration>();
+            var index = 0;
+            foreach (var element in document.RootElement.EnumerateArray())
+            {
+                try
+                {
+                    var configuration = element.Deserialize<LlmProviderConfiguration>(options);
+                    if (configuration == null)
+                    {
+                        throw new JsonException("Custom provider entry cannot be null.");
+                    }
+
+                    configurations.Add(configuration);
+                }
+                catch (JsonException)
+                {
+                    // Report only the array position. JsonElement and parser diagnostics can
+                    // contain the configured API key, which must never enter application logs.
+                    log(
+                        $"[LlmProviderFactory] Skipped LLM_CUSTOM_PROVIDERS entry at index {index} " +
+                        "because it does not match the expected provider schema.");
+                }
+
+                index++;
+            }
+
+            return configurations;
         }
     }
 }

@@ -306,7 +306,7 @@ namespace ScenarioRunner
             var env = new Dictionary<string, string>
             {
                 ["GEMINI_API_KEY"] = "gemini-test-key",
-                ["LLM_CUSTOM_PROVIDERS"] = "[{\"Name\": \"Gemini\", \"ApiKey\": \"custom-key\", \"Endpoint\": \"https://example.com/v1\"}]",
+                ["LLM_CUSTOM_PROVIDERS"] = "[{\"Name\": \"Gemini\", \"ApiKey\": \"custom-key\", \"Endpoint\": \"https://example.com/v1\", \"Model\": \"custom-model\"}]",
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
@@ -332,6 +332,86 @@ namespace ScenarioRunner
             Assert.Equal(TimeSpan.FromSeconds(20), ds.Timeout);
             Assert.Equal(TimeSpan.FromSeconds(50), ds.TotalTimeout);
             Assert.Equal(3, ds.MaxRetries);
+        }
+
+        [Fact]
+        public void LlmProviderFactory_MalformedCustomJson_LogsAndPreservesBuiltInProviders()
+        {
+            var env = new Dictionary<string, string>
+            {
+                ["GEMINI_API_KEY"] = "gemini-test-key",
+                ["LLM_CUSTOM_PROVIDERS"] = "[{\"Name\":\"broken\",\"ApiKey\":\"must-not-be-logged\"",
+            };
+            var diagnostics = new List<string>();
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: null,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null,
+                log: diagnostics.Add);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal("Gemini", provider.Name);
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(
+                "[LlmProviderFactory] Skipped LLM_CUSTOM_PROVIDERS because it is not a valid JSON array.",
+                diagnostic);
+            Assert.DoesNotContain("must-not-be-logged", diagnostic);
+        }
+
+        [Fact]
+        public void LlmProviderFactory_MalformedCustomEntry_LogsAndPreservesValidCustomProviders()
+        {
+            var env = new Dictionary<string, string>
+            {
+                ["LLM_CUSTOM_PROVIDERS"] =
+                    "[{\"Name\":\"Broken\",\"ApiKey\":\"must-not-be-logged\",\"Endpoint\":\"https://broken.example/v1\",\"Model\":{\"unexpected\":true}}," +
+                    "{\"Name\":\"DeepSeek\",\"ApiKey\":\"valid-key\",\"Endpoint\":\"https://api.deepseek.com/v1\",\"Model\":\"deepseek-chat\"}]",
+            };
+            var diagnostics = new List<string>();
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: null,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null,
+                log: diagnostics.Add);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal("DeepSeek", provider.Name);
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(
+                "[LlmProviderFactory] Skipped LLM_CUSTOM_PROVIDERS entry at index 0 because it does not match the expected provider schema.",
+                diagnostic);
+            Assert.DoesNotContain("must-not-be-logged", diagnostic);
+        }
+
+        [Theory]
+        [InlineData("[{\"Name\":\"Custom\",\"ApiKey\":\"custom-key\",\"Endpoint\":\"https://example.com/v1\"}]", "Model")]
+        [InlineData("[{\"Name\":\"Custom\",\"ApiKey\":\"custom-key\",\"Model\":\"custom-model\"}]", "Endpoint")]
+        public void LlmProviderFactory_CustomProviderMissingRequiredSetting_IsSkippedAndLogged(
+            string customJson,
+            string missingSetting)
+        {
+            // OPENAI_* values belong to a different provider and must never become implicit
+            // defaults for a partially configured custom endpoint.
+            var env = new Dictionary<string, string>
+            {
+                ["GEMINI_API_KEY"] = "gemini-test-key",
+                ["OPENAI_MODEL"] = "gpt-4o-mini",
+                ["OPENAI_ENDPOINT"] = "https://api.openai.com/v1",
+                ["LLM_CUSTOM_PROVIDERS"] = customJson,
+            };
+            var diagnostics = new List<string>();
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: null,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null,
+                log: diagnostics.Add);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal("Gemini", provider.Name);
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("Skipped custom provider 'Custom'", diagnostic);
+            Assert.Contains(missingSetting, diagnostic);
+            Assert.DoesNotContain("custom-key", diagnostic);
         }
 
         [Fact]
