@@ -8,6 +8,8 @@ namespace SelfHealing
 {
     public sealed class HealingReportDocument
     {
+        // v8 (issue #144): batch-resolution entries can carry snapshot-local CandidateIdentity
+        // and ReconciliationDisposition ownership telemetry.
         // v7 (issue #82): every resolution attempt carries an explicit Outcome, Platform,
         // ProposedSnapshot and ProviderErrors. Older entries keep these fields null because
         // the build that wrote them did not observe those values.
@@ -20,7 +22,7 @@ namespace SelfHealing
         // v3: entries carry RunnerUpScore (margin gate, issue #4).
         // v2: added EvidenceCoverage and Candidates (#3).
         // Older reports upgrade in place; only newer-than-current schemas are rejected.
-        public const int CurrentSchemaVersion = 7;
+        public const int CurrentSchemaVersion = 8;
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
         public List<HealingReportEntry> Events { get; set; } = new List<HealingReportEntry>();
@@ -68,6 +70,7 @@ namespace SelfHealing
         public const string NoCandidatesOutcome = "no-candidates";
         public const string NoConsensusOutcome = "no-consensus";
         public const string ProviderErrorOutcome = "provider-error";
+        public const string OwnershipConflictOutcome = "ownership-conflict";
         public const string UnspecifiedOutcome = "unspecified";
 
         public DateTimeOffset HealedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -79,6 +82,11 @@ namespace SelfHealing
         // accepted heals only, so IsAccepted deliberately treats a null Outcome as accepted.
         public string? Outcome { get; set; }
         public string? Platform { get; set; }
+
+        // Null on single-locator attempts and entries upgraded from schema v7 or earlier.
+        // CandidateIdentity is an opaque path within one captured tree, not a reusable locator.
+        public string? CandidateIdentity { get; set; }
+        public string? ReconciliationDisposition { get; set; }
 
         [JsonIgnore]
         public bool IsAccepted => Outcome == null ||
@@ -202,6 +210,8 @@ namespace SelfHealing
                     return NoConsensusOutcome;
                 case HealResolutionStatus.ProviderError:
                     return ProviderErrorOutcome;
+                case HealResolutionStatus.OwnershipConflict:
+                    return OwnershipConflictOutcome;
                 case HealResolutionStatus.NoCandidates:
                     return NoCandidatesOutcome;
                 case HealResolutionStatus.LowConfidence:
@@ -273,6 +283,8 @@ namespace SelfHealing
                 ReviewStatus = IsAcceptedOutcome(outcome) ? ClassifyReviewStatus(result) : ManualReviewStatus,
                 Outcome = outcome,
                 Platform = platform,
+                CandidateIdentity = result.CandidateIdentity,
+                ReconciliationDisposition = result.ReconciliationDisposition?.ToString(),
                 Score = result.Score,
                 ConfidenceThreshold = result.ConfidenceThreshold,
                 CandidateCount = result.CandidateCount,

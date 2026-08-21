@@ -2,7 +2,7 @@ using LlmHealing;
 using UiModel;
 namespace SelfHealing
 {
-    public static class SelfHealingResolver
+    public static partial class SelfHealingResolver
     {
         // expected: the last known snapshot state of the locator that just broke.
         // currentTreeRoot: a freshly captured UI tree from the application right now.

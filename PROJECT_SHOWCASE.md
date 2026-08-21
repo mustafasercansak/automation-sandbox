@@ -50,7 +50,8 @@ timeline
 * **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
 * **Extended LLM Providers:** Added `OpenAiHealingProvider` for OpenAI-compatible services including Cloudflare Workers AI, plus offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
 * **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with an automatic repository update only after the healed action retry succeeds (`ExecuteWithHealingAsync`), guarded by an opt-in `shouldHeal` exception-classification policy (default: locator-resolution failures only).
-* **Healing Reports & CI Artifacts:** Schema-v7 JSON and HTML reports capture every resolution attempt, including accepted, ambiguous, no-consensus, provider-error, and retry-failed outcomes, while retaining an accepted-only compatibility view.
+* **Joint Locator Reconciliation:** Opt-in batch resolution prevents independently accepted locators from claiming the same live element using snapshot-local identity; uncontested false heals remain an explicit limitation.
+* **Healing Reports & CI Artifacts:** Schema-v8 JSON and HTML reports capture every resolution attempt, including accepted, ambiguous, ownership-conflict, no-consensus, provider-error, and retry-failed outcomes, while retaining an accepted-only compatibility view.
 * **GitHub Pages Documentation:** Jekyll-based documentation site with Mermaid diagram rendering for architecture, workflow, and roadmap diagrams.
 
 
@@ -256,7 +257,8 @@ timeline
 * **Playwright Web Bağlayıcısı:** Shadow DOM, iframe ve hidden/offscreen CSS tespitiyle web DOM ağacını ortak `UiElementInfo` modeline taşır.
 * **Genişletilmiş LLM Sağlayıcıları:** Claude ve Gemini yanında Cloudflare Workers AI dahil OpenAI uyumlu servisler ile yerel/offline Ollama desteği.
 * **SelfHealingEngine SDK:** Locator repository, resolver ve LLM sağlayıcılarını tek yüksek seviyeli API ile birleştirir; önerilen locator'ı yalnızca iyileştirilmiş eylem denemesi başarılı olduktan sonra repository'ye kaydeder.
-* **Onarım Raporları:** Şema-v7 JSON + HTML raporları kabul edilen, belirsiz, uzlaşmasız, sağlayıcı hatalı ve retry başarısız tüm çözüm denemelerini kaydeder; yalnızca kabul edilenler için geriye uyumlu görünümü korur.
+* **Birleşik Locator Uzlaştırması:** İsteğe bağlı batch çözümleme, snapshot-local kimlik kullanarak bağımsız kabul edilen locator'ların aynı canlı elementi talep etmesini engeller; tartışmasız false-heal'ler açık bir sınır olarak kalır.
+* **Onarım Raporları:** Şema-v8 JSON + HTML raporları kabul edilen, belirsiz, sahiplik çakışmalı, uzlaşmasız, sağlayıcı hatalı ve retry başarısız tüm çözüm denemelerini kaydeder; yalnızca kabul edilenler için geriye uyumlu görünümü korur.
 * **GitHub Pages Dokümanları:** Mermaid diyagramlarını render eden Jekyll tabanlı dokümantasyon sitesi.
 
 ---

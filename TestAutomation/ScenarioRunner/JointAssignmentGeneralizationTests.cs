@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using SelfHealing;
 using UiModel;
 using Xunit;
 
@@ -9,6 +10,60 @@ namespace ScenarioRunner
 {
     public class JointAssignmentGeneralizationTests
     {
+        [Fact]
+        public void ProductionBatchResolver_FrozenCrossApplicationDatasetMatchesOfflineDesign()
+        {
+            var fixtures = new[]
+            {
+                new { Application = "HandBrake", Version = "1.8.2", FileName = "HandBrake_1.8.2.tree.json" },
+                new { Application = "ShareX", Version = "v21.0.0", FileName = "ShareX_v21.0.0.tree.json" },
+            };
+            var comparedLocators = 0;
+
+            foreach (var fixture in fixtures)
+            {
+                var sourceRoot = LoadFixture(fixture.FileName);
+                var dataset = JointAssignmentGeneralizationDataset.Generate(
+                    sourceRoot,
+                    fixture.Application,
+                    fixture.Version,
+                    fixture.FileName);
+                var baseline = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, sourceRoot);
+                var design = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+                foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.MultiLocator))
+                {
+                    var mutatedRoot = LocatorAblationGenerator.ApplyMutation(sourceRoot, scenario);
+                    var requests = scenario.Mutations!
+                        .Select(mutation => new BatchHealingRequest(
+                            mutation.OriginalAutomationId,
+                            LocatorAblationGenerator.FindExpectedElement(sourceRoot, mutation.OriginalAutomationId)!))
+                        .ToList();
+                    var production = SelfHealingResolver.ResolveBatch(requests, mutatedRoot, log: _ => { });
+                    var expectedScenario = Assert.Single(design.Scenarios.Where(s => s.ScenarioId == scenario.ScenarioId));
+
+                    Assert.Equal(expectedScenario.LocatorResults.Count, production.Items.Count);
+                    for (var i = 0; i < production.Items.Count; i++)
+                    {
+                        var expected = expectedScenario.LocatorResults[i];
+                        var actual = production.Items[i];
+                        Assert.Equal(expected.Baseline.EngineAccepted, actual.WasIndependentlyConfident);
+                        Assert.Equal(expected.Joint.EngineAccepted, actual.Result.IsConfident);
+                        Assert.Equal(expected.Disposition.ToString(), actual.ReconciliationDisposition.ToString());
+                        if (actual.WasIndependentlyConfident)
+                        {
+                            // Includes the two observed incidental candidates whose AutomationId is empty.
+                            Assert.False(string.IsNullOrEmpty(actual.CandidateIdentity));
+                        }
+
+                        comparedLocators++;
+                    }
+                }
+            }
+
+            Assert.Equal(135, comparedLocators);
+        }
+
         [Fact]
         public void FrozenCrossApplicationDataset_ReportsJointAssignmentGeneralization()
         {

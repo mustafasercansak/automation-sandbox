@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.SelfHealing</PackageId>
-    <Description>Structural-similarity locator healing with optional LLM consensus fallback and complete resolution-outcome telemetry.</Description>
+    <Description>Structural-similarity locator healing with optional LLM consensus fallback, opt-in joint locator reconciliation, and complete resolution-outcome telemetry.</Description>
   </PropertyGroup>
 
   <ItemGroup>

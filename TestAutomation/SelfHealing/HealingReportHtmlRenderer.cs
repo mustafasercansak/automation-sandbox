@@ -37,7 +37,7 @@ namespace SelfHealing
             html.AppendLine("    .accepted { color: var(--ok); background: #e8f5ee; }");
             html.AppendLine("    .accepted-unverified { color: var(--llm); background: #e8f1fb; }");
             html.AppendLine("    .accepted-with-llm { color: var(--llm); background: #e8f1fb; }");
-            html.AppendLine("    .manual-review, .retry-failed, .ambiguous, .low-evidence, .low-confidence, .no-candidates, .no-consensus, .provider-error, .unspecified { color: var(--review); background: #fff4d6; }");
+            html.AppendLine("    .manual-review, .retry-failed, .ambiguous, .ownership-conflict, .low-evidence, .low-confidence, .no-candidates, .no-consensus, .provider-error, .unspecified { color: var(--review); background: #fff4d6; }");
             html.AppendLine("    .empty { padding: 24px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); }");
             html.AppendLine("    code { font-family: Consolas, monospace; font-size: 12px; }");
             html.AppendLine("  </style>");
@@ -111,6 +111,12 @@ namespace SelfHealing
                             .OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
                             .Select(kvp => kvp.Key + ": " + kvp.Value)) + "]";
                         reasoning = string.IsNullOrEmpty(reasoning) ? providerErrorNote : providerErrorNote + " " + reasoning;
+                    }
+                    if (!string.IsNullOrEmpty(entry.ReconciliationDisposition))
+                    {
+                        var reconciliationNote = "[Reconciliation: " + entry.ReconciliationDisposition +
+                            (string.IsNullOrEmpty(entry.CandidateIdentity) ? "" : " · candidate " + entry.CandidateIdentity) + "]";
+                        reasoning = string.IsNullOrEmpty(reasoning) ? reconciliationNote : reconciliationNote + " " + reasoning;
                     }
                     html.Append("          <td>").Append(E(reasoning)).AppendLine("</td>");
                     html.AppendLine("        </tr>");
