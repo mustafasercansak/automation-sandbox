@@ -13,7 +13,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
-> 📦 **Preview Packages:** The latest prerelease is [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2), published as GitHub Release assets — there is deliberately no push to nuget.org yet. Seven `AutomationSandbox.*` packages are produced by the manual [Release workflow](.github/workflows/release.yml) (with a `dry_run` mode) or the [Pack workflow](.github/workflows/pack.yml). See the [NuGet Packaging Guide](docs/nuget-packaging.md).
+> 📦 **Preview Packages:** The latest prerelease is [`v0.2.0-beta.3`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.3). All seven `AutomationSandbox.*` packages are available from [nuget.org](https://www.nuget.org/profiles/mustafasercansak) and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
 
 > 🎤 **Project Showcase:** For a bilingual (EN/TR) architecture presentation and executive summary, see [PROJECT_SHOWCASE.md](PROJECT_SHOWCASE.md).
 
@@ -699,8 +699,10 @@ graph LR
         P2[Phase 2: Beta Hardening - Closed]
         P1 --> P2
     end
-    subgraph PhaseF [Phase F: Post-Beta Measurement]
-        P3[Phase 3: Calibration & Multi-Model Data - In Progress]
+    subgraph PhaseF [Phase F: Measurement & Adoption]
+        P3[Phase 3: Calibration & Multi-Model Data - Closed]
+        P4[Phase 4: Adoption & Consumer Validation - In Progress]
+        P3 --> P4
     end
     M3 --> M4 --> M5 --> M6 --> P1
     P2 --> P3
@@ -710,7 +712,8 @@ Work is now tracked through GitHub milestones rather than the original M1–M6 s
 
 - **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
 - **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
-- **Phase 3 — Post-Beta Measurement** *(in progress)*: the heuristic and LLM-consensus paths are measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs. The #141/#143 frozen study led to #144's opt-in production batch guard: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but its explicit limit is that 15 uncontested removed-element false heals remain unchanged. The nightly Groq + Mistral ground-truth scenario remains a failing gate rather than collection-only telemetry.
+- **Phase 3 — Post-Beta Measurement** *(closed)*: the heuristic and LLM-consensus paths were measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs. The #141/#143 frozen study led to #144's opt-in production batch guard: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but its explicit limit is that 15 uncontested removed-element false heals remain unchanged. The nightly Groq + Mistral ground-truth scenario remains a failing gate rather than collection-only telemetry.
+- **Phase 4 — Adoption & Consumer Validation** *(in progress)*: validate the published packages from a consumer's perspective, tighten installation and quick-start guidance, and use external integration feedback to prioritize the next product work. Linux desktop discovery remains a separate research track under #17 rather than an assumed release commitment.
 
 ---
 

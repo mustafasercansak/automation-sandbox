@@ -4,6 +4,9 @@ Automation Sandbox packages are prepared as preview artifacts first. The `Pack`
 workflow creates `.nupkg` and `.snupkg` files without publishing anywhere. The
 `Release Preview Packages` workflow can optionally push to nuget.org via Trusted
 Publishing (OIDC, no stored API key) when its `publish_to_nuget` input is enabled.
+The current `0.2.0-beta.3` packages were published this way and are available from
+[nuget.org](https://www.nuget.org/profiles/mustafasercansak), as well as from the
+GitHub prerelease assets.
 
 M5 preview packaging is implemented. Both packaging workflows build all seven packages,
 validate their package/symbol pairs and required contents, and expose the artifacts
@@ -31,7 +34,7 @@ In GitHub Actions:
 1. Open **Actions**.
 2. Select **Pack**.
 3. Click **Run workflow**.
-4. Enter a version such as `0.2.0-beta.2`.
+4. Enter a version such as `0.2.0-beta.3`.
 5. Download the `nupkgs` artifact.
 
 ## Create A GitHub Release
@@ -42,32 +45,42 @@ repository's **Releases** page without publishing to nuget.org:
 1. Open **Actions**.
 2. Select **Release Preview Packages**.
 3. Click **Run workflow**.
-4. Enter a version such as `0.2.0-beta.2`.
+4. Enter a version such as `0.2.0-beta.3`.
 5. Keep `prerelease` enabled for preview builds.
 6. Enable `publish_to_nuget` to also push the packages to nuget.org via Trusted
    Publishing, or leave it disabled to keep the release as GitHub-only assets.
 7. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
 
-For the `0.2.0-beta.2` preview release, the package assets carry the Phase 2 hardening work
-on top of `0.2.0-beta.1`: consensus-based acceptance for LLM picks (at least two providers
-must agree), provider resilience (retry with exponential backoff, dual timeout budgets, a
-`Retry-After` quota ceiling), per-provider attempt telemetry, and healing report schema v7 with explicit accepted, declined, provider-error, and retry-failed outcomes.
-Note that consensus is a behaviour change: a single configured LLM provider no longer has
-its pick accepted.
+The current `0.2.0-beta.3` preview includes the Phase 3 measurement work and the opt-in
+`ResolveBatch` / `ResolveBatchAsync` ownership guard on top of the Phase 2 consensus and
+provider-resilience work. A single configured LLM provider still does not constitute
+consensus, and batch reconciliation remains a collision guard rather than an absence
+detector; see the release notes and benchmark guide for the measured limits.
 
 Locally:
 
 ```powershell
 dotnet restore AutomationSandbox.sln
 dotnet build AutomationSandbox.sln --configuration Release --no-restore
-dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=0.2.0-beta.2
+dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=0.2.0-beta.3
 ```
+
+## Consume From nuget.org
+
+Prerelease versions require an explicit version:
+
+```powershell
+dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+```
+
+The other six packages use the same version. Add only the packages whose APIs the
+consumer uses; NuGet restores their package dependencies transitively.
 
 ## Consume From A Local Folder
 
 ```powershell
 dotnet nuget add source ./nupkgs --name automation-sandbox-local
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.2 --source automation-sandbox-local
+dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3 --source automation-sandbox-local
 ```
 
 ## Publish Checklist
@@ -76,7 +89,7 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.2 --source
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
 - GitHub Release assets include all seven packages and their symbol packages.
 - Package names, README, license, repository URL, and symbols are present.
-- Version follows prerelease SemVer, for example `0.2.0-beta.2`.
+- Version follows prerelease SemVer, for example `0.2.0-beta.3`.
 - Publish target is nuget.org, via a Trusted Publishing policy (no stored API key).
   The `NUGET_USER` repo secret holds the nuget.org username the OIDC login step
   presents; it is not a credential by itself and rotates automatically since the
@@ -86,7 +99,15 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.2 --source
 
 # Türkçe Özet
 
-`Pack` workflow'u NuGet paketlerini artifact olarak üretir; şu aşamada nuget.org'a
-otomatik yayın yapmaz. İlk güvenli adım paketleri indirip lokal feed üzerinden denemektir.
+`Pack` workflow'u NuGet paketlerini yalnızca artifact olarak üretir ve herhangi bir
+feed'e yayın yapmaz. `Release Preview Packages` workflow'u ise `publish_to_nuget`
+etkinleştirildiğinde saklanan bir API anahtarı olmadan Trusted Publishing (OIDC) ile
+nuget.org'a yayın yapabilir. Mevcut `0.2.0-beta.3` sürümünün yedi paketinin tamamı
+nuget.org'da ve GitHub prerelease asset'lerinde bulunur. Yerel doğrulama için `Pack`
+artifact'leri ayrıca lokal feed üzerinden tüketilebilir. Yayınlanan prerelease paketi
+doğrudan tüketmek için aşağıdaki komut kullanılabilir; diğer altı paket de aynı sürüm
+numarasını taşır:
 
-Önerilen ilk sürüm: `0.2.0-beta.2`
+```powershell
+dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+```
