@@ -24,13 +24,13 @@ namespace ScenarioRunner
             Assert.False(string.IsNullOrWhiteSpace(scenario.GroundTruthAutomationId));
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task LiveConsensusGate_GroqAndMistralAgreeOnCorrectCandidate()
         {
             if (!IsGateEnabled())
             {
                 Console.WriteLine($"[LiveConsensusGate] {GateEnvironmentVariable}=1 is not set - skipping live consensus gate.");
-                return;
+                Skip.If(true, $"{GateEnvironmentVariable}=1 is not set.");
             }
 
             var configured = LlmProviderFactory.CreateConfiguredProviders();
@@ -38,7 +38,7 @@ namespace ScenarioRunner
             {
                 Console.WriteLine("[LiveConsensusGate] Groq and Mistral credentials are not configured - skipping live consensus gate.");
                 AppendStepSummary("⏭️ Skipped", configured, null, "Groq and Mistral credentials are absent.");
-                return;
+                Skip.If(true, "Groq and Mistral credentials are not configured.");
             }
 
             IReadOnlyList<ILlmHealingProvider> selected;

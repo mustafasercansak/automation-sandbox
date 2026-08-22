@@ -27,13 +27,13 @@ namespace ScenarioRunner
                 || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task GitHubModels_LiveSmoke_CompletesRoundTripAndHoldsHallucinationGuard()
         {
             if (!IsTokenConfigured())
             {
                 Console.WriteLine("[GitHubModelsSmoke] No GITHUB_TOKEN or OPENAI_API_KEY configured - skipping live smoke test.");
-                return;
+                Skip.If(true, "No GITHUB_TOKEN or OPENAI_API_KEY configured.");
             }
 
             var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT") ?? "https://models.github.ai/inference";

@@ -8,14 +8,14 @@ namespace ScenarioRunner
     // Opt-in via RUN_WINDOWS_APP_SURVEY=1 environment variable.
     public class WindowsAppSurveyLiveTests
     {
-        [Fact]
+        [SkippableFact]
         public void RunLiveWindowsAppSurvey()
         {
             var optIn = Environment.GetEnvironmentVariable("RUN_WINDOWS_APP_SURVEY");
             if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("[WindowsAppSurvey] RUN_WINDOWS_APP_SURVEY=1 is not set - skipping live Windows app survey.");
-                return;
+                Skip.If(true, "RUN_WINDOWS_APP_SURVEY=1 is not set.");
             }
 
             var imageName = Environment.GetEnvironmentVariable("IMAGE_NAME");

@@ -815,7 +815,7 @@ namespace ScenarioRunner
                 : fallback;
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task HandBrakeFixture_LlmConsensus_LiveEvaluation()
         {
             // Opt-in like every other live test here. Without the flag a workflow that merely has
@@ -824,14 +824,14 @@ namespace ScenarioRunner
             if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("[LlmConsensusEvaluation] RUN_ABLATION_CONSENSUS=1 is not set - skipping live evaluation.");
-                return;
+                Skip.If(true, "RUN_ABLATION_CONSENSUS=1 is not set.");
             }
 
             var configured = LlmProviderFactory.CreateConfiguredProviders();
             if (configured.Count < 2)
             {
                 Console.WriteLine($"[LlmConsensusEvaluation] At least 2 configured LLM providers are required (found {configured.Count}) - skipping live evaluation.");
-                return;
+                Skip.If(true, $"At least 2 configured LLM providers are required (found {configured.Count}).");
             }
 
             var root = LoadFixture();

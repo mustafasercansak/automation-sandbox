@@ -28,8 +28,7 @@ namespace ScenarioRunner
             _connector = ApplicationConnector.Launch(exePath);
         }
 
-        [Fact]
-
+        [SkippableFact]
         public async Task CompareProviders_OnLiveBrokenLocator()
         {
             using var httpClient = new HttpClient();
@@ -37,7 +36,7 @@ namespace ScenarioRunner
             if (available.Count == 0)
             {
                 Console.WriteLine("[LlmHealingEvaluation] No provider API keys configured - skipping.");
-                return;
+                Skip.If(true, "No provider API keys configured.");
             }
 
             var window = _connector.GetMainWindow();
