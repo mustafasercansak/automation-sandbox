@@ -99,9 +99,19 @@ namespace SelfHealing
 
             // Bound what the LLM sees to the top-N scored candidates rather than the whole tree -
             // keeps prompt/token cost bounded on large trees (see SimilarityWeights.MaxCandidatesForLlm).
-            var shortlist = ScoreCandidates(expected, currentTreeRoot, w)
+            // Reuses heuristicResult.Candidates (the unpruned candidate list scored during Resolve)
+            // instead of re-scoring the entire tree a second time.
+            var candidateSource = heuristicResult.Candidates ?? ScoreAllCandidates(expected, currentTreeRoot, w);
+            var shortlist = candidateSource
+                .Where(c => c.TotalScore >= w.MinCandidateScore)
                 .Take(w.MaxCandidatesForLlm)
                 .ToList();
+            if (shortlist.Count == 0)
+            {
+                log("[SelfHealing] No candidate met MinCandidateScore for LLM shortlist - returning heuristic result.");
+                return heuristicResult;
+            }
+
             for (var i = 0; i < shortlist.Count; i++)
             {
                 shortlist[i].CandidateId = "c" + i;
