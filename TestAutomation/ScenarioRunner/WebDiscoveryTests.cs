@@ -178,6 +178,27 @@ namespace ScenarioRunner
             Assert.Contains("\\\\9 ", suggestions.Single(s => s.Strategy == "NameAttribute").Expression);
         }
 
+        [Theory]
+        [InlineData("invoice#[draft] item", "page.Locator(\"#invoice\\\\#\\\\[draft\\\\]\\\\ item\")")]
+        [InlineData("123item", "page.Locator(\"#\\\\31 23item\")")]
+        [InlineData("-1item", "page.Locator(\"#-\\\\31 item\")")]
+        [InlineData("-", "page.Locator(\"#\\\\-\")")]
+        [InlineData("control\u001Fid", "page.Locator(\"#control\\\\1f id\")")]
+        [InlineData("null\0id", "page.Locator(\"#null\uFFFDid\")")]
+        [InlineData("café", "page.Locator(\"#café\")")]
+        public void PlaywrightLocatorEmitter_IdStrategy_MatchesCssEscapeSemantics(string id, string expectedExpression)
+        {
+            var element = new WebElementInfo
+            {
+                TagName = "div",
+                Id = id,
+            };
+
+            var suggestion = Assert.Single(PlaywrightLocatorEmitter.Suggest(element));
+
+            Assert.Equal(expectedExpression, suggestion.Expression);
+        }
+
         [Fact]
         public void PlaywrightLocatorEmitter_NameAttributeWithDoubleQuote_EscapesCSharpStringLiteral()
         {
