@@ -17,7 +17,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 1. It remembers what the button looked like (size, location, parent window, role).
 2. When the ID or name breaks, it calculates a **similarity score** ($0\% - 100\%$) across all elements on the screen.
 3. If it is confident ($\ge 50\%$), it automatically picks the right element and heals your test **without any AI cost** (pure heuristic, sub-50ms for 3,000 controls on developer hardware).
-4. If it is unsure, it asks an AI model (Gemini, Claude, OpenAI, or local Ollama) to pick the element safely.
+4. If it is unsure, it collects independent votes from providers such as Gemini, Claude, OpenAI, or local Ollama; an LLM pick is permitted when at least two votes name the same candidate. This agreement is not a correctness guarantee: all 34 unanimous deleted-element verdicts in the measured runs were false heals.
 
 ---
 
@@ -48,7 +48,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 1. Butonun eski halini (boyutunu, ekrandaki yerini, penceresini, türünü) hafızasına kaydeder.
 2. Adı veya ID'si değiştiğinde, ekrandaki tüm elemanları inceleyerek bir **benzerlik skoru** ($\%0 - \%100$) hesaplar.
 3. Eminse ($\ge \%50$), doğru butonu otomatik bulur ve testinizi **yapay zeka maliyeti olmadan** iyileştirir (heal eder) — saf sezgisel; geliştirici donanımında 3.000 kontrol için 50 milisaniyenin altında.
-4. Kararsız kalırsa, yapay zekaya (Gemini, Claude, OpenAI veya bilgisayarınızdaki yerel Ollama'ya) danışarak doğru elemanı güvenle seçer.
+4. Kararsız kalırsa Gemini, Claude, OpenAI veya yerel Ollama gibi sağlayıcılardan bağımsız oylar toplar; en az iki oy aynı adayı gösterirse LLM seçimine izin verir. Bu uzlaşma bir doğruluk garantisi değildir: silinmiş eleman ölçümlerindeki 34 oybirliği kararının tamamı yanlış iyileştirmeydi.
 
 ---
 
@@ -92,7 +92,7 @@ flowchart TB
         C3["OpenAI / Grok / Kimi"]
         C4["Local Ollama (100% Free / Offline)"]
         C5["Hallucination Guard (Filter Votes)"]
-        C6{"Consensus Check (≥ 2 Votes Agree? / Uzlaşma Var mı?)"}
+        C6{"Independent Agreement Quorum (≥ 2 Votes? / ≥ 2 Bağımsız Oy?)"}
     end
 
     subgraph REPO ["4. Locator Repository / Kalıcı Depo"]
@@ -111,3 +111,8 @@ flowchart TB
     C6 -- "Split / Beraberlik (Fallback)" --> B3
     B3 --> D1 & D2
 ```
+
+> **Independent model agreement is not a correctness guarantee / Bağımsız model uzlaşması doğruluk garantisi değildir.**
+> **EN:** This quorum rule blocks a single model from deciding, but multiple models can select the same wrong neighbour. In four live runs, all 34 unanimous deleted-element verdicts were false heals.
+> **TR:** Bu quorum kuralı tek modelin seçimini engeller, fakat birden fazla model aynı yanlış komşuya oy verebilir. Dört canlı koşuda silinmiş elemanlar için verilen 34 oybirliği kararının tamamı yanlış iyileştirmeydi.
+> [Full finding / Resmi bulgu](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)

@@ -7,7 +7,7 @@
 
 An open-source **locator healing** and **intent-driven test generation** engine for Windows desktop and web.
 
-**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback accepted by consensus**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
+**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
 ---
 
@@ -38,7 +38,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 | **Explainable Scoring** | ✅ Implemented | `ScoreComponents` breakdown (ControlType, Parent, Sibling, Name, Position). |
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
 | **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI-compatible cloud providers (including Groq, Kimi, OpenRouter, and Cloudflare Workers AI), and offline Ollama behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
-| **Multi-Provider Consensus** | ✅ Implemented | Independent consensus acceptance ($\ge 2$ votes), attempt telemetry, nightly multi-model evaluation, and a gating live Groq + Mistral assertion on a known ground-truth candidate. |
+| **Independent Model Agreement** | ✅ Implemented | A quorum rule (`MinimumConsensusVotes`, default $2$), attempt telemetry, nightly multi-model evaluation, and a gating live Groq + Mistral assertion on one known ground-truth candidate. Agreement permits an LLM pick; it is not evidence that the pick is correct. |
 | **Joint Locator Reconciliation** | ✅ Implemented | Opt-in `ResolveBatch` / `ResolveBatchAsync` ownership guard prevents independently accepted locators from claiming the same live element; it is a targeted collision guard, not an absence detector. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only). A proposed locator is persisted and reported as accepted only after the retried action succeeds. |
@@ -97,7 +97,7 @@ flowchart TB
         Eval["LlmHealingEvaluator"]
         Providers["Configured Providers (Gemini, Claude, OpenAI, Ollama, ...)"]
         Guard["Hallucination Guard (Filter Votes: CandidateId in Shortlist?)"]
-        Consensus{"Consensus Check (>= 2 Providers Agree?)"}
+        Consensus{"Independent Agreement Quorum (>= 2 Votes?)"}
         LLMRes["LLM Sourced Match"]
         HeuristicFallback["Degrade to Best Heuristic Match"]
         Shortlist -->|Prompt ~500 Tokens| Eval
@@ -142,7 +142,7 @@ sequenceDiagram
     end
 ```
 
-> The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers — agreement is what accepts a pick. See [Consensus Acceptance](docs/llm-providers.md#-consensus-acceptance).
+> The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers. Independent agreement is the quorum rule that permits a pick; it is not a correctness guarantee. See [Independent Model Agreement](docs/llm-providers.md#-independent-model-agreement-consensus-api).
 
 ---
 
@@ -165,15 +165,15 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 >
 > **`EvidenceCoverage` & `MinimumEvidenceWeight`:** `EvidenceCoverage` is the fraction of the total signal weight backed by non-null evidence. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$ by default) — a ControlType-only match is therefore never confident, regardless of its score.
 >
-> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires $best - runnerUp \ge$ `MinimumCandidateMargin` ($0.05$ by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they answer to consensus).
+> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires $best - runnerUp \ge$ `MinimumCandidateMargin` ($0.05$ by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they use the independent-agreement quorum).
 >
 > **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded $1.0$ center-point matches.
 
 > [!IMPORTANT]
 > **How a heuristic match is accepted vs. how an LLM pick is accepted:**
 > - `MinimumConfidence` ($0.50$): Threshold for accepting a heuristic match before falling back to LLM.
-> - **LLM picks are accepted by consensus, not by confidence.** At least `MinimumConsensusVotes` providers ($2$ by default) must independently name the same candidate. Self-reported confidence is recorded but never compared or thresholded — one model's $0.72$ and another's $0.95$ are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) degrades safely back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-consensus-acceptance).
-> - `MinimumLlmConfidence` ($0.50$) remains on `SimilarityWeights` and is still recorded on results, but since consensus replaced confidence-based acceptance it no longer gates anything.
+> - **LLM picks use independent model agreement, not confidence.** At least `MinimumConsensusVotes` providers ($2$ by default) must independently name the same candidate. This is a quorum rule, not evidence of correctness: all 34 unanimous deleted-element verdicts in the measured runs were false heals. Self-reported confidence is recorded but never compared or thresholded — one model's $0.72$ and another's $0.95$ are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) falls back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-independent-model-agreement-consensus-api).
+> - `MinimumLlmConfidence` ($0.50$) remains on `SimilarityWeights` and is still recorded on results, but since the agreement quorum replaced confidence-based acceptance it no longer gates anything.
 
 ---
 
@@ -321,7 +321,7 @@ Each report event includes:
 - `ReviewStatus` (`accepted`, `accepted-with-llm`, or `manual-review`)
 - `Score`, `ConfidenceThreshold`, `CandidateCount`
 - `PreviousSnapshot` and `AcceptedSnapshot`
-- LLM fields such as `LlmConfidence`, `LlmProviderName`, `LlmReasoning`, and `AgreedProviders` (which providers reached consensus) when applicable
+- LLM fields such as `LlmConfidence`, `LlmProviderName`, `LlmReasoning`, and `AgreedProviders` (which providers supplied the agreeing votes) when applicable
 
 GitHub Actions uploads both `healing-report.json` and `healing-report.html` as the
 `self-healing-report` artifact when healing events occur during CI.
@@ -541,7 +541,7 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 - `OLLAMA_HOST` / `OLLAMA_MODEL` / `OLLAMA_ENABLED=true` $\rightarrow$ Ollama (`llama3.2`)
 - `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.); every entry requires an explicit `Name`, `Endpoint`, `Model`, and API key source. Malformed JSON or a missing endpoint/model is skipped with a credential-safe diagnostic instead of falling back to OpenAI defaults or disabling the built-in providers. Use the three-argument `CreateConfiguredProviders` overload to route diagnostics to an application logger; the existing overload writes them to standard error.
 
-See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and consensus details.
+See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and agreement-quorum details.
 
 ### 11. Joint Locator Reconciliation (Opt-In)
 
@@ -564,7 +564,7 @@ foreach (var item in batch.Items.Where(item => item.Result.IsConfident))
 }
 ```
 
-The API reconciles only candidates the existing heuristic or LLM-consensus gates already
+The API reconciles only candidates the existing heuristic or LLM agreement-quorum gates already
 accepted; it never promotes runner-ups. Candidate ownership uses a snapshot-local tree path,
 not `AutomationId`, so empty and duplicate IDs remain distinguishable. Uncontested false
 heals are preserved by design: this is a collision guard, not an absence detector. See the
@@ -584,7 +584,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Locator Repository & Snapshots** | Versioned JSON persistence, file locking, `LocatorKey` stability, `UiElementSnapshot` round-tripping | [LocatorRepositoryTests](TestAutomation/ScenarioRunner/LocatorRepositoryTests.cs), [UiElementSnapshotTests](TestAutomation/ScenarioRunner/UiElementSnapshotTests.cs) |
 | **Self-Healing Engine & Intent Metadata** | Repository auto-upsert, action retry, `TestIntent`-guided healing, JSON/HTML report emission | [SelfHealingEngineTests](TestAutomation/ScenarioRunner/SelfHealingEngineTests.cs), [TestIntentHealingTests](TestAutomation/ScenarioRunner/TestIntentHealingTests.cs) |
 | **LLM Providers & Guard** | Mocked Anthropic/Gemini/OpenAI/Ollama HTTP responses, Hallucination Guard, and provider resilience: retry on transient 429/5xx, fail-fast on 4xx, `Retry-After` quota ceiling, per-attempt and total timeout budgets, attempt telemetry | [LlmHealingProviderTests](TestAutomation/ScenarioRunner/LlmHealingProviderTests.cs), [LlmHealingEvaluationTests](TestAutomation/ScenarioRunner/LlmHealingEvaluationTests.cs), [OpenAiAndOllamaHealingProviderTests](TestAutomation/ScenarioRunner/OpenAiAndOllamaHealingProviderTests.cs) |
-| **Multi-Provider Consensus** | Quorum acceptance, split votes and ties treated as disagreement, single-provider rejection, hallucinated votes dropped before counting, `AgreedProviders` ordering, `LlmProviderFactory` discovery, non-confident evaluation fixtures | [SelfHealingResolverTests](TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [ConsensusEvaluationTests](TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs), [EvaluationScenarios](TestAutomation/ScenarioRunner/EvaluationScenarios.cs) |
+| **Independent Model Agreement** | Quorum acceptance (not a correctness guarantee), split votes and ties treated as disagreement, single-provider rejection, hallucinated votes dropped before counting, `AgreedProviders` ordering, `LlmProviderFactory` discovery, non-confident evaluation fixtures | [SelfHealingResolverTests](TestAutomation/ScenarioRunner/SelfHealingResolverTests.cs), [ConsensusEvaluationTests](TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs), [EvaluationScenarios](TestAutomation/ScenarioRunner/EvaluationScenarios.cs) |
 | **Joint Locator Reconciliation** | Stronger ownership, ambiguous ties, empty-ID identity, uncontested limitation, provider partial failure, report telemetry, single-locator compatibility | [BatchHealingResolverTests](TestAutomation/ScenarioRunner/BatchHealingResolverTests.cs), [JointAssignmentGeneralizationTests](TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs) |
 | **Real-Tree Locator Ablation** | Versioned single- and multi-locator mutation recipes, per-locator ground truth, threshold sweeps, and frozen cross-application joint top-claim evaluation | [LocatorAblationTests](TestAutomation/ScenarioRunner/LocatorAblationTests.cs), [ShareXAblationTests](TestAutomation/ScenarioRunner/ShareXAblationTests.cs), [JointAssignmentGeneralizationTests](TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs) |
 | **Web Discovery** | DOM snapshot mapping, Shadow DOM / iframe traversal, hidden/offscreen handling | [WebDiscoveryTests](TestAutomation/ScenarioRunner/WebDiscoveryTests.cs) |
@@ -676,8 +676,8 @@ A single application cannot tell "this is how the engine behaves" from "this is 
 
 **The false-heal rate did not improve on a second application — it got worse.** No static score threshold separates every relocated control from every deleted one whose neighbour looks structurally similar (HandBrake: false heals on removed elements score $0.665$–$0.955$, true compound drifts score $0.749$–$0.874$ — the distributions overlap). Raising `MinimumConfidence` trades this down at the cost of recall; see the [full threshold sweep](docs/benchmark-calibration.md#4-the-false-heal-downarrow-vs-manual-review-uparrow-trade-off) for both applications, since the same threshold buys a different result on each ($7.6\%$–$9.6\%$ false heals on HandBrake vs. $20\%$–$23\%$ on ShareX at $0.75$–$0.80$).
 
-### Does Multi-Provider Consensus Fix This? Measured, Not Assumed
-Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, $n=133$ usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): consensus separates surviving elements from deleted ones better than any heuristic signal tested ($94.5\%$ vs. $43.6\%$ unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The mechanism is provider *disagreement*, not any model recognising the element is gone, and widening the provider pool from 3 to 7 did not reduce the failure rate. Consensus is not currently an acceptance gate against this failure mode — see the doc for why and what would have to be true to change that.
+### Does Independent Model Agreement Fix This? Measured, Not Assumed
+Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, $n=133$ usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): agreement separates surviving elements from deleted ones better than any heuristic signal tested ($94.5\%$ vs. $43.6\%$ unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The useful signal in those rejection cases is provider *disagreement*, not any model recognising that the element is gone. The shipped agreement quorum therefore limits single-model decisions but does not establish correctness or protect against this false-heal mode; widening the provider pool from 3 to 7 did not reduce the failure rate.
 
 For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
 
@@ -719,8 +719,8 @@ graph LR
 Work is now tracked through GitHub milestones rather than the original M1–M6 sequence:
 
 - **Phase 1 — Beta Blockers** *(closed)*: the correctness gates that had to exist before anything shipped — exception-scoped healing retry, the evidence gate, the runner-up ambiguity margin, the intent semantic gate, LLM divergence tracking, and structured assertions.
-- **Phase 2 — Beta Hardening** *(closed)*: consensus acceptance for LLM picks, provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
-- **Phase 3 — Post-Beta Measurement** *(closed)*: the heuristic and LLM-consensus paths were measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs. The #141/#143 frozen study led to #144's opt-in production batch guard: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but its explicit limit is that 15 uncontested removed-element false heals remain unchanged. The nightly Groq + Mistral ground-truth scenario remains a failing gate rather than collection-only telemetry.
+- **Phase 2 — Beta Hardening** *(closed)*: the independent-agreement quorum for LLM picks (named `Consensus` in the API), provider resilience (retry, backoff, dual timeouts, `Retry-After` quota guard), attempt telemetry, cross-platform Linux CI, and packaging parity across all seven libraries. Shipped as [`v0.2.0-beta.2`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.2).
+- **Phase 3 — Post-Beta Measurement** *(closed)*: the heuristic and LLM agreement paths were measured against two real applications (HandBrake, ShareX) and four independent multi-provider runs. The #141/#143 frozen study led to #144's opt-in production batch guard: joint top-claim ownership preserved all 79 correct survivor heals and eliminated all 4 observed collisions, but its explicit limit is that 15 uncontested removed-element false heals remain unchanged. The nightly Groq + Mistral ground-truth scenario remains a failing gate rather than collection-only telemetry.
 - **Phase 4 — Adoption & Consumer Validation** *(in progress)*: validate the published packages from a consumer's perspective, tighten installation and quick-start guidance, and use external integration feedback to prioritize the next product work. Linux desktop discovery remains a separate research track under #17 rather than an assumed release commitment.
 
 ---

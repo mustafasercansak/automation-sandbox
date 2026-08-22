@@ -49,6 +49,7 @@ timeline
 ### 4️⃣ Milestone 4: Web Playwright Adapter, Extended LLM Providers, Reports & Docs
 * **Playwright Web Adapter:** `PlaywrightDomCaptureScript` supporting Shadow DOM, iframe traversal, and hidden/offscreen CSS detection; `PlaywrightApplicationConnector` for JSON tree parsing.
 * **Extended LLM Providers:** Added `OpenAiHealingProvider` for OpenAI-compatible services including Cloudflare Workers AI, plus offline, zero-cost `OllamaHealingProvider` (`llama3.2`) alongside Claude and Gemini.
+* **Independent Model Agreement:** An LLM pick needs the configured quorum (`MinimumConsensusVotes`, default 2). This blocks single-model acceptance but is not a correctness guarantee; all 34 unanimous deleted-element verdicts in four measured runs were false heals.
 * **High-Level `SelfHealingEngine` SDK:** Unified wrapper connecting `LocatorRepository`, `SelfHealingResolver`, and LLM providers with an automatic repository update only after the healed action retry succeeds (`ExecuteWithHealingAsync`), guarded by an opt-in `shouldHeal` exception-classification policy (default: locator-resolution failures only).
 * **Joint Locator Reconciliation:** Opt-in batch resolution prevents independently accepted locators from claiming the same live element using snapshot-local identity; uncontested false heals remain an explicit limitation.
 * **Healing Reports & CI Artifacts:** Schema-v8 JSON and HTML reports capture every resolution attempt, including accepted, ambiguous, ownership-conflict, no-consensus, provider-error, and retry-failed outcomes, while retaining an accepted-only compatibility view.
@@ -96,7 +97,7 @@ flowchart TB
         Eval["LlmHealingEvaluator"]
         Providers["Configured Providers (Claude, Gemini, OpenAI, Ollama, ...)"]
         Guard["Hallucination Guard (Filter Votes)"]
-        Consensus{"Consensus Check (>= 2 Providers Agree?)"}
+        Consensus{"Independent Agreement Quorum (>= 2 Votes?)"}
         LlmMatch["LLM Sourced Match"]
         Fallback["Safe Heuristic Fallback"]
 
@@ -256,6 +257,7 @@ timeline
 ### 4️⃣ Milestone 4: Web, SDK, Raporlama & Dokümantasyon
 * **Playwright Web Bağlayıcısı:** Shadow DOM, iframe ve hidden/offscreen CSS tespitiyle web DOM ağacını ortak `UiElementInfo` modeline taşır.
 * **Genişletilmiş LLM Sağlayıcıları:** Claude ve Gemini yanında Cloudflare Workers AI dahil OpenAI uyumlu servisler ile yerel/offline Ollama desteği.
+* **Bağımsız Model Uzlaşması:** Bir LLM seçimi yapılandırılmış quorum'u (`MinimumConsensusVotes`, varsayılan 2) karşılamalıdır. Bu tek-model kabulünü engeller, fakat doğruluk garantisi değildir; dört ölçümlü koşudaki 34 oybirliği silinmiş-eleman kararının tamamı yanlış iyileştirmeydi.
 * **SelfHealingEngine SDK:** Locator repository, resolver ve LLM sağlayıcılarını tek yüksek seviyeli API ile birleştirir; önerilen locator'ı yalnızca iyileştirilmiş eylem denemesi başarılı olduktan sonra repository'ye kaydeder.
 * **Birleşik Locator Uzlaştırması:** İsteğe bağlı batch çözümleme, snapshot-local kimlik kullanarak bağımsız kabul edilen locator'ların aynı canlı elementi talep etmesini engeller; tartışmasız false-heal'ler açık bir sınır olarak kalır.
 * **Onarım Raporları:** Şema-v8 JSON + HTML raporları kabul edilen, belirsiz, sahiplik çakışmalı, uzlaşmasız, sağlayıcı hatalı ve retry başarısız tüm çözüm denemelerini kaydeder; yalnızca kabul edilenler için geriye uyumlu görünümü korur.
@@ -302,7 +304,7 @@ flowchart TB
         Eval["LlmHealingEvaluator"]
         Providers["Yapılandırılmış Sağlayıcılar (Claude, Gemini, OpenAI, Ollama, ...)"]
         Guard["Halüsinasyon Koruması (Oyları Filtrele)"]
-        Consensus{"Uzlaşma Kontrolü (≥ 2 Sağlayıcı Eşleşti mi?)"}
+        Consensus{"Bağımsız Uzlaşma Quorum'u (≥ 2 Oy?)"}
         LlmMatch["LLM Kaynaklı Eşleşme"]
         Fallback["Güvenli Sezgisel Düşüş"]
 

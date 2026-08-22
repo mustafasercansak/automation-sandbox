@@ -27,9 +27,9 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 `LlmProviderFactory.CreateConfiguredProviders()` automatically discovers and instantiates available providers based on active environment variables without needing code changes:
 
 > [!IMPORTANT]
-> **No provider is required, and none of these keys is mandatory.** A well-known provider exists only when its own `*_API_KEY` is present; everything else is skipped silently. Invalid `LLM_CUSTOM_PROVIDERS` input is skipped with a credential-safe diagnostic instead. Consensus acceptance needs **two** independent providers, so two keys is the practical minimum.
+> **No provider is required, and none of these keys is mandatory.** A well-known provider exists only when its own `*_API_KEY` is present; everything else is skipped silently. Invalid `LLM_CUSTOM_PROVIDERS` input is skipped with a credential-safe diagnostic instead. The agreement quorum needs **two** independent providers, so two keys is the practical minimum.
 >
-> **Never point one provider slot at another provider's endpoint.** `OpenAiHealingProvider` accepts any OpenAI-compatible URL, which makes it tempting to reuse the `OPENAI_*` slot for a different vendor. Two slots proxying the same model are one voter with two names: they agree because they are the same system, and consensus between them is meaningless (#19). If you need a second opinion, use a second vendor. The `OPENAI_*` slot is reserved for a genuine OpenAI credential; leave it unset otherwise.
+> **Never point one provider slot at another provider's endpoint.** `OpenAiHealingProvider` accepts any OpenAI-compatible URL, which makes it tempting to reuse the `OPENAI_*` slot for a different vendor. Two slots proxying the same model are one voter with two names: their agreement is not independent and the quorum becomes meaningless (#19). If you need a second opinion, use a second vendor. The `OPENAI_*` slot is reserved for a genuine OpenAI credential; leave it unset otherwise.
 
 
 - **Well-known auto-discovery**:
@@ -45,7 +45,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `OLLAMA_ENABLED=true` or `OLLAMA_HOST` $\rightarrow$ `OllamaHealingProvider` (local daemon on `localhost:11434`)
 
 > [!WARNING]
-> `OLLAMA_CLOUD_*` and `OLLAMA_*` are deliberately separate and must never be conflated. The local variables build a provider aimed at `localhost:11434`, where no daemon exists on a CI runner. Pointing `OLLAMA_MODEL` at a cloud model therefore produces a provider that fails every request **while still counting toward the two-provider consensus threshold**, which is the opposite of what adding a provider is meant to achieve.
+> `OLLAMA_CLOUD_*` and `OLLAMA_*` are deliberately separate and must never be conflated. The local variables build a provider aimed at `localhost:11434`, where no daemon exists on a CI runner. Pointing `OLLAMA_MODEL` at a cloud model therefore produces a provider that fails every request **while still counting toward the two-provider agreement quorum**, which is the opposite of what adding a provider is meant to achieve.
 
 - **Arbitrary Custom Endpoints (`LLM_CUSTOM_PROVIDERS`)**:
   Provide a JSON array string to configure additional OpenAI-compatible endpoints:
@@ -64,7 +64,7 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   Every entry requires a non-empty `name`, `endpoint`, `model`, and either `apiKey`
   or a resolvable `apiKeyEnvVar`. `endpoint` and `model` are never inherited from the
   `OPENAI_*` variables: an entry missing either value is skipped so it cannot silently
-  send a custom credential to OpenAI or add a mislabeled vote to consensus. Malformed
+  send a custom credential to OpenAI or add a mislabeled vote to the agreement quorum. Malformed
   JSON skips the custom array without discarding already discovered built-in providers.
   If the array itself is valid but one entry has the wrong JSON shape, only that entry
   is skipped and valid custom siblings are still constructed.
@@ -105,9 +105,12 @@ includes the raw response body, bounded to 4096 characters. This applies uniform
 Gemini, Ollama, and every OpenAI-compatible endpoint. Only the response body is captured;
 request headers and configured API credentials are not appended to the diagnostic.
 
-### 🤝 Consensus Acceptance
+### 🤝 Independent Model Agreement (`Consensus` API)
 
-An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
+An LLM pick is accepted only when **at least two providers independently name the same candidate**. The public API calls this `MinimumConsensusVotes`, and reports use `no-consensus`; these names describe the quorum mechanism, not a correctness guarantee. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
+
+> [!WARNING]
+> **Agreement is an additional signal, not proof that the chosen element is correct.** Across four live runs, providers unanimously agreed in 34 deleted-element scenarios and all 34 verdicts were false heals, including cases where three independently sourced model families chose the same decoy. The measured separation came from providers disagreeing more often when an element was absent, not from agreement establishing correctness. See the [formal finding](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97).
 
 | Situation | Outcome |
 | :--- | :--- |
@@ -115,9 +118,9 @@ An LLM pick is accepted only when **at least two providers independently name th
 | Only one provider is configured | **Never accepted** — one provider cannot agree with itself |
 | Every provider names a different candidate | Not accepted — reported as split vote / disagreement |
 | Two candidates tie for the most votes | Not accepted — a tie is disagreement |
-| A provider fails or times out | Vote is discarded; remaining valid votes determine consensus |
+| A provider fails or times out | Vote is discarded; remaining valid votes determine whether the quorum is met |
 
-> **Independence is the point.** Two `OpenAiHealingProvider` instances pointed at the same endpoint and model are the same model voting twice, not a consensus. Prefer providers backed by genuinely different models.
+> **Independence is the point.** Two `OpenAiHealingProvider` instances pointed at the same endpoint and model are the same model voting twice, not independent agreement. Prefer providers backed by genuinely different models. Even genuinely independent agreement remains a quorum signal, not a correctness guarantee.
 
 The nightly workflow enforces this rule with a live gate using Groq and Mistral on the known `Desktop_AmbiguousSiblingTabs` scenario. Both raw votes must remain inside the shortlist, name the same ground-truth `CandidateId`, and appear in `HealResult.AgreedProviders`; otherwise the workflow fails. The broader multi-provider evaluation still runs afterward as non-gating telemetry. With no credentials the opt-in test skips cleanly, while a deliberate one-provider configuration fails before making an API call. Releases are not gated on third-party availability; this gate belongs to the nightly workflow only.
 
@@ -146,7 +149,7 @@ Without `name`, both would report `"OpenAI"` and their votes would be indistingu
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
 
-On modest hardware, prefer a smaller model (`llama3.2:1b`, `qwen2.5:0.5b`) — set it with `OLLAMA_MODEL` or the `model:` parameter. Ollama alone cannot satisfy consensus: it is one provider, so pair it with a second one if you want LLM picks accepted rather than only recorded.
+On modest hardware, prefer a smaller model (`llama3.2:1b`, `qwen2.5:0.5b`) — set it with `OLLAMA_MODEL` or the `model:` parameter. Ollama alone cannot satisfy the agreement quorum: it is one provider, so pair it with a second one if you want LLM picks accepted rather than only recorded.
 
 ### 🌐 Free Cloud AI with Cloudflare Workers AI
 
@@ -160,7 +163,7 @@ CLOUDFLARE_MODEL=@cf/zai-org/glm-4.7-flash
 
 The resulting provider is named `Cloudflare` and calls `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1/chat/completions`. The Cloudflare request uses `response_format: { "type": "json_object" }` and `max_tokens: 2000`, leaving room for Qwen reasoning plus the complete JSON response without depending on a provider-specific output default. Model availability and free-plan eligibility can change; run `provider-diagnostics.yml` before selecting a model and consult [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/). Keep model ids in repository variables rather than secrets.
 
-Choose a model family different from the other voters. Two endpoints serving the same underlying model do not provide independent consensus. The free allocation is appropriate for low-volume nightly or manual evaluation, not a guaranteed per-PR release gate.
+Choose a model family different from the other voters. Two endpoints serving the same underlying model do not provide independent agreement. The free allocation is appropriate for low-volume nightly or manual evaluation, not a guaranteed per-PR release gate.
 
 `OpenAiHealingProvider` also supports other OpenAI-compatible endpoints such as Azure OpenAI, vLLM, and LM Studio. GitHub Models is not an option: its inference API was fully retired on July 30, 2026.
 
@@ -185,7 +188,7 @@ Choose a model family different from the other voters. Two endpoints serving the
 `LlmProviderFactory.CreateConfiguredProviders()` ortamdaki anahtarları otomatik keşfeder ve kod değiştirmeden sağlayıcı listesini hazırlar:
 
 > [!IMPORTANT]
-> **Hiçbir sağlayıcı zorunlu değildir; bu anahtarların hiçbiri gerekli değildir.** Bilinen bir sağlayıcı yalnızca kendi `*_API_KEY` değeri varsa kurulur, aksi halde sessizce atlanır. Geçersiz `LLM_CUSTOM_PROVIDERS` girdisi ise kimlik bilgilerini açığa çıkarmayan bir tanı mesajıyla atlanır. Uzlaşma kabulü **iki** bağımsız sağlayıcı gerektirdiği için pratik alt sınır iki anahtardır.
+> **Hiçbir sağlayıcı zorunlu değildir; bu anahtarların hiçbiri gerekli değildir.** Bilinen bir sağlayıcı yalnızca kendi `*_API_KEY` değeri varsa kurulur, aksi halde sessizce atlanır. Geçersiz `LLM_CUSTOM_PROVIDERS` girdisi ise kimlik bilgilerini açığa çıkarmayan bir tanı mesajıyla atlanır. Uzlaşma quorum'u **iki** bağımsız sağlayıcı gerektirdiği için pratik alt sınır iki anahtardır.
 >
 > **Bir sağlayıcı slotunu başka bir sağlayıcının uç noktasına yönlendirmeyin.** `OpenAiHealingProvider` herhangi bir OpenAI-uyumlu adresi kabul ettiği için `OPENAI_*` slotunu başka bir sağlayıcı için yeniden kullanmak cazip gelir. Aynı modeli çağıran iki slot, iki isimli tek bir oy demektir: aynı sistem oldukları için anlaşırlar ve aralarındaki uzlaşma anlamsızdır (#19). İkinci bir görüş gerekiyorsa ikinci bir sağlayıcı kullanın. `OPENAI_*` slotu gerçek bir OpenAI kimlik bilgisine ayrılmıştır; başka bir amaçla doldurmayın, boş bırakın.
 
@@ -240,9 +243,12 @@ karakterle sınırlandırılmış ham yanıt gövdesini içerir. Bu davranış C
 tüm OpenAI uyumlu uç noktalara aynı şekilde uygulanır. Yalnızca yanıt gövdesi yakalanır;
 istek başlıkları ve yapılandırılmış API kimlik bilgileri tanı mesajına eklenmez.
 
-### 🤝 Mutabakat (Consensus) Kabul Kuralı
+### 🤝 Bağımsız Model Uzlaşması (`Consensus` API)
 
-Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seçtiğinde** kabul edilir. Modellerin kendi beyan ettiği güven puanları karşılaştırılmaz.
+Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seçtiğinde** kabul edilir. Public API bu eşiği `MinimumConsensusVotes`, raporlar ise başarısız sonucu `no-consensus` olarak adlandırır; bu adlar doğruluk garantisini değil quorum mekanizmasını ifade eder. Modellerin kendi beyan ettiği güven puanları karşılaştırılmaz.
+
+> [!WARNING]
+> **Uzlaşma ek bir sinyaldir; seçilen elemanın doğru olduğunun kanıtı değildir.** Dört canlı koşuda sağlayıcılar 34 silinmiş-eleman senaryosunda oybirliğine ulaştı ve 34 kararın tamamı yanlış iyileştirmeydi; üç bağımsız kaynaklı model ailesinin aynı yanlış komşuyu seçtiği vakalar da buna dahildi. Ölçülen ayrışma, eleman yokken sağlayıcıların daha sık anlaşamamasından doğdu; anlaşmaları doğruluğu kanıtlamadı. [Resmi bulguya](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97) bakın.
 
 | Durum | Sonuç |
 | :--- | :--- |
@@ -250,9 +256,9 @@ Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seç
 | Yalnızca tek sağlayıcı yapılandırılmış | **Asla kabul edilmez** — tek sağlayıcı kendisiyle mutabakat sağlayamaz |
 | Her sağlayıcı farklı bir aday seçer | Kabul edilmez — ayrık oy (split vote) olarak raporlanır |
 | İki aday en yüksek oyda berabere kalır | Kabul edilmez — beraberlik anlaşmazlıktır |
-| Bir sağlayıcı hata verir veya zaman aşımına uğrar | O oy elenir; kalan geçerli oylar mutabakatı belirler |
+| Bir sağlayıcı hata verir veya zaman aşımına uğrar | O oy elenir; kalan geçerli oylar quorum sağlanıp sağlanmadığını belirler |
 
-> **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, mutabakat değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin.
+> **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, bağımsız uzlaşma değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin. Gerçekten bağımsız uzlaşma bile bir quorum sinyalidir; doğruluk garantisi değildir.
 
 Nightly workflow bu kuralı bilinen `Desktop_AmbiguousSiblingTabs` senaryosunda Groq ve Mistral kullanan canlı bir gate ile uygular. İki ham oyun da shortlist içinde kalması, aynı ground-truth `CandidateId` değerini seçmesi ve `HealResult.AgreedProviders` içinde görünmesi gerekir; aksi halde workflow başarısız olur. Daha geniş çok-sağlayıcılı değerlendirme bunun ardından gate olmayan telemetri olarak çalışmaya devam eder. Hiç credential yoksa opt-in test temiz biçimde atlanır; bilinçli tek-sağlayıcı yapılandırması ise API çağrısı yapmadan başarısız olur. Üçüncü taraf erişilebilirliği release'i engellemesin diye gate yalnızca nightly workflow'dadır.
 
@@ -281,7 +287,7 @@ var providers = new ILlmHealingProvider[]
    var provider = new OllamaHealingProvider(host: "http://localhost:11434");
    ```
 
-Bilgisayarınız zayıfsa daha küçük bir model tercih edin (`llama3.2:1b`, `qwen2.5:0.5b`) — `OLLAMA_MODEL` ile veya `model:` parametresiyle ayarlanır. Ollama tek başına mutabakatı sağlayamaz: tek sağlayıcıdır, dolayısıyla LLM seçimlerinin yalnız kaydedilmesi değil kabul edilmesi isteniyorsa yanına ikinci bir sağlayıcı gerekir.
+Bilgisayarınız zayıfsa daha küçük bir model tercih edin (`llama3.2:1b`, `qwen2.5:0.5b`) — `OLLAMA_MODEL` ile veya `model:` parametresiyle ayarlanır. Ollama tek başına uzlaşma quorum'unu sağlayamaz: tek sağlayıcıdır, dolayısıyla LLM seçimlerinin yalnız kaydedilmesi değil kabul edilmesi isteniyorsa yanına ikinci bir sağlayıcı gerekir.
 
 ### 🌐 Cloudflare Workers AI ile Ücretsiz Bulut Yapay Zekası
 
