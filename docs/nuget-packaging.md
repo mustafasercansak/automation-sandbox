@@ -98,11 +98,17 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3 --source
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
 - GitHub Release assets include all seven packages and their symbol packages.
 - Package names, README, license, repository URL, and symbols are present.
-- Version follows prerelease SemVer, for example `0.2.0-beta.3`.
-- Publish target is nuget.org, via a Trusted Publishing policy (no stored API key).
-  The `NUGET_USER` repo secret holds the nuget.org username the OIDC login step
-  presents; it is not a credential by itself and rotates automatically since the
-  API key it exchanges for expires after 1 hour.
+## Version Bumps / Sürüm Güncelleme
+
+The package version is authoritatively defined in a single location:
+- `Directory.Build.props` -> `<Version>X.Y.Z-prerelease</Version>`
+
+When bumping the version:
+1. Update `<Version>` in `Directory.Build.props`.
+2. Update `<PackageReference>` in `samples/HeuristicHealingQuickstart/HeuristicHealingQuickstart.csproj`.
+3. Run `dotnet test --filter PackageVersionDriftTests` to ensure consistency across the repository.
+
+The packaging workflows (`pack.yml`, `release.yml`) and `verify.ps1` resolve `<Version>` dynamically from `Directory.Build.props` when no explicit version override is supplied.
 
 ---
 

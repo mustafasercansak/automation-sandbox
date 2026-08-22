@@ -10,8 +10,21 @@ if ($projectText -match '<ProjectReference') {
     throw 'Consumer verification must use published PackageReference entries, not repository ProjectReference entries.'
 }
 
-if ($projectText -notmatch 'PackageReference Include="AutomationSandbox\.SelfHealing" Version="0\.2\.0-beta\.3"') {
-    throw 'The sample must pin the published AutomationSandbox.SelfHealing 0.2.0-beta.3 package.'
+$directoryBuildPropsPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'Directory.Build.props'
+if (-not (Test-Path -LiteralPath $directoryBuildPropsPath)) {
+    $directoryBuildPropsPath = Join-Path $PSScriptRoot '../../Directory.Build.props'
+}
+
+$propsText = Get-Content -LiteralPath $directoryBuildPropsPath -Raw
+if ($propsText -match '<Version>(?<version>[^<]+)</Version>') {
+    $expectedVersion = $Matches['version'].Trim()
+} else {
+    throw 'Could not extract <Version> from Directory.Build.props.'
+}
+
+$escapedVersion = [regex]::Escape($expectedVersion)
+if ($projectText -notmatch "PackageReference Include=`"AutomationSandbox\.SelfHealing`" Version=`"$escapedVersion`"") {
+    throw "The sample must pin the published AutomationSandbox.SelfHealing $expectedVersion package (matching Directory.Build.props)."
 }
 
 $verificationRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('automation-sandbox-consumer-' + [Guid]::NewGuid().ToString('N'))
