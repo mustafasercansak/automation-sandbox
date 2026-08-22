@@ -116,11 +116,11 @@ namespace IntentAutomation
                 return new IntentDesktopElementCandidate { Step = step, Element = element };
             }
 
-            var targetText = Join(step.TargetDescription, step.TestIntent, step.ExpectedOutcome, step.LocatorKey);
-            var elementText = Join(element.Name, element.AutomationId, element.ClassName);
-            var semanticScore = TokenOverlap(targetText, elementText);
-            var exactBonus = ContainsNormalized(elementText, step.TargetDescription)
-                || ContainsNormalized(elementText, step.LocatorKey)
+            var targetText = IntentTextScoring.Join(step.TargetDescription, step.TestIntent, step.ExpectedOutcome, step.LocatorKey);
+            var elementText = IntentTextScoring.Join(element.Name, element.AutomationId, element.ClassName);
+            var semanticScore = IntentTextScoring.TokenOverlap(targetText, elementText);
+            var exactBonus = IntentTextScoring.ContainsNormalized(elementText, step.TargetDescription)
+                || IntentTextScoring.ContainsNormalized(elementText, step.LocatorKey)
                 ? 0.15
                 : 0.0;
 
@@ -179,52 +179,9 @@ namespace IntentAutomation
             }
         }
 
-        private static double TokenOverlap(string targetText, string elementText)
-        {
-            var targetTokens = Tokens(targetText).ToList();
-            if (targetTokens.Count == 0)
-            {
-                return 0.0;
-            }
-
-            var elementTokens = new HashSet<string>(Tokens(elementText), StringComparer.OrdinalIgnoreCase);
-            if (elementTokens.Count == 0)
-            {
-                return 0.0;
-            }
-
-            var matches = targetTokens.Count(elementTokens.Contains);
-            return (double)matches / targetTokens.Count;
-        }
-
-        private static IEnumerable<string> Tokens(string value)
-        {
-            return NormalizeText(value)
-                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(token => token.Length > 1);
-        }
-
-        private static bool ContainsNormalized(string haystack, string needle)
-        {
-            var normalizedNeedle = NormalizeText(needle).Replace(" ", "");
-            return normalizedNeedle.Length > 1
-                && NormalizeText(haystack).Replace(" ", "").Contains(normalizedNeedle);
-        }
-
-        private static string NormalizeText(string value)
-        {
-            var chars = (value ?? "").Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : ' ');
-            return new string(chars.ToArray());
-        }
-
-        private static string Join(params string[] values)
-        {
-            return string.Join(" ", values.Where(value => !string.IsNullOrWhiteSpace(value)));
-        }
-
         private static string CandidateLabel(UiElementInfo element)
         {
-            return Join(element.AutomationId, element.Name, element.ClassName, element.ControlType);
+            return IntentTextScoring.Join(element.AutomationId, element.Name, element.ClassName, element.ControlType);
         }
     }
 }
