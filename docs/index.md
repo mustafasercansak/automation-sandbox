@@ -34,6 +34,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🔬 [**Benchmark & Calibration**](benchmark-calibration.md) | Multi-signal locator ablation benchmark on real organic apps, score overlap findings, and threshold trade-off analysis. |
 | 🔗 [**Joint Locator Reconciliation**](joint-locator-reconciliation.md) | Opt-in batch ownership guard for independently accepted locator heals, including deterministic assignment and limitations. |
 | 🤖 [**LLM Providers**](llm-providers.md) | Setting up AI providers (Gemini, Claude, OpenAI, and 100% free local Ollama). |
+| 🔐 [**LLM Security Model**](llm-security-model.md) | Trust boundaries, disclosed fields, prompt-injection and PII limitations, provider retention, and local report handling. |
 | 📄 [**JSON Schema Reference**](json-schema.md) | Field-by-field breakdown of the `.locator.json` repository file. |
 | 📦 [**NuGet Packaging**](nuget-packaging.md) | Creating preview `.nupkg` artifacts and preparing a publish checklist. |
 
@@ -65,6 +66,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🔬 [**Benchmark ve Kalibrasyon**](benchmark-calibration.md) | Gerçek uygulamalarda çoklu sinyal ablasyon testi, skor çakışması bulguları ve eşik denge analizi. |
 | 🔗 [**Birleşik Locator Uzlaştırması**](joint-locator-reconciliation.md) | Bağımsız kabul edilen locator iyileştirmeleri için deterministik, isteğe bağlı batch sahiplik koruması ve sınırları. |
 | 🤖 [**Yapay Zeka Kurulumu**](llm-providers.md) | Gemini, Claude, OpenAI ve 0 TL maliyetli yerel Ollama kurulumu. |
+| 🔐 [**LLM Güvenlik Modeli**](llm-security-model.md) | Güven sınırları, açıklanan alanlar, prompt injection ve PII sınırları, sağlayıcı retention ve yerel rapor güvenliği. |
 | 📄 [**JSON Şema Rehberi**](json-schema.md) | `.locator.json` kayıt dosyasının alan alan detaylı açıklaması. |
 | 📦 [**NuGet Paketleme**](nuget-packaging.md) | Preview `.nupkg` artifact üretimi ve yayın kontrol listesi. |
 

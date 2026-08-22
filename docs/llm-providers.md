@@ -20,7 +20,10 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
 | **Cloudflare Workers AI** | Explicit (`CLOUDFLARE_MODEL`) | Token + account ID + model | Free daily allocation | Cloud |
-| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free (\$0)** | **100% Local (Offline)** |
+| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free (\$0)** | Local by default; host-controlled |
+
+> [!CAUTION]
+> Provider setup is also a data-disclosure decision. DOM/UI text is untrusted, there is no automatic PII/secret redaction, and every configured provider receives the bounded prompt. Read the [LLM Healing Security Model](llm-security-model.md) before adding cloud or remote endpoints.
 
 ### 🏭 Dynamic Environment Provider Factory (`LlmProviderFactory`)
 
@@ -181,7 +184,10 @@ Choose a model family different from the other voters. Two endpoints serving the
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
 | **Cloudflare Workers AI** | Açıkça belirtilir (`CLOUDFLARE_MODEL`) | Token + hesap kimliği + model | Günlük ücretsiz kota | Bulut |
-| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz (\$0)** | **%100 Yerel (Çevrimdışı)** |
+| **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz (\$0)** | Varsayılan yerel; host'a bağlı |
+
+> [!CAUTION]
+> Sağlayıcı kurulumu aynı zamanda bir veri ifşası kararıdır. DOM/UI metni güvenilmeyen girdidir, otomatik PII/secret redaction yoktur ve yapılandırılmış her sağlayıcı sınırlı prompt'u alır. Bulut veya uzak endpoint eklemeden önce [LLM Healing Güvenlik Modelini](llm-security-model.md) okuyun.
 
 ### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
 

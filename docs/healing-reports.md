@@ -64,6 +64,10 @@ Each event in the report contains:
 
 `HealingReportDocument.Events` contains every attempt. Consumers that need the pre-v7 accepted-only view can use `HealingReportDocument.AcceptedEvents`; it includes `accepted`, `accepted-unverified`, and all legacy entries without requiring hand-written filtering.
 
+Reports can contain captured UI text, automation IDs, model reasoning, and provider error
+details (including a bounded raw response when parsing fails). Treat both JSON and HTML as
+sensitive test artifacts; see the [LLM Healing Security Model](llm-security-model.md#local-telemetry-is-sensitive-too).
+
 > [!WARNING]
 > **Report size:** the candidate list is intentionally **unpruned**. On very large UI trees a single event can add ~1 MB of JSON (≈1.3 MB measured on a 3,001-node tree), and each `Record()` call rewrites the whole file — cost grows quadratically with event count. Enable file reports (`SELF_HEALING_REPORT_PATH`) on CI/diagnostic runs, not on every local run.
 
@@ -124,6 +128,11 @@ Rapordaki her olay şu bilgileri içerir:
 - **`Candidates`** (şema v2+): Yalnızca kazanan değil, skorlanan **tüm** adaylar — `TotalScore`, `Components` ve `EvidenceCoverage` ile birlikte; eşiklerin çevrimdışı yeniden ayarlanabilmesi için.
 
 `HealingReportDocument.Events` tüm denemeleri içerir. v7 öncesindeki yalnızca-kabul-edilen görünümüne ihtiyaç duyan tüketiciler elle filtre yazmadan `HealingReportDocument.AcceptedEvents` kullanabilir; bu görünüm `accepted`, `accepted-unverified` ve tüm eski girdileri kapsar.
+
+Raporlar yakalanmış UI metni, automation ID, model reasoning'i ve sağlayıcı hata ayrıntıları
+(parse başarısız olduğunda sınırlı bir ham yanıt dahil) içerebilir. JSON ve HTML'yi hassas
+test artifact'ları olarak kabul edin; [LLM Healing Güvenlik Modeline](llm-security-model.md#yerel-telemetri-de-hassastır)
+bakın.
 
 > [!WARNING]
 > **Rapor boyutu:** aday listesi bilinçli olarak **budanmamıştır**. Çok büyük UI ağaçlarında tek bir olay ~1 MB JSON ekleyebilir (3.001 düğümlü ağaçta ≈1,3 MB ölçüldü) ve her `Record()` çağrısı dosyanın tamamını yeniden yazar — maliyet olay sayısıyla karesel büyür. Dosya raporlarını (`SELF_HEALING_REPORT_PATH`) her yerel çalıştırmada değil, CI/teşhis çalıştırmalarında açın.
