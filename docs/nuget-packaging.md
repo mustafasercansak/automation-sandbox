@@ -42,14 +42,15 @@ In GitHub Actions:
 Use **Release Preview Packages** when you want the package files to appear on the
 repository's **Releases** page without publishing to nuget.org:
 
-1. Open **Actions**.
-2. Select **Release Preview Packages**.
-3. Click **Run workflow**.
-4. Enter a version such as `0.2.0-beta.3`.
-5. Keep `prerelease` enabled for preview builds.
-6. Enable `publish_to_nuget` to also push the packages to nuget.org via Trusted
+1. Ensure the release notes file exists at `docs/release-notes/v<version>.md` (e.g. `docs/release-notes/v0.2.0-beta.3.md`). The release workflow validates this file and fails if it is missing or empty.
+2. Open **Actions**.
+3. Select **Release Preview Packages**.
+4. Click **Run workflow**.
+5. Enter a version such as `0.2.0-beta.3` (or leave blank to use `Directory.Build.props`).
+6. Keep `prerelease` enabled for preview builds.
+7. Enable `publish_to_nuget` to also push the packages to nuget.org via Trusted
    Publishing, or leave it disabled to keep the release as GitHub-only assets.
-7. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
+8. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
 
 The current `0.2.0-beta.3` preview includes the Phase 3 measurement work and the opt-in
 `ResolveBatch` / `ResolveBatchAsync` ownership guard on top of the Phase 2 consensus and
