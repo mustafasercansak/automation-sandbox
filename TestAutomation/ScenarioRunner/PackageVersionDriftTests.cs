@@ -90,5 +90,37 @@ namespace ScenarioRunner
             Assert.Contains("Resolve Package Version", releaseContent);
             Assert.Contains("Directory.Build.props", releaseContent);
         }
+
+        [Fact]
+        public void ReleaseNotes_ExistForCurrentVersionAndAreNonEmpty()
+        {
+            var repoRoot = FindRepoRoot();
+            var propsPath = Path.Combine(repoRoot, "Directory.Build.props");
+            var propsContent = File.ReadAllText(propsPath);
+            var version = Regex.Match(propsContent, @"<Version>(?<v>[^<]+)</Version>").Groups["v"].Value.Trim();
+
+            var tagNotesPath = Path.Combine(repoRoot, "docs", "release-notes", $"v{version}.md");
+            var versionNotesPath = Path.Combine(repoRoot, "docs", "release-notes", $"{version}.md");
+
+            var exists = File.Exists(tagNotesPath) || File.Exists(versionNotesPath);
+            Assert.True(exists, $"Release notes file must exist at {tagNotesPath} or {versionNotesPath}.");
+
+            var activePath = File.Exists(tagNotesPath) ? tagNotesPath : versionNotesPath;
+            var text = File.ReadAllText(activePath);
+            Assert.False(string.IsNullOrWhiteSpace(text), $"Release notes file at {activePath} must not be empty.");
+            Assert.True(text.Length > 50, "Release notes file must contain meaningful content.");
+        }
+
+        [Fact]
+        public void ReleaseWorkflow_ReferencesExternalReleaseNotes()
+        {
+            var repoRoot = FindRepoRoot();
+            var releaseYmlPath = Path.Combine(repoRoot, ".github", "workflows", "release.yml");
+            Assert.True(File.Exists(releaseYmlPath));
+
+            var content = File.ReadAllText(releaseYmlPath);
+            Assert.Contains("Validate and write release notes", content);
+            Assert.Contains("docs/release-notes/", content);
+        }
     }
 }
