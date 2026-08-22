@@ -4,10 +4,19 @@ namespace UiModel
     // cycle in Upsert is guarded by an exclusive lock on a sidecar ".lock" file so concurrent
     // callers - e.g. parallel xUnit test collections healing against the same repository file -
     // serialize instead of racing and silently dropping each other's updates.
+    // In-memory document and O(1) lookup dictionary are cached across repeated Find/Load calls
+    // and invalidated whenever the underlying file's mtime or length changes (dirty-check).
     public sealed class LocatorRepository
     {
         private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
+
+        private readonly object _syncRoot = new object();
+        private DateTime _lastWriteTimeUtc = DateTime.MinValue;
+        private long _lastLength = -1;
+        private bool _cachedFileExists;
+        private LocatorRepositoryDocument? _cachedDocument;
+        private Dictionary<string, LocatorRecord>? _cachedLookup;
 
         public string FilePath { get; }
 
@@ -25,13 +34,11 @@ namespace UiModel
         // heal in a fresh environment is exactly when this file doesn't exist yet.
         public LocatorRepositoryDocument Load()
         {
-            if (!File.Exists(FilePath))
+            lock (_syncRoot)
             {
-                return new LocatorRepositoryDocument();
+                RefreshCacheIfStaleLocked();
+                return _cachedDocument ?? new LocatorRepositoryDocument();
             }
-
-            var json = File.ReadAllText(FilePath);
-            return LocatorRepositorySerializer.FromJson(json);
         }
 
         public void Save(LocatorRepositoryDocument document)
@@ -63,7 +70,6 @@ namespace UiModel
                     File.Move(tempPath, FilePath);
                 }
             }
-
             finally
             {
                 if (File.Exists(tempPath))
@@ -71,11 +77,88 @@ namespace UiModel
                     File.Delete(tempPath);
                 }
             }
+
+            lock (_syncRoot)
+            {
+                var fileInfo = new FileInfo(FilePath);
+                _cachedFileExists = fileInfo.Exists;
+                _lastWriteTimeUtc = fileInfo.Exists ? fileInfo.LastWriteTimeUtc : DateTime.MinValue;
+                _lastLength = fileInfo.Exists ? fileInfo.Length : -1;
+                _cachedDocument = document;
+                _cachedLookup = BuildLookupIndex(document);
+            }
         }
 
         public LocatorRecord? Find(string locatorKey)
         {
-            return Load().Locators.Find(r => r.LocatorKey == locatorKey);
+            if (locatorKey == null)
+            {
+                return null;
+            }
+
+            lock (_syncRoot)
+            {
+                RefreshCacheIfStaleLocked();
+                if (_cachedLookup != null && _cachedLookup.TryGetValue(locatorKey, out var record))
+                {
+                    return record;
+                }
+
+                return null;
+            }
+        }
+
+        private void RefreshCacheIfStaleLocked()
+        {
+            var fileInfo = new FileInfo(FilePath);
+            if (!fileInfo.Exists)
+            {
+                if (!_cachedFileExists || _cachedDocument == null)
+                {
+                    _cachedFileExists = false;
+                    _lastWriteTimeUtc = DateTime.MinValue;
+                    _lastLength = -1;
+                    _cachedDocument = new LocatorRepositoryDocument();
+                    _cachedLookup = new Dictionary<string, LocatorRecord>(StringComparer.Ordinal);
+                }
+
+                return;
+            }
+
+            var lastWrite = fileInfo.LastWriteTimeUtc;
+            var length = fileInfo.Length;
+
+            if (_cachedFileExists && _cachedDocument != null && _lastWriteTimeUtc == lastWrite && _lastLength == length)
+            {
+                return;
+            }
+
+            var json = File.ReadAllText(FilePath);
+            var doc = LocatorRepositorySerializer.FromJson(json);
+            var lookup = BuildLookupIndex(doc);
+
+            _cachedFileExists = true;
+            _lastWriteTimeUtc = lastWrite;
+            _lastLength = length;
+            _cachedDocument = doc;
+            _cachedLookup = lookup;
+        }
+
+        private static Dictionary<string, LocatorRecord> BuildLookupIndex(LocatorRepositoryDocument document)
+        {
+            var lookup = new Dictionary<string, LocatorRecord>(StringComparer.Ordinal);
+            if (document?.Locators != null)
+            {
+                foreach (var record in document.Locators)
+                {
+                    if (record?.LocatorKey != null && !lookup.ContainsKey(record.LocatorKey))
+                    {
+                        lookup[record.LocatorKey] = record;
+                    }
+                }
+            }
+
+            return lookup;
         }
 
         // Adds or updates the record for locatorKey under an exclusive lock spanning the whole

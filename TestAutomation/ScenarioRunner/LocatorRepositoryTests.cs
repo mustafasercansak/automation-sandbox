@@ -135,6 +135,55 @@ namespace ScenarioRunner
             Assert.Null(repository.Find("CustomerForm.Phone"));
         }
 
+        [Fact]
+        public void Find_ReusesCachedDocument_WhenFileHasNotChanged()
+        {
+            var repository = new LocatorRepository(_filePath);
+            repository.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail" });
+
+            var first = repository.Find("CustomerForm.Email");
+            var second = repository.Find("CustomerForm.Email");
+
+            Assert.NotNull(first);
+            Assert.NotNull(second);
+            Assert.Same(first, second);
+        }
+
+        [Fact]
+        public void Find_InvalidatesCache_WhenSecondInstanceModifiesFile()
+        {
+            var repo1 = new LocatorRepository(_filePath);
+            var repo2 = new LocatorRepository(_filePath);
+
+            repo1.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail" });
+
+            var firstFromRepo1 = repo1.Find("CustomerForm.Email");
+            Assert.NotNull(firstFromRepo1);
+            Assert.Equal("txtEmail", firstFromRepo1!.Snapshot.AutomationId);
+
+            // Second instance updates the record
+            repo2.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail_Updated" });
+
+            // First instance must observe the update (cache invalidated by mtime/size change)
+            var updatedFromRepo1 = repo1.Find("CustomerForm.Email");
+            Assert.NotNull(updatedFromRepo1);
+            Assert.Equal("txtEmail_Updated", updatedFromRepo1!.Snapshot.AutomationId);
+        }
+
+        [Fact]
+        public void Find_UsesFirstWins_WhenDuplicateKeysExistInDocument()
+        {
+            var repository = new LocatorRepository(_filePath);
+            var doc = new LocatorRepositoryDocument();
+            doc.Locators.Add(new LocatorRecord { LocatorKey = "DupeKey", Snapshot = new UiElementInfo { AutomationId = "first" } });
+            doc.Locators.Add(new LocatorRecord { LocatorKey = "DupeKey", Snapshot = new UiElementInfo { AutomationId = "second" } });
+            repository.Save(doc);
+
+            var found = repository.Find("DupeKey");
+            Assert.NotNull(found);
+            Assert.Equal("first", found!.Snapshot.AutomationId);
+        }
+
         public void Dispose()
         {
             if (Directory.Exists(_directory))
