@@ -378,7 +378,7 @@ namespace ScenarioRunner
             };
             var window = new UiElementInfo { ControlType = "Window", BoundingRectangle = new BoundingRectangle(0, 0, 800, 600) };
             window.Children.Add(new UiElementInfo { ControlType = "MenuItem", Name = "Account Menu", AutomationId = "accountMenu", BoundingRectangle = new BoundingRectangle(10, 10, 100, 30) });
-            window.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Resume File", AutomationId = "resumeFile", BoundingRectangle = new BoundingRectangle(10, 50, 200, 30) });
+            window.Children.Add(new UiElementInfo { ControlType = "Button", Name = "Resume File", AutomationId = "resumeFile", BoundingRectangle = new BoundingRectangle(10, 50, 200, 30) });
             window.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Search Field", AutomationId = "searchField", BoundingRectangle = new BoundingRectangle(10, 90, 200, 30) });
             window.Children.Add(new UiElementInfo { ControlType = "Text", Name = "Confirmation Message", AutomationId = "confirmation", BoundingRectangle = new BoundingRectangle(10, 130, 200, 30) });
 

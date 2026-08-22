@@ -125,15 +125,50 @@ namespace ScenarioRunner
                     new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
                 }
             };
-            var recordings = scenario.Steps.Select(step => Recorded(step.LocatorKey, step.LocatorKey)).ToList();
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Action.Hover", "btnHover", "Button"),
+                Recorded("Field.ResumeFile", "btnUpload", "Button"),
+                Recorded("Action.SearchKey", "txtSearch", "Edit"),
+                Recorded("Wait.Confirmation", "lblStatus", "Text"),
+            };
 
             var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
 
-            Assert.Contains("Mouse.MoveTo(window.FindFirstDescendant(cf => cf.ByAutomationId(\"Action.Hover\"))!.GetClickablePoint());", code);
-            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"Field.ResumeFile\"))!.AsTextBox().Text = \"C:\\\\temp\\\\resume.pdf\";", code);
-            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"Action.SearchKey\"))!.Focus();", code);
+            Assert.Contains("Mouse.MoveTo(window.FindFirstDescendant(cf => cf.ByAutomationId(\"btnHover\"))!.GetClickablePoint());", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"btnUpload\"))!.AsButton().Invoke();", code);
+            Assert.Contains("var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;", code);
+            Assert.Contains("Assert.NotNull(fileDialog);", code);
+            Assert.Contains("var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))?.AsTextBox();", code);
+            Assert.Contains("Assert.NotNull(fileNameEdit);", code);
+            Assert.Contains("fileNameEdit!.Text = \"C:\\\\temp\\\\resume.pdf\";", code);
+            Assert.Contains("openButton!.Invoke();", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"txtSearch\"))!.Focus();", code);
             Assert.Contains("Keyboard.Type(VirtualKeyShort.RETURN);", code);
-            Assert.Contains("Assert.NotNull(Retry.WhileNull(() => window.FindFirstDescendant(cf => cf.ByAutomationId(\"Wait.Confirmation\")), timeout: TimeSpan.FromMilliseconds(3000)).Result);", code);
+            Assert.Contains("Assert.NotNull(Retry.WhileNull(() => window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblStatus\")), timeout: TimeSpan.FromMilliseconds(3000)).Result);", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        [Fact]
+        public void Generate_EmitsExplicitFailure_WhenUploadFileControlIsNotTriggerButton()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Field.ResumeFile", "txtResume", "Edit"),
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("// Desktop UploadFile requires a trigger button or manual file-dialog automation.", code);
+            Assert.Contains("Assert.True(false, \"UploadFile requires manual file-dialog handling.\");", code);
+            AssertValidCSharpSyntax(code);
         }
 
         [Fact]

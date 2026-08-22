@@ -86,8 +86,9 @@ For `UploadFile`, `Value` is the file path. For `PressKey`, it is a Playwright-s
 key name such as `Enter` or `ArrowDown`. For `Wait`, it is an optional positive timeout
 in milliseconds (default `5000`); wait generation polls for the target element to become
 visible/present instead of emitting a fixed sleep. Web upload matching requires a captured
-`<input type="file">`; desktop generation treats the matched control as the file-path text
-input. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
+`<input type="file">`; desktop generation drives a real file dialog (invoking the trigger button,
+setting the file path in the dialog, and confirming the Open button) or emits an explicit failure
+marker if manual handling is required. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
 and single letters or digits; unsupported names produce an explicit failing review marker.
 
 `Check`/`Uncheck` target checkboxes and radio buttons - a radio button can only be
@@ -382,8 +383,9 @@ Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Check`, `Unchec
 `PressKey` için `Enter`/`ArrowDown` gibi tuş adı, `Wait` içinse isteğe bağlı pozitif
 milisaniye timeout değeridir (varsayılan `5000`). `Wait` sabit uyku üretmez; hedef
 elementin görünür/var olmasını poll eder. Web upload eşleştirmesi yakalanmış
-`<input type="file">` sinyalini zorunlu tutar; desktop üretimi eşleşen kontrolü dosya
-yolu metin alanı olarak kullanır. `Check`/`Uncheck` onay kutuları ve radyo düğmeleri
+`<input type="file">` sinyalini zorunlu tutar; desktop üretimi gerçek bir dosya diyaloğunu
+yönetir (tetikleyici butonu tıklar, diyalogdaki dosya yolu alanını doldurur ve Aç butonunu onaylar)
+veya manuel müdahale gerekiyorsa açık bir hata işareti üretir. `Check`/`Uncheck` onay kutuları ve radyo düğmeleri
 içindir - bir radyo düğmesi yalnızca işaretlenebilir, işareti kaldırılamaz; bu yüzden
 `Uncheck` ile eşleşmez. `Select` yalnızca gerçek açılır liste/select/combobox
 elementlerine ayrılmıştır: üreteçler bu eylem için yalnızca select çağrıları üretir
