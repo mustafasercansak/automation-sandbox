@@ -618,6 +618,75 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveAsync_BuildsShortlistFromHeuristicCandidates_PreservingOrderAndIdentity()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var heuristicResult = SelfHealingResolver.Resolve(expected, currentTree, log: _ => { });
+
+            var observed = new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 });
+            var second = new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 });
+
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new ILlmHealingProvider[] { observed, second }, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.NotNull(observed.LastCandidates);
+            var expectedCandidates = heuristicResult.Candidates!
+                .Where(c => c.TotalScore >= SimilarityWeights.Default.MinCandidateScore)
+                .Take(SimilarityWeights.Default.MaxCandidatesForLlm)
+                .ToList();
+
+            Assert.Equal(expectedCandidates.Count, observed.LastCandidates!.Count);
+            for (var i = 0; i < expectedCandidates.Count; i++)
+            {
+                Assert.Equal("c" + i, observed.LastCandidates[i].CandidateId);
+                Assert.Equal(expectedCandidates[i].Candidate.AutomationId, observed.LastCandidates[i].Candidate.AutomationId);
+                Assert.Equal(expectedCandidates[i].TotalScore, observed.LastCandidates[i].TotalScore, precision: 6);
+            }
+        }
+
+        [Fact]
+        public async Task ResolveAsync_WhenNoCandidatesPassMinScore_ReturnsHeuristicResultWithoutCallingLlm()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "CompletelyUnrelatedName",
+                ParentControlType = "CompletelyUnrelatedParent",
+                BoundingRectangle = new BoundingRectangle(1000, 1000, 10, 10),
+            };
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Text",
+                        Name = "XYZ",
+                        ParentControlType = "Window",
+                        BoundingRectangle = new BoundingRectangle(0, 0, 10, 10),
+                    },
+                },
+            };
+
+            var called = false;
+            var provider = new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+            {
+                called = true;
+                return new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.9 };
+            });
+
+            // Set MinCandidateScore very high so no candidate qualifies
+            var weights = new SimilarityWeights { MinCandidateScore = 0.99 };
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, new[] { provider }, weights, log: _ => { });
+
+            Assert.Equal(HealSource.Heuristic, result.Source);
+            Assert.False(called, "LLM evaluator should not be called when shortlist is empty.");
+        }
+
+        [Fact]
         public void ScoreCandidates_UsesDeterministicTieBreakers_WhenScoresAreEqual()
         {
             var expected = new UiElementInfo
