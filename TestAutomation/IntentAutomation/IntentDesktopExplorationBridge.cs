@@ -157,7 +157,7 @@ namespace IntentAutomation
                     // CheckBox only: a radio button can be checked but never unchecked.
                     return EqualsAny(type, "CheckBox") ? 1.0 : 0.0;
                 case IntentActionType.UploadFile:
-                    return EqualsAny(type, "Edit", "Document") ? 1.0 : 0.0;
+                    return EqualsAny(type, "Button", "SplitButton", "MenuItem", "Hyperlink", "Custom") ? 1.0 : 0.0;
                 case IntentActionType.PressKey:
                     return EqualsAny(type, "Edit", "Document", "ComboBox", "List", "ListItem", "Button", "MenuItem") ? 1.0 : 0.25;
                 case IntentActionType.Hover:

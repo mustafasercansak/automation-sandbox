@@ -149,7 +149,27 @@ namespace IntentAutomation
                     code.AppendLine($"            Mouse.MoveTo(window.{findExpression}!.GetClickablePoint());");
                     break;
                 case IntentActionType.UploadFile:
-                    code.AppendLine($"            window.{findExpression}!.AsTextBox().Text = \"{CodeGenerationUtilities.EscapeString(step.Value)}\";");
+                    if (string.Equals(snapshot?.ControlType, "Button", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(snapshot?.ControlType, "SplitButton", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(snapshot?.ControlType, "MenuItem", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(snapshot?.ControlType, "Hyperlink", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(snapshot?.ControlType, "Custom", StringComparison.OrdinalIgnoreCase))
+                    {
+                        code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");
+                        code.AppendLine("            var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;");
+                        code.AppendLine("            Assert.NotNull(fileDialog);");
+                        code.AppendLine("            var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))?.AsTextBox();");
+                        code.AppendLine("            Assert.NotNull(fileNameEdit);");
+                        code.AppendLine($"            fileNameEdit!.Text = \"{CodeGenerationUtilities.EscapeString(step.Value)}\";");
+                        code.AppendLine("            var openButton = fileDialog.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(\"Open\").Or(cf.ByName(\"Aç\"))))?.AsButton() ?? fileDialog.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button))?.AsButton();");
+                        code.AppendLine("            Assert.NotNull(openButton);");
+                        code.AppendLine("            openButton!.Invoke();");
+                    }
+                    else
+                    {
+                        code.AppendLine("            // Desktop UploadFile requires a trigger button or manual file-dialog automation.");
+                        code.AppendLine("            Assert.True(false, \"UploadFile requires manual file-dialog handling.\");");
+                    }
                     break;
                 case IntentActionType.PressKey:
                     code.AppendLine($"            window.{findExpression}!.Focus();");
