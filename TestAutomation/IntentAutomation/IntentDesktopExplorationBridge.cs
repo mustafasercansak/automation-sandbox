@@ -116,7 +116,7 @@ namespace IntentAutomation
                 return new IntentDesktopElementCandidate { Step = step, Element = element };
             }
 
-            var targetText = IntentTextScoring.Join(step.TargetDescription, step.TestIntent, step.ExpectedOutcome, step.LocatorKey);
+            var targetText = IntentTextScoring.BuildMatchingText(step);
             var elementText = IntentTextScoring.Join(element.Name, element.AutomationId, element.ClassName);
             var semanticScore = IntentTextScoring.TokenOverlap(targetText, elementText);
             var exactBonus = IntentTextScoring.ContainsNormalized(elementText, step.TargetDescription)
