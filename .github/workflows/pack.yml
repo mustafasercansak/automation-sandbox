@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version to stamp into produced .nupkg files'
-        required: true
-        default: '0.2.0-beta.3'
+        description: 'Package version to stamp into produced .nupkg files (leave empty to use Directory.Build.props)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -17,12 +17,25 @@ permissions:
 jobs:
   pack:
     runs-on: windows-latest
-    env:
-      PACKAGE_VERSION: ${{ inputs.version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Resolve Package Version
+        shell: pwsh
+        run: |
+          $version = '${{ inputs.version }}'.Trim()
+          if (-not $version) {
+            $props = Get-Content Directory.Build.props -Raw
+            if ($props -match '<Version>(?<v>[^<]+)</Version>') {
+              $version = $Matches['v'].Trim()
+            } else {
+              throw 'Could not extract <Version> from Directory.Build.props'
+            }
+          }
+          Write-Host "Resolved package version: $version"
+          "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6

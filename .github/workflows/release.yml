@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'SemVer package version, for example 0.2.0-beta.3'
-        required: true
-        default: '0.2.0-beta.3'
+        description: 'SemVer package version (leave empty to use Directory.Build.props)'
+        required: false
+        default: ''
       prerelease:
         description: 'Mark the GitHub Release as a prerelease'
         required: true
@@ -30,15 +30,28 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    env:
-      PACKAGE_VERSION: ${{ inputs.version }}
-      TAG_NAME: v${{ inputs.version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Resolve Package Version
+        shell: pwsh
+        run: |
+          $version = '${{ inputs.version }}'.Trim()
+          if (-not $version) {
+            $props = Get-Content Directory.Build.props -Raw
+            if ($props -match '<Version>(?<v>[^<]+)</Version>') {
+              $version = $Matches['v'].Trim()
+            } else {
+              throw 'Could not extract <Version> from Directory.Build.props'
+            }
+          }
+          Write-Host "Resolved package version: $version"
+          "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
+          "TAG_NAME=v$version" >> $env:GITHUB_ENV
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
