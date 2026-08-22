@@ -177,6 +177,9 @@ sequenceDiagram
 ```
 
 > The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers. Independent agreement is the quorum rule that permits a pick; it is not a correctness guarantee. See [Independent Model Agreement](docs/llm-providers.md#-independent-model-agreement-consensus-api).
+>
+> [!CAUTION]
+> DOM/UI text and `TestIntent` are untrusted input. The Top-N prompt still sends target metadata plus candidate names and automation IDs to every configured provider; there is no automatic PII/secret redaction or prompt-injection defence. See the [LLM Healing Security Model](docs/llm-security-model.md) before enabling cloud providers.
 
 ---
 
@@ -575,7 +578,7 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 - `OLLAMA_HOST` / `OLLAMA_MODEL` / `OLLAMA_ENABLED=true` $\rightarrow$ Ollama (`llama3.2`)
 - `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.); every entry requires an explicit `Name`, `Endpoint`, `Model`, and API key source. Malformed JSON or a missing endpoint/model is skipped with a credential-safe diagnostic instead of falling back to OpenAI defaults or disabling the built-in providers. Use the three-argument `CreateConfiguredProviders` overload to route diagnostics to an application logger; the existing overload writes them to standard error.
 
-See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and agreement-quorum details.
+See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and agreement-quorum details, and the [LLM Healing Security Model](docs/llm-security-model.md) for disclosed fields, provider retention, and report-handling requirements.
 
 ### 11. Joint Locator Reconciliation (Opt-In)
 

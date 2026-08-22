@@ -1,0 +1,248 @@
+# LLM Healing Security Model / LLM Healing Güvenlik Modeli
+
+## English
+
+### Scope and trust boundary
+
+LLM healing is opt-in. It runs only when heuristic resolution is not confident and at
+least one configured provider is available. The resolver sends each available provider
+the same bounded shortlist in parallel; retries send the same prompt to that provider
+again. Configuring several providers therefore discloses the prompt to several separate
+data processors—it is not one shared private computation.
+
+Treat every value captured from a DOM or desktop accessibility tree as **untrusted
+input**. Element text can contain personal data, secrets, customer content, or deliberate
+prompt-injection instructions. `TestIntent` is application-authored but may carry the
+same kinds of sensitive data. Neither source becomes trusted merely because it is
+serialized into a structured prompt.
+
+The deterministic heuristic path does not call an LLM provider. To guarantee that UI
+content does not leave the process through this feature, do not configure LLM providers
+and do not pass provider instances to `ResolveAsync`.
+
+### What reaches a provider
+
+The provider does **not** receive a screenshot or the full DOM/UI tree. The prompt
+contains:
+
+- the target platform;
+- the last known element's `ControlType`, `Name`, `ClassName`, bounding rectangle,
+  parent control type, sibling index/count, and `TestIntent`;
+- up to `MaxCandidatesForLlm` candidates (20 by default), including each candidate's
+  synthetic `CandidateId`, `AutomationId`, `ControlType`, `Name`, total heuristic score,
+  and component scores; and
+- instructions requesting a candidate ID, confidence value, and one-sentence reasoning.
+
+The stale target `AutomationId` is deliberately omitted to reduce semantic anchoring.
+Candidate `AutomationId` values are still included. `TestIntent` appears in both the
+serialized target snapshot and a human-readable intent block when it is non-empty.
+
+No built-in classifier, redactor, allow-list, or secret scanner modifies these values
+before transmission. Bounding the shortlist limits volume and cost; it does not make
+the remaining content anonymous or safe to disclose.
+
+### Named risks, current mitigations, and residual risk
+
+| Risk | Current mitigation | What it does **not** mitigate |
+| :--- | :--- | :--- |
+| A model invents an element that was not offered | Synthetic candidate IDs form a closed shortlist; the hallucination guard discards votes whose ID is outside it before counting agreement. | Prompt injection, a malicious or mistaken choice *inside* the shortlist, sensitive-data disclosure, or a false heal. |
+| The stale target ID semantically anchors the model | The target's old `AutomationId` is omitted from the prompt. | Sensitive target `Name`, `ClassName`, `TestIntent`, candidate names/IDs, or adversarial text in any of those fields. |
+| An unexpectedly large tree causes unbounded disclosure | Only the scored Top-N shortlist is sent; no screenshot or full tree is sent. | PII or secrets contained in those selected elements, disclosure to every configured provider, or repeated disclosure during retries. |
+| One provider returns an arbitrary high-confidence answer | At least `MinimumConsensusVotes` independent provider votes must name the same in-shortlist candidate; self-reported confidence does not gate acceptance. | Correctness or security. Providers can share the same bad assumption, and agreement is explicitly not evidence that an element still exists. |
+| A provider stalls or rate-limits a run | Bounded retries and per-attempt/total timeouts limit how long the call can occupy the resolver. See “Timeouts & Resilience Patterns” in the [provider guide](llm-providers.md). | Confidentiality. Every retry resends the prompt, and these controls do not change provider retention. |
+
+The candidate-ID protocol is an **output-integrity boundary**, not a prompt-injection
+defence. There is currently no instruction/data separation that can prevent UI text such
+as “ignore previous instructions” from influencing a model. Do not use LLM healing on
+screens whose captured fields cannot be disclosed to every configured provider.
+
+Independent agreement also remains a locator-selection quorum—not a security review,
+fact check, or correctness guarantee. The measured limitations are documented in the
+[benchmark guide](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97).
+
+### PII, secrets, and operator controls
+
+The library currently provides **no automatic PII/secret redaction** and no per-field or
+per-provider disclosure policy. Applications must make the disclosure decision before
+calling the LLM path. Suitable controls include:
+
+1. Use heuristic-only resolution for authenticated, financial, health, production-data,
+   or other sensitive screens.
+2. Capture synthetic or scrubbed test data, and keep secrets out of element names,
+   accessibility labels, IDs, and `TestIntent`.
+3. Configure only providers and regions approved by the application's data owner. A
+   multi-provider quorum requires disclosure to multiple providers.
+4. If local processing is required, use an Ollama daemon on a controlled host and verify
+   `OLLAMA_HOST`. Ollama Cloud is remote, and a non-local `OLLAMA_HOST` is remote even
+   though the provider class is named `OllamaHealingProvider`.
+5. Treat custom OpenAI-compatible endpoints as separate processors. Their transport,
+   logging, retention, subprocessors, and training policies are entirely operator-owned.
+
+### Provider telemetry and retention
+
+Automation Sandbox cannot enforce provider-side logging, training, regional processing,
+abuse monitoring, or deletion. These policies can differ by account tier, endpoint,
+region, feature, and contract, and they can change independently of this repository.
+Review the terms that apply to the exact account and endpoint before enabling it:
+
+| Provider path supported by the factory | Official policy or data-control starting point |
+| :--- | :--- |
+| Anthropic Claude | [Anthropic API data retention](https://privacy.anthropic.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data) |
+| Google Gemini | [Gemini API terms](https://ai.google.dev/gemini-api/terms) and [Zero Data Retention](https://ai.google.dev/gemini-api/docs/zdr) |
+| OpenAI | [OpenAI API data controls](https://developers.openai.com/api/docs/guides/your-data#default-usage-policies-by-endpoint) |
+| xAI Grok | [xAI security FAQ](https://docs.x.ai/developers/faq/security) |
+| Groq | [Groq: Your Data](https://console.groq.com/docs/your-data) |
+| OpenRouter | [Data collection](https://openrouter.ai/docs/guides/privacy/data-collection) and [Zero Data Retention routing](https://openrouter.ai/docs/guides/features/zdr) |
+| Cloudflare Workers AI | [Workers AI data usage](https://developers.cloudflare.com/workers-ai/platform/data-usage/) |
+| Mistral | [Mistral legal terms](https://legal.mistral.ai/) |
+| NVIDIA NIM API | [NVIDIA API trial terms](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) |
+| Kimi/Moonshot | Start with the [Moonshot platform documentation](https://platform.moonshot.ai/docs) and verify the current service terms, privacy notice, account controls, and contract for the exact endpoint. |
+| Ollama Cloud or a local/remote Ollama daemon | [Ollama privacy policy](https://ollama.com/privacy); also verify where `OLLAMA_HOST` actually routes requests. |
+| Custom endpoints | Verify the endpoint operator's current service terms, privacy notice, account controls, and contract. No retention assumption is encoded in this library. |
+
+For example, the linked OpenAI documentation distinguishes abuse-monitoring retention
+from application-state storage and describes account eligibility for modified or zero
+data retention. Do not generalize one provider's or one endpoint's policy to another.
+
+### Local telemetry is sensitive too
+
+When healing reports are enabled, JSON and rendered HTML can persist captured snapshots,
+candidate names and automation IDs, model reasoning, provider names and attempt counts,
+and provider error details. A response parse failure appends up to 4096 characters of the
+raw HTTP response body to the provider error. A model may echo prompt content there.
+
+Healing reports are not encrypted or automatically expired by the library. Store them as
+sensitive test artifacts, restrict access, define a deletion period, and review them
+before attaching them to issues or CI artifacts. See the [healing report guide](healing-reports.md).
+
+Availability and retry design is tracked separately in issues
+[#109](https://github.com/mustafasercansak/automation-sandbox/issues/109),
+[#110](https://github.com/mustafasercansak/automation-sandbox/issues/110),
+[#127](https://github.com/mustafasercansak/automation-sandbox/issues/127), and
+[#129](https://github.com/mustafasercansak/automation-sandbox/issues/129). Those controls
+limit operational failure; they do not change this confidentiality model.
+
+---
+
+## Türkçe
+
+### Kapsam ve güven sınırı
+
+LLM healing isteğe bağlıdır. Yalnızca sezgisel çözüm yeterince güvenli olmadığında ve en
+az bir yapılandırılmış sağlayıcı bulunduğunda çalışır. Resolver aynı sınırlı aday listesini
+kullanılabilir tüm sağlayıcılara paralel gönderir; retry aynı prompt'u o sağlayıcıya yeniden
+gönderir. Bu nedenle birden fazla sağlayıcı yapılandırmak, prompt'u tek bir ortak özel
+hesaplamaya değil birden fazla ayrı veri işleyene açıklamak demektir.
+
+DOM veya masaüstü erişilebilirlik ağacından yakalanan her değeri **güvenilmeyen girdi**
+olarak kabul edin. Eleman metni kişisel veri, sır, müşteri içeriği veya kasıtlı prompt
+injection talimatı içerebilir. `TestIntent` uygulama tarafından yazılır fakat aynı tür
+hassas verileri taşıyabilir. Bu kaynaklar yapılandırılmış bir prompt içine serialize
+edilince güvenilir hâle gelmez.
+
+Deterministik sezgisel yol hiçbir LLM sağlayıcısını çağırmaz. UI içeriğinin bu özellik
+üzerinden süreç dışına çıkmamasını garanti etmek için LLM sağlayıcısı yapılandırmayın ve
+`ResolveAsync` metoduna sağlayıcı örneği vermeyin.
+
+### Sağlayıcıya hangi veriler gider
+
+Sağlayıcı ekran görüntüsünü veya DOM/UI ağacının tamamını almaz. Prompt şunları içerir:
+
+- hedef platform;
+- son bilinen elemanın `ControlType`, `Name`, `ClassName`, bounding rectangle, üst eleman
+  türü, kardeş indeksi/sayısı ve `TestIntent` değerleri;
+- en fazla `MaxCandidatesForLlm` aday (varsayılan 20); her adayın sentetik `CandidateId`,
+  `AutomationId`, `ControlType`, `Name`, toplam sezgisel skor ve bileşen skorları; ve
+- aday kimliği, confidence değeri ve tek cümlelik reasoning isteyen talimatlar.
+
+Eski hedef `AutomationId`, semantik çapalamayı azaltmak için bilerek çıkarılır. Adayların
+`AutomationId` değerleri ise gönderilir. Boş değilse `TestIntent` hem serialize edilmiş
+hedef snapshot'ında hem de okunabilir intent bloğunda yer alır.
+
+Yerleşik bir sınıflandırıcı, redactor, allow-list veya secret scanner bu değerleri gönderim
+öncesinde değiştirmez. Aday listesini sınırlamak hacmi ve maliyeti sınırlar; kalan içeriği
+anonim veya açıklanması güvenli hâle getirmez.
+
+### Adlandırılmış riskler, mevcut önlemler ve kalan risk
+
+| Risk | Mevcut önlem | **Azaltmadığı** risk |
+| :--- | :--- | :--- |
+| Model sunulmayan bir eleman uydurur | Sentetik aday kimlikleri kapalı bir liste oluşturur; hallucination guard liste dışı kimliğe verilen oyu uzlaşma sayımından önce atar. | Prompt injection, liste içindeki kötü niyetli veya hatalı seçim, hassas veri ifşası ya da yanlış healing. |
+| Eski hedef kimliği modeli semantik olarak çapalar | Hedefin eski `AutomationId` değeri prompt'tan çıkarılır. | Hassas hedef `Name`, `ClassName`, `TestIntent`, aday adları/kimlikleri veya bu alanlardaki saldırgan metin. |
+| Beklenmedik büyüklükteki ağaç sınırsız veri ifşasına yol açar | Yalnızca skorlanmış Top-N aday listesi gönderilir; ekran görüntüsü ve tam ağaç gönderilmez. | Seçilen elemanlardaki PII/sırlar, tüm yapılandırılmış sağlayıcılara ifşa veya retry sırasında tekrarlanan ifşa. |
+| Tek sağlayıcı keyfî ve yüksek-confidence bir cevap verir | En az `MinimumConsensusVotes` bağımsız sağlayıcı oyu aynı liste içi adayı göstermelidir; modelin confidence değeri kabulü belirlemez. | Doğruluk veya güvenlik. Sağlayıcılar aynı hatalı varsayımı paylaşabilir; uzlaşma elemanın hâlâ var olduğunu kanıtlamaz. |
+| Sağlayıcı çalışmayı bekletir veya rate limit uygular | Sınırlı retry ile deneme/operasyon timeout'ları çağrının resolver'ı ne kadar süre meşgul edeceğini sınırlar. [Sağlayıcı rehberindeki](llm-providers.md) “Zaman Aşımı ve Dayanıklılık” bölümüne bakın. | Gizlilik. Her retry prompt'u yeniden gönderir ve bu kontroller sağlayıcı retention politikasını değiştirmez. |
+
+Aday-kimliği protokolü bir **çıktı bütünlüğü sınırıdır**; prompt-injection savunması
+değildir. “Önceki talimatları yok say” gibi UI metinlerinin modeli etkilemesini engelleyen
+bir talimat/veri ayrımı şu anda yoktur. Yakalanan alanları tüm yapılandırılmış sağlayıcılara
+açıklayamayacağınız ekranlarda LLM healing kullanmayın.
+
+Bağımsız uzlaşma da yalnızca locator seçimi quorum'udur; güvenlik incelemesi, doğrulama
+veya doğruluk garantisi değildir. Ölçülmüş sınırlar [benchmark rehberinde](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)
+belgelenmiştir.
+
+### PII, sırlar ve operatör kontrolleri
+
+Kütüphane şu anda **otomatik PII/secret redaction** veya alan/sağlayıcı bazlı ifşa
+politikası sağlamaz. Uygulama LLM yolunu çağırmadan önce ifşa kararını vermelidir:
+
+1. Kimlik doğrulamalı, finansal, sağlık, production-data veya başka hassas ekranlarda
+   yalnızca sezgisel çözümü kullanın.
+2. Sentetik ya da temizlenmiş test verisi yakalayın; eleman adları, accessibility label,
+   kimlik ve `TestIntent` içine sır koymayın.
+3. Yalnızca veri sahibinin onayladığı sağlayıcıları ve bölgeleri yapılandırın. Çoklu
+   sağlayıcı quorum'u verinin birden fazla sağlayıcıya açıklanmasını gerektirir.
+4. Yerel işleme gerekiyorsa denetlenen bir host'taki Ollama daemon'unu kullanın ve
+   `OLLAMA_HOST` değerini doğrulayın. Ollama Cloud uzaktır; yerel olmayan bir `OLLAMA_HOST`
+   da sınıf adı `OllamaHealingProvider` olsa bile uzaktır.
+5. Özel OpenAI-uyumlu endpoint'leri ayrı veri işleyenler olarak kabul edin. Transport,
+   loglama, retention, alt işleyen ve eğitim politikaları tamamen operatör sorumluluğundadır.
+
+### Sağlayıcı telemetrisi ve retention
+
+Automation Sandbox sağlayıcı tarafındaki loglama, eğitim, bölgesel işleme, abuse
+monitoring veya silmeyi zorlayamaz. Politikalar hesap paketi, endpoint, bölge, özellik ve
+sözleşmeye göre farklılaşabilir ve bu depodan bağımsız değişebilir. Bir sağlayıcıyı
+etkinleştirmeden önce tam olarak kullandığınız hesap ve endpoint için geçerli koşulları
+inceleyin:
+
+| Factory'nin desteklediği sağlayıcı yolu | Resmî politika veya veri kontrolü başlangıç noktası |
+| :--- | :--- |
+| Anthropic Claude | [Anthropic API veri saklama](https://privacy.anthropic.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data) |
+| Google Gemini | [Gemini API koşulları](https://ai.google.dev/gemini-api/terms) ve [Zero Data Retention](https://ai.google.dev/gemini-api/docs/zdr) |
+| OpenAI | [OpenAI API veri kontrolleri](https://developers.openai.com/api/docs/guides/your-data#default-usage-policies-by-endpoint) |
+| xAI Grok | [xAI güvenlik SSS](https://docs.x.ai/developers/faq/security) |
+| Groq | [Groq: Your Data](https://console.groq.com/docs/your-data) |
+| OpenRouter | [Veri toplama](https://openrouter.ai/docs/guides/privacy/data-collection) ve [Zero Data Retention routing](https://openrouter.ai/docs/guides/features/zdr) |
+| Cloudflare Workers AI | [Workers AI veri kullanımı](https://developers.cloudflare.com/workers-ai/platform/data-usage/) |
+| Mistral | [Mistral yasal koşulları](https://legal.mistral.ai/) |
+| NVIDIA NIM API | [NVIDIA API deneme koşulları](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) |
+| Kimi/Moonshot | [Moonshot platform dokümanından](https://platform.moonshot.ai/docs) başlayın; tam endpoint için güncel hizmet koşulları, gizlilik bildirimi, hesap kontrolleri ve sözleşmeyi doğrulayın. |
+| Ollama Cloud veya yerel/uzak Ollama daemon'u | [Ollama gizlilik politikası](https://ollama.com/privacy); ayrıca `OLLAMA_HOST` değerinin istekleri gerçekte nereye yönlendirdiğini doğrulayın. |
+| Özel endpoint'ler | Endpoint operatörünün güncel hizmet koşulları, gizlilik bildirimi, hesap kontrolleri ve sözleşmesini doğrulayın. Bu kütüphanede hiçbir retention varsayımı kodlanmaz. |
+
+Örneğin bağlantısı verilen OpenAI dokümanı abuse-monitoring retention ile uygulama-durumu
+saklamasını ayırır ve değiştirilmiş veya sıfır veri saklamaya hesap uygunluğunu açıklar.
+Bir sağlayıcının veya endpoint'in politikasını diğerine genellemeyin. Kimi/Moonshot,
+Ollama Cloud ve özel endpoint'ler için bu kütüphanede hiçbir retention varsayımı kodlanmaz.
+
+### Yerel telemetri de hassastır
+
+Healing raporları etkinse JSON ve oluşturulan HTML; yakalanmış snapshot'ları, aday adları
+ve automation ID'leri, model reasoning'ini, sağlayıcı adları ve deneme sayılarını, ayrıca
+sağlayıcı hata ayrıntılarını kalıcılaştırabilir. Yanıt parse edilemezse ham HTTP response
+body'nin en fazla 4096 karakteri sağlayıcı hatasına eklenir. Model burada prompt içeriğini
+tekrarlayabilir.
+
+Healing raporları kütüphane tarafından şifrelenmez veya otomatik süresi doldurulmaz.
+Bunları hassas test artifact'ları olarak saklayın, erişimi kısıtlayın, silme süresi
+belirleyin ve issue/CI artifact'ına eklemeden önce inceleyin. [Healing report rehberine](healing-reports.md)
+bakın.
+
+Kullanılabilirlik ve retry tasarımı ayrıca
+[#109](https://github.com/mustafasercansak/automation-sandbox/issues/109),
+[#110](https://github.com/mustafasercansak/automation-sandbox/issues/110),
+[#127](https://github.com/mustafasercansak/automation-sandbox/issues/127) ve
+[#129](https://github.com/mustafasercansak/automation-sandbox/issues/129) issue'larında
+izlenir. Bu kontroller operasyonel arızayı sınırlar; gizlilik modelini değiştirmez.
