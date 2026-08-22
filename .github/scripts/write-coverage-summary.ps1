@@ -40,10 +40,33 @@ if ([string]::IsNullOrWhiteSpace($SummaryPath)) {
 
 $reports = @()
 if (Test-Path -LiteralPath $CoverageSearchPath -PathType Container) {
-    $reports = @(
+    # Find all coverage.cobertura.xml files, excluding VSTest test-run attachment staging directories (\In\).
+    $discoveredFiles = @(
         Get-ChildItem -LiteralPath $CoverageSearchPath -Filter 'coverage.cobertura.xml' -File -Recurse |
+            Where-Object { $_.FullName -notmatch '[\\/]In[\\/]' } |
             Sort-Object FullName
     )
+
+    # Deduplicate files that share identical coverage XML metrics (e.g. duplicate runner attachment copies)
+    $seenSignatures = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($file in $discoveredFiles) {
+        try {
+            [xml]$doc = Get-Content -LiteralPath $file.FullName -Raw
+            $cov = $doc.coverage
+            if ($null -ne $cov) {
+                $signature = "$($cov.'line-rate')|$($cov.'branch-rate')|$($cov.'lines-covered')|$($cov.'lines-valid')|$($cov.'branches-covered')|$($cov.'branches-valid')"
+                if ($seenSignatures.Add($signature)) {
+                    $reports += $file
+                }
+            }
+            else {
+                $reports += $file
+            }
+        }
+        catch {
+            $reports += $file
+        }
+    }
 }
 
 $markdown = [System.Text.StringBuilder]::new()
