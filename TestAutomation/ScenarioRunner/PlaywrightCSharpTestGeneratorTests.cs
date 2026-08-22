@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using IntentAutomation;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using UiModel;
 using WebDiscovery;
 using Xunit;
@@ -66,6 +69,7 @@ namespace ScenarioRunner
             Assert.Contains("await Page.GetByRole(AriaRole.Button, new() { Name = \"Save\" }).ClickAsync();", code);
             Assert.Contains("await Expect(Page.GetByTestId(\"customer-records\")).ToBeVisibleAsync();", code);
             Assert.Contains("// locator: Field.Email", code);
+            AssertValidCSharpSyntax(code);
         }
 
         [Fact]
@@ -416,6 +420,41 @@ namespace ScenarioRunner
                     new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
                 }
             };
+        }
+
+        [Theory]
+        [InlineData("My Tests.Suite 1", "MyTests.Suite1")]
+        [InlineData("foo-bar.v2_feature", "FooBar.V2Feature")]
+        [InlineData("123.456", "_123._456")]
+        [InlineData("  ", "GeneratedTests")]
+        [InlineData(null, "GeneratedTests")]
+        public void Generate_SanitizesNamespace_AndProducesValidCSharpSyntax(string? rawNamespace, string expectedNamespace)
+        {
+            var scenario = CommonInteractionScenario();
+            var recordings = scenario.Steps.Select(step =>
+                Recorded(step.LocatorKey, step.LocatorKey, $"page.GetByTestId(\"{step.LocatorKey}\")")).ToList();
+            var options = new PlaywrightCSharpTestGenerationOptions
+            {
+                Namespace = rawNamespace!,
+                ClassName = "Custom Tests",
+                MethodName = "Run All Steps",
+            };
+
+            var code = new PlaywrightCSharpTestGenerator(options).Generate(scenario, recordings);
+
+            Assert.Contains($"namespace {expectedNamespace}", code);
+            Assert.Contains("public class CustomTests : PageTest", code);
+            Assert.Contains("public async Task RunAllSteps()", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        private static void AssertValidCSharpSyntax(string code)
+        {
+            var syntaxTree = CSharpSyntaxTree.ParseText(code);
+            var errors = syntaxTree.GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .ToList();
+            Assert.Empty(errors);
         }
 
         private static IntentLocatorRecordingResult Recorded(string locatorKey, string automationId, string expression)

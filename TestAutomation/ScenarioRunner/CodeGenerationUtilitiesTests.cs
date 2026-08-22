@@ -67,6 +67,25 @@ namespace ScenarioRunner
             Assert.Equal("FallbackName", CodeGenerationUtilities.ToIdentifier("   ", "FallbackName"));
         }
 
+        [Fact]
+        public void ToNamespace_SanitizesDotSeparatedIdentifiersAndHandlesEdgeCases()
+        {
+            Assert.Equal("GeneratedTests", CodeGenerationUtilities.ToNamespace(null));
+            Assert.Equal("GeneratedTests", CodeGenerationUtilities.ToNamespace(""));
+            Assert.Equal("GeneratedTests", CodeGenerationUtilities.ToNamespace("   "));
+            Assert.Equal("GeneratedTests", CodeGenerationUtilities.ToNamespace(" ...---... "));
+            Assert.Equal("CustomFallback", CodeGenerationUtilities.ToNamespace("", "CustomFallback"));
+            Assert.Equal("MyCompany.Tests", CodeGenerationUtilities.ToNamespace("MyCompany.Tests"));
+            Assert.Equal("MyCompany.MyTests.V1", CodeGenerationUtilities.ToNamespace("My Company.My-Tests.v1"));
+            Assert.Equal("FooBar", CodeGenerationUtilities.ToNamespace("foo-bar"));
+            Assert.Equal("_123._456", CodeGenerationUtilities.ToNamespace("123.456"));
+            Assert.Equal("MyCompany.Tests", CodeGenerationUtilities.ToNamespace("MyCompany..Tests"));
+            Assert.Equal("LeadingAndTrailing", CodeGenerationUtilities.ToNamespace(".LeadingAndTrailing."));
+            Assert.Equal("Class.Namespace.Void", CodeGenerationUtilities.ToNamespace("class.namespace.void"));
+            Assert.Equal("GeneratedTests", CodeGenerationUtilities.ToNamespace("$#@!"));
+            Assert.Equal("PrivateNamespace.Sub", CodeGenerationUtilities.ToNamespace("@_privateNamespace._sub"));
+        }
+
         [Theory]
         [InlineData("Button", true, "Button")]
         [InlineData("button", true, "Button")]
