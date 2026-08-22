@@ -1,0 +1,55 @@
+name: Feature Request / Enhancement
+description: Suggest an idea, enhancement, or architectural improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to Automation Sandbox!
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this solve, or what capability does it add?
+      placeholder: |
+        Describe why this enhancement is needed or beneficial.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution / Design
+      description: How should this be implemented or architected?
+      placeholder: |
+        Outline the proposed API changes, design, or workflow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Concrete checkboxes defining when this feature is completed.
+      value: |
+        - [ ] Feature implemented according to proposed design.
+        - [ ] Automated tests added in ScenarioRunner.
+        - [ ] Documentation updated in docs/ or README.md if applicable.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Target Component
+      multiple: true
+      options:
+        - Core SelfHealing (SelfHealingResolver / SimilarityScorer)
+        - LLM Healing & Providers (Claude / Gemini / OpenAI / Ollama)
+        - Intent Automation & Codegen (IntentAutomation / Generators)
+        - Web Discovery & Playwright (WebDiscovery / PlaywrightLiveExploration)
+        - Desktop Discovery & FlaUI (Discovery / WinForms / WPF)
+        - Test Suite & Benchmarks (ScenarioRunner)
+        - Build & CI Pipelines (.github/workflows)
