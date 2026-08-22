@@ -292,6 +292,34 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_SupportsCommonInteractionActions()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "account menu" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, TargetDescription = "resume file" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, TargetDescription = "search field" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, TargetDescription = "confirmation message" },
+                }
+            };
+            var dom = new WebElementInfo { TagName = "body" };
+            dom.Children.Add(new WebElementInfo { TagName = "div", AccessibleName = "Account Menu", TestId = "account-menu" });
+            dom.Children.Add(new WebElementInfo { TagName = "input", InputType = "file", AccessibleName = "Resume File", TestId = "resume-file" });
+            dom.Children.Add(new WebElementInfo { TagName = "input", Role = "searchbox", AccessibleName = "Search Field", TestId = "search-field" });
+            dom.Children.Add(new WebElementInfo { TagName = "div", Role = "status", AccessibleName = "Confirmation Message", TestId = "confirmation" });
+
+            var result = new IntentExplorationBridge().Match(scenario, dom);
+
+            Assert.Equal("account-menu", result.StepResults[0].Candidates[0].Element.TestId);
+            Assert.Equal("resume-file", result.StepResults[1].Candidates[0].Element.TestId);
+            Assert.Equal("search-field", result.StepResults[2].Candidates[0].Element.TestId);
+            Assert.Equal("confirmation", result.StepResults[3].Candidates[0].Element.TestId);
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+        }
+
+        [Fact]
         public void Constructor_ValidatesOptionsRanges()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new IntentExplorationBridge(new IntentExplorationOptions { MaxCandidatesPerStep = 0 }));

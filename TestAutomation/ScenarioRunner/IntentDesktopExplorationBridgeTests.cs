@@ -300,6 +300,34 @@ namespace ScenarioRunner
             Assert.Equal("txtRenderedEmail", candidates[0].Element.AutomationId);
         }
 
+        [Fact]
+        public void Match_SupportsCommonInteractionActions()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "account menu" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, TargetDescription = "resume file" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, TargetDescription = "search field" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, TargetDescription = "confirmation message" },
+                }
+            };
+            var window = new UiElementInfo { ControlType = "Window", BoundingRectangle = new BoundingRectangle(0, 0, 800, 600) };
+            window.Children.Add(new UiElementInfo { ControlType = "MenuItem", Name = "Account Menu", AutomationId = "accountMenu", BoundingRectangle = new BoundingRectangle(10, 10, 100, 30) });
+            window.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Resume File", AutomationId = "resumeFile", BoundingRectangle = new BoundingRectangle(10, 50, 200, 30) });
+            window.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Search Field", AutomationId = "searchField", BoundingRectangle = new BoundingRectangle(10, 90, 200, 30) });
+            window.Children.Add(new UiElementInfo { ControlType = "Text", Name = "Confirmation Message", AutomationId = "confirmation", BoundingRectangle = new BoundingRectangle(10, 130, 200, 30) });
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, window);
+
+            Assert.Equal("accountMenu", result.StepResults[0].Candidates[0].Element.AutomationId);
+            Assert.Equal("resumeFile", result.StepResults[1].Candidates[0].Element.AutomationId);
+            Assert.Equal("searchField", result.StepResults[2].Candidates[0].Element.AutomationId);
+            Assert.Equal("confirmation", result.StepResults[3].Candidates[0].Element.AutomationId);
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+        }
+
         private static UiElementInfo BuildCustomerWindow()
         {
             var root = new UiElementInfo

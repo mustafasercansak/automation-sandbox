@@ -53,10 +53,82 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void DeterministicIntentPlanner_RecognizesCommonInteractionActions()
+        {
+            var upload = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Upload a resume file",
+                TestData = new Dictionary<string, string> { ["resume file"] = "/tmp/resume.pdf" },
+            });
+            var hover = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Hover over account menu",
+            });
+            var pressKey = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Press Enter on search field",
+            });
+            var wait = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Wait for confirmation message for 3 seconds",
+            });
+
+            Assert.Contains(upload.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.UploadFile &&
+                step.TargetDescription == "resume file" &&
+                step.Value == "/tmp/resume.pdf");
+            Assert.Contains(hover.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.Hover && step.TargetDescription == "account menu");
+            Assert.Contains(pressKey.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.PressKey &&
+                step.TargetDescription == "search field" &&
+                step.Value == "Enter");
+            Assert.Contains(wait.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.Wait &&
+                step.TargetDescription == "confirmation message" &&
+                step.Value == "3000");
+            Assert.False(upload.RequiresReview);
+            Assert.False(hover.RequiresReview);
+            Assert.False(pressKey.RequiresReview);
+            Assert.False(wait.RequiresReview);
+        }
+
+        [Fact]
+        public void DeterministicIntentPlanner_DisambiguatesKeyFieldsByValueShape()
+        {
+            var credential = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Register a new account",
+                TestData = new Dictionary<string, string> { ["public key"] = "ssh-rsa AAAAB3NzaC1yc2E" },
+            });
+            var keyPress = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Submit the form",
+                TestData = new Dictionary<string, string> { ["key"] = "Enter" },
+            });
+
+            Assert.Contains(credential.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.Fill && step.TargetDescription == "public key");
+            Assert.Contains(keyPress.Scenario.Steps, step =>
+                step.ActionType == IntentActionType.PressKey && step.Value == "Enter");
+        }
+
+        [Fact]
         public void DeterministicIntentPlanner_RejectsEmptyGoal()
         {
             var planner = new DeterministicIntentPlanner();
             Assert.Throws<ArgumentException>(() => planner.Plan(new IntentPlanningRequest { Goal = " " }));
+        }
+
+        [Fact]
+        public void IntentActionType_PreservesExistingNumericContract()
+        {
+            Assert.Equal(0, (int)IntentActionType.Unknown);
+            Assert.Equal(1, (int)IntentActionType.Navigate);
+            Assert.Equal(2, (int)IntentActionType.Fill);
+            Assert.Equal(3, (int)IntentActionType.Click);
+            Assert.Equal(4, (int)IntentActionType.Select);
+            Assert.Equal(5, (int)IntentActionType.Assert);
         }
 
         [Fact]

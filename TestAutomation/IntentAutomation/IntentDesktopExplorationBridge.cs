@@ -147,6 +147,13 @@ namespace IntentAutomation
                     return EqualsAny(type, "Edit", "Document", "Spinner") ? 1.0 : 0.0;
                 case IntentActionType.Select:
                     return EqualsAny(type, "ComboBox", "CheckBox", "RadioButton", "List", "ListItem", "Tab", "TabItem") ? 1.0 : 0.0;
+                case IntentActionType.UploadFile:
+                    return EqualsAny(type, "Edit", "Document") ? 1.0 : 0.0;
+                case IntentActionType.PressKey:
+                    return EqualsAny(type, "Edit", "Document", "ComboBox", "List", "ListItem", "Button", "MenuItem") ? 1.0 : 0.25;
+                case IntentActionType.Hover:
+                case IntentActionType.Wait:
+                    return 1.0;
                 case IntentActionType.Click:
                     if (EqualsAny(type, "Button", "Hyperlink", "SplitButton", "MenuItem"))
                     {

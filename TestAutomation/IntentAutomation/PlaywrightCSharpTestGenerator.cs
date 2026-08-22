@@ -105,6 +105,18 @@ namespace IntentAutomation
                 case IntentActionType.Click:
                     code.AppendLine($"            await {locatorExpression}.ClickAsync();");
                     break;
+                case IntentActionType.Hover:
+                    code.AppendLine($"            await {locatorExpression}.HoverAsync();");
+                    break;
+                case IntentActionType.UploadFile:
+                    code.AppendLine($"            await {locatorExpression}.SetInputFilesAsync(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
+                    break;
+                case IntentActionType.PressKey:
+                    code.AppendLine($"            await {locatorExpression}.PressAsync(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
+                    break;
+                case IntentActionType.Wait:
+                    code.AppendLine($"            await {locatorExpression}.WaitForAsync(new() {{ State = WaitForSelectorState.Visible, Timeout = {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                    break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitPlaywrightCSharp(step, locatorExpression, _options.AssertGenerationMode, code);
                     break;

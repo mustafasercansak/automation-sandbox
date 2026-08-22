@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using IntentAutomation;
 using UiModel;
 using Xunit;
@@ -105,6 +106,49 @@ namespace ScenarioRunner
             var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
 
             Assert.Contains("Assert.Equal(\"$125\", window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblTotal\"))!.Name);", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsCommonInteractionActions()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Use common interactions",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                }
+            };
+            var recordings = scenario.Steps.Select(step => Recorded(step.LocatorKey, step.LocatorKey)).ToList();
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("Mouse.MoveTo(window.FindFirstDescendant(cf => cf.ByAutomationId(\"Action.Hover\"))!.GetClickablePoint());", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"Field.ResumeFile\"))!.AsTextBox().Text = \"C:\\\\temp\\\\resume.pdf\";", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"Action.SearchKey\"))!.Focus();", code);
+            Assert.Contains("Keyboard.Type(VirtualKeyShort.RETURN);", code);
+            Assert.Contains("Assert.NotNull(Retry.WhileNull(() => window.FindFirstDescendant(cf => cf.ByAutomationId(\"Wait.Confirmation\")), timeout: TimeSpan.FromMilliseconds(3000)).Result);", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsExplicitFailure_ForUnsupportedDesktopKey()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.PressKey, LocatorKey = "Action.EditorKey", Value = "Control+Shift+P" },
+                }
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(
+                scenario,
+                new List<IntentDesktopLocatorRecordingResult> { Recorded("Action.EditorKey", "editor") });
+
+            Assert.Contains("Assert.True(false, \"Unsupported desktop key Control+Shift+P.\");", code);
         }
 
         [Fact]

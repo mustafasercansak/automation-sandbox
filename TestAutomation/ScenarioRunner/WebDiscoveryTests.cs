@@ -290,6 +290,7 @@ namespace ScenarioRunner
         {
             Assert.Contains("document.body", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("data-testid", PlaywrightDomCaptureScript.JavaScript);
+            Assert.Contains("InputType", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("BoundingRectangle", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("shadowRoot", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("contentDocument", PlaywrightDomCaptureScript.JavaScript);

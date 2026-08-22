@@ -80,6 +80,31 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsCommonInteractionActions()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Use common interactions",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = "/tmp/resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                }
+            };
+            var recordings = scenario.Steps.Select(step =>
+                Recorded(step.LocatorKey, step.LocatorKey, $"page.GetByTestId(\"{step.LocatorKey}\")")).ToList();
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await page.getByTestId('Action.Hover').hover();", code);
+            Assert.Contains("await page.getByTestId('Field.ResumeFile').setInputFiles('/tmp/resume.pdf');", code);
+            Assert.Contains("await page.getByTestId('Action.SearchKey').press('Enter');", code);
+            Assert.Contains("await page.getByTestId('Wait.Confirmation').waitFor({ state: 'visible', timeout: 3000 });", code);
+        }
+
+        [Fact]
         public void Generate_EmitterAccessibleNameWithEscapedQuote_PreservesNameInCSharpAndTypeScript()
         {
             var scenario = new IntentScenario

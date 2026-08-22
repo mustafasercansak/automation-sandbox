@@ -66,6 +66,17 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void PlanningPrompt_AdvertisesCommonInteractionActions()
+        {
+            var prompt = LlmIntentPlanningPrompt.Build(BuildRequest());
+
+            Assert.Contains("Hover", prompt);
+            Assert.Contains("UploadFile", prompt);
+            Assert.Contains("PressKey", prompt);
+            Assert.Contains("Wait", prompt);
+        }
+
+        [Fact]
         public async Task ParsesStructuredAssertion_FromModelResponse()
         {
             const string anthropicResponseJson = """

@@ -118,7 +118,8 @@ namespace IntentAutomation
                 element.Text,
                 element.TestId,
                 element.Id,
-                element.NameAttribute);
+                element.NameAttribute,
+                element.InputType);
             var semanticScore = IntentTextScoring.TokenOverlap(targetText, elementText);
             var locatorSuggestions = PlaywrightLocatorEmitter.Suggest(element).ToList();
             var locatorScore = locatorSuggestions.Count == 0 ? 0.0 : locatorSuggestions[0].Confidence;
@@ -154,6 +155,20 @@ namespace IntentAutomation
                     return tag == "select" || role == "combobox" || role == "listbox" || role == "radio" || role == "checkbox"
                         ? 1.0
                         : 0.0;
+                case IntentActionType.UploadFile:
+                    return tag == "input" && string.Equals(element.InputType, "file", StringComparison.OrdinalIgnoreCase)
+                        ? 1.0
+                        : 0.0;
+                case IntentActionType.PressKey:
+                    if (tag == "input" || tag == "textarea" || role == "textbox" || role == "searchbox" || role == "combobox")
+                    {
+                        return 1.0;
+                    }
+
+                    return tag == "button" || tag == "a" || role == "button" || role == "link" ? 0.60 : 0.25;
+                case IntentActionType.Hover:
+                case IntentActionType.Wait:
+                    return 1.0;
                 case IntentActionType.Click:
                     if (tag == "button" || tag == "a" || role == "button" || role == "link")
                     {
@@ -191,7 +206,7 @@ namespace IntentAutomation
 
         private static string CandidateLabel(WebElementInfo element)
         {
-            return IntentTextScoring.Join(element.TestId, element.Id, element.NameAttribute, element.AccessibleName, element.Text, element.CssSelector);
+            return IntentTextScoring.Join(element.TestId, element.Id, element.NameAttribute, element.InputType, element.AccessibleName, element.Text, element.CssSelector);
         }
     }
 }

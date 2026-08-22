@@ -136,6 +136,7 @@ namespace WebDiscovery
       Text: textOf(element),
       Id: element.id || '',
       NameAttribute: element.getAttribute('name') || '',
+      InputType: element.getAttribute('type') || '',
       TestId: element.getAttribute('data-testid') || element.getAttribute('data-test') || '',
       ClassName: typeof element.className === 'string' ? element.className : '',
       CssSelector: cssSelectorOf(element),
