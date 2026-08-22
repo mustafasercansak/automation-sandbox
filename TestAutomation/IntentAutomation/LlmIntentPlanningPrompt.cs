@@ -32,10 +32,13 @@ Available test data (field name -> value):
 {dataJson}
 
 Break the goal down into an ordered list of steps needed to accomplish it end to end,
-using only these action types: Navigate, Fill, Click, Select, Hover, UploadFile, PressKey,
-Wait, Assert. Use Navigate only if a target URL is given. Use Fill/Select/UploadFile for
-each relevant piece of test data (UploadFile for a file path, Select for a dropdown or
-choice-like field, Fill otherwise). Use PressKey for a named keyboard key, Hover for a
+using only these action types: Navigate, Fill, Click, Select, Check, Uncheck, Hover,
+UploadFile, PressKey, Wait, Assert. Use Navigate only if a target URL is given. Use
+Fill/Select/UploadFile for each relevant piece of test data (UploadFile for a file path,
+Select for a dropdown or choice-like field, Fill otherwise). Use Check/Uncheck for
+checkboxes and radio buttons (a radio button can only be checked, never unchecked);
+Select is only for real dropdown/select/combobox elements. Use PressKey for a named
+keyboard key, Hover for a
 hover-triggered interaction, and Wait to poll for a target element to become visible;
 for Wait, put a timeout in milliseconds in value or leave it empty for 5000. Add a final
 Click step for whatever submits/saves/completes the goal, and a final Assert step
@@ -45,7 +48,7 @@ and ""expectedValue"" (the expected text, value, or URL, empty for Visible/NotVi
 
 Respond with ONLY a single JSON object, no markdown fences, no other text, in this shape:
 {{""steps"": [
-  {{""actionType"": ""Navigate|Fill|Click|Select|Hover|UploadFile|PressKey|Wait|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<input/file/key/timeout value, empty when unused>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""locatorKey"": ""<short stable dotted key, e.g. Field.Email or Action.PrimarySubmit>"", ""assertionKind"": ""<Visible|NotVisible|TextEquals|TextContains|ValueEquals|UrlEquals|UrlContains>"", ""expectedValue"": ""<expected value for assertion>""}}
+  {{""actionType"": ""Navigate|Fill|Click|Select|Check|Uncheck|Hover|UploadFile|PressKey|Wait|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<input/file/key/timeout value, empty when unused>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""locatorKey"": ""<short stable dotted key, e.g. Field.Email or Action.PrimarySubmit>"", ""assertionKind"": ""<Visible|NotVisible|TextEquals|TextContains|ValueEquals|UrlEquals|UrlContains>"", ""expectedValue"": ""<expected value for assertion>""}}
 ]}}";
         }
 

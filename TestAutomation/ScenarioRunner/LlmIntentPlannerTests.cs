@@ -74,6 +74,8 @@ namespace ScenarioRunner
             Assert.Contains("UploadFile", prompt);
             Assert.Contains("PressKey", prompt);
             Assert.Contains("Wait", prompt);
+            Assert.Contains("Check", prompt);
+            Assert.Contains("Uncheck", prompt);
         }
 
         [Fact]

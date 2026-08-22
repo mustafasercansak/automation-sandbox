@@ -235,6 +235,69 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_ExcludesCheckBoxesRadiosAndLists_FromSelectCandidates()
+        {
+            // #198: Select maps to AsComboBox().Select(...), which exists only for ComboBox -
+            // CheckBox/RadioButton match Check/Uncheck instead, and List/ListItem/Tab/TabItem
+            // no longer match Select at all.
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Select, TargetDescription = "record type", LocatorKey = "Field.RecordType" },
+                }
+            };
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, BuildChoiceWindow());
+
+            var stepResult = result.StepResults[0];
+            Assert.False(stepResult.RequiresReview);
+            Assert.Equal("cmbRecordType", stepResult.Candidates[0].Element.AutomationId);
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.AutomationId == "chkNewsletter");
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.AutomationId == "radShipping");
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.AutomationId == "lstItems");
+        }
+
+        [Fact]
+        public void Match_MatchesCheckBoxesAndRadioButtons_ForCheck()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Check, TargetDescription = "shipping method", LocatorKey = "Field.ShippingMethod" },
+                }
+            };
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, BuildChoiceWindow());
+
+            Assert.Equal("chkNewsletter", result.StepResults[0].Candidates[0].Element.AutomationId);
+            Assert.Equal("radShipping", result.StepResults[1].Candidates[0].Element.AutomationId);
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+        }
+
+        [Fact]
+        public void Match_ExcludesRadioButtons_FromUncheckCandidates()
+        {
+            // A radio button can be checked but never unchecked (#198).
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Uncheck, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
+                }
+            };
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, BuildChoiceWindow());
+
+            var stepResult = result.StepResults[0];
+            Assert.False(stepResult.RequiresReview);
+            Assert.Equal("chkNewsletter", stepResult.Candidates[0].Element.AutomationId);
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.AutomationId == "radShipping");
+        }
+
+        [Fact]
         public void Constructor_ValidatesOptionsRanges()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new IntentDesktopExplorationBridge(new IntentDesktopExplorationOptions { MaxCandidatesPerStep = 0 }));
@@ -326,6 +389,45 @@ namespace ScenarioRunner
             Assert.Equal("searchField", result.StepResults[2].Candidates[0].Element.AutomationId);
             Assert.Equal("confirmation", result.StepResults[3].Candidates[0].Element.AutomationId);
             Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+        }
+
+        private static UiElementInfo BuildChoiceWindow()
+        {
+            var root = new UiElementInfo
+            {
+                ControlType = "Window",
+                BoundingRectangle = new BoundingRectangle(0, 0, 800, 600),
+            };
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "ComboBox",
+                Name = "Record Type",
+                AutomationId = "cmbRecordType",
+                BoundingRectangle = new BoundingRectangle(100, 160, 220, 24),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "CheckBox",
+                Name = "Newsletter",
+                AutomationId = "chkNewsletter",
+                BoundingRectangle = new BoundingRectangle(100, 200, 20, 20),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "RadioButton",
+                Name = "Shipping Method",
+                AutomationId = "radShipping",
+                BoundingRectangle = new BoundingRectangle(100, 240, 20, 20),
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "List",
+                Name = "Items",
+                AutomationId = "lstItems",
+                BoundingRectangle = new BoundingRectangle(100, 280, 220, 120),
+            });
+
+            return root;
         }
 
         private static UiElementInfo BuildCustomerWindow()

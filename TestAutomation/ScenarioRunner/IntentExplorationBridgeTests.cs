@@ -320,6 +320,67 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_ExcludesCheckboxesAndRadios_FromSelectCandidates()
+        {
+            // #198: Select maps to selectOption, which Playwright only accepts on real
+            // dropdown elements - checkboxes and radios must match Check/Uncheck instead.
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Select, TargetDescription = "record type", LocatorKey = "Field.RecordType" },
+                }
+            };
+
+            var result = new IntentExplorationBridge().Match(scenario, BuildChoiceDom());
+
+            var stepResult = result.StepResults[0];
+            Assert.False(stepResult.RequiresReview);
+            Assert.Equal("record-type", stepResult.Candidates[0].Element.TestId);
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.TestId == "newsletter-checkbox");
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.TestId == "shipping-radio");
+        }
+
+        [Fact]
+        public void Match_MatchesCheckboxesAndRadios_ForCheck()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Check, TargetDescription = "shipping method", LocatorKey = "Field.ShippingMethod" },
+                }
+            };
+
+            var result = new IntentExplorationBridge().Match(scenario, BuildChoiceDom());
+
+            Assert.Equal("newsletter-checkbox", result.StepResults[0].Candidates[0].Element.TestId);
+            Assert.Equal("shipping-radio", result.StepResults[1].Candidates[0].Element.TestId);
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+        }
+
+        [Fact]
+        public void Match_ExcludesRadios_FromUncheckCandidates()
+        {
+            // A radio button can be checked but never unchecked (#198).
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Uncheck, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
+                }
+            };
+
+            var result = new IntentExplorationBridge().Match(scenario, BuildChoiceDom());
+
+            var stepResult = result.StepResults[0];
+            Assert.False(stepResult.RequiresReview);
+            Assert.Equal("newsletter-checkbox", stepResult.Candidates[0].Element.TestId);
+            Assert.DoesNotContain(stepResult.Candidates, candidate => candidate.Element.TestId == "shipping-radio");
+        }
+
+        [Fact]
         public void Constructor_ValidatesOptionsRanges()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new IntentExplorationBridge(new IntentExplorationOptions { MaxCandidatesPerStep = 0 }));
@@ -336,6 +397,43 @@ namespace ScenarioRunner
             return result.StepResults
                 .Single(step => step.Step.TargetDescription == targetDescription)
                 .Candidates[0];
+        }
+
+        private static WebElementInfo BuildChoiceDom()
+        {
+            var root = new WebElementInfo
+            {
+                TagName = "body",
+                BoundingRectangle = new BoundingRectangle(0, 0, 1024, 768),
+            };
+            root.Children.Add(new WebElementInfo
+            {
+                TagName = "select",
+                Role = "combobox",
+                AccessibleName = "Record Type",
+                TestId = "record-type",
+                BoundingRectangle = new BoundingRectangle(100, 160, 220, 32),
+            });
+            root.Children.Add(new WebElementInfo
+            {
+                TagName = "input",
+                Role = "checkbox",
+                InputType = "checkbox",
+                AccessibleName = "Newsletter",
+                TestId = "newsletter-checkbox",
+                BoundingRectangle = new BoundingRectangle(100, 200, 20, 20),
+            });
+            root.Children.Add(new WebElementInfo
+            {
+                TagName = "input",
+                Role = "radio",
+                InputType = "radio",
+                AccessibleName = "Shipping Method",
+                TestId = "shipping-radio",
+                BoundingRectangle = new BoundingRectangle(100, 240, 20, 20),
+            });
+
+            return root;
         }
 
         private static WebElementInfo BuildCustomerDom()

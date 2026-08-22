@@ -253,6 +253,32 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsCheckAndUncheckCalls_ForCheckAndUncheckSteps()
+        {
+            // #198: Check/Uncheck steps must emit checkable-element calls, never selectOption.
+            var scenario = new IntentScenario
+            {
+                Goal = "Toggle form options",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, LocatorKey = "Field.Terms" },
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Field.Newsletter", "newsletter", "page.GetByTestId(\"newsletter\")"),
+                Recorded("Field.Terms", "terms", "page.GetByTestId(\"terms\")"),
+            };
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await page.getByTestId('newsletter').check();", code);
+            Assert.Contains("await page.getByTestId('terms').uncheck();", code);
+            Assert.DoesNotContain("selectOption", code);
+        }
+
+        [Fact]
         public void Generate_EmitsSkip_WhenStepHasNoRecordedLocator()
         {
             var scenario = new IntentScenario
