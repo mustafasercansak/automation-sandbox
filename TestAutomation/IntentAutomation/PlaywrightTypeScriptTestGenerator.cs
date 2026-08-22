@@ -87,6 +87,12 @@ namespace IntentAutomation
                 case IntentActionType.Select:
                     code.AppendLine($"  await {locatorExpression}.selectOption('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
                     break;
+                case IntentActionType.Check:
+                    code.AppendLine($"  await {locatorExpression}.check();");
+                    break;
+                case IntentActionType.Uncheck:
+                    code.AppendLine($"  await {locatorExpression}.uncheck();");
+                    break;
                 case IntentActionType.Click:
                     code.AppendLine($"  await {locatorExpression}.click();");
                     break;

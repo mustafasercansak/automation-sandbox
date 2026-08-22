@@ -146,7 +146,16 @@ namespace IntentAutomation
                 case IntentActionType.Fill:
                     return EqualsAny(type, "Edit", "Document", "Spinner") ? 1.0 : 0.0;
                 case IntentActionType.Select:
-                    return EqualsAny(type, "ComboBox", "CheckBox", "RadioButton", "List", "ListItem", "Tab", "TabItem") ? 1.0 : 0.0;
+                    // ComboBox only: FlaUiCSharpTestGenerator emits AsComboBox().Select(...),
+                    // which exists only for ComboBox - CheckBox/RadioButton moved to
+                    // Check/Uncheck, and List/ListItem/Tab/TabItem were removed for the same
+                    // reason (AsComboBox() would throw on them at runtime) (#198).
+                    return EqualsAny(type, "ComboBox") ? 1.0 : 0.0;
+                case IntentActionType.Check:
+                    return EqualsAny(type, "CheckBox", "RadioButton") ? 1.0 : 0.0;
+                case IntentActionType.Uncheck:
+                    // CheckBox only: a radio button can be checked but never unchecked.
+                    return EqualsAny(type, "CheckBox") ? 1.0 : 0.0;
                 case IntentActionType.UploadFile:
                     return EqualsAny(type, "Edit", "Document") ? 1.0 : 0.0;
                 case IntentActionType.PressKey:

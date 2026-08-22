@@ -100,7 +100,8 @@ namespace IntentAutomation
             }
 
             recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
-            var findExpression = FindExpression(recording?.Record?.Snapshot, out var warningComment);
+            var snapshot = recording?.Record?.Snapshot;
+            var findExpression = FindExpression(snapshot, out var warningComment);
             if (!string.IsNullOrWhiteSpace(warningComment))
             {
                 code.AppendLine($"            {warningComment}");
@@ -125,6 +126,21 @@ namespace IntentAutomation
                     break;
                 case IntentActionType.Select:
                     code.AppendLine($"            window.{findExpression}!.AsComboBox().Select(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
+                    break;
+                case IntentActionType.Check:
+                    if (string.Equals(snapshot?.ControlType, "RadioButton", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Radio buttons cannot be toggled; clicking selects.
+                        code.AppendLine("            // Radio buttons cannot be toggled; clicking selects.");
+                        code.AppendLine($"            window.{findExpression}!.AsRadioButton().Click();");
+                    }
+                    else
+                    {
+                        code.AppendLine($"            window.{findExpression}!.AsCheckBox().IsChecked = true;");
+                    }
+                    break;
+                case IntentActionType.Uncheck:
+                    code.AppendLine($"            window.{findExpression}!.AsCheckBox().IsChecked = false;");
                     break;
                 case IntentActionType.Click:
                     code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");

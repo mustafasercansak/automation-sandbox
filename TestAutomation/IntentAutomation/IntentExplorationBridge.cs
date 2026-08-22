@@ -152,7 +152,21 @@ namespace IntentAutomation
                         ? 1.0
                         : 0.0;
                 case IntentActionType.Select:
-                    return tag == "select" || role == "combobox" || role == "listbox" || role == "radio" || role == "checkbox"
+                    // Only real dropdown/select elements: the generators emit
+                    // selectOption/SelectOptionAsync, which Playwright rejects on anything
+                    // that is not a <select>/combobox/listbox. Checkboxes and radios match
+                    // Check/Uncheck instead (#198).
+                    return tag == "select" || role == "combobox" || role == "listbox"
+                        ? 1.0
+                        : 0.0;
+                case IntentActionType.Check:
+                    return role == "checkbox" || role == "radio" ||
+                            (tag == "input" && (string.Equals(element.InputType, "checkbox", StringComparison.OrdinalIgnoreCase) || string.Equals(element.InputType, "radio", StringComparison.OrdinalIgnoreCase)))
+                        ? 1.0
+                        : 0.0;
+                case IntentActionType.Uncheck:
+                    // Checkbox only: a radio button can be checked but never unchecked.
+                    return role == "checkbox" || (tag == "input" && string.Equals(element.InputType, "checkbox", StringComparison.OrdinalIgnoreCase))
                         ? 1.0
                         : 0.0;
                 case IntentActionType.UploadFile:

@@ -317,6 +317,56 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsCheckBoxAssignments_ForCheckAndUncheckSteps()
+        {
+            // #198: Check/Uncheck steps must emit AsCheckBox(), never AsComboBox().Select(...).
+            var scenario = new IntentScenario
+            {
+                Goal = "Toggle form options",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, LocatorKey = "Field.Terms" },
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Field.Newsletter", "chkNewsletter", "CheckBox"),
+                Recorded("Field.Terms", "chkTerms", "CheckBox"),
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"chkNewsletter\"))!.AsCheckBox().IsChecked = true;", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"chkTerms\"))!.AsCheckBox().IsChecked = false;", code);
+            Assert.DoesNotContain("AsComboBox()", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsRadioButtonClick_ForCheckStepOnRadioButton()
+        {
+            // #198: a radio button has no checked-state setter; clicking selects it.
+            var scenario = new IntentScenario
+            {
+                Goal = "Choose shipping method",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.ShippingMethod" },
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Field.ShippingMethod", "radExpress", "RadioButton"),
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("// Radio buttons cannot be toggled; clicking selects.", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"radExpress\"))!.AsRadioButton().Click();", code);
+            Assert.DoesNotContain("AsCheckBox()", code);
+        }
+
+        [Fact]
         public void Generate_EmitsFailingAssertion_WhenStepHasNoRecordedLocator()
         {
             var scenario = new IntentScenario
@@ -457,6 +507,20 @@ namespace ScenarioRunner
                 {
                     LocatorKey = locatorKey,
                     Snapshot = new UiElementInfo { AutomationId = automationId },
+                },
+            };
+        }
+
+        private static IntentDesktopLocatorRecordingResult Recorded(string locatorKey, string automationId, string controlType)
+        {
+            return new IntentDesktopLocatorRecordingResult
+            {
+                LocatorKey = locatorKey,
+                Recorded = true,
+                Record = new LocatorRecord
+                {
+                    LocatorKey = locatorKey,
+                    Snapshot = new UiElementInfo { AutomationId = automationId, ControlType = controlType },
                 },
             };
         }

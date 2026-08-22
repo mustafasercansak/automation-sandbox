@@ -102,6 +102,12 @@ namespace IntentAutomation
                 case IntentActionType.Select:
                     code.AppendLine($"            await {locatorExpression}.SelectOptionAsync(new[] {{ \"{CodeGenerationUtilities.EscapeString(step.Value)}\" }});");
                     break;
+                case IntentActionType.Check:
+                    code.AppendLine($"            await {locatorExpression}.CheckAsync();");
+                    break;
+                case IntentActionType.Uncheck:
+                    code.AppendLine($"            await {locatorExpression}.UncheckAsync();");
+                    break;
                 case IntentActionType.Click:
                     code.AppendLine($"            await {locatorExpression}.ClickAsync();");
                     break;

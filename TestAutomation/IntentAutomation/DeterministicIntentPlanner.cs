@@ -275,6 +275,11 @@ namespace IntentAutomation
             {
                 actionType = IntentActionType.PressKey;
             }
+            else if (keyTokens.Any(token => token == "agree" || token == "terms" || token == "accept" || token == "consent" || token == "newsletter" || token == "subscribe" || token == "remember" || token == "checkbox"))
+            {
+                // Checkbox-like fields toggle rather than take a value; a falsy value means Uncheck.
+                actionType = IsFalsyValue(value) ? IntentActionType.Uncheck : IntentActionType.Check;
+            }
             else if (normalizedKey.Contains("type") || normalizedKey.Contains("country") || normalizedKey.Contains("status"))
             {
                 actionType = IntentActionType.Select;
@@ -289,7 +294,11 @@ namespace IntentAutomation
                     ? "Press key on"
                     : actionType == IntentActionType.Select
                         ? "Select"
-                        : "Fill";
+                        : actionType == IntentActionType.Check
+                            ? "Check"
+                            : actionType == IntentActionType.Uncheck
+                                ? "Uncheck"
+                                : "Fill";
             var locatorPrefix = actionType == IntentActionType.PressKey ? "Action." : "Field.";
 
             return new IntentStep
@@ -303,9 +312,23 @@ namespace IntentAutomation
                     ? $"{target} has the requested file"
                     : actionType == IntentActionType.PressKey
                         ? $"{value} is pressed on {target}"
-                        : $"{target} has the requested value",
+                        : actionType == IntentActionType.Check
+                            ? $"{target} is checked"
+                            : actionType == IntentActionType.Uncheck
+                                ? $"{target} is unchecked"
+                                : $"{target} has the requested value",
                 LocatorKey = locatorPrefix + ToPascalKey(target),
             };
+        }
+
+        private static bool IsFalsyValue(string value)
+        {
+            var trimmed = (value ?? "").Trim();
+            return string.Equals(trimmed, "false", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(trimmed, "no", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(trimmed, "off", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(trimmed, "0", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(trimmed, "unchecked", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void AddDirectAction(

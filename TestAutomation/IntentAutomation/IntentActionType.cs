@@ -12,5 +12,9 @@ namespace IntentAutomation
         UploadFile = 7,
         PressKey = 8,
         Wait = 9,
+        // Check/Uncheck are appended without renumbering: the numeric values are a
+        // persisted contract (IntentPlannerTests pins (int)Select == 4).
+        Check = 10,
+        Uncheck = 11,
     }
 }

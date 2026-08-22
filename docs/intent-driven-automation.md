@@ -74,7 +74,7 @@ public sealed class IntentScenario
 
 Each step can carry:
 
-- `ActionType`: `Navigate`, `Fill`, `Click`, `Select`, `Hover`, `UploadFile`, `PressKey`, `Wait`, `Assert`
+- `ActionType`: `Navigate`, `Fill`, `Click`, `Select`, `Check`, `Uncheck`, `Hover`, `UploadFile`, `PressKey`, `Wait`, `Assert`
 - `TestIntent`
 - `TargetDescription`
 - `Value`
@@ -89,6 +89,12 @@ visible/present instead of emitting a fixed sleep. Web upload matching requires 
 `<input type="file">`; desktop generation treats the matched control as the file-path text
 input. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
 and single letters or digits; unsupported names produce an explicit failing review marker.
+
+`Check`/`Uncheck` target checkboxes and radio buttons - a radio button can only be
+checked, never unchecked, so it never matches `Uncheck`. `Select` is reserved for real
+dropdown/select/combobox elements only: the generators emit select-only calls for it
+(`selectOption` / `SelectOptionAsync` / `AsComboBox().Select(...)`), which the target
+frameworks reject on checkboxes, radios, or list/tab controls.
 
 `TargetDescription` is the authoritative free-text field for element matching.
 `TestIntent` explains the business reason for the step and is preserved in generated
@@ -371,13 +377,18 @@ için tanımlar. Bu iki anlatı alanı aday sıralamasını etkilemez; böylece 
 metin adımı bildirilen hedeften başka bir elemente yönlendiremez. Mevcut repository
 sözleşmesinde `LocatorKey` ek bir eşleştirme ipucu olmaya devam eder.
 
-Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Hover`, `UploadFile`,
-`PressKey`, `Wait` ve `Assert` değerlerini kapsar. `UploadFile` için `Value` dosya yolu,
+Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Check`, `Uncheck`, `Hover`,
+`UploadFile`, `PressKey`, `Wait` ve `Assert` değerlerini kapsar. `UploadFile` için `Value` dosya yolu,
 `PressKey` için `Enter`/`ArrowDown` gibi tuş adı, `Wait` içinse isteğe bağlı pozitif
 milisaniye timeout değeridir (varsayılan `5000`). `Wait` sabit uyku üretmez; hedef
 elementin görünür/var olmasını poll eder. Web upload eşleştirmesi yakalanmış
 `<input type="file">` sinyalini zorunlu tutar; desktop üretimi eşleşen kontrolü dosya
-yolu metin alanı olarak kullanır.
+yolu metin alanı olarak kullanır. `Check`/`Uncheck` onay kutuları ve radyo düğmeleri
+içindir - bir radyo düğmesi yalnızca işaretlenebilir, işareti kaldırılamaz; bu yüzden
+`Uncheck` ile eşleşmez. `Select` yalnızca gerçek açılır liste/select/combobox
+elementlerine ayrılmıştır: üreteçler bu eylem için yalnızca select çağrıları üretir
+(`selectOption` / `SelectOptionAsync` / `AsComboBox().Select(...)`), bu da hedef
+çatılarca onay kutularında, radyo düğmelerinde ve liste/sekme kontrollerinde reddedilir.
 
 **Güvenlik Kapıları ve Bilinen Sınır:**
 Eşleştiricilerde iki temel koruma mekanizması devrededir:

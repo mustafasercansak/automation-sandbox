@@ -114,6 +114,36 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void DeterministicIntentPlanner_ChecksCheckboxLikeDataKeys()
+        {
+            var result = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Register a new account",
+                TestData = new Dictionary<string, string> { ["newsletter"] = "yes" },
+            });
+
+            var step = result.Scenario.Steps.Single(s => s.TargetDescription == "newsletter");
+            Assert.Equal(IntentActionType.Check, step.ActionType);
+            Assert.Equal("newsletter is checked", step.ExpectedOutcome);
+            Assert.StartsWith("Field.", step.LocatorKey);
+        }
+
+        [Fact]
+        public void DeterministicIntentPlanner_UnchecksCheckboxLikeDataKeys_WhenValueIsFalsy()
+        {
+            var result = new DeterministicIntentPlanner().Plan(new IntentPlanningRequest
+            {
+                Goal = "Register a new account",
+                TestData = new Dictionary<string, string> { ["terms"] = "false" },
+            });
+
+            var step = result.Scenario.Steps.Single(s => s.TargetDescription == "terms");
+            Assert.Equal(IntentActionType.Uncheck, step.ActionType);
+            Assert.Equal("terms is unchecked", step.ExpectedOutcome);
+            Assert.StartsWith("Field.", step.LocatorKey);
+        }
+
+        [Fact]
         public void DeterministicIntentPlanner_RejectsEmptyGoal()
         {
             var planner = new DeterministicIntentPlanner();
@@ -129,6 +159,8 @@ namespace ScenarioRunner
             Assert.Equal(3, (int)IntentActionType.Click);
             Assert.Equal(4, (int)IntentActionType.Select);
             Assert.Equal(5, (int)IntentActionType.Assert);
+            Assert.Equal(10, (int)IntentActionType.Check);
+            Assert.Equal(11, (int)IntentActionType.Uncheck);
         }
 
         [Fact]
