@@ -84,7 +84,7 @@ namespace IntentAutomation
                 {
                     Order = order,
                     ActionType = IntentActionType.Assert,
-                    TargetDescription = "result record or confirmation area",
+                    TargetDescription = "result records or confirmation area",
                     TestIntent = "Verify the expected result for: " + result.Scenario.Goal,
                     ExpectedOutcome = string.IsNullOrEmpty(expectedVal)
                         ? "The created or updated result is visible"

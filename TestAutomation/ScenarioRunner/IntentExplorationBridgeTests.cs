@@ -170,6 +170,44 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_UsesTargetDescription_WhenNarrativeFieldsDisagree()
+        {
+            var scenario = new IntentScenario
+            {
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Click,
+                        TargetDescription = "save",
+                        TestIntent = "Click cancel and discard the draft",
+                        ExpectedOutcome = "The draft is cancelled",
+                    }
+                }
+            };
+            var dom = new WebElementInfo { TagName = "body" };
+            dom.Children.Add(new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Cancel",
+                TestId = "cancel-button",
+            });
+            dom.Children.Add(new WebElementInfo
+            {
+                TagName = "button",
+                Role = "button",
+                AccessibleName = "Save",
+                TestId = "save-button",
+            });
+
+            var result = new IntentExplorationBridge().Match(scenario, dom);
+
+            Assert.Equal("save-button", result.StepResults[0].Candidates[0].Element.TestId);
+        }
+
+        [Fact]
         public void Match_CustomerDemo_SemanticAndMarginScores_ArePinned()
         {
             // Regression guard: pins the calibrated semantic scores and margin behaviors

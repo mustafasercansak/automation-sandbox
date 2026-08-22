@@ -10,6 +10,14 @@ namespace IntentAutomation
 
     public static class IntentTextScoring
     {
+        internal static string BuildMatchingText(IntentStep step)
+        {
+            // TestIntent explains why the step exists and ExpectedOutcome describes the state
+            // after it runs. Neither identifies the element to act on, so letting them influence
+            // candidate ranking makes contradictory narrative metadata override the target.
+            return Join(step.TargetDescription, step.LocatorKey);
+        }
+
         public static double TokenOverlap(string targetText, string elementText)
         {
             var targetTokens = Tokens(targetText).ToList();

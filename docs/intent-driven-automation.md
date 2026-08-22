@@ -82,6 +82,14 @@ Each step can carry:
 - `AssertionKind`: `Visible`, `NotVisible`, `TextEquals`, `TextContains`, `ValueEquals`, `UrlEquals`, `UrlContains`
 - `ExpectedValue`: Target value for value-checked assertions (e.g. `"$125"`)
 
+`TargetDescription` is the authoritative free-text field for element matching.
+`TestIntent` explains the business reason for the step and is preserved in generated
+tests, reports, locator snapshots, and LLM healing context; `ExpectedOutcome` describes
+the state after the action for reporting and assertion generation. Those two narrative
+fields do not influence candidate ranking, so conflicting prose cannot redirect a step
+away from its declared target. `LocatorKey` remains an additional matching hint for the
+current repository contract.
+
 Assert generation behavior across all generators is configured via `AssertGenerationMode`:
 - `Strict` (default): Emits real assertions for mapped `AssertionKind`s; emits inconclusive review checks (`Assert.Inconclusive` / `test.skip` / `Assert.True(false, ...)`) for unmapped kinds.
 - `Lenient`: Emits real assertions for mapped kinds; emits presence checks with a `// TODO` review comment for unmapped kinds.
@@ -151,7 +159,7 @@ For each intent step, the exploration bridges (`IntentExplorationBridge` for Web
 - role and tag semantics (Action Compatibility)
 - accessible name / label text / AutomationId (Semantic Overlap)
 - placeholder and test id
-- `TestIntent` and `LocatorKey`
+- authoritative `TargetDescription` and the current `LocatorKey` hint
 - locator confidence suggestions
 
 #### Safety Gates and Manual Review
@@ -346,6 +354,14 @@ Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent ad�
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
 MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
 olarak tutar.
+
+Intent adımlarında element eşleştirmesi için yetkili serbest metin alanı
+`TargetDescription`'dır. `TestIntent` adımın iş gerekçesini anlatır ve üretilen
+testlerde, raporlarda, locator snapshot'larında ve LLM healing bağlamında korunur;
+`ExpectedOutcome` ise eylem sonrasındaki beklenen durumu raporlama ve assertion üretimi
+için tanımlar. Bu iki anlatı alanı aday sıralamasını etkilemez; böylece çelişkili bir
+metin adımı bildirilen hedeften başka bir elemente yönlendiremez. Mevcut repository
+sözleşmesinde `LocatorKey` ek bir eşleştirme ipucu olmaya devam eder.
 
 **Güvenlik Kapıları ve Bilinen Sınır:**
 Eşleştiricilerde iki temel koruma mekanizması devrededir:

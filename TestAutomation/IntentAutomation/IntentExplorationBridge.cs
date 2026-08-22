@@ -112,7 +112,7 @@ namespace IntentAutomation
                 return new IntentElementCandidate { Step = step, Element = element };
             }
 
-            var targetText = IntentTextScoring.Join(step.TargetDescription, step.TestIntent, step.ExpectedOutcome, step.LocatorKey);
+            var targetText = IntentTextScoring.BuildMatchingText(step);
             var elementText = IntentTextScoring.Join(
                 element.AccessibleName,
                 element.Text,

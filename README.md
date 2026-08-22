@@ -455,6 +455,7 @@ var pipeline = new IntentAutomationPipeline(planner: new LlmIntentPlanner());
 
 #### Exploration Safety Gates & Manual Review
 Both Web (`IntentExplorationBridge`) and Desktop (`IntentDesktopExplorationBridge`) exploration bridges protect against unrelated and ambiguous matches:
+- **Explicit text-field precedence:** `TargetDescription` is the authoritative free-text matching input. `TestIntent` remains business-context metadata and `ExpectedOutcome` remains reporting/assertion metadata; neither can redirect candidate ranking when the prose conflicts. The current `LocatorKey` contract still contributes a matching hint.
 - **Semantic Overlap Gate (`MinimumSemanticScore = 0.01`):** Action compatibility alone (e.g. any button) cannot match an intent step without textual/semantic overlap — unrelated elements (e.g. "Delete customer" matching "Export Report") are flagged with `RequiresReview = true`.
 - **Runner-Up Margin Check (`MinimumCandidateMargin = 0.05`):** Competing candidates within margin $< 0.05$ are marked ambiguous for human review rather than guessing.
 - **Unreviewed Persistence Guard:** Steps requiring review are excluded from automatic locator repository persistence by default, while retaining full candidate telemetry and runner-up diagnostics in the intent flow report.
