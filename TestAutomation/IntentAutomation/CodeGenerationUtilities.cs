@@ -164,6 +164,21 @@ namespace IntentAutomation
             return Regex.Escape(value ?? "");
         }
 
+        public static string ToNamespace(string? value, string fallback = "GeneratedTests")
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return fallback;
+            }
+
+            var segments = value!.Split('.')
+                .Select(segment => ToIdentifier(segment, ""))
+                .Where(segment => segment.Length > 0)
+                .ToList();
+
+            return segments.Count > 0 ? string.Join(".", segments) : fallback;
+        }
+
         public static string ToIdentifier(string? value, string fallback)
         {
             var parts = (value ?? "")
@@ -177,7 +192,7 @@ namespace IntentAutomation
                 identifier = fallback;
             }
 
-            if (!char.IsLetter(identifier[0]) && identifier[0] != '_')
+            if (identifier.Length > 0 && !char.IsLetter(identifier[0]) && identifier[0] != '_')
             {
                 identifier = "_" + identifier;
             }
@@ -197,3 +212,4 @@ namespace IntentAutomation
         }
     }
 }
+

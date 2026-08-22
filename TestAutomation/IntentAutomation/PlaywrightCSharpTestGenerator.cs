@@ -33,7 +33,7 @@ namespace IntentAutomation
             var methodName = string.IsNullOrWhiteSpace(_options.MethodName)
                 ? CodeGenerationUtilities.ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
                 : CodeGenerationUtilities.ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
-            var namespaceName = string.IsNullOrWhiteSpace(_options.Namespace) ? "GeneratedTests" : _options.Namespace.Trim();
+            var namespaceName = CodeGenerationUtilities.ToNamespace(_options.Namespace, "GeneratedTests");
             var recordingsByKey = recordingResults
                 .Where(result => result.Recorded && !string.IsNullOrWhiteSpace(result.LocatorKey))
                 .GroupBy(result => result.LocatorKey)

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using IntentAutomation;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using UiModel;
 using Xunit;
 
@@ -77,6 +79,7 @@ namespace ScenarioRunner
             Assert.Contains("// locator: Field.Email", code);
             Assert.Contains("ApplicationConnector.Launch(@\"", code);
             Assert.Contains("_connector.Dispose();", code);
+            AssertValidCSharpSyntax(code);
         }
 
         [Fact]
@@ -495,6 +498,58 @@ namespace ScenarioRunner
             Assert.Contains("// Fill multi-line  notes with tab", code);
             Assert.Contains(".Text = \"Line 1\\r\\nLine 2\\twith \\\"quotes\\\"\";", code);
             Assert.Contains("Assert.Equal(\"Line 1\\r\\nLine 2\", window.FindFirstDescendant(cf => cf.ByAutomationId(\"txtNotes\"))!.AsTextBox().Text);", code);
+        }
+
+        [Theory]
+        [InlineData("Desktop Suite.WinForms-App.v2", "DesktopSuite.WinFormsApp.V2")]
+        [InlineData("my-app.tests", "MyApp.Tests")]
+        [InlineData("123.456", "_123._456")]
+        [InlineData("  ", "GeneratedTests")]
+        [InlineData(null, "GeneratedTests")]
+        public void Generate_SanitizesNamespace_AndProducesValidCSharpSyntax(string? rawNamespace, string expectedNamespace)
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "Interaction flow",
+                Goal = "Execute desktop interaction flow",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Action.Hover", "btnHover", "Button"),
+                Recorded("Field.ResumeFile", "btnUpload", "Button"),
+                Recorded("Action.SearchKey", "txtSearch", "Edit"),
+                Recorded("Wait.Confirmation", "lblStatus", "Text"),
+            };
+            var options = new FlaUiCSharpTestGenerationOptions
+            {
+                Namespace = rawNamespace!,
+                ClassName = "Desktop Form Tests",
+                MethodName = "Execute Interaction Flow",
+                ApplicationExecutablePath = @"C:\Apps\DemoApp.exe",
+            };
+
+            var code = new FlaUiCSharpTestGenerator(options).Generate(scenario, recordings);
+
+            Assert.Contains($"namespace {expectedNamespace}", code);
+            Assert.Contains("public class DesktopFormTests : IDisposable", code);
+            Assert.Contains("public void ExecuteInteractionFlow()", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        private static void AssertValidCSharpSyntax(string code)
+        {
+            var syntaxTree = CSharpSyntaxTree.ParseText(code);
+            var errors = syntaxTree.GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .ToList();
+            Assert.Empty(errors);
         }
 
         private static IntentDesktopLocatorRecordingResult Recorded(string locatorKey, string automationId)
