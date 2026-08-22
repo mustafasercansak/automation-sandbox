@@ -80,5 +80,53 @@ namespace ScenarioRunner
             Assert.Equal("txtEmail_renamed", result.Matched!.AutomationId);
             Assert.True(result.IsConfident, $"Expected a confident match at scale, but score was: {result.Score}");
         }
+
+        [Theory]
+        [InlineData(100, 100)]
+        [InlineData(1000, 100)]
+        [InlineData(10000, 100)]
+        public void LocatorRepository_Find_Benchmark_AtScale(int recordCount, int lookupCount)
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "RepoBenchmark_" + Guid.NewGuid().ToString("N"));
+            var filePath = Path.Combine(tempDir, "benchmark.locators.json");
+            try
+            {
+                var repo = new LocatorRepository(filePath);
+                var doc = new LocatorRepositoryDocument { ApplicationName = "BenchmarkApp" };
+                for (var i = 0; i < recordCount; i++)
+                {
+                    doc.Locators.Add(new LocatorRecord
+                    {
+                        LocatorKey = $"Form.Field_{i}",
+                        Snapshot = new UiElementInfo
+                        {
+                            ControlType = "Edit",
+                            AutomationId = $"txt_{i}",
+                            Name = $"Field {i}",
+                            BoundingRectangle = new BoundingRectangle(10, i * 20, 100, 20),
+                        },
+                    });
+                }
+                repo.Save(doc);
+
+                // Benchmark lookups
+                var targetKey = $"Form.Field_{recordCount / 2}";
+                var sw = Stopwatch.StartNew();
+                for (var i = 0; i < lookupCount; i++)
+                {
+                    var found = repo.Find(targetKey);
+                    Assert.NotNull(found);
+                }
+                sw.Stop();
+                Console.WriteLine($"[Benchmark] LocatorRepository.Find ({recordCount} records, {lookupCount} lookups): {sw.ElapsedMilliseconds}ms (avg {(double)sw.ElapsedMilliseconds / lookupCount:F3}ms/lookup)");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
     }
 }
