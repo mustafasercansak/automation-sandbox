@@ -102,7 +102,9 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
             var json = FindFirstResponseJsonObject(rawText);
             if (json is null)
             {
-                throw new FormatException($"No JSON object found in model response: {rawText}");
+                // Provider diagnostics append the bounded HTTP response body. Repeating the
+                // unbounded model text here would bypass that limit and duplicate the payload.
+                throw new FormatException("No JSON object found in model response.");
             }
 
             using var doc = JsonDocument.Parse(json);
