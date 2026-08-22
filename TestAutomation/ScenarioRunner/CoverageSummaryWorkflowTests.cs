@@ -96,6 +96,56 @@ namespace ScenarioRunner
             }
         }
 
+        [Fact]
+        public void CoverageSummaryScript_DeduplicatesIdenticalAttachmentCopiesAndRendersSingleTable()
+        {
+            var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDirectory);
+            try
+            {
+                var guidDirectory = Path.Combine(testDirectory, "bcbb30a1-a327-48ca-9615-48fa9ae66828");
+                Directory.CreateDirectory(guidDirectory);
+                var xmlContent = "<coverage line-rate=\"0.876\" branch-rate=\"0.798\" lines-covered=\"4708\" lines-valid=\"5376\" branches-covered=\"1783\" branches-valid=\"2233\">" +
+                    "<packages>" +
+                    "<package name=\"Discovery\" line-rate=\"0.682\" branch-rate=\"0.689\" />" +
+                    "<package name=\"UiModel\" line-rate=\"0.915\" branch-rate=\"0.786\" />" +
+                    "</packages></coverage>";
+
+                File.WriteAllText(Path.Combine(guidDirectory, "coverage.cobertura.xml"), xmlContent);
+
+                // VSTest attachment directory copy simulation
+                var runnerDirectory = Path.Combine(testDirectory, "runnervm6lq3x", "In", "deployment-dir");
+                Directory.CreateDirectory(runnerDirectory);
+                File.WriteAllText(Path.Combine(runnerDirectory, "coverage.cobertura.xml"), xmlContent);
+
+                var summaryPath = Path.Combine(testDirectory, "summary.md");
+                var scriptPath = Path.Combine(RepositoryRoot(), ".github", "scripts", "write-coverage-summary.ps1");
+
+                var result = RunPowerShell(
+                    scriptPath,
+                    testDirectory,
+                    "Windows net48",
+                    summaryPath,
+                    "Includes the net48-only Discovery assembly.");
+
+                Assert.True(
+                    result.ExitCode == 0,
+                    "Coverage summary script failed. stdout: " + result.StandardOutput + " stderr: " + result.StandardError);
+                var summary = File.ReadAllText(summaryPath);
+                Assert.Contains("## Code coverage — Windows net48", summary, StringComparison.Ordinal);
+                Assert.Contains("**Overall** | 87.6% (4708/5376) | 79.8% (1783/2233)", summary, StringComparison.Ordinal);
+                Assert.Contains("`Discovery` | 68.2% | 68.9%", summary, StringComparison.Ordinal);
+                Assert.Contains("`UiModel` | 91.5% | 78.6%", summary, StringComparison.Ordinal);
+                Assert.DoesNotContain("| Report |", summary, StringComparison.Ordinal);
+                Assert.DoesNotContain("bcbb30a1", summary, StringComparison.Ordinal);
+                Assert.DoesNotContain("runnervm6lq3x", summary, StringComparison.Ordinal);
+            }
+            finally
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+
         private static ProcessResult RunPowerShell(
             string scriptPath,
             string coveragePath,
