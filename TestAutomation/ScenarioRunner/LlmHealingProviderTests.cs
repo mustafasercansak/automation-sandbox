@@ -828,6 +828,32 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task NonCloudflareParseFailure_RecordsBoundedRawResponseDiagnosticWithoutCredentials()
+        {
+            const string apiKey = "test-openai-secret";
+            var malformedText = "not-json-response-" + new string('x', 5000) + "-response-tail";
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"choices\":[{\"message\":{\"content\":\"" + malformedText + "\"}}]}")
+            });
+            var provider = new OpenAiHealingProvider(
+                httpClient: new HttpClient(handler),
+                apiKey: apiKey,
+                name: "OpenRouter");
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.Contains("No JSON object found", result.ErrorMessage);
+            Assert.Contains("Raw response:", result.ErrorMessage);
+            Assert.Contains("not-json-response", result.ErrorMessage);
+            Assert.Contains("...<truncated>", result.ErrorMessage);
+            Assert.DoesNotContain("response-tail", result.ErrorMessage);
+            Assert.DoesNotContain(apiKey, result.ErrorMessage);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_CallerCancellation_TakesPrecedence()
         {
             var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));

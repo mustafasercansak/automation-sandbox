@@ -100,6 +100,11 @@ All LLM providers derive from `HttpLlmHealingProvider` and support configurable 
 - **Fail-Fast on Permanent Errors**: HTTP 400, 401, 403, and 404 fail immediately without wasting retry attempts.
 - **`Retry-After` Header & Quota Guard**: If a response includes a `Retry-After` header $\le 10\text{s}$, the transport pauses for the requested delay. If `Retry-After` $> 10\text{s}$ (e.g. daily quota exhaustion), the provider fails fast immediately.
 
+If an HTTP provider returns a successful response that cannot be parsed, its provider error
+includes the raw response body, bounded to 4096 characters. This applies uniformly to Claude,
+Gemini, Ollama, and every OpenAI-compatible endpoint. Only the response body is captured;
+request headers and configured API credentials are not appended to the diagnostic.
+
 ### 🤝 Consensus Acceptance
 
 An LLM pick is accepted only when **at least two providers independently name the same candidate**. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
@@ -229,6 +234,11 @@ Tüm sağlayıcılar `HttpLlmHealingProvider` tabanından türer; deneme başın
 - **Yeniden denenen geçici hatalar**: HTTP 429 (kota aşımı), 500, 502, 503, 504 ve `HttpRequestException` (geçici ağ kopmaları) üstel geri çekilme ve jitter ile otomatik olarak yeniden denenir.
 - **Kalıcı hatalarda hızlı başarısızlık**: HTTP 400, 401, 403 ve 404 yeniden deneme hakkı harcamadan anında başarısız döner.
 - **`Retry-After` Başlığı ve Kota Koruması**: Yanıtta `Retry-After` başlığı $\le 10\text{s}$ ise belirtilen süre kadar beklenir. $> 10\text{s}$ ise (ör. günlük kota tükenmesi) boşuna beklenmez, doğrudan başarısız dönülür.
+
+Bir HTTP sağlayıcısı ayrıştırılamayan başarılı bir yanıt döndürürse sağlayıcı hatası, 4096
+karakterle sınırlandırılmış ham yanıt gövdesini içerir. Bu davranış Claude, Gemini, Ollama ve
+tüm OpenAI uyumlu uç noktalara aynı şekilde uygulanır. Yalnızca yanıt gövdesi yakalanır;
+istek başlıkları ve yapılandırılmış API kimlik bilgileri tanı mesajına eklenmez.
 
 ### 🤝 Mutabakat (Consensus) Kabul Kuralı
 

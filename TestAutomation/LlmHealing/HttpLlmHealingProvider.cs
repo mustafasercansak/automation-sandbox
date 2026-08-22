@@ -158,9 +158,7 @@ namespace LlmHealing
             }
             catch (Exception ex)
             {
-                var diagnostic = Name == "Cloudflare"
-                    ? $" Raw response: {TruncateForDiagnostics(httpResponse.Body)}"
-                    : "";
+                var diagnostic = $" Raw response: {TruncateForDiagnostics(httpResponse.Body)}";
                 return new LlmHealingResult
                 {
                     ProviderName = Name,
