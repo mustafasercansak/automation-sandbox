@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Playwright;
 using PlaywrightLiveExploration;
 using UiModel;
 using WebDiscovery;
@@ -50,6 +51,31 @@ namespace ScenarioRunner
             await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
 
             await Assert.ThrowsAsync<ArgumentException>(() => explorer.CaptureAsync(""));
+        }
+
+        [Fact]
+        public async Task PlaywrightLocatorEmitter_IdStrategyWithCssSyntaxCharacters_MatchesLiveElement()
+        {
+            const string id = "invoice#[draft] item";
+            var suggestion = Assert.Single(PlaywrightLocatorEmitter.Suggest(new WebElementInfo
+            {
+                TagName = "button",
+                Id = id,
+            }));
+            const string expressionPrefix = "page.Locator(\"";
+            const string expressionSuffix = "\")";
+            Assert.StartsWith(expressionPrefix, suggestion.Expression);
+            Assert.EndsWith(expressionSuffix, suggestion.Expression);
+            var selector = suggestion.Expression
+                .Substring(expressionPrefix.Length, suggestion.Expression.Length - expressionPrefix.Length - expressionSuffix.Length)
+                .Replace("\\\\", "\\");
+
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            var page = await browser.NewPageAsync();
+            await page.SetContentAsync($"<button id=\"{id}\">Pay</button>");
+
+            Assert.Equal(1, await page.Locator(selector).CountAsync());
         }
 
         [Fact]

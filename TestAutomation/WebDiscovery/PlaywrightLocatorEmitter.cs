@@ -116,7 +116,47 @@ namespace WebDiscovery
 
         private static string EscapeCssId(string value)
         {
-            return EscapeCSharpString(value.Replace(":", "\\:").Replace(".", "\\."));
+            // The DOM capture script delegates this operation to CSS.escape(). Mirroring the
+            // CSSOM identifier serialization rules here keeps the independently emitted Id
+            // strategy valid for every id the browser-derived Css strategy can represent.
+            var escaped = new StringBuilder(value.Length);
+            for (var index = 0; index < value.Length; index++)
+            {
+                var character = value[index];
+                if (character == '\0')
+                {
+                    escaped.Append('\uFFFD');
+                }
+                else if ((character >= '\u0001' && character <= '\u001F')
+                    || character == '\u007F'
+                    || (index == 0 && character >= '0' && character <= '9')
+                    || (index == 1 && character >= '0' && character <= '9' && value[0] == '-'))
+                {
+                    escaped.Append('\\');
+                    escaped.Append(((int)character).ToString("x", System.Globalization.CultureInfo.InvariantCulture));
+                    escaped.Append(' ');
+                }
+                else if (index == 0 && character == '-' && value.Length == 1)
+                {
+                    escaped.Append("\\-");
+                }
+                else if (character >= '\u0080'
+                    || character == '-'
+                    || character == '_'
+                    || (character >= '0' && character <= '9')
+                    || (character >= 'A' && character <= 'Z')
+                    || (character >= 'a' && character <= 'z'))
+                {
+                    escaped.Append(character);
+                }
+                else
+                {
+                    escaped.Append('\\');
+                    escaped.Append(character);
+                }
+            }
+
+            return EscapeCSharpString(escaped.ToString());
         }
 
         private static string EscapeCssString(string value)
