@@ -9,6 +9,40 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 
 **Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
+## A Broken Locator, in 30 Seconds
+
+Yesterday the checkout test stored this locator; today a UI refactor changed both its ID and label:
+
+| Stored snapshot | Live candidate after refactor |
+| :--- | :--- |
+| `#btn-submit` · “Submit order” | `#checkout-confirm` · “Confirm order” |
+
+The original lookup fails. `SelfHealingEngine` captures the live tree, scores candidates from
+control type, parent, sibling position, name, and geometry, then retries the same action only
+when the confidence, evidence, and ambiguity gates pass:
+
+```diff
+- click #btn-submit        // locator not found
++ click #checkout-confirm // selected candidate; retry succeeded
+```
+
+Only that successful retry updates the locator repository. The same decision is written to an
+auditable healing report; an illustrative excerpt looks like this:
+
+```json
+{
+  "LocatorKey": "Checkout.Submit",
+  "Outcome": "accepted",
+  "Source": "heuristic",
+  "Score": 0.86,
+  "PreviousSnapshot": { "AutomationId": "btn-submit", "Name": "Submit order" },
+  "AcceptedSnapshot": { "AutomationId": "checkout-confirm", "Name": "Confirm order" }
+}
+```
+
+If the evidence is weak, candidates are tied, or the retried action fails, the engine records
+that outcome for review and does not persist the proposed locator.
+
 ---
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
