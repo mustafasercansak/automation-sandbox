@@ -2,6 +2,9 @@
 
 Welcome to the beginner-friendly setup guide for **Automation Sandbox**! / **Automation Sandbox** için adım adım başlangıç rehberine hoş geldiniz!
 
+> [!TIP]
+> Installing from nuget.org for the first time? Start with the focused [Published Package Quickstart](consumer-quickstart.md), which includes a maintained runnable sample and clean-package verification. / İlk kez nuget.org'dan mı kuruyorsunuz? Bakımı yapılan çalıştırılabilir örnek ve temiz paket doğrulaması içeren [Yayınlanmış Paket Hızlı Başlangıcı](consumer-quickstart.md) ile başlayın.
+
 ---
 
 ## 🇬🇧 English: Step-by-Step Guide

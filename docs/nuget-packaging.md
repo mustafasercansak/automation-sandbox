@@ -76,6 +76,15 @@ dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
 The other six packages use the same version. Add only the packages whose APIs the
 consumer uses; NuGet restores their package dependencies transitively.
 
+For a complete first run, use the [Published Package Quickstart](consumer-quickstart.md).
+The checked-in consumer project has no repository project references, and its verification
+script restores exclusively from nuget.org into a clean temporary package directory. Run
+it from the repository root:
+
+```powershell
+pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
+```
+
 ## Consume From A Local Folder
 
 ```powershell
@@ -110,4 +119,13 @@ numarasını taşır:
 
 ```powershell
 dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+```
+
+İlk çalıştırmanın tamamı için [Yayınlanmış Paket Hızlı Başlangıcını](consumer-quickstart.md)
+kullanın. Repository içi project reference içermeyen consumer örneğini yalnızca nuget.org
+kaynağından temiz bir geçici paket dizinine restore edip çalıştırmak için aşağıdaki komutu
+repository kökünden çalıştırın:
+
+```powershell
+pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
 ```
