@@ -304,14 +304,14 @@ namespace ScenarioRunner
             Assert.Contains("Found **2 candidate(s)** with verified organic drift", md);
         }
 
-        [Fact]
+        [SkippableFact]
         public void RunLiveSurveyComparison()
         {
             var optIn = Environment.GetEnvironmentVariable("COMPARE_SURVEY_REPORTS");
             if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("[SurveyComparison] COMPARE_SURVEY_REPORTS=1 is not set - skipping live comparison.");
-                return;
+                Skip.If(true, "COMPARE_SURVEY_REPORTS=1 is not set.");
             }
 
             var path2022 = Environment.GetEnvironmentVariable("SURVEY_REPORT_2022")

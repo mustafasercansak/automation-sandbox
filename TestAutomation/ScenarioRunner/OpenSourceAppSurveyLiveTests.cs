@@ -8,14 +8,14 @@ namespace ScenarioRunner
     // Opt-in via RUN_OPEN_SOURCE_APP_SURVEY=1 environment variable.
     public class OpenSourceAppSurveyLiveTests
     {
-        [Fact]
+        [SkippableFact]
         public void RunLiveOpenSourceAppSurvey()
         {
             var optIn = Environment.GetEnvironmentVariable("RUN_OPEN_SOURCE_APP_SURVEY");
             if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("[OpenSourceSurvey] RUN_OPEN_SOURCE_APP_SURVEY=1 is not set - skipping live open-source app survey.");
-                return;
+                Skip.If(true, "RUN_OPEN_SOURCE_APP_SURVEY=1 is not set.");
             }
 
             var outputDir = Environment.GetEnvironmentVariable("SURVEY_OUTPUT_DIR")

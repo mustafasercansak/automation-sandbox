@@ -497,21 +497,21 @@ namespace ScenarioRunner
             Assert.Contains("**Consensus on Undecidable:** 0/1", markdown);
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task RunConsensusEvaluation_LiveNightlyRun()
         {
             var optIn = Environment.GetEnvironmentVariable("CONSENSUS_EVALUATION");
             if (optIn != "1" && !string.Equals(optIn, "true", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("[ConsensusEvaluation] CONSENSUS_EVALUATION=1 is not set - skipping live nightly evaluation.");
-                return;
+                Skip.If(true, "CONSENSUS_EVALUATION=1 is not set.");
             }
 
             var providers = LlmProviderFactory.CreateConfiguredProviders();
             if (providers.Count == 0)
             {
                 Console.WriteLine("[ConsensusEvaluation] No available LLM providers configured - evaluation skipped.");
-                return;
+                Skip.If(true, "No available LLM providers configured.");
             }
 
             Console.WriteLine($"[ConsensusEvaluation] Running nightly consensus evaluation with {providers.Count} providers: {string.Join(", ", providers.Select(p => p.Name))}");
