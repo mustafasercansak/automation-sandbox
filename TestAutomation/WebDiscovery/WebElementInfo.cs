@@ -10,6 +10,7 @@ namespace WebDiscovery
         public string Text { get; set; } = "";
         public string Id { get; set; } = "";
         public string NameAttribute { get; set; } = "";
+        public string InputType { get; set; } = "";
         public string TestId { get; set; } = "";
         public string ClassName { get; set; } = "";
         public string CssSelector { get; set; } = "";

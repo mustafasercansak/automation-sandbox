@@ -61,6 +61,26 @@ namespace IntentAutomation
                 { "Window", "Window" }
             };
 
+        private static readonly Dictionary<string, string> FlaUiVirtualKeys =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Backspace", "BACK" },
+                { "Tab", "TAB" },
+                { "Enter", "RETURN" },
+                { "Escape", "ESCAPE" },
+                { "Space", "SPACE" },
+                { "PageUp", "PRIOR" },
+                { "PageDown", "NEXT" },
+                { "End", "END" },
+                { "Home", "HOME" },
+                { "ArrowLeft", "LEFT" },
+                { "ArrowUp", "UP" },
+                { "ArrowRight", "RIGHT" },
+                { "ArrowDown", "DOWN" },
+                { "Insert", "INSERT" },
+                { "Delete", "DELETE" },
+            };
+
         public static IReadOnlyCollection<string> KnownFlaUiControlTypes => CanonicalFlaUiControlTypes.Keys;
 
         public static bool TryGetCanonicalFlaUiControlType(string? controlType, out string canonicalControlType)
@@ -74,6 +94,36 @@ namespace IntentAutomation
 
             canonicalControlType = "";
             return false;
+        }
+
+        internal static bool TryGetFlaUiVirtualKey(string? key, out string virtualKey)
+        {
+            var trimmed = (key ?? "").Trim();
+            if (FlaUiVirtualKeys.TryGetValue(trimmed, out var knownKey))
+            {
+                virtualKey = knownKey;
+                return true;
+            }
+
+            if (trimmed.Length == 1 && char.IsLetterOrDigit(trimmed[0]))
+            {
+                virtualKey = "KEY_" + char.ToUpperInvariant(trimmed[0]);
+                return true;
+            }
+
+            virtualKey = "";
+            return false;
+        }
+
+        internal static int WaitTimeoutMilliseconds(string? value)
+        {
+            return int.TryParse(
+                       value,
+                       System.Globalization.NumberStyles.Integer,
+                       System.Globalization.CultureInfo.InvariantCulture,
+                       out var timeout) && timeout > 0
+                ? timeout
+                : 5000;
         }
 
         public static string EscapeString(string? value)

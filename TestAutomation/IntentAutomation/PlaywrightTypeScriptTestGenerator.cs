@@ -90,6 +90,18 @@ namespace IntentAutomation
                 case IntentActionType.Click:
                     code.AppendLine($"  await {locatorExpression}.click();");
                     break;
+                case IntentActionType.Hover:
+                    code.AppendLine($"  await {locatorExpression}.hover();");
+                    break;
+                case IntentActionType.UploadFile:
+                    code.AppendLine($"  await {locatorExpression}.setInputFiles('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
+                    break;
+                case IntentActionType.PressKey:
+                    code.AppendLine($"  await {locatorExpression}.press('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
+                    break;
+                case IntentActionType.Wait:
+                    code.AppendLine($"  await {locatorExpression}.waitFor({{ state: 'visible', timeout: {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                    break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitPlaywrightTypeScript(step, locatorExpression, _options.AssertGenerationMode, code);
                     break;

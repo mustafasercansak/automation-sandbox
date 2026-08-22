@@ -27,6 +27,7 @@ namespace ScenarioRunner
                 <html>
                 <body>
                     <input data-testid="email-input" name="email" placeholder="Email" />
+                    <input data-testid="resume-file" name="resume" type="file" />
                     <button data-testid="save-button">Save</button>
                 </body>
                 </html>
@@ -42,6 +43,7 @@ namespace ScenarioRunner
 
             var flattened = Flatten(dom).ToList();
             Assert.Contains(flattened, element => element.TestId == "email-input" && element.NameAttribute == "email");
+            Assert.Contains(flattened, element => element.TestId == "resume-file" && element.InputType == "file");
             Assert.Contains(flattened, element => element.TestId == "save-button" && element.Text == "Save");
         }
 

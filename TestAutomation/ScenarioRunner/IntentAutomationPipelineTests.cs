@@ -105,6 +105,37 @@ namespace ScenarioRunner
             Assert.NotEmpty(result.Report.Steps);
         }
 
+        [Fact]
+        public void Run_UploadFileFlowsFromPlanThroughMatchToGeneratedCode()
+        {
+            var request = new IntentPlanningRequest
+            {
+                Goal = "Upload a resume file",
+                TestData = new Dictionary<string, string>
+                {
+                    ["resume file"] = "/tmp/resume.pdf",
+                }
+            };
+            var dom = new WebElementInfo { TagName = "body" };
+            dom.Children.Add(new WebElementInfo
+            {
+                TagName = "input",
+                InputType = "file",
+                AccessibleName = "Resume File",
+                TestId = "resume-file",
+            });
+
+            var result = new IntentAutomationPipeline().Run(request, dom, new LocatorRepository(_filePath));
+
+            Assert.False(result.Planning.RequiresReview);
+            var step = Assert.Single(result.Planning.Scenario.Steps);
+            Assert.Equal(IntentActionType.UploadFile, step.ActionType);
+            Assert.Equal("resume-file", result.Exploration.StepResults[0].Candidates[0].Element.TestId);
+            Assert.True(result.RecordingResults[0].Recorded);
+            Assert.Contains("await Page.GetByTestId(\"resume-file\").SetInputFilesAsync(\"/tmp/resume.pdf\");", result.PlaywrightCSharpTestCode);
+            Assert.Contains("await page.getByTestId('resume-file').setInputFiles('/tmp/resume.pdf');", result.PlaywrightTypeScriptTestCode);
+        }
+
         public void Dispose()
         {
             if (Directory.Exists(_directory))

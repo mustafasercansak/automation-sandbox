@@ -49,6 +49,9 @@ namespace IntentAutomation
             code.AppendLine("using System;");
             code.AppendLine("using Discovery;");
             code.AppendLine("using FlaUI.Core.AutomationElements;");
+            code.AppendLine("using FlaUI.Core.Input;");
+            code.AppendLine("using FlaUI.Core.Tools;");
+            code.AppendLine("using FlaUI.Core.WindowsAPI;");
             code.AppendLine("using Xunit;");
             code.AppendLine();
             code.AppendLine($"namespace {namespaceName}");
@@ -125,6 +128,26 @@ namespace IntentAutomation
                     break;
                 case IntentActionType.Click:
                     code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");
+                    break;
+                case IntentActionType.Hover:
+                    code.AppendLine($"            Mouse.MoveTo(window.{findExpression}!.GetClickablePoint());");
+                    break;
+                case IntentActionType.UploadFile:
+                    code.AppendLine($"            window.{findExpression}!.AsTextBox().Text = \"{CodeGenerationUtilities.EscapeString(step.Value)}\";");
+                    break;
+                case IntentActionType.PressKey:
+                    code.AppendLine($"            window.{findExpression}!.Focus();");
+                    if (CodeGenerationUtilities.TryGetFlaUiVirtualKey(step.Value, out var virtualKey))
+                    {
+                        code.AppendLine($"            Keyboard.Type(VirtualKeyShort.{virtualKey});");
+                    }
+                    else
+                    {
+                        code.AppendLine($"            Assert.True(false, \"Unsupported desktop key {CodeGenerationUtilities.EscapeString(step.Value)}.\");");
+                    }
+                    break;
+                case IntentActionType.Wait:
+                    code.AppendLine($"            Assert.NotNull(Retry.WhileNull(() => window.{findExpression}, timeout: TimeSpan.FromMilliseconds({CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)})).Result);");
                     break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitFlaUiCSharp(step, findExpression, _options.AssertGenerationMode, code);

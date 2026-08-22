@@ -74,13 +74,21 @@ public sealed class IntentScenario
 
 Each step can carry:
 
-- `ActionType`: `Fill`, `Click`, `Select`, `Assert`
+- `ActionType`: `Navigate`, `Fill`, `Click`, `Select`, `Hover`, `UploadFile`, `PressKey`, `Wait`, `Assert`
 - `TestIntent`
 - `TargetDescription`
 - `Value`
 - `ExpectedOutcome`
 - `AssertionKind`: `Visible`, `NotVisible`, `TextEquals`, `TextContains`, `ValueEquals`, `UrlEquals`, `UrlContains`
 - `ExpectedValue`: Target value for value-checked assertions (e.g. `"$125"`)
+
+For `UploadFile`, `Value` is the file path. For `PressKey`, it is a Playwright-style
+key name such as `Enter` or `ArrowDown`. For `Wait`, it is an optional positive timeout
+in milliseconds (default `5000`); wait generation polls for the target element to become
+visible/present instead of emitting a fixed sleep. Web upload matching requires a captured
+`<input type="file">`; desktop generation treats the matched control as the file-path text
+input. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
+and single letters or digits; unsupported names produce an explicit failing review marker.
 
 `TargetDescription` is the authoritative free-text field for element matching.
 `TestIntent` explains the business reason for the step and is preserved in generated
@@ -362,6 +370,14 @@ testlerde, raporlarda, locator snapshot'larında ve LLM healing bağlamında kor
 için tanımlar. Bu iki anlatı alanı aday sıralamasını etkilemez; böylece çelişkili bir
 metin adımı bildirilen hedeften başka bir elemente yönlendiremez. Mevcut repository
 sözleşmesinde `LocatorKey` ek bir eşleştirme ipucu olmaya devam eder.
+
+Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Hover`, `UploadFile`,
+`PressKey`, `Wait` ve `Assert` değerlerini kapsar. `UploadFile` için `Value` dosya yolu,
+`PressKey` için `Enter`/`ArrowDown` gibi tuş adı, `Wait` içinse isteğe bağlı pozitif
+milisaniye timeout değeridir (varsayılan `5000`). `Wait` sabit uyku üretmez; hedef
+elementin görünür/var olmasını poll eder. Web upload eşleştirmesi yakalanmış
+`<input type="file">` sinyalini zorunlu tutar; desktop üretimi eşleşen kontrolü dosya
+yolu metin alanı olarak kullanır.
 
 **Güvenlik Kapıları ve Bilinen Sınır:**
 Eşleştiricilerde iki temel koruma mekanizması devrededir:
