@@ -26,6 +26,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | Guide | Description |
 | :--- | :--- |
 | 🚀 [**Getting Started**](getting-started.md) | Step-by-step installation, core concepts, and copy-paste code examples. |
+| 📦 [**Published Package Quickstart**](consumer-quickstart.md) | First run from `dotnet add package` to a verified heuristic heal using the maintained NuGet consumer sample. |
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
@@ -58,6 +59,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | Rehber | Açıklama |
 | :--- | :--- |
 | 🚀 [**Başlangıç Rehberi**](getting-started.md) | Adım adım kurulum, temel mantık ve kopyala-yapıştır kod örnekleri. |
+| 📦 [**Yayınlanmış Paket Hızlı Başlangıcı**](consumer-quickstart.md) | `dotnet add package` komutundan bakımı yapılan NuGet consumer örneğiyle doğrulanmış sezgisel healing'e ilk çalıştırma. |
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
