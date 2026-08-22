@@ -63,6 +63,7 @@ namespace SelfHealing
         // candidate, sorted ordinally so a report is stable across runs regardless of which
         // provider answered first. Empty on heuristic results.
         public IReadOnlyList<string> AgreedProviders { get; set; } = Array.Empty<string>();
+        public int ConsensusThreshold { get; set; } = SimilarityWeights.Default.MinimumConsensusVotes;
 
         // Provider attempt telemetry (#11): records how many attempts each evaluated provider made.
         public IReadOnlyDictionary<string, int>? ProviderAttempts { get; set; }
@@ -99,6 +100,6 @@ namespace SelfHealing
                 // Consensus, not confidence (#10/#19): an LLM pick is confident when
                 // independent providers agreed on it. A single provider - however sure it
                 // says it is - is one uncalibrated opinion, which is what this replaces.
-                : AgreedProviders.Count >= 2);
+                : AgreedProviders.Count >= ConsensusThreshold);
     }
 }

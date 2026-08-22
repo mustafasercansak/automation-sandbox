@@ -513,6 +513,71 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HealResult_IsConfident_RespectsConfiguredConsensusThreshold()
+        {
+            var result = new HealResult
+            {
+                Matched = new UiElementInfo { ControlType = "Button", Name = "Submit" },
+                Source = HealSource.Llm,
+                EvidenceCoverage = 1.0,
+                EvidenceThreshold = 0.4,
+                ConsensusThreshold = 3,
+                AgreedProviders = new[] { "AlphaLlm", "BetaLlm" },
+            };
+
+            // 2 votes < 3 threshold -> false
+            Assert.False(result.IsConfident);
+
+            // 3 votes >= 3 threshold -> true
+            result.AgreedProviders = new[] { "AlphaLlm", "BetaLlm", "GammaLlm" };
+            Assert.True(result.IsConfident);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_CarriesConfiguredMinimumConsensusVotes_IntoConsensusThreshold()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+                new FakeProvider("GammaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "GammaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+            };
+
+            var weights = new SimilarityWeights { MinimumConsensusVotes = 3 };
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(3, result.ConsensusThreshold);
+            Assert.Equal(new[] { "AlphaLlm", "BetaLlm", "GammaLlm" }, result.AgreedProviders);
+            Assert.True(result.IsConfident);
+        }
+
+        [Fact]
+        public async Task ResolveAsync_FailsConsensusWhenAgreedProvidersBelowCustomMinimumConsensusVotes()
+        {
+            var (expected, currentTree) = BuildLowConfidenceScenario();
+            var providers = new ILlmHealingProvider[]
+            {
+                new FakeProvider("AlphaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "AlphaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+                new FakeProvider("BetaLlm", isAvailable: true, resolve: () =>
+                    new LlmHealingResult { ProviderName = "BetaLlm", Success = true, MatchedCandidateId = "c0", Confidence = 0.8 }),
+            };
+
+            var weights = new SimilarityWeights { MinimumConsensusVotes = 3 };
+            var result = await SelfHealingResolver.ResolveAsync(expected, currentTree, providers, weights, log: _ => { });
+
+            Assert.Equal(HealSource.Heuristic, result.Source);
+            Assert.Equal(HealResolutionStatus.NoConsensus, result.ResolutionStatus);
+            Assert.Equal(3, result.ConsensusThreshold);
+            Assert.False(result.IsConfident);
+        }
+
+        [Fact]
         public async Task ResolveAsync_CapsShortlistAtMaxCandidatesForLlm_EvenWhenManyMoreCandidatesQualify()
         {
             // 30 candidates that all individually score below MinimumConfidence but above

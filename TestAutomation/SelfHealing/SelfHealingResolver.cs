@@ -24,7 +24,7 @@ namespace SelfHealing
             if (scoredCandidates.Count == 0)
             {
                 log($"[SelfHealing] No structurally similar candidate was found for '{expected.AutomationId}' ({expected.ControlType}).");
-                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence, EvidenceCoverage = 0.0, EvidenceThreshold = w.MinimumEvidenceWeight, Candidates = allScored, ResolutionStatus = HealResolutionStatus.NoCandidates };
+                return new HealResult { Matched = null, Score = 0.0, CandidateCount = 0, ConfidenceThreshold = w.MinimumConfidence, EvidenceCoverage = 0.0, EvidenceThreshold = w.MinimumEvidenceWeight, ConsensusThreshold = w.MinimumConsensusVotes, Candidates = allScored, ResolutionStatus = HealResolutionStatus.NoCandidates };
             }
 
             var best = scoredCandidates[0];
@@ -59,6 +59,7 @@ namespace SelfHealing
                 ConfidenceThreshold = w.MinimumConfidence,
                 EvidenceCoverage = best.EvidenceCoverage,
                 EvidenceThreshold = w.MinimumEvidenceWeight,
+                ConsensusThreshold = w.MinimumConsensusVotes,
                 RunnerUpScore = runnerUpScore,
                 MarginThreshold = w.MinimumCandidateMargin,
                 Candidates = allScored,
@@ -247,6 +248,7 @@ namespace SelfHealing
                 ConfidenceThreshold = w.MinimumLlmConfidence,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
+                ConsensusThreshold = w.MinimumConsensusVotes,
                 // RunnerUpScore preserves the heuristic competition telemetry (c0 vs c1) that triggered
                 // fallback. The margin gate itself is not applied to LLM picks (which use MinimumLlmConfidence).
                 RunnerUpScore = heuristicResult.RunnerUpScore,
