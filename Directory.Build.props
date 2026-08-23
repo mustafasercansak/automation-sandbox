@@ -34,6 +34,19 @@
 
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 
+    <!-- Package security audit (#223): NuGetAudit checks every direct and transitive
+         package on every restore. Locally this only warns, so it never blocks dev work.
+         In CI (ContinuousIntegrationBuild == true, set above), High/Critical advisories
+         (NU1903 direct, NU1904 transitive) are promoted to build errors so a vulnerable
+         dependency cannot merge to main. See AGENTS.md "Security considerations". -->
+    <NuGetAudit>true</NuGetAudit>
+
+    <NuGetAuditMode>all</NuGetAuditMode>
+
+    <NuGetAuditLevel>moderate</NuGetAuditLevel>
+
+    <WarningsAsErrors Condition="'$(ContinuousIntegrationBuild)' == 'true'">$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
+
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' != 'false'">

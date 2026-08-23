@@ -9,6 +9,8 @@ TestResults/
 .vscode/
 *.suo
 /eng/
+/vulnerable-report.json
+/outdated-report.json
 
 # Local hidden files/directories. Keep .gitignore tracked so these rules are shared.
 .*
