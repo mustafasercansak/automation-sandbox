@@ -233,6 +233,13 @@ Before any issue, task, backlog item, or planned proposal can be moved to **"Rea
 
 **Strict Policy:** If `Priority`, `Estimate`, `Size`, or `Iteration` is missing, work **MUST NOT BE STARTED** and the item must not be moved to "Ready".
 
+### Work Intake Rule — ONLY Pick Up Work From "Ready", NEVER Directly From "Backlog"
+> [!CAUTION]
+> **Strict Intake Gate:** Work **MUST ONLY be picked up from the "Ready" column**. Picking up an item directly from the "Backlog" is **STRICTLY PROHIBITED**.
+> 1. An item in `Backlog` must first be refined to satisfy the full **Definition of Ready (DoR)** (`Priority`, `Size`, `Estimate`, `Iteration`, and actionable acceptance criteria).
+> 2. Once DoR is satisfied, the item is moved to the **"Ready"** column on the GitHub Project board.
+> 3. An engineer or AI agent is **ONLY permitted to start work on an issue that is already residing in the "Ready" column**, at which point it transitions to **"In progress"**.
+
 ### PR and Review Lifecycle
 - Whenever a Pull Request (PR) is opened for an issue, the task/issue and PR **MUST IMMEDIATELY transition to "In Review"**.
 - Every PR description must reference its issue (`Fixes #xyz` or `Closes #xyz`) and explicitly include the `Priority`, `Estimate`, `Size`, and `Iteration` metadata in its summary header.

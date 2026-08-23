@@ -21,6 +21,13 @@ Before any issue or task can be moved to **"Ready"** or before any implementatio
 > [!IMPORTANT]
 > **Strict Policy:** If `Priority`, `Estimate`, `Size`, or `Iteration` is missing, work **MUST NOT BE STARTED** and the item must not be moved to "Ready".
 
+### Work Intake Rule — ONLY Pick Up Work From "Ready", NEVER From "Backlog"
+> [!CAUTION]
+> Work **MUST ONLY be picked up from the "Ready" column** on the project board. Picking up an item directly from the "Backlog" is **STRICTLY PROHIBITED**.
+> 1. An item in `Backlog` must first be refined to satisfy the full **Definition of Ready (DoR)**.
+> 2. Once DoR is satisfied, the item is moved to the **"Ready"** column on the GitHub Project board.
+> 3. Contributors and AI agents are **ONLY permitted to start work on an issue that is already residing in the "Ready" column**.
+
 ### Branch Naming Convention
 Create a dedicated branch per issue:
 - Bug fixes: `fix/<issue-number>-<short-description>` (e.g. `fix/225-update-test-dependencies-warnings`)
