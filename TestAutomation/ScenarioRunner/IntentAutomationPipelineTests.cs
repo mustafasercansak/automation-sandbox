@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using IntentAutomation;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using UiModel;
 using WebDiscovery;
 using Xunit;
@@ -134,6 +136,45 @@ namespace ScenarioRunner
             Assert.True(result.RecordingResults[0].Recorded);
             Assert.Contains("await Page.GetByTestId(\"resume-file\").SetInputFilesAsync(\"/tmp/resume.pdf\");", result.PlaywrightCSharpTestCode);
             Assert.Contains("await page.getByTestId('resume-file').setInputFiles('/tmp/resume.pdf');", result.PlaywrightTypeScriptTestCode);
+        }
+
+        [Fact]
+        public void Run_DecoupledPipeline_PhrasingVariationsFlowEndToEndWithValidGeneratedCode()
+        {
+            var request = new IntentPlanningRequest
+            {
+                Name = "Natural Phrasing Web Customer",
+                Goal = "Register customer with email and save form",
+                TargetUrl = "https://example.test/register",
+                TestData = new Dictionary<string, string>
+                {
+                    ["the user email address"] = "alex.smith@example.test",
+                }
+            };
+            var repository = new LocatorRepository(_filePath);
+            var pipeline = new IntentAutomationPipeline();
+
+            var result = pipeline.Run(request, BuildCustomerDom(), repository);
+
+            Assert.False(result.Planning.RequiresReview);
+            Assert.All(result.Exploration.StepResults.Where(s => s.Step.ActionType != IntentActionType.Navigate), step =>
+            {
+                Assert.False(step.RequiresReview);
+                Assert.NotEmpty(step.Candidates);
+            });
+
+            // Validate that recordings have synthesized keys
+            Assert.Contains(result.RecordingResults, r => r.LocatorKey.StartsWith("Field.") && r.Recorded);
+            Assert.Contains(result.RecordingResults, r => r.LocatorKey.StartsWith("Action.") && r.Recorded);
+
+            // Validate generated C# syntax is clean with 0 errors
+            var syntaxTree = CSharpSyntaxTree.ParseText(result.PlaywrightCSharpTestCode);
+            var errors = syntaxTree.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+            Assert.Empty(errors);
+
+            // Validate generated TypeScript has expected content
+            Assert.Contains("await page.goto('https://example.test/register');", result.PlaywrightTypeScriptTestCode);
+            Assert.Contains("alex.smith@example.test", result.PlaywrightTypeScriptTestCode);
         }
 
         public void Dispose()

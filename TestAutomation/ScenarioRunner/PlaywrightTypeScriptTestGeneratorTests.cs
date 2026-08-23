@@ -335,6 +335,73 @@ namespace ScenarioRunner
             Assert.Contains(".toHaveText('It\\'s line 1\\r\\nLine 2');", code);
         }
 
+        [Fact]
+        public void Generate_AllActionsUnderDecoupledModel_ProducesValidTypeScriptStructure()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "All actions full flow",
+                Goal = "Execute end-to-end multi-step flow",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Navigate, Value = "https://example.test/portal", TestIntent = "Open portal" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Hover, TargetDescription = "User menu", TestIntent = "Hover user menu" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.Fill, TargetDescription = "Email address", Value = "user@example.test", TestIntent = "Fill email" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Select, TargetDescription = "Role dropdown", Value = "Admin", TestIntent = "Select role" },
+                    new IntentStep { Order = 5, ActionType = IntentActionType.Check, TargetDescription = "Newsletter checkbox", TestIntent = "Check newsletter" },
+                    new IntentStep { Order = 6, ActionType = IntentActionType.Uncheck, TargetDescription = "Terms checkbox", TestIntent = "Uncheck terms" },
+                    new IntentStep { Order = 7, ActionType = IntentActionType.UploadFile, TargetDescription = "Resume attachment", Value = "/tmp/cv.pdf", TestIntent = "Upload CV" },
+                    new IntentStep { Order = 8, ActionType = IntentActionType.PressKey, TargetDescription = "Search edit", Value = "Enter", TestIntent = "Press Enter" },
+                    new IntentStep { Order = 9, ActionType = IntentActionType.Wait, TargetDescription = "Spinner element", Value = "3000", TestIntent = "Wait for spinner" },
+                    new IntentStep { Order = 10, ActionType = IntentActionType.Click, TargetDescription = "Submit button", TestIntent = "Submit form" },
+                    new IntentStep { Order = 11, ActionType = IntentActionType.Assert, TargetDescription = "Confirmation message", AssertionKind = AssertionKind.Visible, ExpectedOutcome = "Confirmation is displayed" },
+                    new IntentStep { Order = 12, ActionType = IntentActionType.Assert, TargetDescription = "Total amount", AssertionKind = AssertionKind.TextEquals, ExpectedValue = "$100", ExpectedOutcome = "Total is $100" },
+                }
+            };
+
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded(scenario.Steps[1], "Action.Hover.UserMenu", "user-menu", "page.GetByTestId(\"user-menu\")"),
+                Recorded(scenario.Steps[2], "Field.EmailAddress", "email-input", "page.GetByTestId(\"email-input\")"),
+                Recorded(scenario.Steps[3], "Field.RoleDropdown", "role-select", "page.GetByTestId(\"role-select\")"),
+                Recorded(scenario.Steps[4], "Field.NewsletterCheckbox", "newsletter-chk", "page.GetByTestId(\"newsletter-chk\")"),
+                Recorded(scenario.Steps[5], "Field.TermsCheckbox", "terms-chk", "page.GetByTestId(\"terms-chk\")"),
+                Recorded(scenario.Steps[6], "Field.ResumeAttachment", "resume-up", "page.GetByTestId(\"resume-up\")"),
+                Recorded(scenario.Steps[7], "Action.PressKey.SearchEdit", "search-txt", "page.GetByTestId(\"search-txt\")"),
+                Recorded(scenario.Steps[8], "Action.Wait.SpinnerElement", "spinner", "page.GetByTestId(\"spinner\")"),
+                Recorded(scenario.Steps[9], "Action.Click.SubmitButton", "submit-btn", "page.GetByTestId(\"submit-btn\")"),
+                Recorded(scenario.Steps[10], "Assert.ConfirmationMessage", "confirm-box", "page.GetByTestId(\"confirm-box\")"),
+                Recorded(scenario.Steps[11], "Assert.TotalAmount", "total-box", "page.GetByTestId(\"total-box\")"),
+            };
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("import { test, expect } from '@playwright/test';", code);
+            Assert.Contains("await page.goto('https://example.test/portal');", code);
+            Assert.Contains("await page.getByTestId('user-menu').hover();", code);
+            Assert.Contains("await page.getByTestId('email-input').fill('user@example.test');", code);
+            Assert.Contains("await page.getByTestId('role-select').selectOption('Admin');", code);
+            Assert.Contains("await page.getByTestId('newsletter-chk').check();", code);
+            Assert.Contains("await page.getByTestId('terms-chk').uncheck();", code);
+            Assert.Contains("await page.getByTestId('resume-up').setInputFiles('/tmp/cv.pdf');", code);
+            Assert.Contains("await page.getByTestId('search-txt').press('Enter');", code);
+            Assert.Contains("await page.getByTestId('spinner').waitFor({ state: 'visible', timeout: 3000 });", code);
+            Assert.Contains("await page.getByTestId('submit-btn').click();", code);
+            Assert.Contains("await expect(page.getByTestId('confirm-box')).toBeVisible();", code);
+            Assert.Contains("await expect(page.getByTestId('total-box')).toHaveText('$100');", code);
+
+            // Verify balanced braces and parentheses
+            Assert.Equal(code.Count(c => c == '{'), code.Count(c => c == '}'));
+            Assert.Equal(code.Count(c => c == '('), code.Count(c => c == ')'));
+        }
+
+        private static IntentLocatorRecordingResult Recorded(IntentStep step, string locatorKey, string automationId, string expression)
+        {
+            var result = Recorded(locatorKey, automationId, expression);
+            result.Step = step;
+            return result;
+        }
+
         private static IntentLocatorRecordingResult Recorded(string locatorKey, string automationId, string expression)
         {
             return new IntentLocatorRecordingResult

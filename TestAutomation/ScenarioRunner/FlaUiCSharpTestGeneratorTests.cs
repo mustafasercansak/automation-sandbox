@@ -578,6 +578,64 @@ namespace ScenarioRunner
             AssertValidCSharpSyntax(code);
         }
 
+        [Fact]
+        public void Generate_AllActionsUnderDecoupledModel_ProducesCompilableFlaUiCSharpCode()
+        {
+            var scenario = new IntentScenario
+            {
+                Name = "All actions desktop full flow",
+                Goal = "Execute end-to-end multi-step desktop flow",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "User menu", TestIntent = "Hover user menu" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Fill, TargetDescription = "Email address", Value = "user@example.test", TestIntent = "Fill email" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.Select, TargetDescription = "Role combobox", Value = "Admin", TestIntent = "Select role" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Check, TargetDescription = "Newsletter checkbox", TestIntent = "Check newsletter" },
+                    new IntentStep { Order = 5, ActionType = IntentActionType.Uncheck, TargetDescription = "Terms checkbox", TestIntent = "Uncheck terms" },
+                    new IntentStep { Order = 6, ActionType = IntentActionType.UploadFile, TargetDescription = "Browse button", Value = @"C:\tmp\cv.pdf", TestIntent = "Upload CV" },
+                    new IntentStep { Order = 7, ActionType = IntentActionType.PressKey, TargetDescription = "Search edit", Value = "Enter", TestIntent = "Press Enter" },
+                    new IntentStep { Order = 8, ActionType = IntentActionType.Wait, TargetDescription = "Spinner element", Value = "3000", TestIntent = "Wait for spinner" },
+                    new IntentStep { Order = 9, ActionType = IntentActionType.Click, TargetDescription = "Submit button", TestIntent = "Submit form" },
+                    new IntentStep { Order = 10, ActionType = IntentActionType.Assert, TargetDescription = "Confirmation message", AssertionKind = AssertionKind.Visible, ExpectedOutcome = "Confirmation is displayed" },
+                    new IntentStep { Order = 11, ActionType = IntentActionType.Assert, TargetDescription = "Total amount", AssertionKind = AssertionKind.TextEquals, ExpectedValue = "$100", ExpectedOutcome = "Total is $100" },
+                }
+            };
+
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded(scenario.Steps[0], "Action.Hover.UserMenu", "btnUserMenu", "MenuItem"),
+                Recorded(scenario.Steps[1], "Field.EmailAddress", "txtEmail", "Edit"),
+                Recorded(scenario.Steps[2], "Field.RoleCombobox", "cmbRole", "ComboBox"),
+                Recorded(scenario.Steps[3], "Field.NewsletterCheckbox", "chkNewsletter", "CheckBox"),
+                Recorded(scenario.Steps[4], "Field.TermsCheckbox", "chkTerms", "CheckBox"),
+                Recorded(scenario.Steps[5], "Field.BrowseButton", "btnBrowse", "Button"),
+                Recorded(scenario.Steps[6], "Action.PressKey.SearchEdit", "txtSearch", "Edit"),
+                Recorded(scenario.Steps[7], "Action.Wait.SpinnerElement", "lblSpinner", "Text"),
+                Recorded(scenario.Steps[8], "Action.Click.SubmitButton", "btnSubmit", "Button"),
+                Recorded(scenario.Steps[9], "Assert.ConfirmationMessage", "lblConfirm", "Text"),
+                Recorded(scenario.Steps[10], "Assert.TotalAmount", "lblTotal", "Text"),
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"txtEmail\"))!.AsTextBox().Text = \"user@example.test\";", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"cmbRole\"))!.AsComboBox().Select(\"Admin\");", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"chkNewsletter\"))!.AsCheckBox().IsChecked = true;", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"chkTerms\"))!.AsCheckBox().IsChecked = false;", code);
+            Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"btnSubmit\"))!.AsButton().Invoke();", code);
+            Assert.Contains("Assert.NotNull(window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblConfirm\")));", code);
+            Assert.Contains("Assert.Equal(\"$100\", window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblTotal\"))!.Name);", code);
+
+            AssertValidCSharpSyntax(code);
+        }
+
+        private static IntentDesktopLocatorRecordingResult Recorded(IntentStep step, string locatorKey, string automationId, string controlType)
+        {
+            var result = Recorded(locatorKey, automationId, controlType);
+            result.Step = step;
+            return result;
+        }
+
         private static void AssertValidCSharpSyntax(string code)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(code);
