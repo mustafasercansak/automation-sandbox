@@ -378,6 +378,32 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Match_PhrasingVariations_ResolveToCorrectCandidatesWithoutFalseReviews()
+        {
+            // #237: Natural language variations should match the intended elements with high
+            // confidence and not trigger false reviews due to filler words or role descriptors.
+            var scenario = new IntentScenario
+            {
+                Goal = "Submit customer registration form",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Fill, TargetDescription = "the user's email address in the input field" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Fill, TargetDescription = "company name textbox" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.Select, TargetDescription = "choose the record type from dropdown" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Click, TargetDescription = "click the save button to submit" },
+                }
+            };
+
+            var result = new IntentExplorationBridge().Match(scenario, BuildCustomerDom());
+
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+            Assert.Equal("email-input", result.StepResults[0].Candidates[0].Element.TestId);
+            Assert.Equal("company-name", result.StepResults[1].Candidates[0].Element.TestId);
+            Assert.Equal("record-type", result.StepResults[2].Candidates[0].Element.TestId);
+            Assert.Equal("save-button", result.StepResults[3].Candidates[0].Element.TestId);
+        }
+
+        [Fact]
         public void Constructor_ValidatesOptionsRanges()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new IntentExplorationBridge(new IntentExplorationOptions { MaxCandidatesPerStep = 0 }));

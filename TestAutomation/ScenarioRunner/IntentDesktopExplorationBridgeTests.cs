@@ -388,6 +388,32 @@ namespace ScenarioRunner
             Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
         }
 
+        [Fact]
+        public void Match_PhrasingVariations_ResolveToCorrectDesktopCandidatesWithoutFalseReviews()
+        {
+            // #237: Natural language variations on desktop targets should match intended controls
+            // without false reviews from filler words or control type descriptors.
+            var scenario = new IntentScenario
+            {
+                Goal = "Submit customer desktop form",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Fill, TargetDescription = "the customer's email address in the edit field" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Fill, TargetDescription = "company name text edit" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.Select, TargetDescription = "choose the record type from combobox" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Click, TargetDescription = "click the save button to submit" },
+                }
+            };
+
+            var result = new IntentDesktopExplorationBridge().Match(scenario, BuildCustomerWindow());
+
+            Assert.All(result.StepResults, step => Assert.False(step.RequiresReview));
+            Assert.Equal("txtEmail", result.StepResults[0].Candidates[0].Element.AutomationId);
+            Assert.Equal("txtCompanyName", result.StepResults[1].Candidates[0].Element.AutomationId);
+            Assert.Equal("cmbRecordType", result.StepResults[2].Candidates[0].Element.AutomationId);
+            Assert.Equal("btnSave", result.StepResults[3].Candidates[0].Element.AutomationId);
+        }
+
         private static UiElementInfo BuildChoiceWindow()
         {
             var root = new UiElementInfo

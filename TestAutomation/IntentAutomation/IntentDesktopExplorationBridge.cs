@@ -117,7 +117,7 @@ namespace IntentAutomation
             }
 
             var targetText = IntentTextScoring.BuildMatchingText(step);
-            var elementText = IntentTextScoring.Join(element.Name, element.AutomationId, element.ClassName);
+            var elementText = IntentTextScoring.Join(element.Name, element.AutomationId, element.ClassName, element.ControlType);
             var semanticScore = IntentTextScoring.TokenOverlap(targetText, elementText);
             var exactBonus = IntentTextScoring.ContainsNormalized(elementText, step.TargetDescription)
                 ? 0.15
