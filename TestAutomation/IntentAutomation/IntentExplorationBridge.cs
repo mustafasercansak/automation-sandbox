@@ -114,6 +114,8 @@ namespace IntentAutomation
 
             var targetText = IntentTextScoring.BuildMatchingText(step);
             var elementText = IntentTextScoring.Join(
+                element.Role,
+                element.TagName,
                 element.AccessibleName,
                 element.Text,
                 element.TestId,

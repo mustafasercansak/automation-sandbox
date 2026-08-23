@@ -58,6 +58,39 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Tokens_SplitsCamelCaseAndPascalCaseIdentifiers()
+        {
+            var tokens = IntentTextScoring.Tokens("btnSaveDraftCustomer txtFirstName");
+
+            Assert.Equal(new[] { "btn", "save", "draft", "customer", "txt", "first", "name" }, tokens);
+        }
+
+        [Fact]
+        public void SignificantTokens_FiltersEnglishStopWords()
+        {
+            var tokens = IntentTextScoring.SignificantTokens("enter the user email address for our record");
+
+            Assert.Equal(new[] { "enter", "email", "address", "record" }, tokens);
+        }
+
+        [Fact]
+        public void TokenOverlap_IgnoresStopWordsInDenominator()
+        {
+            // "the user email" has significant token "email", matching "email-input" with 1.0 rather than 1/3
+            var score = IntentTextScoring.TokenOverlap("the user email", "email-input");
+
+            Assert.Equal(1.0, score);
+        }
+
+        [Fact]
+        public void ContainsNormalized_MatchesBidirectionalPhrases()
+        {
+            // Element text "Save" is contained in target "Save button"
+            Assert.True(IntentTextScoring.ContainsNormalized("Save", "Save button"));
+            Assert.True(IntentTextScoring.ContainsNormalized("Save button", "Save"));
+        }
+
+        [Fact]
         public void Join_SkipsNullAndWhitespaceValues()
         {
             var joined = IntentTextScoring.Join("Submit", "", null!, "  ", "Order");
