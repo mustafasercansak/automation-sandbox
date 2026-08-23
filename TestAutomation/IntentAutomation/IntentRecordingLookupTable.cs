@@ -45,9 +45,9 @@ namespace IntentAutomation
                 }
 
                 var key = getKey(recording);
-                if (!string.IsNullOrWhiteSpace(key) && !_byKey.ContainsKey(key))
+                if (!string.IsNullOrWhiteSpace(key) && !_byKey.ContainsKey(key!))
                 {
-                    _byKey[key] = recording;
+                    _byKey[key!] = recording;
                 }
             }
         }
