@@ -116,12 +116,13 @@ namespace LlmHealing
                     // Non-transient errors (400, 401, 403, 404) fail fast without retrying
                     if (!IsTransient(response.StatusCode))
                     {
+                        var truncatedBody = TruncateErrorBody(responseBody);
                         return new LlmHttpResponse
                         {
                             IsSuccess = false,
                             StatusCode = response.StatusCode,
-                            Body = responseBody,
-                            ErrorMessage = $"HTTP {(int)response.StatusCode}: {responseBody}",
+                            Body = truncatedBody,
+                            ErrorMessage = $"HTTP {(int)response.StatusCode}: {truncatedBody}",
                             AttemptsMade = attemptsMade,
                         };
                     }
@@ -130,11 +131,12 @@ namespace LlmHealing
                     var retryAfter = ParseRetryAfter(response);
                     if (retryAfter.HasValue && retryAfter.Value > retryAfterCeiling)
                     {
+                        var truncatedBody = TruncateErrorBody(responseBody);
                         return new LlmHttpResponse
                         {
                             IsSuccess = false,
                             StatusCode = response.StatusCode,
-                            Body = responseBody,
+                            Body = truncatedBody,
                             ErrorMessage = $"HTTP {(int)response.StatusCode}: Retry-After of {retryAfter.Value.TotalSeconds:F0}s exceeds maximum delay threshold ({retryAfterCeiling.TotalSeconds:F0}s).",
                             AttemptsMade = attemptsMade,
                         };
@@ -258,12 +260,13 @@ namespace LlmHealing
 
             if (lastStatusCode.HasValue)
             {
+                var truncatedBody = TruncateErrorBody(lastResponseBody);
                 return new LlmHttpResponse
                 {
                     IsSuccess = false,
                     StatusCode = lastStatusCode,
-                    Body = lastResponseBody,
-                    ErrorMessage = $"HTTP {(int)lastStatusCode.Value}: {lastResponseBody}",
+                    Body = truncatedBody,
+                    ErrorMessage = $"HTTP {(int)lastStatusCode.Value}: {truncatedBody}",
                     AttemptsMade = attemptsMade,
                 };
             }
@@ -274,6 +277,24 @@ namespace LlmHealing
                 ErrorMessage = lastExceptionMessage ?? "Request failed after maximum retries.",
                 AttemptsMade = attemptsMade,
             };
+        }
+
+        public const int MaxCapturedErrorBodyLength = 1024;
+
+        public static string TruncateErrorBody(string? body, int maxLength = MaxCapturedErrorBodyLength)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return "";
+            }
+
+            var trimmed = body!.Trim();
+            if (trimmed.Length <= maxLength)
+            {
+                return trimmed;
+            }
+
+            return trimmed.Substring(0, maxLength) + " [truncated]";
         }
 
         private static TimeSpan CalculateExponentialBackoff(int attempt)

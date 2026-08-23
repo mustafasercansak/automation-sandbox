@@ -925,6 +925,25 @@ namespace ScenarioRunner
             Assert.Throws<ArgumentException>(() => new GeminiHealingProvider(timeout: TimeSpan.FromSeconds(20), totalTimeout: TimeSpan.FromSeconds(10)));
         }
 
+        [Fact]
+        public async Task ResolveAsync_TruncatesMassiveHttpErrorResponseBody()
+        {
+            var massiveErrorBody = new string('X', 50000);
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(massiveErrorBody, Encoding.UTF8, "text/plain"),
+            });
+            var client = new HttpClient(handler);
+            var provider = new ClaudeHealingProvider(httpClient: client, apiKey: "test-key", delayAsync: (_, _) => Task.CompletedTask);
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.False(result.Success);
+            Assert.NotNull(result.ErrorMessage);
+            Assert.Contains("[truncated]", result.ErrorMessage);
+            Assert.True(result.ErrorMessage!.Length <= LlmHttpTransport.MaxCapturedErrorBodyLength + 50);
+        }
+
         private sealed class FakeHttpMessageHandler : HttpMessageHandler
         {
             private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responder;

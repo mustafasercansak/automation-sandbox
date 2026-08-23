@@ -277,7 +277,7 @@ namespace IntentAutomation
                 // Checkbox-like fields toggle rather than take a value; a falsy value means Uncheck.
                 actionType = IsFalsyValue(value) ? IntentActionType.Uncheck : IntentActionType.Check;
             }
-            else if (normalizedKey.Contains("type") || normalizedKey.Contains("country") || normalizedKey.Contains("status"))
+            else if (keyTokens.Any(token => token == "type" || token == "country" || token == "status" || token == "category" || token == "role" || token == "gender" || token == "state" || token == "select" || token == "dropdown"))
             {
                 actionType = IntentActionType.Select;
             }

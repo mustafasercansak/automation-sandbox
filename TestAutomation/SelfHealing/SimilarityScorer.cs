@@ -1,4 +1,7 @@
+using System;
+using System.Buffers;
 using UiModel;
+
 namespace SelfHealing
 {
     // Pure heuristic, no LLM involved: ControlType, parent context, sibling
@@ -126,27 +129,57 @@ namespace SelfHealing
 
         private static int LevenshteinDistance(string a, string b)
         {
-            var dp = new int[a.Length + 1, b.Length + 1];
-            for (var i = 0; i <= a.Length; i++)
+            if (string.IsNullOrEmpty(a))
             {
-                dp[i, 0] = i;
+                return b?.Length ?? 0;
             }
 
-            for (var j = 0; j <= b.Length; j++)
+            if (string.IsNullOrEmpty(b))
             {
-                dp[0, j] = j;
+                return a.Length;
             }
 
-            for (var i = 1; i <= a.Length; i++)
+            // Ensure b is the shorter string to minimize rented buffer size
+            if (a.Length < b.Length)
             {
-                for (var j = 1; j <= b.Length; j++)
+                var temp = a;
+                a = b;
+                b = temp;
+            }
+
+            var bLen = b.Length;
+            var aLen = a.Length;
+
+            var rented = ArrayPool<int>.Shared.Rent(bLen + 1);
+            try
+            {
+                for (var j = 0; j <= bLen; j++)
                 {
-                    var cost = a[i - 1] == b[j - 1] ? 0 : 1;
-                    dp[i, j] = Math.Min(Math.Min(dp[i - 1, j] + 1, dp[i, j - 1] + 1), dp[i - 1, j - 1] + cost);
+                    rented[j] = j;
                 }
-            }
 
-            return dp[a.Length, b.Length];
+                for (var i = 1; i <= aLen; i++)
+                {
+                    var previousDiagonal = rented[0];
+                    rented[0] = i;
+                    var aChar = a[i - 1];
+
+                    for (var j = 1; j <= bLen; j++)
+                    {
+                        var previousDiagonalTemp = rented[j];
+                        var cost = aChar == b[j - 1] ? 0 : 1;
+                        var insertOrDelete = Math.Min(rented[j] + 1, rented[j - 1] + 1);
+                        rented[j] = Math.Min(insertOrDelete, previousDiagonal + cost);
+                        previousDiagonal = previousDiagonalTemp;
+                    }
+                }
+
+                return rented[bLen];
+            }
+            finally
+            {
+                ArrayPool<int>.Shared.Return(rented);
+            }
         }
     }
 }

@@ -213,5 +213,41 @@ namespace ScenarioRunner
             Assert.Equal(AssertionKind.UrlEquals, kind);
             Assert.Equal("https://shop.test/orders", value);
         }
+
+        [Fact]
+        public void DeterministicIntentPlanner_FieldNameContainingSubstring_DoesNotFalsePositiveAsSelect()
+        {
+            var planner = new DeterministicIntentPlanner();
+            var plan = planner.Plan(new IntentPlanningRequest
+            {
+                Goal = "Save prototype details",
+                TestData = new Dictionary<string, string>
+                {
+                    ["prototype"] = "Model X",
+                    ["countryside"] = "North Ridge",
+                    ["keystatuses"] = "Active",
+                    ["recordType"] = "Engineering",
+                    ["user country"] = "Germany",
+                    ["account_status"] = "Verified",
+                }
+            });
+
+            var prototypeStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "prototype");
+            var countrysideStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "countryside");
+            var keystatusesStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "keystatuses");
+            var recordTypeStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "recordType");
+            var userCountryStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "user country");
+            var accountStatusStep = plan.Scenario.Steps.Single(s => s.TargetDescription == "account status");
+
+            // Substring overlaps should NOT classify as Select
+            Assert.Equal(IntentActionType.Fill, prototypeStep.ActionType);
+            Assert.Equal(IntentActionType.Fill, countrysideStep.ActionType);
+            Assert.Equal(IntentActionType.Fill, keystatusesStep.ActionType);
+
+            // Exact token matches SHOULD classify as Select
+            Assert.Equal(IntentActionType.Select, recordTypeStep.ActionType);
+            Assert.Equal(IntentActionType.Select, userCountryStep.ActionType);
+            Assert.Equal(IntentActionType.Select, accountStatusStep.ActionType);
+        }
     }
 }
