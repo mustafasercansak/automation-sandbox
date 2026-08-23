@@ -8,6 +8,54 @@ body:
       value: |
         Thanks for taking the time to report an issue! Please provide as much context as possible.
 
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: What is the urgency / impact of this issue?
+      options:
+        - P0 (Blocker / Critical)
+        - P1 (High)
+        - P2 (Medium)
+        - P3 (Low / Backlog)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: T-Shirt sizing of the task.
+      options:
+        - XS (Extra Small - <1h)
+        - S (Small - 1h-2h)
+        - M (Medium - 2h-4h)
+        - L (Large - 1d-2d)
+        - XL (Extra Large - >2d)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: iteration
+    attributes:
+      label: Target Iteration
+      description: When should this issue be executed?
+      options:
+        - Current Iteration (Now)
+        - Next Iteration (Next)
+        - Future / Backlog
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: Estimated Effort (Est.)
+      description: Estimated time to resolve (e.g., 30m, 1h, 4h, 1d).
+      placeholder: "1h"
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
