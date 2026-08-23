@@ -54,7 +54,7 @@ Create a dedicated branch per issue:
 
 - **Mandatory Package Security Auditing (#223):** MSBuild `NuGetAudit` is enabled repo-wide (`NuGetAuditMode=all`, `NuGetAuditLevel=moderate`). In CI (`ContinuousIntegrationBuild=true`), any High or Critical advisory (`NU1903` direct, `NU1904` transitive) causes a **hard build failure**.
 - **Verified GitHub Actions & Modern Dependencies Standard (#228):** Hallucinated future action tags (`@v6`, `@v7`, `@v8`) and deprecated actions (`actions/jekyll-build-pages`) are strictly forbidden. All workflow action calls are verified by `WorkflowActionVersionTests` in CI.
-- **Mandatory Ownership:** Every active issue and PR must always be assigned to the responsible contributor (`--assignee <username>`).
+- **Mandatory Ownership & Labels:** Every active issue and PR must always be assigned to the responsible contributor (`--assignee <username>`) and tagged with relevant GitHub labels (`--label <labels>`, e.g. `testing`, `documentation`, `ci`, `enhancement`, `bug`, `safety`). Unlabeled issues or PRs are not allowed.
 - **Zero Build Warnings:** Code must compile cleanly with `0 Warning(s), 0 Error(s)` across all targeted frameworks. Analyzer warnings (such as `xUnit.analyzers` `xUnit2031`) must be resolved rather than suppressed.
 - **Testing Rules:**
   - **Assert behavior, not implementation:** Tests should assert what components compute and decide, allowing refactoring without breaking tests.
