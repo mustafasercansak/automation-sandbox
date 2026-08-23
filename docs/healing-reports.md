@@ -1,3 +1,8 @@
+---
+layout: default
+title: Healing Reports & Dashboard - Automation Sandbox
+---
+
 # 📊 Self-Healing Reports & Dashboard / İyileştirme Raporları ve Görsel Panel
 
 This guide explains how **Automation Sandbox** generates JSON and HTML visual report artifacts whenever locator resolution is attempted.

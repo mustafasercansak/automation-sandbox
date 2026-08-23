@@ -1,3 +1,8 @@
+---
+layout: default
+title: LLM Security Model - Automation Sandbox
+---
+
 # LLM Healing Security Model / LLM Healing Güvenlik Modeli
 
 ## English

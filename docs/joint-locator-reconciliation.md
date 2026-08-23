@@ -1,3 +1,8 @@
+---
+layout: default
+title: Joint Locator Reconciliation - Automation Sandbox
+---
+
 # Joint Locator Reconciliation
 
 Joint locator reconciliation is an opt-in batch guard for callers that resolve several

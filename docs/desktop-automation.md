@@ -1,3 +1,8 @@
+---
+layout: default
+title: Desktop Automation - Automation Sandbox
+---
+
 # 💻 Desktop Automation Guide / Masaüstü Otomasyon Rehberi
 
 This guide explains how to test Windows desktop applications (WinForms, WPF, WinUI) with **Automation Sandbox**.

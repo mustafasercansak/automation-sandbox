@@ -1,3 +1,8 @@
+---
+layout: default
+title: Getting Started - Automation Sandbox
+---
+
 # 🚀 Getting Started / Başlangıç Rehberi
 
 Welcome to the beginner-friendly setup guide for **Automation Sandbox**! / **Automation Sandbox** için adım adım başlangıç rehberine hoş geldiniz!

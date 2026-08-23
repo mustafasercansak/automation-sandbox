@@ -153,6 +153,13 @@ namespace ScenarioRunner
                 var readmeText = File.ReadAllText(readmePath);
                 Assert.False(readmeText.Contains(currentVersion), $"README.md contains hardcoded package version '{currentVersion}'. Use dynamic live badges and SSoT references instead.");
             }
+
+            var indexPath = Path.Combine(repoRoot, "index.md");
+            if (File.Exists(indexPath))
+            {
+                var indexText = File.ReadAllText(indexPath);
+                Assert.False(indexText.Contains(currentVersion), $"index.md contains hardcoded package version '{currentVersion}'. Use dynamic live badges and SSoT references instead.");
+            }
         }
     }
 }
