@@ -266,8 +266,15 @@ AI Agents and contributors **MUST actively synchronize GitHub Projects V2 (Proje
    - MUST update the GitHub Project item via `gh project item-edit`:
      - Set `Status` to **`Done`** (`98236657`)
 
+### Mandatory Assignee & Ownership Assignment
+- **Explicit Ownership Rule:** Every issue moved to "In progress" and every Pull Request opened **MUST ALWAYS be assigned to the active contributor/owner** (`gh issue edit --add-assignee <username>`, `gh pr create --assignee <username>`). AI agents and human contributors must never leave active issues or PRs unassigned.
+
+### Modern Dependency & Verified GitHub Actions Standard (Anti-Hallucination Policy)
+> [!CAUTION]
+> - **Modern Verified Action Tags:** Always verify and use real, officially released versions (`actions/checkout@v7`, `actions/setup-dotnet@v6`, `actions/upload-artifact@v7`, `actions/download-artifact@v8`, `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`, `NuGet/login@v1`).
+> - **Zero Deprecated Actions:** Abandoned or deprecated actions (such as `actions/jekyll-build-pages@v1` or obsolete Node 20 runners) are strictly forbidden.
+> - **Automated CI Enforcement:** These constraints are permanently guarded by [`WorkflowActionVersionTests.cs`](TestAutomation/ScenarioRunner/WorkflowActionVersionTests.cs) which runs on every test pass. Any unapproved, legacy, or deprecated action breaks the build.
+
 **Project IDs Reference for CLI automation:**
 - Project ID: `PVT_kwHOAr3aNM4BgUrT` (Project #3)
 - Field IDs: Status (`PVTSSF_lAHOAr3aNM4BgUrTzhahRmc`), Priority (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAU`), Size (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAY`), Estimate (`PVTF_lAHOAr3aNM4BgUrTzhahSAc`), Iteration (`PVTIF_lAHOAr3aNM4BgUrTzhgG21Y`).
-=======
->>>>>>> origin/main
