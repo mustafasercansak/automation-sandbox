@@ -31,38 +31,40 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: Check GitHub Pages availability
-        id: pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          status_code=$(curl -sS \
-            -o "$RUNNER_TEMP/pages.json" \
-            -w "%{http_code}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${REPOSITORY}/pages" || true)
-
-          if [ "$status_code" = "200" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::GitHub Pages is not enabled for this repository (GET /pages returned ${status_code}). Skipping deployment. Enable Settings > Pages > Source: GitHub Actions to publish docs."
-          fi
-
       - name: Setup Pages
-        if: steps.pages.outputs.enabled == 'true'
+        id: pages
         uses: actions/configure-pages@v6
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Resolve Package Version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          $ver = $props.Project.PropertyGroup.Version
+          if (-not $ver) {
+            throw "Could not resolve <Version> from Directory.Build.props"
+          }
+          Write-Host "Resolved package version: $ver"
+          "PACKAGE_VERSION=$ver" >> $env:GITHUB_ENV
+
+      - name: Install Jekyll & Plugins
+        run: |
+          gem install jekyll kramdown jekyll-relative-links
+
+      - name: Build site with Jekyll
+        run: |
+          jekyll build --baseurl "${{ steps.pages.outputs.base_path }}" --source . --destination ./_site
+
       - name: Upload Pages Artifact
-        if: steps.pages.outputs.enabled == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: './docs'
+          path: './_site'
 
       - name: Deploy to GitHub Pages
-        if: steps.pages.outputs.enabled == 'true'
         id: deployment
         uses: actions/deploy-pages@v5

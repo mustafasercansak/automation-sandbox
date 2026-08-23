@@ -122,5 +122,37 @@ namespace ScenarioRunner
             Assert.Contains("Validate and write release notes", content);
             Assert.Contains("docs/release-notes/", content);
         }
+
+        [Fact]
+        public void NoDocumentationFiles_ContainHardcodedPackageVersion()
+        {
+            var repoRoot = FindRepoRoot();
+            var propsPath = Path.Combine(repoRoot, "Directory.Build.props");
+            var propsContent = File.ReadAllText(propsPath);
+            var currentVersion = Regex.Match(propsContent, @"<Version>(?<v>[^<]+)</Version>").Groups["v"].Value.Trim();
+
+            var docsDir = Path.Combine(repoRoot, "docs");
+            var docFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
+
+            foreach (var docFile in docFiles)
+            {
+                var relativePath = docFile.Substring(repoRoot.Length).TrimStart(Path.DirectorySeparatorChar, '/');
+                if (relativePath.StartsWith("docs" + Path.DirectorySeparatorChar + "release-notes", StringComparison.OrdinalIgnoreCase) ||
+                    relativePath.StartsWith("docs/release-notes", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var text = File.ReadAllText(docFile);
+                Assert.False(text.Contains(currentVersion), $"Documentation file '{relativePath}' contains hardcoded package version '{currentVersion}'. Use dynamic commands (--prerelease) or SSoT references instead.");
+            }
+
+            var readmePath = Path.Combine(repoRoot, "README.md");
+            if (File.Exists(readmePath))
+            {
+                var readmeText = File.ReadAllText(readmePath);
+                Assert.False(readmeText.Contains(currentVersion), $"README.md contains hardcoded package version '{currentVersion}'. Use dynamic live badges and SSoT references instead.");
+            }
+        }
     }
 }

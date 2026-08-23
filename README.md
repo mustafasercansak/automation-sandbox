@@ -1,13 +1,15 @@
 # Automation Sandbox
 
 ![CI](https://github.com/mustafasercansak/automation-sandbox/actions/workflows/ci.yml/badge.svg)
+![Release](https://img.shields.io/github/v/release/mustafasercansak/automation-sandbox?include_prereleases)
+![NuGet](https://img.shields.io/nuget/v/AutomationSandbox.SelfHealing.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Target](https://img.shields.io/badge/.NET-Standard%202.0%20%7C%20.NET%208%20%7C%20.NET%2010%20%7C%20.NET%204.8-purple.svg)
 ![Status](https://img.shields.io/badge/Status-Desktop%20%26%20Web%20Core-green.svg)
 
 An open-source **locator healing** and **intent-driven test generation** engine for Windows desktop and web.
 
-**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~$12\text{ms}$ for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
+**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~12ms for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
 ## A Broken Locator, in 30 Seconds
 
@@ -31,12 +33,15 @@ auditable healing report; an illustrative excerpt looks like this:
 
 ```json
 {
-  "LocatorKey": "Checkout.Submit",
+  "SchemaVersion": 8,
+  "TargetLocator": "#btn-submit",
   "Outcome": "accepted",
-  "Source": "heuristic",
-  "Score": 0.86,
-  "PreviousSnapshot": { "AutomationId": "btn-submit", "Name": "Submit order" },
-  "AcceptedSnapshot": { "AutomationId": "checkout-confirm", "Name": "Confirm order" }
+  "AgreedProviders": [],
+  "ProviderAttempts": {},
+  "EvidenceCoverage": 0.85,
+  "TotalScore": 0.78,
+  "RunnerUpScore": 0.32,
+  "ProposedSnapshot": { "AutomationId": "checkout-confirm", "Name": "Confirm order" }
 }
 ```
 
@@ -45,11 +50,11 @@ that outcome for review and does not persist the proposed locator.
 
 ---
 
-> 🚀 **First run:** Go from `dotnet add package AutomationSandbox.SelfHealing` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
+> 🚀 **First run:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
-> 📦 **Preview Packages:** The latest prerelease is [`v0.2.0-beta.3`](https://github.com/mustafasercansak/automation-sandbox/releases/tag/v0.2.0-beta.3). All seven `AutomationSandbox.*` packages are available from [nuget.org](https://www.nuget.org/profiles/mustafasercansak) and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
+> 📦 **Preview Packages:** The latest prerelease packages are published on [GitHub Releases](https://github.com/mustafasercansak/automation-sandbox/releases) and [nuget.org](https://www.nuget.org/profiles/mustafasercansak). All seven `AutomationSandbox.*` packages are available from nuget.org and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
 
 > 🎤 **Project Showcase:** For a bilingual (EN/TR) architecture presentation and executive summary, see [PROJECT_SHOWCASE.md](PROJECT_SHOWCASE.md).
 
@@ -70,11 +75,11 @@ that outcome for review and does not persist the proposed locator.
 
 | Feature / Module | Status | Description |
 | :--- | :---: | :--- |
-| **Heuristic Self-Healing** | ✅ Implemented | Pure C# structural similarity scoring ($O(N)$ execution, zero-cost, deterministic). |
+| **Heuristic Self-Healing** | ✅ Implemented | Pure C# structural similarity scoring (O(N) execution, zero-cost, deterministic). |
 | **Explainable Scoring** | ✅ Implemented | `ScoreComponents` breakdown (ControlType, Parent, Sibling, Name, Position). |
 | **Offscreen Rectangle Handling** | ✅ Implemented | Dynamic exclusion of unusable `(0,0,0,0)` bounding boxes from position weights. |
 | **LLM Fallback & Guard** | ✅ Implemented | Gemini, Claude, OpenAI-compatible cloud providers (including Groq, Kimi, OpenRouter, and Cloudflare Workers AI), and offline Ollama behind `HttpLlmHealingProvider` with `LlmProviderFactory` auto-discovery and **Hallucination Guard**. |
-| **Independent Model Agreement** | ✅ Implemented | A quorum rule (`MinimumConsensusVotes`, default $2$), attempt telemetry, nightly multi-model evaluation, and a gating live Groq + Mistral assertion on one known ground-truth candidate. Agreement permits an LLM pick; it is not evidence that the pick is correct. |
+| **Independent Model Agreement** | ✅ Implemented | A quorum rule (`MinimumConsensusVotes`, default 2), attempt telemetry, nightly multi-model evaluation, and a gating live Groq + Mistral assertion on one known ground-truth candidate. Agreement permits an LLM pick; it is not evidence that the pick is correct. |
 | **Joint Locator Reconciliation** | ✅ Implemented | Opt-in `ResolveBatch` / `ResolveBatchAsync` ownership guard prevents independently accepted locators from claiming the same live element; it is a targeted collision guard, not an absence detector. |
 | **Offline AI Healing (Ollama)** | ✅ Implemented | 100% offline, zero-cost local LLM healing with `llama3.2` via `OllamaHealingProvider`. |
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Automatic repository load, healing resolution, and policy-guarded action retry (`shouldHeal`; default heals exact locator-resolution exception types only). A proposed locator is persisted and reported as accepted only after the retried action succeeds. |
@@ -196,24 +201,24 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 | :--- | :---: | :--- |
 | **`ControlTypeScore`** | `0.20` | `1.0` if `expected.ControlType == candidate.ControlType`, else `0.0`. (Weighted, not a hard zero-filter). |
 | **`ParentControlTypeScore`** | `0.20` | `1.0` if parent container `ControlType` matches, else `0.0`. |
-| **`SiblingPositionScore`** | `0.15` | Proportional index distance: $1.0 - \frac{\|idx_{exp} - idx_{cand}\|}{\max(cnt_{exp}, cnt_{cand})}$. |
+| **`SiblingPositionScore`** | `0.15` | Proportional index distance: $1.0 - \frac{|idx_{exp} - idx_{cand}|}{\max(cnt_{exp}, cnt_{cand})}$. |
 | **`NameScore`** | `0.20` | Levenshtein distance similarity on `Name` property: $1.0 - \frac{\text{Levenshtein}(a,b)}{\max(\text{len}_a, \text{len}_b)}$. |
-| **`PositionScore`** | `0.25` | Euclidean center-point distance score within `PositionToleranceRadius` ($300\text{px}$). |
+| **`PositionScore`** | `0.25` | Euclidean center-point distance score within `PositionToleranceRadius` (300px). |
 
 > [!NOTE]
-> **Missing Signal Handling:** Every signal is nullable. When *both* sides lack a signal (empty `Name`, empty `ParentControlType`, zero sibling metadata, or an unusable bounding box), that signal scores `null` — it is excluded from the weighted average entirely, never treated as a perfect $1.0$ match. Two elements sharing only `ControlType` can still reach $\text{TotalScore} = 1.0$, but with `EvidenceCoverage` of only $0.20$.
+> **Missing Signal Handling:** Every signal is nullable. When *both* sides lack a signal (empty `Name`, empty `ParentControlType`, zero sibling metadata, or an unusable bounding box), that signal scores `null` — it is excluded from the weighted average entirely, never treated as a perfect 1.0 match. Two elements sharing only `ControlType` can still reach `TotalScore = 1.0`, but with `EvidenceCoverage` of only 0.20.
 >
-> **`EvidenceCoverage` & `MinimumEvidenceWeight`:** `EvidenceCoverage` is the fraction of the total signal weight backed by non-null evidence. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` ($0.40$ by default) — a ControlType-only match is therefore never confident, regardless of its score.
+> **`EvidenceCoverage` & `MinimumEvidenceWeight`:** `EvidenceCoverage` is the fraction of the total signal weight backed by non-null evidence. A heuristic match is `IsConfident` only when `Score >= MinimumConfidence` **and** `EvidenceCoverage >= MinimumEvidenceWeight` (0.40 by default) — a ControlType-only match is therefore never confident, regardless of its score.
 >
-> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires $best - runnerUp \ge$ `MinimumCandidateMargin` ($0.05$ by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they use the independent-agreement quorum).
+> **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires `best - runnerUp >= MinimumCandidateMargin` (0.05 by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they use the independent-agreement quorum).
 >
-> **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded $1.0$ center-point matches.
+> **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded 1.0 center-point matches.
 
 > [!IMPORTANT]
 > **How a heuristic match is accepted vs. how an LLM pick is accepted:**
-> - `MinimumConfidence` ($0.50$): Threshold for accepting a heuristic match before falling back to LLM.
-> - **LLM picks use independent model agreement, not confidence.** At least `MinimumConsensusVotes` providers ($2$ by default) must independently name the same candidate. This is a quorum rule, not evidence of correctness: all 34 unanimous deleted-element verdicts in the measured runs were false heals. Self-reported confidence is recorded but never compared or thresholded — one model's $0.72$ and another's $0.95$ are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) falls back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-independent-model-agreement-consensus-api).
-> - `MinimumLlmConfidence` ($0.50$) remains on `SimilarityWeights` and is still recorded on results, but since the agreement quorum replaced confidence-based acceptance it no longer gates anything.
+> - `MinimumConfidence` (0.50): Threshold for accepting a heuristic match before falling back to LLM.
+> - **LLM picks use independent model agreement, not confidence.** At least `MinimumConsensusVotes` providers (2 by default) must independently name the same candidate. This is a quorum rule, not evidence of correctness: all 34 unanimous deleted-element verdicts in the measured runs were false heals. Self-reported confidence is recorded but never compared or thresholded — one model's 0.72 and another's 0.95 are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) falls back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-independent-model-agreement-consensus-api).
+> - `MinimumLlmConfidence` (0.50) remains on `SimilarityWeights` and is still recorded on results, but since the agreement quorum replaced confidence-based acceptance it no longer gates anything.
 
 ---
 
@@ -711,7 +716,7 @@ The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-mem
 [Benchmark] 3000 candidates scored in 23ms - best score=1.00, candidateCount=3031.
 ```
 
-- **Execution Scaling:** $O(N)$ tree traversal and candidate scoring (indicative ~23ms on developer hardware; execution time is hardware-dependent while candidate counts and score outputs are deterministic).
+- **Execution Scaling:** O(N) tree traversal and candidate scoring (indicative ~23ms on developer hardware; execution time is hardware-dependent while candidate counts and score outputs are deterministic).
 - **Memory Footprint:** Allocation-optimized `Flatten` enumeration and fast Levenshtein matrix.
 - **Cross-Platform:** Benchmark unit tests run natively on Linux, macOS, and Windows.
 
@@ -726,19 +731,19 @@ We benchmark against two real application trees using controlled **multi-signal 
 ### Key Finding: The Heuristic's Accuracy Is a Range, Not a Number
 A single application cannot tell "this is how the engine behaves" from "this is how one app's structure happens to behave." Measured on two:
 
-| Metric (default weights, $\text{MinimumConfidence}=0.50$) | HandBrake | ShareX¹ |
+| Metric (default weights, MinimumConfidence = 0.50) | HandBrake | ShareX¹ |
 | :--- | ---: | ---: |
-| Precision | $84.4\%$ | $73.2\%$ |
-| Auto-heal recall | $76.9\%$ | $71.4\%$ |
-| **False heal rate on removed elements** | $40.5\%$ | $57.1\%$ |
-| Manual review rate | $30.7\%$ | $26.8\%$ |
+| Precision | 84.4% | 73.2% |
+| Auto-heal recall | 76.9% | 71.4% |
+| **False heal rate on removed elements** | 40.5% | 57.1% |
+| Manual review rate | 30.7% | 26.8% |
 
 ¹ ShareX figures exclude 15 `DataItem` grid-row locators from a settings table that are structurally near-identical to their siblings and correctly decline regardless of threshold — see [§8](docs/benchmark-calibration.md#8-a-second-application-sharex-v2100-99-134) for why, and for the unfiltered numbers.
 
-**The false-heal rate did not improve on a second application — it got worse.** No static score threshold separates every relocated control from every deleted one whose neighbour looks structurally similar (HandBrake: false heals on removed elements score $0.665$–$0.955$, true compound drifts score $0.749$–$0.874$ — the distributions overlap). Raising `MinimumConfidence` trades this down at the cost of recall; see the [full threshold sweep](docs/benchmark-calibration.md#4-the-false-heal-downarrow-vs-manual-review-uparrow-trade-off) for both applications, since the same threshold buys a different result on each ($7.6\%$–$9.6\%$ false heals on HandBrake vs. $20\%$–$23\%$ on ShareX at $0.75$–$0.80$).
+**The false-heal rate did not improve on a second application — it got worse.** No static score threshold separates every relocated control from every deleted one whose neighbour looks structurally similar (HandBrake: false heals on removed elements score 0.665–0.955, true compound drifts score 0.749–0.874 — the distributions overlap). Raising `MinimumConfidence` trades this down at the cost of recall; see the [full threshold sweep](docs/benchmark-calibration.md#4-the-false-heal-downarrow-vs-manual-review-uparrow-trade-off) for both applications, since the same threshold buys a different result on each (7.6%–9.6% false heals on HandBrake vs. 20%–23% on ShareX at 0.75–0.80).
 
 ### Does Independent Model Agreement Fix This? Measured, Not Assumed
-Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, $n=133$ usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): agreement separates surviving elements from deleted ones better than any heuristic signal tested ($94.5\%$ vs. $43.6\%$ unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The useful signal in those rejection cases is provider *disagreement*, not any model recognising that the element is gone. The shipped agreement quorum therefore limits single-model decisions but does not establish correctness or protect against this false-heal mode; widening the provider pool from 3 to 7 did not reduce the failure rate.
+Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, n = 133 usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): agreement separates surviving elements from deleted ones better than any heuristic signal tested (94.5% vs. 43.6% unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The useful signal in those rejection cases is provider *disagreement*, not any model recognising that the element is gone. The shipped agreement quorum therefore limits single-model decisions but does not establish correctness or protect against this false-heal mode; widening the provider pool from 3 to 7 did not reduce the failure rate.
 
 For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
 

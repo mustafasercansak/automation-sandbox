@@ -83,9 +83,10 @@ dotnet list package --outdated
 
 ### "In Review" State Transition & GitHub Projects Synchronization
 When a Pull Request (PR) is opened:
-1. The corresponding issue and PR **MUST IMMEDIATELY transition to "In Review"** on the GitHub Projects board (`automation sandbox`).
-2. The PR **MUST be assigned to the responsible contributor** (`--assignee <username>`).
-3. The PR description must reference the issue (`Fixes #xyz` or `Closes #xyz`) and declare the metadata:
+1. **Update Issue Checkboxes:** Before transitioning an issue to "In review", all `Proposed Changes` and `Acceptance Criteria` checkboxes (`- [x]`) inside the issue body **MUST be updated and checked off** (or explicitly documented if skipped). An issue must never sit in `In review` with unchecked boxes.
+2. The corresponding issue and PR **MUST transition to "In review"** on the GitHub Projects board (`automation sandbox`).
+3. The PR **MUST be assigned to the responsible contributor** (`--assignee <username>`).
+4. The PR description must reference the issue (`Fixes #xyz` or `Closes #xyz`) and declare the metadata:
    ```markdown
    - **Issue:** Fixes #xyz
    - **Priority:** P1 (High)
@@ -93,7 +94,7 @@ When a Pull Request (PR) is opened:
    - **Iteration:** Current Iteration (Now)
    - **Estimate:** 1h
    ```
-4. The project board fields (`Priority`, `Size`, `Estimate`, `Iteration`, and `Status: In review`) must be active on the project card.
+5. The project board fields (`Priority`, `Size`, `Estimate`, `Iteration`, and `Status: In review`) must be active on the project card.
 
 ### Definition of Done (DoD) — Completion Gate
 > [!CAUTION]

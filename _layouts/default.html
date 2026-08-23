@@ -78,13 +78,52 @@
       background: #f7f9fb;
     }
 
-    .mermaid {
-      margin: 20px 0;
-      padding: 16px;
-      border: 1px solid #d9e1ea;
-      border-radius: 6px;
-      background: #fff;
-      overflow-x: auto;
+    header.site-header {
+      background: #f7f9fb;
+      border-bottom: 1px solid #d9e1ea;
+      padding: 12px 24px;
+    }
+
+    header .nav-container {
+      max-width: 980px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header .site-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1.1em;
+      color: #17202a;
+      text-decoration: none;
+    }
+
+    header .site-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    header .site-nav a {
+      color: #245a91;
+      text-decoration: none;
+      font-size: 0.95em;
+    }
+
+    header .site-nav a:hover {
+      text-decoration: underline;
+    }
+
+    .version-badge {
+      display: inline-block;
+      vertical-align: middle;
     }
   </style>
   <script>
@@ -104,6 +143,21 @@
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
+  <header class="site-header">
+    <div class="nav-container">
+      <a class="site-brand" href="{{ site.baseurl }}/">
+        <span>⚡ Automation Sandbox</span>
+        <img class="version-badge" src="https://img.shields.io/github/v/release/mustafasercansak/automation-sandbox?include_prereleases&label=release" alt="Latest Release">
+      </a>
+      <nav class="site-nav">
+        <a href="{{ site.baseurl }}/docs/">Docs Index</a>
+        <a href="{{ site.baseurl }}/docs/getting-started.html">Getting Started</a>
+        <a href="{{ site.baseurl }}/docs/consumer-quickstart.html">Quickstart</a>
+        <a href="https://github.com/mustafasercansak/automation-sandbox/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/mustafasercansak/automation-sandbox" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
   <main>
     {{ content }}
   </main>

@@ -1,5 +1,10 @@
 # 🚀 Automation Sandbox Documentation / Dökümantasyon
 
+![CI](https://github.com/mustafasercansak/automation-sandbox/actions/workflows/ci.yml/badge.svg)
+![Release](https://img.shields.io/github/v/release/mustafasercansak/automation-sandbox?include_prereleases)
+![NuGet](https://img.shields.io/nuget/v/AutomationSandbox.SelfHealing.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 Welcome to **Automation Sandbox**! / **Automation Sandbox** projesine hoş geldiniz!
 
 > 💡 **Select Language / Dil Seçin:**
@@ -15,8 +20,8 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 
 **Automation Sandbox is like a smart GPS for your software tests:**
 1. It remembers what the button looked like (size, location, parent window, role).
-2. When the ID or name breaks, it calculates a **similarity score** ($0\% - 100\%$) across all elements on the screen.
-3. If it is confident ($\ge 50\%$), it automatically picks the right element and heals your test **without any AI cost** (pure heuristic, sub-50ms for 3,000 controls on developer hardware).
+2. When the ID or name breaks, it calculates a **similarity score** (0% - 100%) across all elements on the screen.
+3. If it is confident (>= 50%), it automatically picks the right element and heals your test **without any AI cost** (pure heuristic, sub-50ms for 3,000 controls on developer hardware).
 4. If it is unsure, it collects independent votes from providers such as Gemini, Claude, OpenAI, or local Ollama; an LLM pick is permitted when at least two votes name the same candidate. This agreement is not a correctness guarantee: all 34 unanimous deleted-element verdicts in the measured runs were false heals.
 
 ---
@@ -27,6 +32,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | :--- | :--- |
 | 🚀 [**Getting Started**](getting-started.md) | Step-by-step installation, core concepts, and copy-paste code examples. |
 | 📦 [**Published Package Quickstart**](consumer-quickstart.md) | First run from `dotnet add package` to a verified heuristic heal using the maintained NuGet consumer sample. |
+| 📋 [**Release Notes**](https://github.com/mustafasercansak/automation-sandbox/releases) | Latest release notes, breaking changes, and artifact downloads on GitHub. |
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
@@ -48,8 +54,8 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 
 **Automation Sandbox, testleriniz için akıllı bir navigasyon (GPS) gibidir:**
 1. Butonun eski halini (boyutunu, ekrandaki yerini, penceresini, türünü) hafızasına kaydeder.
-2. Adı veya ID'si değiştiğinde, ekrandaki tüm elemanları inceleyerek bir **benzerlik skoru** ($\%0 - \%100$) hesaplar.
-3. Eminse ($\ge \%50$), doğru butonu otomatik bulur ve testinizi **yapay zeka maliyeti olmadan** iyileştirir (heal eder) — saf sezgisel; geliştirici donanımında 3.000 kontrol için 50 milisaniyenin altında.
+2. Adı veya ID'si değiştiğinde, ekrandaki tüm elemanları inceleyerek bir **benzerlik skoru** (%0 - %100) hesaplar.
+3. Eminse (>= %50), doğru butonu otomatik bulur ve testinizi **yapay zeka maliyeti olmadan** iyileştirir (heal eder) — saf sezgisel; geliştirici donanımında 3.000 kontrol için 50 milisaniyenin altında.
 4. Kararsız kalırsa Gemini, Claude, OpenAI veya yerel Ollama gibi sağlayıcılardan bağımsız oylar toplar; en az iki oy aynı adayı gösterirse LLM seçimine izin verir. Bu uzlaşma bir doğruluk garantisi değildir: silinmiş eleman ölçümlerindeki 34 oybirliği kararının tamamı yanlış iyileştirmeydi.
 
 ---
@@ -60,6 +66,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | :--- | :--- |
 | 🚀 [**Başlangıç Rehberi**](getting-started.md) | Adım adım kurulum, temel mantık ve kopyala-yapıştır kod örnekleri. |
 | 📦 [**Yayınlanmış Paket Hızlı Başlangıcı**](consumer-quickstart.md) | `dotnet add package` komutundan bakımı yapılan NuGet consumer örneğiyle doğrulanmış sezgisel healing'e ilk çalıştırma. |
+| 📋 [**Sürüm Notları**](https://github.com/mustafasercansak/automation-sandbox/releases) | GitHub üzerindeki en güncel sürüm notları, değişiklikler ve artifact indirmeleri. |
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
