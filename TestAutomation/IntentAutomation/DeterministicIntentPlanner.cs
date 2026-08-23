@@ -487,13 +487,6 @@ namespace IntentAutomation
             return key.Replace("_", " ").Replace("-", " ").Trim();
         }
 
-        private static string ToPascalKey(string key)
-        {
-            var parts = HumanizeKey(key)
-                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return string.Concat(parts.Select(part => char.ToUpperInvariant(part[0]) + part.Substring(1)));
-        }
-
         private static string NormalizeToken(string value)
         {
             return new string((value ?? "")

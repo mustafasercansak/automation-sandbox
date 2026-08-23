@@ -31,15 +31,32 @@ namespace ScenarioRunner
 
         [Theory]
         [InlineData("primary submit or save action", "Action.PrimarySubmit")]
-        [InlineData("save button", "Action.PrimarySubmit")]
-        [InlineData("submit form", "Action.PrimarySubmit")]
+        [InlineData("primary submit", "Action.PrimarySubmit")]
         [InlineData("primary action", "Action.PrimarySubmit")]
+        [InlineData("save draft", "Action.Click.SaveDraft")]
+        [InlineData("save and submit", "Action.Click.SaveAndSubmit")]
+        [InlineData("save button", "Action.Click.SaveButton")]
+        [InlineData("submit form", "Action.Click.SubmitForm")]
         [InlineData("delete customer", "Action.Click.DeleteCustomer")]
         [InlineData("checkout", "Action.Click.Checkout")]
         public void Synthesize_GeneratesClickKeys_Correctly(string target, string expected)
         {
             var step = new IntentStep { ActionType = IntentActionType.Click, TargetDescription = target };
             Assert.Equal(expected, IntentLocatorKeySynthesizer.Synthesize(step));
+        }
+
+        [Fact]
+        public void Synthesize_GeneratesDistinctKeys_ForMultipleSaveOrSubmitButtons()
+        {
+            var draftStep = new IntentStep { ActionType = IntentActionType.Click, TargetDescription = "Save draft" };
+            var submitStep = new IntentStep { ActionType = IntentActionType.Click, TargetDescription = "Save and submit" };
+
+            var draftKey = IntentLocatorKeySynthesizer.Synthesize(draftStep);
+            var submitKey = IntentLocatorKeySynthesizer.Synthesize(submitStep);
+
+            Assert.Equal("Action.Click.SaveDraft", draftKey);
+            Assert.Equal("Action.Click.SaveAndSubmit", submitKey);
+            Assert.NotEqual(draftKey, submitKey);
         }
 
         [Theory]

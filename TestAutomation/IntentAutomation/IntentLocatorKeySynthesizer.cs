@@ -47,8 +47,9 @@ namespace IntentAutomation
                     return "Field." + pascalTarget;
 
                 case IntentActionType.Click:
-                    var lower = target.ToLowerInvariant();
-                    if (lower.Contains("submit") || lower.Contains("save") || lower.Contains("primary"))
+                    if (string.Equals(pascalTarget, "PrimarySubmitOrSaveAction", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pascalTarget, "PrimarySubmit", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pascalTarget, "PrimaryAction", StringComparison.OrdinalIgnoreCase))
                     {
                         return "Action.PrimarySubmit";
                     }
@@ -108,8 +109,9 @@ namespace IntentAutomation
                     return "Field." + pascalTarget;
 
                 case IntentActionType.Click:
-                    var lower = target.ToLowerInvariant();
-                    if (lower.Contains("submit") || lower.Contains("save") || lower.Contains("primary"))
+                    if (string.Equals(pascalTarget, "PrimarySubmitOrSaveAction", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pascalTarget, "PrimarySubmit", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(pascalTarget, "PrimaryAction", StringComparison.OrdinalIgnoreCase))
                     {
                         return "Action.PrimarySubmit";
                     }
