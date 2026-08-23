@@ -23,7 +23,7 @@ Create an empty console application and add the current prerelease explicitly:
 mkdir automation-sandbox-first-run
 cd automation-sandbox-first-run
 dotnet new console --framework net8.0
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
 `AutomationSandbox.SelfHealing` brings its `UiModel` and `LlmHealing` dependencies
@@ -106,7 +106,7 @@ Boş bir console uygulaması oluşturun ve mevcut prerelease sürümünü açık
 mkdir automation-sandbox-first-run
 cd automation-sandbox-first-run
 dotnet new console --framework net8.0
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
 `AutomationSandbox.SelfHealing`, `UiModel` ve `LlmHealing` bağımlılıklarını transitif olarak

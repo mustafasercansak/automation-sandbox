@@ -1,6 +1,14 @@
 title: Automation Sandbox
 description: Explainable self-healing UI test automation engine.
+repository: mustafasercansak/automation-sandbox
 markdown: kramdown
+
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
 
 defaults:
   - scope:
@@ -14,3 +22,4 @@ exclude:
   - TestAutomation
   - WinFormsApp
   - WpfApp
+  - samples

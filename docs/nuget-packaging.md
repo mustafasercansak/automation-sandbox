@@ -4,7 +4,7 @@ Automation Sandbox packages are prepared as preview artifacts first. The `Pack`
 workflow creates `.nupkg` and `.snupkg` files without publishing anywhere. The
 `Release Preview Packages` workflow can optionally push to nuget.org via Trusted
 Publishing (OIDC, no stored API key) when its `publish_to_nuget` input is enabled.
-The current `0.2.0-beta.3` packages were published this way and are available from
+Published packages are available from
 [nuget.org](https://www.nuget.org/profiles/mustafasercansak), as well as from the
 GitHub prerelease assets.
 
@@ -34,7 +34,7 @@ In GitHub Actions:
 1. Open **Actions**.
 2. Select **Pack**.
 3. Click **Run workflow**.
-4. Enter a version such as `0.2.0-beta.3`.
+4. Leave version blank to use `Directory.Build.props` (or specify an explicit override).
 5. Download the `nupkgs` artifact.
 
 ## Create A GitHub Release
@@ -42,17 +42,17 @@ In GitHub Actions:
 Use **Release Preview Packages** when you want the package files to appear on the
 repository's **Releases** page without publishing to nuget.org:
 
-1. Ensure the release notes file exists at `docs/release-notes/v<version>.md` (e.g. `docs/release-notes/v0.2.0-beta.3.md`). The release workflow validates this file and fails if it is missing or empty.
+1. Ensure the release notes file exists at `docs/release-notes/v<version>.md`. The release workflow validates this file and fails if it is missing or empty.
 2. Open **Actions**.
 3. Select **Release Preview Packages**.
 4. Click **Run workflow**.
-5. Enter a version such as `0.2.0-beta.3` (or leave blank to use `Directory.Build.props`).
+5. Leave version blank to use `Directory.Build.props` (or specify an explicit override).
 6. Keep `prerelease` enabled for preview builds.
 7. Enable `publish_to_nuget` to also push the packages to nuget.org via Trusted
    Publishing, or leave it disabled to keep the release as GitHub-only assets.
 8. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
 
-The current `0.2.0-beta.3` preview includes the Phase 3 measurement work and the opt-in
+The latest preview includes the Phase 3 measurement work and the opt-in
 `ResolveBatch` / `ResolveBatchAsync` ownership guard on top of the Phase 2 consensus and
 provider-resilience work. A single configured LLM provider still does not constitute
 consensus, and batch reconciliation remains a collision guard rather than an absence
@@ -63,15 +63,15 @@ Locally:
 ```powershell
 dotnet restore AutomationSandbox.sln
 dotnet build AutomationSandbox.sln --configuration Release --no-restore
-dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=0.2.0-beta.3
+dotnet pack TestAutomation/SelfHealing/SelfHealing.csproj --configuration Release --no-build --output ./nupkgs
 ```
 
 ## Consume From nuget.org
 
-Prerelease versions require an explicit version:
+Install the latest prerelease package:
 
 ```powershell
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
 The other six packages use the same version. Add only the packages whose APIs the
@@ -90,7 +90,7 @@ pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
 
 ```powershell
 dotnet nuget add source ./nupkgs --name automation-sandbox-local
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3 --source automation-sandbox-local
+dotnet add package AutomationSandbox.SelfHealing --prerelease --source automation-sandbox-local
 ```
 
 ## Publish Checklist
@@ -118,14 +118,12 @@ The packaging workflows (`pack.yml`, `release.yml`) and `verify.ps1` resolve `<V
 `Pack` workflow'u NuGet paketlerini yalnızca artifact olarak üretir ve herhangi bir
 feed'e yayın yapmaz. `Release Preview Packages` workflow'u ise `publish_to_nuget`
 etkinleştirildiğinde saklanan bir API anahtarı olmadan Trusted Publishing (OIDC) ile
-nuget.org'a yayın yapabilir. Mevcut `0.2.0-beta.3` sürümünün yedi paketinin tamamı
-nuget.org'da ve GitHub prerelease asset'lerinde bulunur. Yerel doğrulama için `Pack`
-artifact'leri ayrıca lokal feed üzerinden tüketilebilir. Yayınlanan prerelease paketi
-doğrudan tüketmek için aşağıdaki komut kullanılabilir; diğer altı paket de aynı sürüm
-numarasını taşır:
+nuget.org'a yayın yapabilir. Yayınlanan yedi paketin tamamı nuget.org'da ve GitHub
+prerelease asset'lerinde bulunur. Yerel doğrulama için `Pack` artifact'leri ayrıca lokal
+feed üzerinden tüketilebilir. Yayınlanan prerelease paketi doğrudan tüketmek için:
 
 ```powershell
-dotnet add package AutomationSandbox.SelfHealing --version 0.2.0-beta.3
+dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
 İlk çalıştırmanın tamamı için [Yayınlanmış Paket Hızlı Başlangıcını](consumer-quickstart.md)

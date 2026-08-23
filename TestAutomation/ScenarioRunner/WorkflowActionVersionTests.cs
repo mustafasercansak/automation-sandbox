@@ -17,6 +17,7 @@ namespace ScenarioRunner
             "actions/configure-pages@v6",
             "actions/upload-pages-artifact@v5",
             "actions/deploy-pages@v5",
+            "ruby/setup-ruby@v1",
             "NuGet/login@v1"
         };
 

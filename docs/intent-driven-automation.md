@@ -316,7 +316,7 @@ namespace GeneratedTests
 Locator resolution favors `AutomationId`, falling back to `Name` and then bare
 `ControlType` - the same tiering `MainFormScenarioTests` uses by hand for `panel1`, whose
 `AutomationId` is deliberately meaningless (see
-[Framework Case Studies](../README.md#-framework-case-studies-winforms-vs-wpf)). The
+[Framework Case Studies](https://github.com/mustafasercansak/automation-sandbox#-framework-case-studies-winforms-vs-wpf)). The
 generated code calls FlaUI directly rather than going through `SelfHealingEngine`: codegen
 output and self-healing are separate, already-implemented concerns.
 
