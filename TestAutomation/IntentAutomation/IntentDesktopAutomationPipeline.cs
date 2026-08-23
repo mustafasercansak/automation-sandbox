@@ -26,6 +26,33 @@ namespace IntentAutomation
         }
 
         public IntentDesktopAutomationPipelineResult Run(
+            IntentDesktopPlanningRequest request,
+            UiElementInfo desktopRoot,
+            LocatorRepository repository)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            return Run(request.ToPlanningRequest(), desktopRoot, repository);
+        }
+
+        public IntentDesktopAutomationPipelineResult Run(
+            string goal,
+            UiElementInfo desktopRoot,
+            LocatorRepository repository)
+        {
+            if (string.IsNullOrWhiteSpace(goal))
+            {
+                throw new ArgumentException("Goal must not be empty.", nameof(goal));
+            }
+
+            var request = new IntentDesktopPlanningRequest { Goal = goal.Trim() };
+            return Run(request, desktopRoot, repository);
+        }
+
+        public IntentDesktopAutomationPipelineResult Run(
             IntentPlanningRequest request,
             UiElementInfo desktopRoot,
             LocatorRepository repository)
