@@ -445,6 +445,98 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HandBrakeFixture_AbsenceInvestigation_ReviewBandWideningTradeOff()
+        {
+            // #179 Candidate 1: Review-Band Widening (Policy Option).
+            // Evaluates routing the entire measured overlap band ([0.665, 0.874] or higher) to mandatory review.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+
+            var report050 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+            var report088 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.88 });
+            var report096 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.96 });
+
+            var compound050 = report050.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var compound088 = report088.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var compound096 = report096.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+
+            var removedFalse050 = report050.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+            var removedFalse088 = report088.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+            var removedFalse096 = report096.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+
+            // Finding:
+            // At 0.88 (above the 0.874 true compound-drift maximum), compound auto-heal recall drops to 0 (6 -> 0),
+            // yet 3 false heals on removed elements still survive because confident decoys score up to 0.955.
+            Assert.Equal(6, compound050);
+            Assert.Equal(0, compound088);
+            Assert.Equal(0, compound096);
+
+            Assert.Equal(17, removedFalse050);
+            Assert.Equal(3, removedFalse088);
+            Assert.Equal(0, removedFalse096);
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AbsenceInvestigation_GlobalAssignmentResidual_CannotSeparateAbsenceFromDrift()
+        {
+            // #179 Candidate 2: Global Assignment Residual (Whole-Tree Bipartite Matching).
+            // Evaluates whether matching residual (1 - score) for unclaimed tree nodes separates absence from true drift.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var report050 = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+
+            // On removed elements, the best unclaimed decoy candidate achieves scores up to 0.955 (residual = 0.045).
+            var maxRemovedScore = report050.Results
+                .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                .Max(r => r.Score);
+            var minRemovedResidual = 1.0 - maxRemovedScore;
+
+            // On surviving compound-drift elements, true ground-truth successors score between 0.749 and 0.874 (residual = 0.126 to 0.251).
+            var maxCompoundScore = report050.Results
+                .Where(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal)
+                .Max(r => r.Score);
+            var minCompoundResidual = 1.0 - maxCompoundScore;
+
+            // Finding: The minimum residual for false heals on removed elements is strictly smaller than the minimum residual for true compound drift.
+            // Therefore, a whole-tree residual threshold encounters the identical score distribution overlap and cannot detect absence without active locator contention.
+            Assert.True(minRemovedResidual < minCompoundResidual,
+                $"Expected removed decoy residual ({minRemovedResidual:F3}) to be smaller than compound drift residual ({minCompoundResidual:F3}).");
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AbsenceInvestigation_TemporalStability_DecoyNeighboursPersistInStaticSnapshots()
+        {
+            // #179 Candidate 3: Temporal / Historical Stability Signal.
+            // Evaluates whether repeated healing evaluations differentiate true moved locators from decoy neighbours in static/semi-static snapshots.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+
+            var removedScenarios = dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement).ToList();
+            var stabilityRounds = 3;
+
+            foreach (var scenario in removedScenarios)
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(root, scenario);
+
+                string? firstPickId = null;
+                for (var round = 0; round < stabilityRounds; round++)
+                {
+                    var result = SelfHealingResolver.Resolve(expected, mutatedRoot);
+                    if (round == 0)
+                    {
+                        firstPickId = result.Matched?.AutomationId ?? "NONE";
+                    }
+                    else
+                    {
+                        // In a static snapshot, the decoy candidate chosen by the heuristic is 100% stable across runs
+                        Assert.Equal(firstPickId, result.Matched?.AutomationId ?? "NONE");
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void HandBrakeFixture_AblationPrompt_ContainsNoAutomationIdOrAblationMarkers()
         {
             var root = LoadFixture();

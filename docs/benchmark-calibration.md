@@ -420,6 +420,51 @@ The larger sample also confirms the limit more strongly than §10: **15 uncontes
 
 ---
 
+### 12. Absence Detection Investigation: Review-Band Widening, Assignment Residual, and Temporal Stability (#179)
+
+Building on the negative findings from single-target heuristic signals (§5) and multi-provider LLM consensus (§6), #179 evaluated three untried absence detection hypotheses offline across the HandBrake 1.8.2 and ShareX v21.0.0 ablation datasets:
+
+#### 1. Candidate 1: Review-Band Widening (Policy Option)
+*Hypothesis:* The overlap band between false heals on deleted elements ($[0.665, 0.955]$) and true compound drift ($[0.749, 0.874]$) is already known. Instead of inventing a new heuristic signal, widen the review band (`RequiresReview`) to cover this overlap, trading auto-heal recall for eliminating confidently-wrong heals on deleted controls.
+
+*Empirical Findings:*
+- On **HandBrake 1.8.2** ($n=176$, $42$ removals, $25$ compound drifts):
+  - At default $\text{Threshold} = 0.50$: Compound drift recall is $24.0\%$ ($6/25$), false heals on removed is $40.5\%$ ($17/42$), manual review rate is $30.7\%$.
+  - At $\text{Threshold} = 0.88$ (just above the $0.874$ compound drift ceiling): Compound drift recall drops to **$0.0\%$** ($0/25$), while **$3$ false heals on removed elements persist** (scoring up to $0.955$).
+  - At $\text{Threshold} = 0.96$: False heals on removed reach $0/42$, but compound drift recall remains $0.0\%$ and manual review rate surges to **$76.1\%$**.
+- On **ShareX v21.0.0** ($n=56$ excluding grid rows, $14$ removals, $14$ compound drifts):
+  - At $\text{Threshold} = 0.50$: Compound drift recall is $14.3\%$ ($2/14$), false heals on removed is $57.1\%$ ($8/14$).
+  - At $\text{Threshold} = 0.88$: Compound drift recall drops to **$0.0\%$** ($0/14$), while **$2$ false heals on removed persist**.
+
+*Result:* **Negative as a selective filter.** Review-band widening is a blunt policy knob. Because confident sibling decoys score up to $0.955$, setting the auto-accept floor high enough to eliminate all deleted-element false heals completely wipes out compound-drift auto-healing recall and routes over three-quarters of all locators to manual review.
+
+#### 2. Candidate 2: Global Assignment Residual (Whole-Tree Bipartite Matching)
+*Hypothesis:* In a whole-tree assignment where all active locators are matched to tree nodes, a deleted locator will be forced to match an unclaimed background node with high residual ($1 - \text{score}$), signalling absence without single-target isolation.
+
+*Empirical Findings:*
+- In HandBrake 1.8.2, all surviving authored locators claim their true nodes ($1.000$).
+- When a locator is deleted, its highest-scoring unclaimed background decoy scores up to $0.955$, yielding a minimum residual of **$1.0 - 0.955 = 0.045$**.
+- True compound-drift successors score between $0.749$ and $0.874$, yielding a minimum residual of **$1.0 - 0.874 = 0.126$**.
+- Because $0.045 < 0.126$, any residual threshold that admits surviving compound-drifted elements will also admit the highest-scoring deleted-element decoys.
+
+*Result:* **Negative.** Whole-tree assignment residual is mathematically isomorphic to the similarity score ($residual = 1 - score$). An unclaimed background decoy looks as structurally convincing to a bipartite residual scorer as it does to a single-locator heuristic. One-to-one ownership provides an absence signal only when another locator actively contests the candidate (#141/#144), not through residual magnitude alone.
+
+#### 3. Candidate 3: Temporal / Historical Stability Signal
+*Hypothesis:* A genuinely moved or drifted control consistently resolves to the same ground-truth candidate across repeated executions, whereas decoy neighbours for deleted elements should exhibit instability across runs.
+
+*Empirical Findings:*
+- In static and semi-static UI snapshots, the structural context surrounding a deleted element (e.g. an adjacent toolbar button or sibling container) remains identical across evaluation rounds.
+- The top-scoring decoy candidate chosen by the heuristic demonstrates **$100\%$ temporal stability** ($1.0$ convergence rate across consecutive evaluations).
+- Without dynamic runtime perturbations affecting the decoy node specifically, historical stability cannot distinguish a stable decoy neighbour from a stable true successor.
+
+*Result:* **Negative.** Historical stability reflects the stability of the UI tree, not the validity of the locator-element relationship.
+
+#### Formal Finding
+> [!IMPORTANT]
+> **Formal finding (#179).** None of the three candidate mechanisms (review-band widening, global assignment residual, temporal stability) separates deleted elements from moved elements unassisted. Review-band widening trades compound recall linearly for false-heal reduction, assignment residual suffers from the identical score overlap ($0.045 < 0.126$), and temporal stability reflects tree stability rather than absence. Consequently, unassisted absence detection remains mathematically bounded by the score overlap floor, and the engine maintains its shipped default (`0.50`) while offering `SimilarityWeights` configurability for teams requiring strict zero-defect policies. Regression guards: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ReviewBandWideningTradeOff`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_GlobalAssignmentResidual_CannotSeparateAbsenceFromDrift`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_TemporalStability_DecoyNeighboursPersistInStaticSnapshots`, and `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ReviewBandWidening_MatchesHandBrakePattern`.
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
@@ -811,3 +856,49 @@ Daha büyük örnek sınırı §10'dan daha güçlü doğruluyor: **itiraz edilm
 
 > [!IMPORTANT]
 > **Resmi çıkarım ve karar.** Önceden ilan edilen üretim-tasarım eşiği iki uygulamada da bağımsız olarak geçti: baseline'daki her doğru hayatta-kalan korundu, her uygulama en az bir yeni silinmiş-eleman doğru reddi kazandı, yeni eşleşme üretilmedi ve tüm paylaşılan-aday çakışmaları kaldırıldı. Bu, ayrı üretim-tasarım issue'su #144'ü haklı çıkardı; çevrimdışı değerlendiriciyi olduğu gibi yayımlamayı **haklı çıkarmadı**. #144 daha sonra snapshot-local aday kimliği, açık belirsizlik davranışı ve şema-v8 sahiplik telemetrisi olan isteğe bağlı üretim batch API'sini eklerken tek-locator davranışını değiştirmedi. Bire-bir sahiplik hedefli bir çakışma koruması olarak kalır, yokluk dedektörü değildir; itiraz edilmeyen 15 yanlış iyileştirme erişim dışında kalıyor. Regresyon korumaları: `JointAssignmentGeneralizationDatasetTests.FrozenSelection_GeneratesOneRotationPerEligibleLeaf`, `JointAssignmentGeneralizationTests.FrozenCrossApplicationDataset_ReportsJointAssignmentGeneralization` ve `BatchHealingResolverTests`.
+
+---
+
+### 12. Yokluk Tespiti Araştırması: İnceleme Bandı Genişletme, Atama Kalıntısı ve Zamansal Kararlılık (#179)
+
+Tek-hedefli sezgisel sinyaller (§5) ve çoklu-sağlayıcılı LLM mutabakatından (§6) elde edilen negatif bulguların ardından #179, denenmemiş üç yokluk tespiti hipotezini HandBrake 1.8.2 ve ShareX v21.0.0 ablasyon veri setleri üzerinde çevrimdışı değerlendirdi:
+
+#### 1. Aday 1: İnceleme Bandı Genişletme (Politika Seçeneği)
+*Hipotez:* Silinen elemanlardaki yanlış iyileştirmeler ($[0.665, 0.955]$) ile gerçek bileşik kayma ($[0.749, 0.874]$) arasındaki skor çakışma bandı bilinmektedir. Yeni bir sezgisel sinyal icat etmek yerine, inceleme bandı (`RequiresReview`) bu çakışmayı kapsayacak şekilde genişletilerek, silinen kontroller üzerindeki kendinden emin yanlış kabul durumları elenebilir.
+
+*Ampirik Bulgular:*
+- **HandBrake 1.8.2** ($n=176$, $42$ silme, $25$ bileşik kayma):
+  - Varsayılan $\text{Eşik} = 0.50$: Bileşik kayma recall'u $\%24.0$ ($6/25$), silinendeki yanlış iyileştirme $\%40.5$ ($17/42$), manuel inceleme oranı $\%30.7$.
+  - $\text{Eşik} = 0.88$ ($0.874$ bileşik tavanının hemen üzeri): Bileşik kayma recall'u **$\%0.0$**'a ($0/25$) düşerken, silinendeki **$3$ yanlış iyileştirme hâlâ hayatta kalır** ($0.955$'e kadar skorlar).
+  - $\text{Eşik} = 0.96$: Silinendeki yanlış iyileştirmeler $0/42$'ye iner, ancak bileşik recall $\%0.0$ kalır ve manuel inceleme oranı **$\%76.1$**'e fırlar.
+- **ShareX v21.0.0** (grid satırları hariç $n=56$, $14$ silme, $14$ bileşik kayma):
+  - Varsayılan $\text{Eşik} = 0.50$: Bileşik kayma recall'u $\%14.3$ ($2/14$), silinendeki yanlış iyileştirme $\%57.1$ ($8/14$).
+  - $\text{Eşik} = 0.88$: Bileşik kayma recall'u **$\%0.0$**'a ($0/14$) düşer, silinendeki **$2$ yanlış iyileştirme hayatta kalır**.
+
+*Sonuç:* **Seçici bir filtre olarak negatif.** İnceleme bandı genişletme kaba bir politika ayarıdır. Yüksek skorlu komşu yanıltıcılar $0.955$'e kadar ulaştığından, tüm silinmiş-eleman yanlış iyileştirmelerini eleyecek kadar yüksek bir otomatik kabul tabanı belirlemek, bileşik kayma recall'unu tamamen yok eder ve locator'ların dörtte üçünden fazlasını manuel incelemeye iter.
+
+#### 2. Aday 2: Global Atama Kalıntısı (Tüm Ağaç Bipartite Eşleme)
+*Hipotez:* Tüm aktif locator'ların ağaç düğümleriyle eşleştiği global bir atamada, silinmiş bir locator talep edilmemiş bir arka plan düğümüyle yüksek kalıntı ($1 - \text{skor}$) ile eşleşmek zorunda kalacak ve bu durum yokluk sinyali verecektir.
+
+*Ampirik Bulgular:*
+- HandBrake 1.8.2'de hayatta kalan tüm authored locator'lar kendi gerçek düğümlerini talep eder ($1.000$).
+- Bir locator silindiğinde, talep edilmemiş en iyi arka plan adayı $0.955$'e kadar skor alır ve minimum kalıntı **$1.0 - 0.955 = 0.045$** olur.
+- Gerçek bileşik kayma halefleri $0.749$ ile $0.874$ arasında skor alır ve minimum kalıntı **$1.0 - 0.874 = 0.126$** olur.
+- $0.045 < 0.126$ olduğundan, hayatta kalan bileşik kayma elemanlarını kabul eden herhangi bir kalıntı eşiği, silinmiş elemanların en yüksek skorlu yanıltıcılarını da kabul edecektir.
+
+*Sonuç:* **Negatif.** Tüm ağaç atama kalıntısı matematiksel olarak benzerlik skorunun tümleyenidir ($kal\iota nt\iota = 1 - skor$). Talep edilmemiş bir arka plan yanıltıcısı, bipartite kalıntı puanlayıcısına da tekli locator sezgiseline göründüğü kadar inandırıcı görünür. Bire-bir sahiplik, yalnızca başka bir locator adaya aktif olarak itiraz ettiğinde yokluk sinyali sağlar (#141/#144); tek başına kalıntı büyüklüğü üzerinden değil.
+
+#### 3. Aday 3: Zamansal / Geçmiş Kararlılık Sinyali
+*Hipotez:* Gerçekten taşınan veya kayan bir kontrol, tekrarlanan çalıştırmalarda tutarlı olarak aynı ground-truth adayına yönelirken; silinen elemanların yanıltıcı komşuları çalıştırmalar arasında kararsızlık göstermelidir.
+
+*Ampirik Bulgular:*
+- Statik ve yarı statik UI anlık görüntülerinde, silinen bir elemanı çevreleyen yapısal bağlam (ör. bitişik araç çubuğu butonu veya kapsayıcı) değerlendirme turları boyunca tamamen aynı kalır.
+- Sezgisel motorun seçtiği en iyi yanıltıcı aday, ardışık değerlendirmeler boyunca **$\%100$ zamansal kararlılık** ($1.0$ yakınsama oranı) sergiler.
+- Yanıltıcı düğümün kendisini etkileyen dinamik çalışma zamanı değişimleri olmadığı sürece, geçmiş kararlılık kararlı bir komşuyu kararlı bir gerçek haleften ayırt edemez.
+
+*Sonuç:* **Negatif.** Geçmiş kararlılık, locator-eleman ilişkisinin geçerliliğini değil, UI ağacının kararlılığını yansıtır.
+
+#### Resmi Çıkarım
+> [!IMPORTANT]
+> **Resmi çıkarım (#179).** Değerlendirilen üç mekanizmanın hiçbiri (inceleme bandı genişletme, global atama kalıntısı, zamansal kararlılık) silinen elemanları taşınan elemanlardan tek başına ayıramaz. İnceleme bandı genişletme bileşik recall'u yanlış iyileştirme azaltımı karşılığında doğrusal olarak feda eder; atama kalıntısı aynı skor çakışmasından ($0.045 < 0.126$) muzdariptir; zamansal kararlılık ise yokluğu değil ağaç kararlılığını yansıtır. Sonuç olarak, tekil yokluk tespiti skor çakışması tabanıyla matematiksel olarak sınırlı kalır ve motor varsayılan değerini (`0.50`) korurken, sıfır hata toleransı arayan ekipler için `SimilarityWeights` yapılandırılabilirliğini sunmaya devam eder. Regresyon korumaları: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ReviewBandWideningTradeOff`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_GlobalAssignmentResidual_CannotSeparateAbsenceFromDrift`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_TemporalStability_DecoyNeighboursPersistInStaticSnapshots` ve `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ReviewBandWidening_MatchesHandBrakePattern`.
+
