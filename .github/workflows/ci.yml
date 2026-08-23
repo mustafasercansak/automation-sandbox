@@ -146,9 +146,33 @@ jobs:
         shell: pwsh
         run: ./samples/HeuristicHealingQuickstart/verify.ps1
 
+  docs-build-preview:
+    name: Docs Build & Link Integrity Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install Jekyll & Plugins
+        run: gem install jekyll kramdown jekyll-relative-links
+
+      - name: Build site with Jekyll
+        run: |
+          jekyll build --source . --destination ./_site
+          if [ ! -f "./_site/index.html" ]; then
+            echo "::error::FATAL: ./_site/index.html was not generated!"
+            exit 1
+          fi
+          echo "Verified: ./_site/index.html generated successfully."
+
   build-and-test:
     name: build-and-test
-    needs: [test, nuget-consumer]
+    needs: [test, nuget-consumer, docs-build-preview]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -162,5 +186,9 @@ jobs:
             echo "NuGet consumer verification failed: ${{ needs.nuget-consumer.result }}"
             exit 1
           fi
-          echo "All matrix test jobs and the NuGet consumer verification passed."
+          if [ "${{ needs.docs-build-preview.result }}" != "success" ]; then
+            echo "Docs build preview verification failed: ${{ needs.docs-build-preview.result }}"
+            exit 1
+          fi
+          echo "All matrix test jobs, NuGet consumer, and docs build verification passed."
 
