@@ -800,7 +800,16 @@ dotnet build AutomationSandbox.sln --configuration Debug
 
 # Run all test suites
 dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --no-build
+
+# Audit packages for security vulnerabilities and outdated versions
+dotnet list package --vulnerable --include-transitive
+dotnet list package --outdated
 ```
+
+### Security & CI Quality Gates
+- **Package Security Auditing:** Enforced via MSBuild `NuGetAudit` (`NU1903`/`NU1904` hard errors in CI).
+- **Verified GitHub Actions Standard:** All workflow actions must target active official releases and are verified by `WorkflowActionVersionTests`.
+- **Contribution Guidelines:** See [CONTRIBUTING.md](CONTRIBUTING.md) for strict lifecycle rules (DoR, DoD, Assignee assignment, and GitHub Projects board sync).
 
 ---
 

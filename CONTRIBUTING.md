@@ -53,6 +53,8 @@ Create a dedicated branch per issue:
 ## 3. Security, Auditing & Quality Gates
 
 - **Mandatory Package Security Auditing (#223):** MSBuild `NuGetAudit` is enabled repo-wide (`NuGetAuditMode=all`, `NuGetAuditLevel=moderate`). In CI (`ContinuousIntegrationBuild=true`), any High or Critical advisory (`NU1903` direct, `NU1904` transitive) causes a **hard build failure**.
+- **Verified GitHub Actions & Modern Dependencies Standard (#228):** Hallucinated future action tags (`@v6`, `@v7`, `@v8`) and deprecated actions (`actions/jekyll-build-pages`) are strictly forbidden. All workflow action calls are verified by `WorkflowActionVersionTests` in CI.
+- **Mandatory Assignee:** All issues and PRs must always be assigned to `@mustafasercansak`.
 - **Zero Build Warnings:** Code must compile cleanly with `0 Warning(s), 0 Error(s)` across all targeted frameworks. Analyzer warnings (such as `xUnit.analyzers` `xUnit2031`) must be resolved rather than suppressed.
 - **Testing Rules:**
   - **Assert behavior, not implementation:** Tests should assert what components compute and decide, allowing refactoring without breaking tests.
@@ -82,7 +84,8 @@ dotnet list package --outdated
 ### "In Review" State Transition & GitHub Projects Synchronization
 When a Pull Request (PR) is opened:
 1. The corresponding issue and PR **MUST IMMEDIATELY transition to "In Review"** on the GitHub Projects board (`automation sandbox`).
-2. The PR description must reference the issue (`Fixes #xyz` or `Closes #xyz`) and declare the metadata:
+2. The PR **MUST be assigned to `@mustafasercansak`** (`--assignee mustafasercansak`).
+3. The PR description must reference the issue (`Fixes #xyz` or `Closes #xyz`) and declare the metadata:
    ```markdown
    - **Issue:** Fixes #xyz
    - **Priority:** P1 (High)
@@ -90,7 +93,7 @@ When a Pull Request (PR) is opened:
    - **Iteration:** Current Iteration (Now)
    - **Estimate:** 1h
    ```
-3. The project board fields (`Priority`, `Size`, `Estimate`, `Iteration`, and `Status: In review`) must be active on the project card.
+4. The project board fields (`Priority`, `Size`, `Estimate`, `Iteration`, and `Status: In review`) must be active on the project card.
 
 ### Definition of Done (DoD) — Completion Gate
 > [!CAUTION]
@@ -99,8 +102,9 @@ When a Pull Request (PR) is opened:
 ### Pull Request Checklist
 When submitting a pull request, ensure:
 - [ ] Linked issue in the description (`Fixes #xyz` or `Closes #xyz`).
+- [ ] PR assigned to `@mustafasercansak`.
 - [ ] `Priority`, `Size`, `Iteration`, and `Estimate` metadata included in PR description.
 - [ ] All acceptance criteria in the issue are verified and checked `[x]`.
 - [ ] Solution builds with `0 Warning(s)` and `0 Error(s)`.
-- [ ] Full test suite passes (`dotnet test`).
+- [ ] Full test suite passes (`dotnet test`), including `WorkflowActionVersionTests` and `PackageVersionDriftTests`.
 - [ ] No High/Critical vulnerable packages introduced (`dotnet list package --vulnerable --include-transitive`).
