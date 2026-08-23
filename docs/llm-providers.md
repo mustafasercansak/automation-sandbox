@@ -1,3 +1,8 @@
+---
+layout: default
+title: LLM Providers Guide - Automation Sandbox
+---
+
 # 🤖 LLM Providers Guide / Yapay Zeka Sağlayıcıları Rehberi
 
 Automation Sandbox includes built-in AI providers and an environment-driven factory for low-confidence healing fallback ($Score < 50\%$).

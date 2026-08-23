@@ -1,3 +1,8 @@
+---
+layout: default
+title: Web Automation - Automation Sandbox
+---
+
 # 🌐 Web Automation Guide / Web Otomasyon Rehberi
 
 This guide explains how to capture Web DOM trees with **Playwright**, support Shadow DOM / iframes, and generate prioritized locators.

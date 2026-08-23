@@ -1,3 +1,8 @@
+---
+layout: default
+title: Intent-Aware Healing - Automation Sandbox
+---
+
 # 🎯 Intent-Aware Healing Guide / Test Amacı İle İyileştirme
 
 This guide explains **Intent-Aware Healing** (`TestIntent`), BDD/Gherkin scenario style intents, best practices, and multilingual support.

@@ -1,3 +1,8 @@
+---
+layout: default
+title: NuGet Packaging Guide - Automation Sandbox
+---
+
 # NuGet Packaging Guide / NuGet Paketleme Rehberi
 
 Automation Sandbox packages are prepared as preview artifacts first. The `Pack`

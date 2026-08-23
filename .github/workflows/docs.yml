@@ -59,6 +59,11 @@ jobs:
       - name: Build site with Jekyll
         run: |
           jekyll build --baseurl "${{ steps.pages.outputs.base_path }}" --source . --destination ./_site
+          if [ ! -f "./_site/index.html" ]; then
+            echo "::error::FATAL: ./_site/index.html was not generated!"
+            exit 1
+          fi
+          echo "Verified ./_site/index.html successfully generated."
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v5

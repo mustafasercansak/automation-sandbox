@@ -1,3 +1,8 @@
+---
+layout: default
+title: JSON Schema Guide - Automation Sandbox
+---
+
 # 📄 JSON Schema Guide / JSON Şema Rehberi
 
 This guide explains the `.locator.json` repository file structure used to store element snapshots and healing audit history.

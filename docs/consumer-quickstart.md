@@ -1,3 +1,8 @@
+---
+layout: default
+title: Published Package Quickstart - Automation Sandbox
+---
+
 # Published Package Quickstart / Yayınlanmış Paket Hızlı Başlangıcı
 
 ## English

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Documentation Hub - Automation Sandbox
+title: Automation Sandbox - Documentation
 ---
 
 # 🚀 Automation Sandbox Documentation / Dökümantasyon

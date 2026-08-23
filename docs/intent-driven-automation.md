@@ -1,3 +1,8 @@
+---
+layout: default
+title: Intent-Driven Automation - Automation Sandbox
+---
+
 # Intent-Driven Automation / Intent Tabanlı Otomasyon
 
 This page documents the **M6** direction: moving from intent-aware self-healing
