@@ -124,7 +124,6 @@ namespace IntentAutomation
             var locatorSuggestions = PlaywrightLocatorEmitter.Suggest(element).ToList();
             var locatorScore = locatorSuggestions.Count == 0 ? 0.0 : locatorSuggestions[0].Confidence;
             var exactBonus = IntentTextScoring.ContainsNormalized(elementText, step.TargetDescription)
-                || IntentTextScoring.ContainsNormalized(elementText, step.LocatorKey)
                 ? 0.15
                 : 0.0;
 

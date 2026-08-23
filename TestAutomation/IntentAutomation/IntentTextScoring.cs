@@ -15,7 +15,7 @@ namespace IntentAutomation
             // TestIntent explains why the step exists and ExpectedOutcome describes the state
             // after it runs. Neither identifies the element to act on, so letting them influence
             // candidate ranking makes contradictory narrative metadata override the target.
-            return Join(step.TargetDescription, step.LocatorKey);
+            return step.TargetDescription ?? "";
         }
 
         public static double TokenOverlap(string targetText, string elementText)

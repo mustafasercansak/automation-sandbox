@@ -95,7 +95,6 @@ namespace ScenarioRunner
                         TargetDescription = "delete customer",
                         TestIntent = "Click the delete action for customer",
                         ExpectedOutcome = "The customer record is deleted",
-                        LocatorKey = "Action.DeleteCustomer",
                     }
                 }
             };
@@ -137,7 +136,6 @@ namespace ScenarioRunner
                         TargetDescription = "save action",
                         TestIntent = "Click save action",
                         ExpectedOutcome = "Changes are saved",
-                        LocatorKey = "Action.Save",
                     }
                 }
             };
@@ -251,7 +249,6 @@ namespace ScenarioRunner
                         TargetDescription = "checkout",
                         TestIntent = "Click the checkout button",
                         ExpectedOutcome = "Order is submitted",
-                        LocatorKey = "Action.Checkout",
                     }
                 }
             };
@@ -328,7 +325,7 @@ namespace ScenarioRunner
             {
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Select, TargetDescription = "record type", LocatorKey = "Field.RecordType" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Select, TargetDescription = "record type" },
                 }
             };
 
@@ -348,8 +345,8 @@ namespace ScenarioRunner
             {
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.Check, TargetDescription = "shipping method", LocatorKey = "Field.ShippingMethod" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Check, TargetDescription = "shipping method" },
                 }
             };
 
@@ -368,7 +365,7 @@ namespace ScenarioRunner
             {
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Uncheck, TargetDescription = "newsletter", LocatorKey = "Field.Newsletter" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Uncheck, TargetDescription = "newsletter" },
                 }
             };
 

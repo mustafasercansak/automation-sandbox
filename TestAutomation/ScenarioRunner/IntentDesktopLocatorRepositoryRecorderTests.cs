@@ -57,7 +57,7 @@ namespace ScenarioRunner
             {
                 Order = 1,
                 ActionType = IntentActionType.Fill,
-                LocatorKey = "Field.TaxId",
+                TargetDescription = "TaxId",
                 TestIntent = "Fill tax id",
             };
             var explorationResult = new IntentDesktopExplorationResult
@@ -105,7 +105,6 @@ namespace ScenarioRunner
                 Order = 1,
                 ActionType = IntentActionType.Fill,
                 TargetDescription = "Email",
-                LocatorKey = "Field.Email",
                 TestIntent = "Fill Email for: Create a customer record",
             };
             var saveStep = new IntentStep
@@ -113,7 +112,6 @@ namespace ScenarioRunner
                 Order = 2,
                 ActionType = IntentActionType.Click,
                 TargetDescription = "primary submit or save action",
-                LocatorKey = "Action.PrimarySubmit",
                 TestIntent = "Click Save for: Create a customer record",
             };
 

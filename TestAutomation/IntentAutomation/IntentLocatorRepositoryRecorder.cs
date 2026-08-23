@@ -44,10 +44,16 @@ namespace IntentAutomation
             LocatorRepository repository)
         {
             var step = stepResult.Step;
+            var candidate = stepResult.Candidates
+                .OrderByDescending(item => item.Score)
+                .FirstOrDefault();
+            var locatorKey = IntentLocatorKeySynthesizer.Synthesize(step, candidate);
+
             var result = new IntentLocatorRecordingResult
             {
                 Step = step,
-                LocatorKey = step.LocatorKey,
+                LocatorKey = locatorKey,
+                Candidate = candidate,
             };
 
             if (step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
@@ -56,7 +62,7 @@ namespace IntentAutomation
                 return result;
             }
 
-            if (string.IsNullOrWhiteSpace(step.LocatorKey))
+            if (string.IsNullOrWhiteSpace(locatorKey))
             {
                 result.Diagnostic = "Step has no LocatorKey.";
                 return result;
@@ -67,11 +73,6 @@ namespace IntentAutomation
                 result.Diagnostic = "Step requires review; candidate was not recorded.";
                 return result;
             }
-
-            var candidate = stepResult.Candidates
-                .OrderByDescending(item => item.Score)
-                .FirstOrDefault();
-            result.Candidate = candidate;
 
             if (candidate == null)
             {
@@ -88,7 +89,7 @@ namespace IntentAutomation
             var snapshot = WebElementMapper.ToUiElementTree(candidate.Element);
             snapshot.TestIntent = step.TestIntent;
             result.Record = repository.Upsert(
-                step.LocatorKey,
+                locatorKey,
                 snapshot,
                 applicationName: _options.ApplicationName,
                 platform: _options.Platform);

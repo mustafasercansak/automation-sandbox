@@ -30,7 +30,7 @@ namespace ScenarioRunner
                     {
                         Order = 2,
                         ActionType = IntentActionType.Fill,
-                        LocatorKey = "Field.Email",
+                        TargetDescription = "Email",
                         Value = "jane.doe@example.com",
                         TestIntent = "Fill customer email",
                     },
@@ -38,7 +38,7 @@ namespace ScenarioRunner
                     {
                         Order = 3,
                         ActionType = IntentActionType.Select,
-                        LocatorKey = "Field.RecordType",
+                        TargetDescription = "RecordType",
                         Value = "Corporate",
                         TestIntent = "Select corporate record type",
                     },
@@ -46,14 +46,14 @@ namespace ScenarioRunner
                     {
                         Order = 4,
                         ActionType = IntentActionType.Click,
-                        LocatorKey = "Action.PrimarySubmit",
+                        TargetDescription = "PrimarySubmit",
                         TestIntent = "Submit customer form",
                     },
                     new IntentStep
                     {
                         Order = 5,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.ResultVisible",
+                        TargetDescription = "ResultVisible",
                         TestIntent = "Verify customer result appears",
                         AssertionKind = AssertionKind.Visible,
                     },
@@ -94,7 +94,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.OrderTotal",
+                        TargetDescription = "OrderTotal",
                         AssertionKind = AssertionKind.TextEquals,
                         ExpectedValue = "$125",
                         ExpectedOutcome = "Order total should be $125",
@@ -119,10 +119,10 @@ namespace ScenarioRunner
                 Goal = "Use common interactions",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
-                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
-                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "Action.Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, TargetDescription = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, TargetDescription = "Action.SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, TargetDescription = "Wait.Confirmation", Value = "3000" },
                 }
             };
             var recordings = new List<IntentDesktopLocatorRecordingResult>
@@ -156,7 +156,7 @@ namespace ScenarioRunner
             {
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.UploadFile, TargetDescription = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
                 }
             };
             var recordings = new List<IntentDesktopLocatorRecordingResult>
@@ -178,7 +178,7 @@ namespace ScenarioRunner
             {
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.PressKey, LocatorKey = "Action.EditorKey", Value = "Control+Shift+P" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.PressKey, TargetDescription = "Action.EditorKey", Value = "Control+Shift+P" },
                 }
             };
 
@@ -201,7 +201,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.CustomerEmail",
+                        TargetDescription = "CustomerEmail",
                         AssertionKind = AssertionKind.ValueEquals,
                         ExpectedValue = "jane@example.com",
                         ExpectedOutcome = "Email field value is jane@example.com",
@@ -230,7 +230,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.Outcome",
+                        TargetDescription = "Outcome",
                         AssertionKind = AssertionKind.None,
                         ExpectedOutcome = "Complex unspecified desktop state",
                     }
@@ -307,7 +307,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.Outcome",
+                        TargetDescription = "Outcome",
                         AssertionKind = AssertionKind.None,
                         ExpectedOutcome = "Complex unspecified desktop state",
                     }
@@ -332,7 +332,7 @@ namespace ScenarioRunner
                 Goal = "Toggle corporate panel",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Assert, LocatorKey = "Panel.Company", AssertionKind = AssertionKind.Visible },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Assert, TargetDescription = "Panel.Company", AssertionKind = AssertionKind.Visible },
                 }
             };
             var recordingResults = new List<IntentDesktopLocatorRecordingResult>
@@ -363,8 +363,8 @@ namespace ScenarioRunner
                 Goal = "Toggle form options",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.Newsletter" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, LocatorKey = "Field.Terms" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, TargetDescription = "Terms" },
                 }
             };
             var recordings = new List<IntentDesktopLocatorRecordingResult>
@@ -389,7 +389,7 @@ namespace ScenarioRunner
                 Goal = "Choose shipping method",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.ShippingMethod" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "ShippingMethod" },
                 }
             };
             var recordings = new List<IntentDesktopLocatorRecordingResult>
@@ -416,7 +416,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Fill,
-                        LocatorKey = "Field.Email",
+                        TargetDescription = "Field.Email",
                     }
                 }
             };
@@ -434,7 +434,7 @@ namespace ScenarioRunner
                 Goal = "Toggle custom grid",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, LocatorKey = "Grid.Custom" }
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, TargetDescription = "Grid.Custom" }
                 }
             };
             var recordingResults = new List<IntentDesktopLocatorRecordingResult>
@@ -469,7 +469,7 @@ namespace ScenarioRunner
                 Goal = "Toggle unknown control",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, LocatorKey = "Unknown.Control" }
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Click, TargetDescription = "Unknown.Control" }
                 }
             };
             var recordingResults = new List<IntentDesktopLocatorRecordingResult>
@@ -508,7 +508,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Fill,
-                        LocatorKey = "Field.Notes",
+                        TargetDescription = "Field.Notes",
                         Value = "Line 1\r\nLine 2\twith \"quotes\"",
                         TestIntent = "Fill multi-line\r\nnotes with\ttab",
                     },
@@ -516,7 +516,7 @@ namespace ScenarioRunner
                     {
                         Order = 2,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Field.Notes",
+                        TargetDescription = "Field.Notes",
                         AssertionKind = AssertionKind.ValueEquals,
                         ExpectedValue = "Line 1\r\nLine 2",
                         ExpectedOutcome = "Expected\r\nmultiline outcome",
@@ -549,10 +549,10 @@ namespace ScenarioRunner
                 Goal = "Execute desktop interaction flow",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = @"C:\temp\resume.pdf" },
-                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
-                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, TargetDescription = "ResumeFile", Value = @"C:\temp\resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, TargetDescription = "SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, TargetDescription = "Confirmation", Value = "3000" },
                 }
             };
             var recordings = new List<IntentDesktopLocatorRecordingResult>

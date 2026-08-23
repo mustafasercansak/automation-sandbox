@@ -51,7 +51,7 @@ and ""expectedValue"" (the expected text, value, or URL, empty for Visible/NotVi
 
 Respond with ONLY a single JSON object, no markdown fences, no other text, in this shape:
 {{""steps"": [
-  {{""actionType"": ""Navigate|Fill|Click|Select|Check|Uncheck|Hover|UploadFile|PressKey|Wait|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<input/file/key/timeout value, empty when unused>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""locatorKey"": ""<short stable dotted key, e.g. Field.Email or Action.PrimarySubmit>"", ""assertionKind"": ""<Visible|NotVisible|TextEquals|TextContains|ValueEquals|UrlEquals|UrlContains>"", ""expectedValue"": ""<expected value for assertion>""}}
+  {{""actionType"": ""Navigate|Fill|Click|Select|Check|Uncheck|Hover|UploadFile|PressKey|Wait|Assert"", ""targetDescription"": ""<short human description of the target element>"", ""value"": ""<input/file/key/timeout value, empty when unused>"", ""testIntent"": ""<one sentence: why this step exists>"", ""expectedOutcome"": ""<one sentence: what should be true after this step>"", ""assertionKind"": ""<Visible|NotVisible|TextEquals|TextContains|ValueEquals|UrlEquals|UrlContains>"", ""expectedValue"": ""<expected value for assertion>""}}
 ]}}";
         }
 
@@ -133,7 +133,6 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 Value = GetString(element, "value") ?? "",
                 TestIntent = testIntent,
                 ExpectedOutcome = expectedOutcome,
-                LocatorKey = GetString(element, "locatorKey") ?? "",
                 AssertionKind = assertionKind,
                 ExpectedValue = expectedValue,
             };

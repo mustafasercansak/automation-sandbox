@@ -36,7 +36,7 @@ namespace ScenarioRunner
 
             Assert.Equal(0, callCount);
             Assert.Contains(result.Diagnostics, d => d.Contains("ANTHROPIC_API_KEY"));
-            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Click && step.LocatorKey == "Action.PrimarySubmit");
+            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Click && step.TargetDescription.Contains("submit"));
         }
 
         [Fact]
@@ -124,7 +124,7 @@ namespace ScenarioRunner
 
             Assert.Contains(result.Diagnostics, d => d.Contains("LLM planning failed"));
             // Falls back to the deterministic planner's own well-formed result.
-            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Fill && step.LocatorKey == "Field.Email");
+            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Fill && step.TargetDescription == "email");
         }
 
         [Fact]

@@ -39,7 +39,6 @@ namespace IntentAutomation
                     Value = result.Scenario.TargetUrl,
                     TestIntent = "Navigate to the target page for: " + result.Scenario.Goal,
                     ExpectedOutcome = "The target page is loaded",
-                    LocatorKey = "Navigation.TargetPage",
                 });
             }
 
@@ -108,7 +107,6 @@ namespace IntentAutomation
                     TargetDescription = "primary submit or save action",
                     TestIntent = "Click the primary action to complete: " + result.Scenario.Goal,
                     ExpectedOutcome = "The requested workflow is submitted",
-                    LocatorKey = "Action.PrimarySubmit",
                 });
             }
             else if (!hasDirectAction)
@@ -134,7 +132,6 @@ namespace IntentAutomation
                     ExpectedOutcome = string.IsNullOrEmpty(expectedVal)
                         ? "The created or updated result is visible"
                         : "Result should be " + expectedVal,
-                    LocatorKey = "Assert.ResultVisible",
                     AssertionKind = kind,
                     ExpectedValue = expectedVal,
                 });
@@ -299,7 +296,6 @@ namespace IntentAutomation
                             : actionType == IntentActionType.Uncheck
                                 ? "Uncheck"
                                 : "Fill";
-            var locatorPrefix = actionType == IntentActionType.PressKey ? "Action." : "Field.";
 
             return new IntentStep
             {
@@ -317,7 +313,6 @@ namespace IntentAutomation
                             : actionType == IntentActionType.Uncheck
                                 ? $"{target} is unchecked"
                                 : $"{target} has the requested value",
-                LocatorKey = locatorPrefix + ToPascalKey(target),
             };
         }
 
@@ -349,7 +344,6 @@ namespace IntentAutomation
                 ExpectedOutcome = actionType == IntentActionType.Wait
                     ? $"{target} becomes available"
                     : $"{actionType} completes for {target}",
-                LocatorKey = "Action." + actionType + "." + ToPascalKey(target),
             });
         }
 
@@ -467,7 +461,6 @@ namespace IntentAutomation
                 Value = value,
                 TestIntent = $"{actionType} {target} for: {goal}",
                 ExpectedOutcome = $"{target} has the requested value",
-                LocatorKey = "Field." + ToPascalKey(target),
             });
         }
 
@@ -492,13 +485,6 @@ namespace IntentAutomation
         private static string HumanizeKey(string key)
         {
             return key.Replace("_", " ").Replace("-", " ").Trim();
-        }
-
-        private static string ToPascalKey(string key)
-        {
-            var parts = HumanizeKey(key)
-                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return string.Concat(parts.Select(part => char.ToUpperInvariant(part[0]) + part.Substring(1)));
         }
 
         private static string NormalizeToken(string value)

@@ -44,14 +44,14 @@ namespace IntentAutomation
 
             foreach (var stepResult in result.Exploration.StepResults)
             {
-                var recording = FindRecording(result, stepResult.Step.LocatorKey);
+                var recording = FindRecording(result, stepResult.Step);
                 var best = stepResult.Candidates.Count == 0 ? null : stepResult.Candidates[0];
                 var runnerUp = stepResult.Candidates.Count > 1 ? stepResult.Candidates[1] : null;
                 document.Steps.Add(new IntentFlowReportStep
                 {
                     Order = stepResult.Step.Order,
                     ActionType = stepResult.Step.ActionType.ToString(),
-                    LocatorKey = stepResult.Step.LocatorKey,
+                    LocatorKey = recording?.LocatorKey ?? "",
                     TestIntent = stepResult.Step.TestIntent,
                     TargetDescription = stepResult.Step.TargetDescription,
                     Value = stepResult.Step.Value,
@@ -73,11 +73,11 @@ namespace IntentAutomation
             return document;
         }
 
-        private static IntentLocatorRecordingResult? FindRecording(IntentAutomationPipelineResult result, string locatorKey)
+        private static IntentLocatorRecordingResult? FindRecording(IntentAutomationPipelineResult result, IntentStep step)
         {
             foreach (var recording in result.RecordingResults)
             {
-                if (recording.LocatorKey == locatorKey)
+                if (ReferenceEquals(recording.Step, step) || (recording.Step != null && recording.Step.Order == step.Order))
                 {
                     return recording;
                 }
