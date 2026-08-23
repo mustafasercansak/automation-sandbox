@@ -8,12 +8,7 @@ namespace IntentAutomation
     {
         public static string Synthesize(IntentStep step, IntentElementCandidate? candidate = null)
         {
-            if (step == null)
-            {
-                return "";
-            }
-
-            if (step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
+            if (step == null || step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
             {
                 return "";
             }
@@ -26,58 +21,12 @@ namespace IntentAutomation
                         ? candidate!.Element!.TestId
                         : candidate?.Element?.Id ?? "";
 
-            if (string.IsNullOrWhiteSpace(target))
-            {
-                return "";
-            }
-
-            var pascalTarget = ToPascalKey(target);
-            if (string.IsNullOrWhiteSpace(pascalTarget))
-            {
-                return "";
-            }
-
-            switch (step.ActionType)
-            {
-                case IntentActionType.Fill:
-                case IntentActionType.Select:
-                case IntentActionType.Check:
-                case IntentActionType.Uncheck:
-                case IntentActionType.UploadFile:
-                    return "Field." + pascalTarget;
-
-                case IntentActionType.Click:
-                    if (string.Equals(pascalTarget, "PrimarySubmitOrSaveAction", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(pascalTarget, "PrimarySubmit", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(pascalTarget, "PrimaryAction", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return "Action.PrimarySubmit";
-                    }
-                    return "Action.Click." + pascalTarget;
-
-                case IntentActionType.PressKey:
-                case IntentActionType.Hover:
-                case IntentActionType.Wait:
-                    return "Action." + step.ActionType + "." + pascalTarget;
-
-                case IntentActionType.Assert:
-                    return "Assert." + (string.Equals(pascalTarget, "ResultRecordsOrConfirmationArea", StringComparison.OrdinalIgnoreCase) || string.Equals(pascalTarget, "ResultVisible", StringComparison.OrdinalIgnoreCase)
-                        ? "ResultVisible"
-                        : pascalTarget);
-
-                default:
-                    return "Element." + pascalTarget;
-            }
+            return SynthesizeCore(step.ActionType, target);
         }
 
         public static string Synthesize(IntentStep step, IntentDesktopElementCandidate? candidate)
         {
-            if (step == null)
-            {
-                return "";
-            }
-
-            if (step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
+            if (step == null || step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
             {
                 return "";
             }
@@ -88,6 +37,11 @@ namespace IntentAutomation
                     ? candidate!.Element!.Name
                     : candidate?.Element?.AutomationId ?? "";
 
+            return SynthesizeCore(step.ActionType, target);
+        }
+
+        public static string SynthesizeCore(IntentActionType actionType, string target)
+        {
             if (string.IsNullOrWhiteSpace(target))
             {
                 return "";
@@ -99,7 +53,7 @@ namespace IntentAutomation
                 return "";
             }
 
-            switch (step.ActionType)
+            switch (actionType)
             {
                 case IntentActionType.Fill:
                 case IntentActionType.Select:
@@ -120,7 +74,7 @@ namespace IntentAutomation
                 case IntentActionType.PressKey:
                 case IntentActionType.Hover:
                 case IntentActionType.Wait:
-                    return "Action." + step.ActionType + "." + pascalTarget;
+                    return "Action." + actionType + "." + pascalTarget;
 
                 case IntentActionType.Assert:
                     return "Assert." + (string.Equals(pascalTarget, "ResultRecordsOrConfirmationArea", StringComparison.OrdinalIgnoreCase) || string.Equals(pascalTarget, "ResultVisible", StringComparison.OrdinalIgnoreCase)

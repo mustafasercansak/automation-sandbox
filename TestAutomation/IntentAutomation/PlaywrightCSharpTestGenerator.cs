@@ -34,18 +34,7 @@ namespace IntentAutomation
                 ? CodeGenerationUtilities.ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
                 : CodeGenerationUtilities.ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
             var namespaceName = CodeGenerationUtilities.ToNamespace(_options.Namespace, "GeneratedTests");
-            var recordingsByStep = recordingResults
-                .Where(result => result.Step != null)
-                .GroupBy(result => result.Step)
-                .ToDictionary(group => group.Key, group => group.First());
-            var recordingsByOrder = recordingResults
-                .Where(result => result.Step != null && result.Step.Order > 0)
-                .GroupBy(result => result.Step.Order)
-                .ToDictionary(group => group.Key, group => group.First());
-            var recordingsByKey = recordingResults
-                .Where(result => !string.IsNullOrWhiteSpace(result.LocatorKey))
-                .GroupBy(result => result.LocatorKey)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            var lookupTable = IntentRecordingLookupTable.Create(recordingResults);
 
             var code = new StringBuilder();
             code.AppendLine("using System.Threading.Tasks;");
@@ -63,7 +52,7 @@ namespace IntentAutomation
 
             foreach (var step in scenario.Steps.OrderBy(step => step.Order))
             {
-                AppendStep(code, step, recordingsByStep, recordingsByOrder, recordingsByKey);
+                AppendStep(code, step, lookupTable);
             }
 
             code.AppendLine("        }");
@@ -75,9 +64,7 @@ namespace IntentAutomation
         private void AppendStep(
             StringBuilder code,
             IntentStep step,
-            IReadOnlyDictionary<IntentStep, IntentLocatorRecordingResult> recordingsByStep,
-            IReadOnlyDictionary<int, IntentLocatorRecordingResult> recordingsByOrder,
-            IReadOnlyDictionary<string, IntentLocatorRecordingResult> recordingsByKey)
+            IntentRecordingLookupTable<IntentLocatorRecordingResult> lookupTable)
         {
             if (!string.IsNullOrWhiteSpace(step.TestIntent))
             {
@@ -90,23 +77,7 @@ namespace IntentAutomation
                 return;
             }
 
-            if (!recordingsByStep.TryGetValue(step, out var recording))
-            {
-                if (!recordingsByOrder.TryGetValue(step.Order, out recording))
-                {
-                    if (!string.IsNullOrWhiteSpace(step.TargetDescription) && recordingsByKey.TryGetValue(step.TargetDescription, out recording))
-                    {
-                    }
-                    else
-                    {
-                        var synthesizedKey = IntentLocatorKeySynthesizer.Synthesize(step);
-                        if (!string.IsNullOrWhiteSpace(synthesizedKey))
-                        {
-                            recordingsByKey.TryGetValue(synthesizedKey, out recording);
-                        }
-                    }
-                }
-            }
+            lookupTable.TryFindRecording(step, out var recording);
 
             var locatorExpression = LocatorExpression(recording?.Candidate, recording?.Record?.Snapshot);
             var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
