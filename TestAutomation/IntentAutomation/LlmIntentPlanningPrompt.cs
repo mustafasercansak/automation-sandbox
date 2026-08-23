@@ -14,19 +14,22 @@ namespace IntentAutomation
 
     public static class LlmIntentPlanningPrompt
     {
-        public static string Build(IntentPlanningRequest request)
+        public static string Build(IntentPlanningRequest request, Func<string, string>? textSanitizer = null)
         {
             var dataJson = JsonSerializer.Serialize(
-                NormalizeData(request.TestData),
+                NormalizeData(request.TestData, textSanitizer),
                 new JsonSerializerOptions { WriteIndented = true });
 
-            var urlLine = string.IsNullOrWhiteSpace(request.TargetUrl)
+            var sanitizedUrl = Sanitize(request.TargetUrl, textSanitizer);
+            var urlLine = string.IsNullOrWhiteSpace(sanitizedUrl)
                 ? ""
-                : $"\nTarget URL: {request.TargetUrl.Trim()}\n";
+                : $"\nTarget URL: {sanitizedUrl!.Trim()}\n";
+
+            var sanitizedGoal = Sanitize(request.Goal, textSanitizer)?.Trim() ?? "";
 
             return
 $@"You are planning an automated UI test from a plain-language goal.
-Goal: {request.Goal.Trim()}
+Goal: {sanitizedGoal}
 {urlLine}
 Available test data (field name -> value):
 {dataJson}
@@ -143,11 +146,24 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 : null;
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> NormalizeData(IDictionary<string, string>? data)
+        private static IEnumerable<KeyValuePair<string, string>> NormalizeData(IDictionary<string, string>? data, Func<string, string>? textSanitizer)
         {
             return (data ?? new Dictionary<string, string>())
                 .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+                .Select(pair => new KeyValuePair<string, string>(
+                    Sanitize(pair.Key, textSanitizer) ?? "",
+                    Sanitize(pair.Value, textSanitizer) ?? ""))
                 .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string? Sanitize(string? s, Func<string, string>? textSanitizer)
+        {
+            if (s == null)
+            {
+                return null;
+            }
+
+            return textSanitizer != null ? textSanitizer(s) : s;
         }
 
         private static string BuildScenarioName(string goal)

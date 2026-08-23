@@ -14,7 +14,7 @@ namespace LlmHealing
 
     public static class LlmHealingPrompt
     {
-        public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null)
+        public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, Func<string, string>? textSanitizer = null)
         {
             var effectivePlatform = !string.IsNullOrWhiteSpace(platform)
                 ? platform!
@@ -31,22 +31,23 @@ namespace LlmHealing
             var expectedForPrompt = new UiElementInfo
             {
                 ControlType = expected.ControlType,
-                Name = expected.Name,
-                ClassName = expected.ClassName,
+                Name = Sanitize(expected.Name, textSanitizer) ?? "",
+                ClassName = Sanitize(expected.ClassName, textSanitizer) ?? "",
                 BoundingRectangle = expected.BoundingRectangle,
                 ParentControlType = expected.ParentControlType,
                 SiblingIndex = expected.SiblingIndex,
                 SiblingCount = expected.SiblingCount,
-                TestIntent = expected.TestIntent,
+                TestIntent = Sanitize(expected.TestIntent, textSanitizer) ?? "",
             };
             var expectedJson = UiTreeSerializer.ToJson(expectedForPrompt);
             var candidatesJson = JsonSerializer.Serialize(
-                candidates.Select(ToPromptCandidate),
+                candidates.Select(c => ToPromptCandidate(c, textSanitizer)),
                 new JsonSerializerOptions { WriteIndented = true });
 
-            var intentHeader = string.IsNullOrWhiteSpace(expected.TestIntent)
+            var intentText = Sanitize(expected.TestIntent, textSanitizer);
+            var intentHeader = string.IsNullOrWhiteSpace(intentText)
                 ? ""
-                : $"\nTEST INTENT (Goal of this test step):\n\"{expected.TestIntent}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n";
+                : $"\nTEST INTENT (Goal of this test step):\n\"{intentText}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n";
 
             return
 $@"You are diagnosing a broken UI test locator for a {effectivePlatform} application.
@@ -115,12 +116,13 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
             return (string.IsNullOrWhiteSpace(candidateId) ? null : candidateId, confidence, reasoning);
         }
 
-        private static object ToPromptCandidate(CandidateScore c) => new
+        private static object ToPromptCandidate(CandidateScore c, Func<string, string>? textSanitizer) => new
         {
             candidateId = c.CandidateId,
-            automationId = c.Candidate.AutomationId,
+            automationId = Sanitize(c.Candidate.AutomationId, textSanitizer),
             controlType = c.Candidate.ControlType,
-            name = c.Candidate.Name,
+            name = Sanitize(c.Candidate.Name, textSanitizer),
+            className = Sanitize(c.Candidate.ClassName, textSanitizer),
             score = Math.Round(c.TotalScore, 2),
             components = new
             {
@@ -133,6 +135,16 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
                 positionScore = RoundOrNull(c.Components.PositionScore),
             },
         };
+
+        private static string? Sanitize(string? s, Func<string, string>? textSanitizer)
+        {
+            if (s == null)
+            {
+                return null;
+            }
+
+            return textSanitizer != null ? textSanitizer(s) : s;
+        }
 
         private static double? RoundOrNull(double? value) => value.HasValue ? Math.Round(value.Value, 2) : (double?)null;
 
