@@ -269,3 +269,5 @@ AI Agents and contributors **MUST actively synchronize GitHub Projects V2 (Proje
 **Project IDs Reference for CLI automation:**
 - Project ID: `PVT_kwHOAr3aNM4BgUrT` (Project #3)
 - Field IDs: Status (`PVTSSF_lAHOAr3aNM4BgUrTzhahRmc`), Priority (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAU`), Size (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAY`), Estimate (`PVTF_lAHOAr3aNM4BgUrTzhahSAc`), Iteration (`PVTIF_lAHOAr3aNM4BgUrTzhgG21Y`).
+=======
+>>>>>>> origin/main
