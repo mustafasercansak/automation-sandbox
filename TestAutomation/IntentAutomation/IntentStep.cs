@@ -13,7 +13,6 @@ namespace IntentAutomation
         // Describes the state expected after the action for reporting and assertion generation.
         // Candidate matching deliberately does not use this field.
         public string ExpectedOutcome { get; set; } = "";
-        public string LocatorKey { get; set; } = "";
         public AssertionKind AssertionKind { get; set; } = AssertionKind.None;
         public string ExpectedValue { get; set; } = "";
     }

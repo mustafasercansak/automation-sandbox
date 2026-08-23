@@ -31,8 +31,8 @@ namespace ScenarioRunner
             Assert.Equal("https://example.test/customers", result.Scenario.TargetUrl);
             Assert.Equal(IntentActionType.Navigate, result.Scenario.Steps[0].ActionType);
             Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Select && step.TargetDescription == "record type" && step.Value == "Corporate");
-            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Click && step.LocatorKey == "Action.PrimarySubmit");
-            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Assert && step.LocatorKey == "Assert.ResultVisible");
+            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Click && step.TargetDescription.Contains("submit"));
+            Assert.Contains(result.Scenario.Steps, step => step.ActionType == IntentActionType.Assert && step.AssertionKind == AssertionKind.Visible);
             Assert.All(result.Scenario.Steps, step => Assert.False(string.IsNullOrWhiteSpace(step.TestIntent)));
             Assert.Equal(result.Scenario.Steps.Select(step => step.Order), result.Scenario.Steps.Select((_, index) => index + 1));
         }
@@ -125,7 +125,7 @@ namespace ScenarioRunner
             var step = result.Scenario.Steps.Single(s => s.TargetDescription == "newsletter");
             Assert.Equal(IntentActionType.Check, step.ActionType);
             Assert.Equal("newsletter is checked", step.ExpectedOutcome);
-            Assert.StartsWith("Field.", step.LocatorKey);
+            Assert.Equal("Field.Newsletter", IntentLocatorKeySynthesizer.Synthesize(step));
         }
 
         [Fact]
@@ -140,7 +140,7 @@ namespace ScenarioRunner
             var step = result.Scenario.Steps.Single(s => s.TargetDescription == "terms");
             Assert.Equal(IntentActionType.Uncheck, step.ActionType);
             Assert.Equal("terms is unchecked", step.ExpectedOutcome);
-            Assert.StartsWith("Field.", step.LocatorKey);
+            Assert.Equal("Field.Terms", IntentLocatorKeySynthesizer.Synthesize(step));
         }
 
         [Fact]

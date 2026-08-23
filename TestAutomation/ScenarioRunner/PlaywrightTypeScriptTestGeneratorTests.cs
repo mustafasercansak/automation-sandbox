@@ -19,9 +19,9 @@ namespace ScenarioRunner
                 Steps = new List<IntentStep>
                 {
                     new IntentStep { Order = 1, ActionType = IntentActionType.Navigate, Value = "https://example.test/customers", TestIntent = "Open customer form" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.Fill, LocatorKey = "Field.Email", Value = "jane.doe@example.com", TestIntent = "Fill customer email" },
-                    new IntentStep { Order = 3, ActionType = IntentActionType.Click, LocatorKey = "Action.PrimarySubmit", TestIntent = "Submit customer form" },
-                    new IntentStep { Order = 4, ActionType = IntentActionType.Assert, LocatorKey = "Assert.ResultVisible", TestIntent = "Verify result", AssertionKind = AssertionKind.Visible },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Fill, TargetDescription = "Email", Value = "jane.doe@example.com", TestIntent = "Fill customer email" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.Click, TargetDescription = "PrimarySubmit", TestIntent = "Submit customer form" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Assert, TargetDescription = "ResultVisible", TestIntent = "Verify result", AssertionKind = AssertionKind.Visible },
                 }
             };
             var recordingResults = new List<IntentLocatorRecordingResult>
@@ -54,7 +54,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Fill,
-                        LocatorKey = "Field.IframeEmail",
+                        TargetDescription = "Field.IframeEmail",
                         Value = "jane@example.com",
                         TestIntent = "Fill email inside iframe",
                     },
@@ -62,7 +62,7 @@ namespace ScenarioRunner
                     {
                         Order = 2,
                         ActionType = IntentActionType.Click,
-                        LocatorKey = "Action.NestedSave",
+                        TargetDescription = "Action.NestedSave",
                         TestIntent = "Click save in nested iframe",
                     },
                 }
@@ -87,14 +87,14 @@ namespace ScenarioRunner
                 Goal = "Use common interactions",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, LocatorKey = "Action.Hover" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, LocatorKey = "Field.ResumeFile", Value = "/tmp/resume.pdf" },
-                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, LocatorKey = "Action.SearchKey", Value = "Enter" },
-                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, LocatorKey = "Wait.Confirmation", Value = "3000" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Hover, TargetDescription = "Action.Hover" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.UploadFile, TargetDescription = "Field.ResumeFile", Value = "/tmp/resume.pdf" },
+                    new IntentStep { Order = 3, ActionType = IntentActionType.PressKey, TargetDescription = "Action.SearchKey", Value = "Enter" },
+                    new IntentStep { Order = 4, ActionType = IntentActionType.Wait, TargetDescription = "Wait.Confirmation", Value = "3000" },
                 }
             };
             var recordings = scenario.Steps.Select(step =>
-                Recorded(step.LocatorKey, step.LocatorKey, $"page.GetByTestId(\"{step.LocatorKey}\")")).ToList();
+                Recorded(step.TargetDescription, step.TargetDescription, $"page.GetByTestId(\"{step.TargetDescription}\")")).ToList();
 
             var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
 
@@ -117,7 +117,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Click,
-                        LocatorKey = "Action.SaveDraft",
+                        TargetDescription = "Action.SaveDraft",
                     }
                 }
             };
@@ -154,7 +154,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.OrderTotal",
+                        TargetDescription = "OrderTotal",
                         AssertionKind = AssertionKind.TextEquals,
                         ExpectedValue = "$125",
                         ExpectedOutcome = "Order total should be $125",
@@ -207,7 +207,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.Outcome",
+                        TargetDescription = "Outcome",
                         AssertionKind = AssertionKind.None,
                         ExpectedOutcome = "Complex unspecified business state",
                     }
@@ -235,7 +235,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Assert.Outcome",
+                        TargetDescription = "Outcome",
                         AssertionKind = AssertionKind.None,
                         ExpectedOutcome = "Complex unspecified business state",
                     }
@@ -261,8 +261,8 @@ namespace ScenarioRunner
                 Goal = "Toggle form options",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, LocatorKey = "Field.Newsletter" },
-                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, LocatorKey = "Field.Terms" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Check, TargetDescription = "Newsletter" },
+                    new IntentStep { Order = 2, ActionType = IntentActionType.Uncheck, TargetDescription = "Terms" },
                 }
             };
             var recordings = new List<IntentLocatorRecordingResult>
@@ -286,7 +286,7 @@ namespace ScenarioRunner
                 Goal = "Create a customer",
                 Steps = new List<IntentStep>
                 {
-                    new IntentStep { Order = 1, ActionType = IntentActionType.Fill, LocatorKey = "Field.Email" },
+                    new IntentStep { Order = 1, ActionType = IntentActionType.Fill, TargetDescription = "Field.Email" },
                 }
             };
 
@@ -308,7 +308,7 @@ namespace ScenarioRunner
                     {
                         Order = 1,
                         ActionType = IntentActionType.Fill,
-                        LocatorKey = "Field.Notes",
+                        TargetDescription = "Field.Notes",
                         Value = "It's line 1\r\nLine 2\twith tab",
                         TestIntent = "Fill multi-line\r\nnotes with\ttab",
                     },
@@ -316,7 +316,7 @@ namespace ScenarioRunner
                     {
                         Order = 2,
                         ActionType = IntentActionType.Assert,
-                        LocatorKey = "Field.Notes",
+                        TargetDescription = "Field.Notes",
                         AssertionKind = AssertionKind.TextEquals,
                         ExpectedValue = "It's line 1\r\nLine 2",
                         ExpectedOutcome = "Expected\r\nmultiline outcome",

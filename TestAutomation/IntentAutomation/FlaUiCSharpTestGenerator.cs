@@ -40,10 +40,18 @@ namespace IntentAutomation
                 ? CodeGenerationUtilities.ToIdentifier(scenario.Goal, "GeneratedIntentScenario")
                 : CodeGenerationUtilities.ToIdentifier(_options.MethodName, "GeneratedIntentScenario");
             var namespaceName = CodeGenerationUtilities.ToNamespace(_options.Namespace, "GeneratedTests");
+            var recordingsByStep = recordingResults
+                .Where(result => result.Step != null)
+                .GroupBy(result => result.Step)
+                .ToDictionary(group => group.Key, group => group.First());
+            var recordingsByOrder = recordingResults
+                .Where(result => result.Step != null && result.Step.Order > 0)
+                .GroupBy(result => result.Step.Order)
+                .ToDictionary(group => group.Key, group => group.First());
             var recordingsByKey = recordingResults
-                .Where(result => result.Recorded && !string.IsNullOrWhiteSpace(result.LocatorKey))
+                .Where(result => !string.IsNullOrWhiteSpace(result.LocatorKey))
                 .GroupBy(result => result.LocatorKey)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
             var code = new StringBuilder();
             code.AppendLine("using System;");
@@ -72,7 +80,7 @@ namespace IntentAutomation
 
             foreach (var step in scenario.Steps.OrderBy(step => step.Order))
             {
-                AppendStep(code, step, recordingsByKey);
+                AppendStep(code, step, recordingsByStep, recordingsByOrder, recordingsByKey);
             }
 
             code.AppendLine("        }");
@@ -86,6 +94,8 @@ namespace IntentAutomation
         private void AppendStep(
             StringBuilder code,
             IntentStep step,
+            IReadOnlyDictionary<IntentStep, IntentDesktopLocatorRecordingResult> recordingsByStep,
+            IReadOnlyDictionary<int, IntentDesktopLocatorRecordingResult> recordingsByOrder,
             IReadOnlyDictionary<string, IntentDesktopLocatorRecordingResult> recordingsByKey)
         {
             if (!string.IsNullOrWhiteSpace(step.TestIntent))
@@ -99,7 +109,24 @@ namespace IntentAutomation
                 return;
             }
 
-            recordingsByKey.TryGetValue(step.LocatorKey, out var recording);
+            if (!recordingsByStep.TryGetValue(step, out var recording))
+            {
+                if (!recordingsByOrder.TryGetValue(step.Order, out recording))
+                {
+                    if (!string.IsNullOrWhiteSpace(step.TargetDescription) && recordingsByKey.TryGetValue(step.TargetDescription, out recording))
+                    {
+                    }
+                    else
+                    {
+                        var synthesizedKey = IntentLocatorKeySynthesizer.Synthesize(step, (IntentDesktopElementCandidate?)null);
+                        if (!string.IsNullOrWhiteSpace(synthesizedKey))
+                        {
+                            recordingsByKey.TryGetValue(synthesizedKey, out recording);
+                        }
+                    }
+                }
+            }
+
             var snapshot = recording?.Record?.Snapshot;
             var findExpression = FindExpression(snapshot, out var warningComment);
             if (!string.IsNullOrWhiteSpace(warningComment))
@@ -108,15 +135,17 @@ namespace IntentAutomation
             }
 
             var locatorRequired = step.ActionType != IntentActionType.Assert || AssertionCodeEmitter.IsLocatorRequired(step.AssertionKind, _options.AssertGenerationMode);
+            var locatorKey = recording?.LocatorKey ?? "";
             if (locatorRequired && string.IsNullOrWhiteSpace(findExpression))
             {
-                code.AppendLine($"            Assert.True(false, \"No recorded locator for {CodeGenerationUtilities.EscapeString(step.LocatorKey)}.\");");
+                var identifier = !string.IsNullOrWhiteSpace(locatorKey) ? locatorKey : step.TargetDescription;
+                code.AppendLine($"            Assert.True(false, \"No recorded locator for {CodeGenerationUtilities.EscapeString(identifier)}.\");");
                 return;
             }
 
-            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(step.LocatorKey) && locatorRequired)
+            if (_options.IncludeLocatorComments && !string.IsNullOrWhiteSpace(locatorKey) && locatorRequired)
             {
-                code.AppendLine($"            // locator: {CodeGenerationUtilities.EscapeComment(step.LocatorKey)}");
+                code.AppendLine($"            // locator: {CodeGenerationUtilities.EscapeComment(locatorKey)}");
             }
 
             switch (step.ActionType)

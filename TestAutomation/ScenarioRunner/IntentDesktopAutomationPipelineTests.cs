@@ -47,7 +47,7 @@ namespace ScenarioRunner
             var result = pipeline.Run(request, BuildCustomerWindow(), repository);
 
             Assert.False(result.Planning.RequiresReview);
-            Assert.Contains(result.Exploration.StepResults, step => step.Step.LocatorKey == "Field.Email" && step.Candidates.Count > 0);
+            Assert.Contains(result.Exploration.StepResults, step => step.Step.TargetDescription == "email" && step.Candidates.Count > 0);
             Assert.Contains(result.RecordingResults, item => item.LocatorKey == "Field.Email" && item.Recorded);
             Assert.Contains(result.RecordingResults, item => item.LocatorKey == "Action.PrimarySubmit" && item.Recorded);
             Assert.Contains(result.RecordingResults, item => item.LocatorKey == "Assert.ResultVisible" && item.Recorded);

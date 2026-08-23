@@ -107,8 +107,9 @@ frameworks reject on checkboxes, radios, or list/tab controls.
 tests, reports, locator snapshots, and LLM healing context; `ExpectedOutcome` describes
 the state after the action for reporting and assertion generation. Those two narrative
 fields do not influence candidate ranking, so conflicting prose cannot redirect a step
-away from its declared target. `LocatorKey` remains an additional matching hint for the
-current repository contract.
+away from its declared target. `IntentStep` is decoupled from locator repository storage;
+repository keys (`Field.*`, `Action.*`, `Assert.*`) are synthesized deterministically
+by `IntentLocatorKeySynthesizer` during exploration and recording.
 
 Assert generation behavior across all generators is configured via `AssertGenerationMode`:
 - `Strict` (default): Emits real assertions for mapped `AssertionKind`s; emits inconclusive review checks (`Assert.Inconclusive` / `test.skip` / `Assert.True(false, ...)`) for unmapped kinds.
@@ -179,7 +180,7 @@ For each intent step, the exploration bridges (`IntentExplorationBridge` for Web
 - role and tag semantics (Action Compatibility)
 - accessible name / label text / AutomationId (Semantic Overlap)
 - placeholder and test id
-- authoritative `TargetDescription` and the current `LocatorKey` hint
+- authoritative `TargetDescription`
 - locator confidence suggestions
 
 #### Safety Gates and Manual Review
@@ -380,8 +381,10 @@ Intent adımlarında element eşleştirmesi için yetkili serbest metin alanı
 testlerde, raporlarda, locator snapshot'larında ve LLM healing bağlamında korunur;
 `ExpectedOutcome` ise eylem sonrasındaki beklenen durumu raporlama ve assertion üretimi
 için tanımlar. Bu iki anlatı alanı aday sıralamasını etkilemez; böylece çelişkili bir
-metin adımı bildirilen hedeften başka bir elemente yönlendiremez. Mevcut repository
-sözleşmesinde `LocatorKey` ek bir eşleştirme ipucu olmaya devam eder.
+metin adımı bildirilen hedeften başka bir elemente yönlendiremez. `IntentStep` locator
+repository depolama formatından tamamen ayrıştırılmıştır; repository anahtarları (`Field.*`,
+`Action.*`, `Assert.*`) keşif ve kayıt aşamasında `IntentLocatorKeySynthesizer` tarafından
+deterministik olarak sentezlenir.
 
 Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Check`, `Uncheck`, `Hover`,
 `UploadFile`, `PressKey`, `Wait` ve `Assert` değerlerini kapsar. `UploadFile` için `Value` dosya yolu,

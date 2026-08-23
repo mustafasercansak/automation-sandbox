@@ -120,7 +120,6 @@ namespace ScenarioRunner
                             ActionType = IntentAutomation.IntentActionType.Click,
                             TargetDescription = "checkout",
                             TestIntent = "Click checkout button",
-                            LocatorKey = "Action.Checkout",
                         }
                     }
                 };
@@ -245,7 +244,6 @@ namespace ScenarioRunner
                             TargetDescription = "inner email",
                             TestIntent = "Fill inner email",
                             Value = "inner@example.com",
-                            LocatorKey = "Field.InnerEmail",
                         },
                         new IntentAutomation.IntentStep
                         {
@@ -253,7 +251,6 @@ namespace ScenarioRunner
                             ActionType = IntentAutomation.IntentActionType.Click,
                             TargetDescription = "nested save",
                             TestIntent = "Click nested save button",
-                            LocatorKey = "Action.NestedSave",
                         },
                     }
                 };

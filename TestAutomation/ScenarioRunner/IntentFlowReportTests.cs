@@ -44,7 +44,7 @@ namespace ScenarioRunner
             {
                 Order = 1,
                 ActionType = IntentActionType.Assert,
-                LocatorKey = "Assert.OrderTotal",
+                TargetDescription = "order total",
                 TestIntent = "Verify the order total",
                 ExpectedOutcome = "Order total should be $125",
                 AssertionKind = AssertionKind.TextEquals,
@@ -54,7 +54,7 @@ namespace ScenarioRunner
             {
                 Order = 2,
                 ActionType = IntentActionType.Assert,
-                LocatorKey = "Assert.Mystery",
+                TargetDescription = "mystery check",
                 TestIntent = "Verify something the planner could not map",
                 ExpectedOutcome = "The workflow behaves correctly",
             };
@@ -117,8 +117,8 @@ namespace ScenarioRunner
 
         private static IntentAutomationPipelineResult BuildPipelineResult()
         {
-            var emailStep = new IntentStep { Order = 1, ActionType = IntentActionType.Fill, LocatorKey = "Field.Email", TestIntent = "Fill email" };
-            var clickStep = new IntentStep { Order = 2, ActionType = IntentActionType.Click, LocatorKey = "Action.PrimarySubmit", TestIntent = "Save customer" };
+            var emailStep = new IntentStep { Order = 1, ActionType = IntentActionType.Fill, TargetDescription = "email", TestIntent = "Fill email" };
+            var clickStep = new IntentStep { Order = 2, ActionType = IntentActionType.Click, TargetDescription = "submit button", TestIntent = "Save customer" };
             var scenario = new IntentScenario
             {
                 Name = "Create customer",
