@@ -242,3 +242,23 @@ Before any issue, task, backlog item, or planned proposal can be moved to **"Rea
   - Every single task item and acceptance criterion checkbox in the issue, implementation plan, and PR description must be completed and marked as `[x]`.
 - **Strict Blocking Policy:** If any acceptance criterion or task remains unchecked (`- [ ]`), work is **NOT COMPLETE** and transitioning to the next stage (e.g. requesting review, moving to "In Review", merging PR, or closing the issue) is **STRICTLY BLOCKED**.
 - **Verification Rule:** No checkbox may be marked `[x]` without verifiable proof: `dotnet test` passing with 0 failures, `dotnet build` passing with 0 warnings/0 errors, and security audit passing with 0 High/Critical CVEs.
+
+### Mandatory GitHub Projects Board Synchronization via CLI
+AI Agents and contributors **MUST actively synchronize GitHub Projects V2 (Project #3, 'automation sandbox') via `gh project` CLI at the exact moment of every state transition**:
+1. **When picking up an issue / starting implementation:**
+   - MUST immediately update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`In progress`** (`47fc9ee4`)
+     - Set `Priority` (`P0`, `P1`, or `P2`)
+     - Set `Size` (`XS`, `S`, `M`, `L`, or `XL`)
+     - Set `Estimate` (Numeric effort, e.g. `1`, `3`, `5`)
+     - Set `Iteration` (Current active iteration, e.g. `Iteration 1`)
+2. **When opening a Pull Request (PR):**
+   - MUST immediately update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`In review`** (`df73e18b`)
+3. **When PR is merged / issue closed:**
+   - MUST update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`Done`** (`98236657`)
+
+**Project IDs Reference for CLI automation:**
+- Project ID: `PVT_kwHOAr3aNM4BgUrT` (Project #3)
+- Field IDs: Status (`PVTSSF_lAHOAr3aNM4BgUrTzhahRmc`), Priority (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAU`), Size (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAY`), Estimate (`PVTF_lAHOAr3aNM4BgUrTzhahSAc`), Iteration (`PVTIF_lAHOAr3aNM4BgUrTzhgG21Y`).

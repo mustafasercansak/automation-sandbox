@@ -72,9 +72,9 @@ dotnet list package --outdated
 
 ## 5. Pull Request Lifecycle & Checklist
 
-### "In Review" State Transition & Definition of Done (DoD)
+### "In Review" State Transition & GitHub Projects Synchronization
 When a Pull Request (PR) is opened:
-1. The corresponding issue and PR **MUST IMMEDIATELY transition to "In Review"**.
+1. The corresponding issue and PR **MUST IMMEDIATELY transition to "In Review"** on the GitHub Projects board (`automation sandbox`).
 2. The PR description must reference the issue (`Fixes #xyz` or `Closes #xyz`) and declare the metadata:
    ```markdown
    - **Issue:** Fixes #xyz
@@ -83,6 +83,7 @@ When a Pull Request (PR) is opened:
    - **Iteration:** Current Iteration (Now)
    - **Estimate:** 1h
    ```
+3. The project board fields (`Priority`, `Size`, `Estimate`, `Iteration`, and `Status: In review`) must be active on the project card.
 
 ### Definition of Done (DoD) — Completion Gate
 > [!CAUTION]
