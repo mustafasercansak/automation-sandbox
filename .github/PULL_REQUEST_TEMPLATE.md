@@ -21,7 +21,7 @@ Brief explanation of the problem, motivation, and solution.
 > **All items below must be checked `[x]` before requesting review or merging.**
 
 - [ ] **Issue Linked & DoR Met:** Linked to tracked GitHub issue with Priority, Size, Iteration, and Estimate.
-- [ ] **Assignee Assigned:** Issue and PR assigned to `@mustafasercansak`.
+- [ ] **Assignee Assigned:** Issue and PR assigned to the responsible contributor/owner.
 - [ ] **Acceptance Criteria Met:** All acceptance criteria defined in the issue have been completed.
 - [ ] **Zero Warnings:** `dotnet build AutomationSandbox.sln` succeeded with `0 Warning(s)` and `0 Error(s)`.
 - [ ] **All Tests Passing:** `dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj` passed with 0 failures (including `WorkflowActionVersionTests`).

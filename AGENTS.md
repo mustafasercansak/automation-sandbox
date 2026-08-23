@@ -266,8 +266,8 @@ AI Agents and contributors **MUST actively synchronize GitHub Projects V2 (Proje
    - MUST update the GitHub Project item via `gh project item-edit`:
      - Set `Status` to **`Done`** (`98236657`)
 
-### Mandatory Assignee Assignment
-- **Sole Contributor Assignment Rule:** Every issue created and Pull Request opened **MUST ALWAYS be assigned to `@mustafasercansak`** (`gh issue create --assignee mustafasercansak`, `gh issue edit --add-assignee mustafasercansak`, `gh pr create --assignee mustafasercansak`). AI agents must never create unassigned issues or PRs.
+### Mandatory Assignee & Ownership Assignment
+- **Explicit Ownership Rule:** Every issue moved to "In progress" and every Pull Request opened **MUST ALWAYS be assigned to the active contributor/owner** (`gh issue edit --add-assignee <username>`, `gh pr create --assignee <username>`). AI agents and human contributors must never leave active issues or PRs unassigned.
 
 ### Modern Dependency & Verified GitHub Actions Standard (Anti-Hallucination Policy)
 > [!CAUTION]
