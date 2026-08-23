@@ -636,6 +636,7 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
 | **Live Page Exploration** | Real headless-Chromium browser launch, navigation, and DOM capture via `PlaywrightLiveExplorer` against a local HTML fixture | [PlaywrightLiveExplorerTests](TestAutomation/ScenarioRunner/PlaywrightLiveExplorerTests.cs) |
 | **CI Coverage Visibility** | Separate Windows `net48` and Linux `net8.0` step summaries, overall and per-assembly rows, missing-report handling, artifact retention | [CoverageSummaryWorkflowTests](TestAutomation/ScenarioRunner/CoverageSummaryWorkflowTests.cs) |
+| **Package Security Audit** | `NuGetAudit` build-break gate on High/Critical advisories, vulnerable/outdated-package step summaries on both matrix legs, missing/malformed-report handling | [SecurityAuditWorkflowTests](TestAutomation/ScenarioRunner/SecurityAuditWorkflowTests.cs) |
 
 ### Running Code Coverage Locally
 
@@ -649,6 +650,24 @@ CI renders the collected Cobertura data into each matrix job's GitHub Step Summa
 `net48` and Linux `net8.0` are labelled and reported separately, with overall and per-assembly
 line/branch coverage. The figures are visibility aids only: they are never combined into one
 headline percentage, published as a badge, or used as a threshold that can fail the build.
+
+### Package Security Audit
+
+Every restore is checked by MSBuild's `NuGetAudit` (`NuGetAuditMode=all`, `NuGetAuditLevel=moderate`
+in `Directory.Build.props`), including transitive packages. Locally this only prints a warning, so
+it never blocks development. In CI (`ContinuousIntegrationBuild == true`), High/Critical advisories
+(`NU1903` for a direct package, `NU1904` for a transitive one) are promoted to build errors, so a
+vulnerable dependency cannot merge to `main`.
+
+Separately, both the Windows and Linux `ci.yml` matrix legs run `dotnet list package --vulnerable
+--include-transitive` and `dotnet list package --outdated`, and render the results to that job's
+GitHub Step Summary via [write-security-audit-summary.ps1](.github/scripts/write-security-audit-summary.ps1)
+— giving visibility into findings below the error threshold (e.g. Moderate/Low severity) as well.
+
+```powershell
+dotnet list TestAutomation/ScenarioRunner/ScenarioRunner.csproj package --vulnerable --include-transitive
+dotnet list TestAutomation/ScenarioRunner/ScenarioRunner.csproj package --outdated
+```
 
 ---
 
