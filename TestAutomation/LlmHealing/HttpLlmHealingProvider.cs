@@ -40,6 +40,7 @@ namespace LlmHealing
         // a report. Null keeps the interactive default; a batch caller raising one ceiling must
         // raise this one too.
         public TimeSpan? TotalTimeoutOverride { get; set; }
+        public Func<string, string>? TextSanitizer { get; set; }
 
         public TimeSpan Timeout => _timeout;
         public TimeSpan TotalTimeout => _totalTimeout;
@@ -112,7 +113,7 @@ namespace LlmHealing
                 };
             }
 
-            var prompt = LlmHealingPrompt.Build(expected, candidates, platform);
+            var prompt = LlmHealingPrompt.Build(expected, candidates, platform, TextSanitizer);
 
             var httpResponse = await LlmHttpTransport.SendWithRetryAsync(
                 _httpClient,

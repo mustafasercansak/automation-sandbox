@@ -62,20 +62,21 @@ fact check, or correctness guarantee. The measured limitations are documented in
 
 ### PII, secrets, and operator controls
 
-The library currently provides **no automatic PII/secret redaction** and no per-field or
-per-provider disclosure policy. Applications must make the disclosure decision before
-calling the LLM path. Suitable controls include:
+By default, the library provides **no automatic built-in PII/secret classifier**, leaving text untouched unless configured. To allow operators to scrub sensitive values before transmission, an opt-in `TextSanitizer` hook (`Func<string, string>?`) is available on HTTP healing providers (`HttpLlmHealingProvider.TextSanitizer`), `LlmHealingPrompt.Build`, and `LlmIntentPlanner.TextSanitizer`. When configured, this delegate intercepts all element names, class names, test intents, URLs, and test data strings before the LLM prompt payload is constructed.
 
-1. Use heuristic-only resolution for authenticated, financial, health, production-data,
+Suitable controls include:
+
+1. Configure an opt-in `TextSanitizer` delegate (e.g. regex masking for tokens, passwords, credit card patterns, or proprietary IDs) on provider instances or intent planners.
+2. Use heuristic-only resolution for authenticated, financial, health, production-data,
    or other sensitive screens.
-2. Capture synthetic or scrubbed test data, and keep secrets out of element names,
+3. Capture synthetic or scrubbed test data, and keep secrets out of element names,
    accessibility labels, IDs, and `TestIntent`.
-3. Configure only providers and regions approved by the application's data owner. A
+4. Configure only providers and regions approved by the application's data owner. A
    multi-provider quorum requires disclosure to multiple providers.
-4. If local processing is required, use an Ollama daemon on a controlled host and verify
+5. If local processing is required, use an Ollama daemon on a controlled host and verify
    `OLLAMA_HOST`. Ollama Cloud is remote, and a non-local `OLLAMA_HOST` is remote even
    though the provider class is named `OllamaHealingProvider`.
-5. Treat custom OpenAI-compatible endpoints as separate processors. Their transport,
+6. Treat custom OpenAI-compatible endpoints as separate processors. Their transport,
    logging, retention, subprocessors, and training policies are entirely operator-owned.
 
 ### Provider telemetry and retention
@@ -184,19 +185,21 @@ belgelenmiştir.
 
 ### PII, sırlar ve operatör kontrolleri
 
-Kütüphane şu anda **otomatik PII/secret redaction** veya alan/sağlayıcı bazlı ifşa
-politikası sağlamaz. Uygulama LLM yolunu çağırmadan önce ifşa kararını vermelidir:
+Varsayılan olarak kütüphane **otomatik yerleşik bir PII/gizli bilgi sınıflandırıcısı** çalıştırmaz ve yapılandırılmadığı sürece metinleri olduğu gibi iletir. Operatörlerin hassas verileri gönderim öncesinde temizleyebilmesi veya maskeleyebilmesi için HTTP healing sağlayıcılarında (`HttpLlmHealingProvider.TextSanitizer`), `LlmHealingPrompt.Build` metodunda ve `LlmIntentPlanner.TextSanitizer` üzerinde isteğe bağlı (opt-in) bir `TextSanitizer` kancası (`Func<string, string>?`) sunulur. Yapılandırıldığında bu delege, LLM prompt yükü oluşturulmadan önce tüm eleman adlarını, sınıf adlarını, test intent'lerini, URL'leri ve test verilerini filtreler.
 
-1. Kimlik doğrulamalı, finansal, sağlık, production-data veya başka hassas ekranlarda
+Uygun kontroller şunları içerir:
+
+1. Sağlayıcı örnekleri veya intent planner üzerinde isteğe bağlı bir `TextSanitizer` delegesi (ör. token, şifre veya hassas veri maskeleme) yapılandırın.
+2. Kimlik doğrulamalı, finansal, sağlık, production-data veya başka hassas ekranlarda
    yalnızca sezgisel çözümü kullanın.
-2. Sentetik ya da temizlenmiş test verisi yakalayın; eleman adları, accessibility label,
+3. Sentetik ya da temizlenmiş test verisi yakalayın; eleman adları, accessibility label,
    kimlik ve `TestIntent` içine sır koymayın.
-3. Yalnızca veri sahibinin onayladığı sağlayıcıları ve bölgeleri yapılandırın. Çoklu
+4. Yalnızca veri sahibinin onayladığı sağlayıcıları ve bölgeleri yapılandırın. Çoklu
    sağlayıcı quorum'u verinin birden fazla sağlayıcıya açıklanmasını gerektirir.
-4. Yerel işleme gerekiyorsa denetlenen bir host'taki Ollama daemon'unu kullanın ve
+5. Yerel işleme gerekiyorsa denetlenen bir host'taki Ollama daemon'unu kullanın ve
    `OLLAMA_HOST` değerini doğrulayın. Ollama Cloud uzaktır; yerel olmayan bir `OLLAMA_HOST`
    da sınıf adı `OllamaHealingProvider` olsa bile uzaktır.
-5. Özel OpenAI-uyumlu endpoint'leri ayrı veri işleyenler olarak kabul edin. Transport,
+6. Özel OpenAI-uyumlu endpoint'leri ayrı veri işleyenler olarak kabul edin. Transport,
    loglama, retention, alt işleyen ve eğitim politikaları tamamen operatör sorumluluğundadır.
 
 ### Sağlayıcı telemetrisi ve retention

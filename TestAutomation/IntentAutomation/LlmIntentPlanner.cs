@@ -48,6 +48,7 @@ namespace IntentAutomation
         public TimeSpan Timeout => _timeout;
         public TimeSpan TotalTimeout => _totalTimeout;
         public int MaxRetries => _maxRetries;
+        public Func<string, string>? TextSanitizer { get; set; }
 
         public LlmIntentPlanner(
             HttpClient? httpClient = null,
@@ -113,7 +114,7 @@ namespace IntentAutomation
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var prompt = LlmIntentPlanningPrompt.Build(request);
+            var prompt = LlmIntentPlanningPrompt.Build(request, TextSanitizer);
             var requestBody = new
             {
                 model = _model,

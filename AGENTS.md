@@ -233,6 +233,13 @@ Before any issue, task, backlog item, or planned proposal can be moved to **"Rea
 
 **Strict Policy:** If `Priority`, `Estimate`, `Size`, or `Iteration` is missing, work **MUST NOT BE STARTED** and the item must not be moved to "Ready".
 
+### Work Intake Rule — ONLY Pick Up Work From "Ready", NEVER Directly From "Backlog"
+> [!CAUTION]
+> **Strict Intake Gate:** Work **MUST ONLY be picked up from the "Ready" column**. Picking up an item directly from the "Backlog" is **STRICTLY PROHIBITED**.
+> 1. An item in `Backlog` must first be refined to satisfy the full **Definition of Ready (DoR)** (`Priority`, `Size`, `Estimate`, `Iteration`, and actionable acceptance criteria).
+> 2. Once DoR is satisfied, the item is moved to the **"Ready"** column on the GitHub Project board.
+> 3. An engineer or AI agent is **ONLY permitted to start work on an issue that is already residing in the "Ready" column**, at which point it transitions to **"In progress"**.
+
 ### PR and Review Lifecycle
 - Whenever a Pull Request (PR) is opened for an issue, the task/issue and PR **MUST IMMEDIATELY transition to "In Review"**.
 - Every PR description must reference its issue (`Fixes #xyz` or `Closes #xyz`) and explicitly include the `Priority`, `Estimate`, `Size`, and `Iteration` metadata in its summary header.
@@ -242,3 +249,25 @@ Before any issue, task, backlog item, or planned proposal can be moved to **"Rea
   - Every single task item and acceptance criterion checkbox in the issue, implementation plan, and PR description must be completed and marked as `[x]`.
 - **Strict Blocking Policy:** If any acceptance criterion or task remains unchecked (`- [ ]`), work is **NOT COMPLETE** and transitioning to the next stage (e.g. requesting review, moving to "In Review", merging PR, or closing the issue) is **STRICTLY BLOCKED**.
 - **Verification Rule:** No checkbox may be marked `[x]` without verifiable proof: `dotnet test` passing with 0 failures, `dotnet build` passing with 0 warnings/0 errors, and security audit passing with 0 High/Critical CVEs.
+
+### Mandatory GitHub Projects Board Synchronization via CLI
+AI Agents and contributors **MUST actively synchronize GitHub Projects V2 (Project #3, 'automation sandbox') via `gh project` CLI at the exact moment of every state transition**:
+1. **When picking up an issue / starting implementation:**
+   - MUST immediately update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`In progress`** (`47fc9ee4`)
+     - Set `Priority` (`P0`, `P1`, or `P2`)
+     - Set `Size` (`XS`, `S`, `M`, `L`, or `XL`)
+     - Set `Estimate` (Numeric effort, e.g. `1`, `3`, `5`)
+     - Set `Iteration` (Current active iteration, e.g. `Iteration 1`)
+2. **When opening a Pull Request (PR):**
+   - MUST immediately update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`In review`** (`df73e18b`)
+3. **When PR is merged / issue closed:**
+   - MUST update the GitHub Project item via `gh project item-edit`:
+     - Set `Status` to **`Done`** (`98236657`)
+
+**Project IDs Reference for CLI automation:**
+- Project ID: `PVT_kwHOAr3aNM4BgUrT` (Project #3)
+- Field IDs: Status (`PVTSSF_lAHOAr3aNM4BgUrTzhahRmc`), Priority (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAU`), Size (`PVTSSF_lAHOAr3aNM4BgUrTzhahSAY`), Estimate (`PVTF_lAHOAr3aNM4BgUrTzhahSAc`), Iteration (`PVTIF_lAHOAr3aNM4BgUrTzhgG21Y`).
+=======
+>>>>>>> origin/main
