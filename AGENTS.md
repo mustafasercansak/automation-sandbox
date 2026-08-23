@@ -31,7 +31,8 @@ Dependency direction: `UiModel` ← `LlmHealing` ← `SelfHealing` ← `Scenario
   - Core libraries (`UiModel`, `SelfHealing`, `LlmHealing`): `netstandard2.0;net8.0`, plus `net10.0` automatically via an MSBuild condition on `$(NETCoreSdkVersion)` ≥ 10. They have zero FlaUI/Windows dependency, so the heuristic engine and its pure-logic tests run cross-platform (Linux CI included).
   - `Discovery`, `ScenarioRunner`, `WinFormsApp`: `net48` (Windows-only; FlaUI UIA3 needs Windows UIA COM APIs).
   - `WpfApp`: `net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting`.
-- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 8.0.5, xunit 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet.collector 6.0.0.
+- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 8.0.5, xunit 2.9.3, Microsoft.NET.Test.Sdk 17.13.0, coverlet.collector 6.0.4, Microsoft.CodeAnalysis.CSharp 4.12.0.
+- **Modern Package & Security Standard:** AI agents and contributors MUST NEVER introduce ancient, end-of-life, or vulnerable package versions. Always target the latest stable, LTS-compatible releases for the project's supported target frameworks (`netstandard2.0;net8.0`), audit dependencies on every build, and keep transitive dependencies CVE-free.
 - `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, authoritative `<Version>`, `Deterministic` builds). Packable by default; demo apps, the sample, and the test project opt out with `IsPackable=false`. Bumping `<Version>` here updates all packaging workflows automatically (enforced by `PackageVersionDriftTests`).
 
 ### Healing pipeline (how the pieces interact)
@@ -217,3 +218,27 @@ Most workflows here are `workflow_dispatch` or scheduled, so **a pull request do
 - The LLM fallback must never bypass the Hallucination Guard: an LLM pick is valid only as a `CandidateId` that exactly matches the shortlist it was sent. `AutomationId` is not a safe lookup key (it can be empty or duplicated — that is the bug class this project heals).
 - LLM prompt size is bounded by `MaxCandidatesForLlm`; keep it that way so live UI data sent to third-party APIs stays minimal.
 - **Standing policy — package security auditing gates CI, not just reports (#223).** Dependabot opening a PR is not the same as blocking a vulnerable dependency from reaching `main`. MSBuild `NuGetAudit` is enabled repo-wide (`NuGetAuditMode=all`, `NuGetAuditLevel=moderate`) in `Directory.Build.props`, with High/Critical advisories (`NU1903` direct, `NU1904` transitive) promoted to build errors only when `$(ContinuousIntegrationBuild) == 'true'` — local dev builds stay unblocked, the Windows and Linux `ci.yml` legs do not (the property is set on both via `dotnet restore`/`dotnet build`, no extra flag needed). [write-security-audit-summary.ps1](.github/scripts/write-security-audit-summary.ps1) runs `dotnet list package --vulnerable --include-transitive` and `dotnet list package --outdated` against each leg's build target (`AutomationSandbox.sln` on Windows, `TestAutomation/ScenarioRunner/ScenarioRunner.csproj` on Linux) and publishes both as tables to `$GITHUB_STEP_SUMMARY`, so findings are visible even below the error threshold (e.g. Moderate). It tolerates a missing or malformed `dotnet list` report (writes an "unavailable" note, exits 0) rather than failing the reporting step — the actual gate is the restore-time `NU1903`/`NU1904` error, not this script. Test coverage: [SecurityAuditWorkflowTests](TestAutomation/ScenarioRunner/SecurityAuditWorkflowTests.cs). When #223 landed, `xunit`/`xunit.runner.visualstudio` in `ScenarioRunner.csproj` had to move off `2.5.3` (pulls `NETStandard.Library 1.6.1` → vulnerable `System.Net.Http`/`System.Text.RegularExpressions` `4.3.0` transitively on `net8.0`) to `2.9.3`/`2.8.2` — turning the gate on without that bump would have broken CI immediately. If a future dependency bump reintroduces a High/Critical advisory, restore fails with `NU1903`/`NU1904` in CI; resolve it by bumping the offending package (direct or, like here, by bumping whatever pulls it in transitively), not by suppressing the code.
+
+## Issue and task lifecycle rules (Definition of Ready & In Review)
+
+### Definition of Ready (DoR) — Gate Before Starting Work
+Before any issue, task, backlog item, or planned proposal can be moved to **"Ready"** or before any implementation work begins, it **MUST ALWAYS** have all four sizing, prioritization, and scheduling fields explicitly defined:
+1. **Priority**: `P0 (Urgent/Blocker)`, `P1 (High)`, `P2 (Medium)`, or `P3 (Low/Backlog)`
+2. **Estimate (`Est.` / `Estimate`)**: Concrete time estimate (e.g., `Est: 30m`, `Est: 1h`, `Est: 2h`, `Est: 1d`, `Est: 2d`)
+3. **Size**: T-Shirt sizing (`XS`, `S`, `M`, `L`, `XL`)
+4. **Iteration**: Execution target — `Current Iteration (Now)`, `Next Iteration (Next)`, or `Backlog (Future)`.
+5. **Problem Statement**: Clear, reproducible explanation of the problem, defect, or requirement
+6. **Proposed Changes / Scope**: Actionable checklist of changes
+7. **Acceptance Criteria & Verification**: Automated and manual verification rules
+
+**Strict Policy:** If `Priority`, `Estimate`, `Size`, or `Iteration` is missing, work **MUST NOT BE STARTED** and the item must not be moved to "Ready".
+
+### PR and Review Lifecycle
+- Whenever a Pull Request (PR) is opened for an issue, the task/issue and PR **MUST IMMEDIATELY transition to "In Review"**.
+- Every PR description must reference its issue (`Fixes #xyz` or `Closes #xyz`) and explicitly include the `Priority`, `Estimate`, `Size`, and `Iteration` metadata in its summary header.
+
+### Definition of Done (DoD) & Stage Transition Gate
+- **All Acceptance Criteria and Sub-tasks MUST be explicitly checked off (`- [x]`)**:
+  - Every single task item and acceptance criterion checkbox in the issue, implementation plan, and PR description must be completed and marked as `[x]`.
+- **Strict Blocking Policy:** If any acceptance criterion or task remains unchecked (`- [ ]`), work is **NOT COMPLETE** and transitioning to the next stage (e.g. requesting review, moving to "In Review", merging PR, or closing the issue) is **STRICTLY BLOCKED**.
+- **Verification Rule:** No checkbox may be marked `[x]` without verifiable proof: `dotnet test` passing with 0 failures, `dotnet build` passing with 0 warnings/0 errors, and security audit passing with 0 High/Critical CVEs.

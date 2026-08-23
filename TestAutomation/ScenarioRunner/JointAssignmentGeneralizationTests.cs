@@ -58,7 +58,7 @@ namespace ScenarioRunner
                             LocatorAblationGenerator.FindExpectedElement(sourceRoot, mutation.OriginalAutomationId)!))
                         .ToList();
                     var production = SelfHealingResolver.ResolveBatch(requests, mutatedRoot, log: _ => { });
-                    var expectedScenario = Assert.Single(design.Scenarios.Where(s => s.ScenarioId == scenario.ScenarioId));
+                    var expectedScenario = Assert.Single(design.Scenarios, s => s.ScenarioId == scenario.ScenarioId);
 
                     Assert.Equal(expectedScenario.LocatorResults.Count, production.Items.Count);
                     for (var i = 0; i < production.Items.Count; i++)
@@ -250,13 +250,13 @@ namespace ScenarioRunner
             string removedAutomationId,
             string winningAutomationId)
         {
-            var scenario = Assert.Single(measurement.Report.Scenarios.Where(s => s.LocatorResults.Any(r =>
+            var scenario = Assert.Single(measurement.Report.Scenarios, s => s.LocatorResults.Any(r =>
                 r.Baseline.OriginalAutomationId == removedAutomationId &&
-                r.Baseline.Outcome == AblationOutcome.FalseHealOnRemoved)));
-            var removed = Assert.Single(scenario.LocatorResults.Where(r =>
-                r.Baseline.OriginalAutomationId == removedAutomationId));
-            var winner = Assert.Single(scenario.LocatorResults.Where(r =>
-                r.Baseline.OriginalAutomationId == winningAutomationId));
+                r.Baseline.Outcome == AblationOutcome.FalseHealOnRemoved));
+            var removed = Assert.Single(scenario.LocatorResults, r =>
+                r.Baseline.OriginalAutomationId == removedAutomationId);
+            var winner = Assert.Single(scenario.LocatorResults, r =>
+                r.Baseline.OriginalAutomationId == winningAutomationId);
             Assert.Equal(removed.Baseline.MatchedAutomationId, winner.Baseline.MatchedAutomationId);
             Assert.Equal(JointAssignmentDisposition.DeclinedByStrongerClaim, removed.Disposition);
             Assert.Equal(JointAssignmentDisposition.WonContention, winner.Disposition);
