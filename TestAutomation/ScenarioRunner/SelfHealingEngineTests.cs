@@ -60,10 +60,253 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void SelfHealingEngine_DefaultsToReviewMode()
+        {
+            var engine = new SelfHealingEngine();
+            Assert.Equal(HealingMode.Review, engine.Mode);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ReviewMode_DoesNotAutoPersistOrRetryAction_RecordsManualReview()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Review);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnSubmit_Renamed",
+                        Name = "Submit",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+
+            var originalException = new ElementNotFoundException("Element not found with old automation ID!");
+            var attemptCount = 0;
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element =>
+                    {
+                        attemptCount++;
+                        throw originalException;
+                    },
+                    captureTreeRoot: () => currentTree));
+
+            Assert.Equal(1, attemptCount);
+            Assert.Same(originalException, exception.InnerException);
+            Assert.Contains("Healing mode is Review", exception.Message);
+            Assert.Contains("btnSubmit_Renamed", exception.Message);
+
+            Assert.Null(repository.Find("submit_btn"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal("submit_btn", entry.LocatorKey);
+            Assert.Equal(HealingReportEntry.ManualReviewOutcome, entry.Outcome);
+            Assert.Equal(HealingReportEntry.ManualReviewStatus, entry.ReviewStatus);
+            Assert.Equal("btnSubmit_Renamed", entry.ProposedSnapshot!.AutomationId);
+            Assert.Null(entry.AcceptedSnapshot);
+            Assert.Empty(report.AcceptedEvents);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ObserveMode_DoesNotAutoPersistOrRetryAction_RecordsObserved()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Observe);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Button",
+                        AutomationId = "btnSubmit_Renamed",
+                        Name = "Submit",
+                        BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+                    }
+                }
+            };
+
+            var originalException = new ElementNotFoundException("Element not found with old automation ID!");
+            var attemptCount = 0;
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element =>
+                    {
+                        attemptCount++;
+                        throw originalException;
+                    },
+                    captureTreeRoot: () => currentTree));
+
+            Assert.Equal(1, attemptCount);
+            Assert.Same(originalException, exception.InnerException);
+            Assert.Contains("healing mode is Observe", exception.Message);
+
+            Assert.Null(repository.Find("submit_btn"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal("submit_btn", entry.LocatorKey);
+            Assert.Equal(HealingReportEntry.ObservedOutcome, entry.Outcome);
+            Assert.Equal("btnSubmit_Renamed", entry.ProposedSnapshot!.AutomationId);
+            Assert.Null(entry.AcceptedSnapshot);
+            Assert.Empty(report.AcceptedEvents);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_FailClosedMode_DoesNotCaptureTreeOrHeal_ThrowsOriginalExceptionImmediately()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.FailClosed);
+
+            var expected = new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "btnSubmit_Old",
+                Name = "Submit",
+                BoundingRectangle = new BoundingRectangle(50, 50, 80, 30),
+            };
+
+            var treeCaptureCount = 0;
+            var originalException = new ElementNotFoundException("Element not found with old automation ID!");
+
+            var thrown = await Assert.ThrowsAsync<ElementNotFoundException>(() =>
+                engine.ExecuteWithHealingAsync<string>(
+                    "submit_btn",
+                    expected,
+                    action: element => throw originalException,
+                    captureTreeRoot: () =>
+                    {
+                        treeCaptureCount++;
+                        return new UiElementInfo { ControlType = "Window" };
+                    }));
+
+            Assert.Same(originalException, thrown);
+            Assert.Equal(0, treeCaptureCount);
+            Assert.Null(repository.Find("submit_btn"));
+
+            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            Assert.NotNull(report);
+            var entry = Assert.Single(report!.Events);
+            Assert.Equal(HealingReportEntry.FailClosedOutcome, entry.Outcome);
+            Assert.Null(entry.ProposedSnapshot);
+            Assert.Null(entry.AcceptedSnapshot);
+            Assert.Empty(report.AcceptedEvents);
+        }
+
+        [Fact]
+        public async Task SelfHealingEngine_ResolveAndRecordAsync_RespectsHealingModes()
+        {
+            var expected = new UiElementInfo
+            {
+                ControlType = "Edit",
+                AutomationId = "old_id",
+                Name = "Email",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+            };
+
+            var currentTree = new UiElementInfo
+            {
+                ControlType = "Window",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "new_healed_id",
+                        Name = "Email",
+                        BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+                    }
+                }
+            };
+
+            // 1. Review mode (default): resolves candidate, records manual-review, does NOT persist to repo.
+            var repoReview = new LocatorRepository(_tempRepoPath);
+            var engineReview = new SelfHealingEngine(repoReview, reportSink: new HealingReportFileSink(_tempReportPath));
+            var resultReview = await engineReview.ResolveAndRecordAsync("email_review", expected, currentTree);
+            Assert.True(resultReview.IsConfident);
+            Assert.Null(repoReview.Find("email_review"));
+
+            var reportReview = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var eventReview = Assert.Single(reportReview!.Events);
+            Assert.Equal(HealingReportEntry.ManualReviewOutcome, eventReview.Outcome);
+
+            // 2. Observe mode: resolves candidate, records observed, does NOT persist to repo.
+            File.Delete(_tempReportPath);
+            var repoObserve = new LocatorRepository(_tempRepoPath);
+            var engineObserve = new SelfHealingEngine(repoObserve, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Observe);
+            var resultObserve = await engineObserve.ResolveAndRecordAsync("email_observe", expected, currentTree);
+            Assert.True(resultObserve.IsConfident);
+            Assert.Null(repoObserve.Find("email_observe"));
+
+            var reportObserve = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var eventObserve = Assert.Single(reportObserve!.Events);
+            Assert.Equal(HealingReportEntry.ObservedOutcome, eventObserve.Outcome);
+
+            // 3. FailClosed mode: skips resolution, returns unconfident, records fail-closed.
+            File.Delete(_tempReportPath);
+            var repoFail = new LocatorRepository(_tempRepoPath);
+            var engineFail = new SelfHealingEngine(repoFail, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.FailClosed);
+            var resultFail = await engineFail.ResolveAndRecordAsync("email_fail", expected, currentTree);
+            Assert.False(resultFail.IsConfident);
+            Assert.Null(repoFail.Find("email_fail"));
+
+            var reportFail = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var eventFail = Assert.Single(reportFail!.Events);
+            Assert.Equal(HealingReportEntry.FailClosedOutcome, eventFail.Outcome);
+
+            // 4. AutoHeal mode: resolves candidate, persists to repo, records accepted-unverified.
+            File.Delete(_tempReportPath);
+            var repoAuto = new LocatorRepository(_tempRepoPath);
+            var engineAuto = new SelfHealingEngine(repoAuto, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.AutoHeal);
+            var resultAuto = await engineAuto.ResolveAndRecordAsync("email_auto", expected, currentTree);
+            Assert.True(resultAuto.IsConfident);
+            Assert.NotNull(repoAuto.Find("email_auto"));
+            Assert.Equal("new_healed_id", repoAuto.Find("email_auto")!.Snapshot.AutomationId);
+
+            var reportAuto = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var eventAuto = Assert.Single(reportAuto!.Events);
+            Assert.Equal(HealingReportEntry.AcceptedUnverifiedOutcome, eventAuto.Outcome);
+        }
+
+        [Fact]
         public async Task SelfHealingEngine_ResolveAndRecordAsync_UpsertsHealedLocatorToRepository()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository);
+            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {
@@ -104,7 +347,7 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ExecuteWithHealingAsync_RetriesActionWithHealedElementWhenInitialFails()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {
@@ -176,7 +419,7 @@ namespace ScenarioRunner
             };
             repository.Upsert("submit_btn", expected, applicationName: "CustomerApp", platform: "windows-uia");
             var repositoryBytesBeforeHeal = File.ReadAllBytes(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.AutoHeal);
             var currentTree = new UiElementInfo
             {
                 ControlType = "Window",
@@ -328,7 +571,7 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ExecuteWithHealingAsync_LogsClassificationBeforeTreeCaptureAndRetry()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository);
+            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {
@@ -394,7 +637,7 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ExecuteWithHealingAsync_HonorsCustomShouldHealPolicy()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository);
+            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {
@@ -496,7 +739,7 @@ namespace ScenarioRunner
         public async Task SelfHealingEngine_ResolveAndRecordAsync_WritesHealingReport()
         {
             var repository = new LocatorRepository(_tempRepoPath);
-            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath));
+            var engine = new SelfHealingEngine(repository, reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {
@@ -1044,7 +1287,7 @@ namespace ScenarioRunner
             var seconder = new FakeEngineLlmProvider("SecondEngine", isAvailable: true, resolve: () =>
                 new LlmHealingResult { ProviderName = "SecondEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.88, Reasoning = "matched" });
 
-            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder });
+            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder }, mode: HealingMode.AutoHeal);
 
             // Stale expected that triggers low heuristic confidence so LLM fallback is used
             var expected = new UiElementInfo
@@ -1092,7 +1335,7 @@ namespace ScenarioRunner
             var seconder = new FakeEngineLlmProvider("SecondEngine", isAvailable: true, resolve: () =>
                 new LlmHealingResult { ProviderName = "SecondEngine", Success = true, MatchedCandidateId = "c0", Confidence = 0.9, Reasoning = "matched" });
 
-            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder });
+            var engine = new SelfHealingEngine(repository, llmProviders: new ILlmHealingProvider[] { provider, seconder }, mode: HealingMode.AutoHeal);
 
             var expected = new UiElementInfo
             {

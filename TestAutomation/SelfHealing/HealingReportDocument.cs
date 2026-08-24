@@ -71,6 +71,9 @@ namespace SelfHealing
         public const string NoConsensusOutcome = "no-consensus";
         public const string ProviderErrorOutcome = "provider-error";
         public const string OwnershipConflictOutcome = "ownership-conflict";
+        public const string ObservedOutcome = "observed";
+        public const string ManualReviewOutcome = "manual-review";
+        public const string FailClosedOutcome = "fail-closed";
         public const string UnspecifiedOutcome = "unspecified";
 
         public DateTimeOffset HealedAt { get; set; } = DateTimeOffset.UtcNow;
