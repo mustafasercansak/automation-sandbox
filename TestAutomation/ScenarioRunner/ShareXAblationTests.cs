@@ -186,6 +186,37 @@ namespace ScenarioRunner
                 "if this ever flips, the doc's cross-application comparison needs updating, not just this assertion.");
         }
 
+        [Fact]
+        public void ShareXFixture_AbsenceInvestigation_ReviewBandWidening_MatchesHandBrakePattern()
+        {
+            // #179 Cross-application verification of Review-Band Widening policy on ShareX (grid rows excluded).
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "ShareX", "v21.0.0", FixtureFileName);
+            var filtered = new LocatorAblationDataset
+            {
+                Scenarios = dataset.Scenarios
+                    .Where(s => LocatorAblationGenerator.FindExpectedElement(root, s.OriginalAutomationId)?.ControlType != "DataItem")
+                    .ToList(),
+            };
+
+            var report050 = LocatorAblationHarness.Run(filtered, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+            var report088 = LocatorAblationHarness.Run(filtered, root, new SimilarityWeights { MinimumConfidence = 0.88 });
+
+            var compound050 = report050.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+            var compound088 = report088.Results.Count(r => r.MutationKind == LocatorMutationKind.CompoundDrift && r.Outcome == AblationOutcome.CorrectHeal);
+
+            var removedFalse050 = report050.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+            var removedFalse088 = report088.Results.Count(r => r.Outcome == AblationOutcome.FalseHealOnRemoved);
+
+            // On ShareX, raising the threshold to 0.88 eliminates 6 of 8 false heals (8 -> 2),
+            // while compound drift auto-heal recall drops to 0 (2 -> 0).
+            Assert.Equal(2, compound050);
+            Assert.Equal(0, compound088);
+
+            Assert.Equal(8, removedFalse050);
+            Assert.Equal(2, removedFalse088);
+        }
+
         private static UiElementInfo LoadFixture()
         {
             var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", FixtureFileName);
