@@ -116,6 +116,25 @@ Assert generation behavior across all generators is configured via `AssertGenera
 - `Lenient`: Emits real assertions for mapped kinds; emits presence checks with a `// TODO` review comment for unmapped kinds.
 - `Fallback`: Emits presence/visibility checks for unmapped kinds.
 
+### Platform Neutrality and Platform-Specific Extensions (#174)
+
+The intent pipeline is architected around a strictly **platform-neutral core** with explicit, isolated **platform-specific extensions**:
+
+- **Platform-Neutral Core**:
+  - Actions: `Fill`, `Click`, `Select`, `Check`, `Uncheck`, `Hover`, `UploadFile`, `PressKey`, `Wait`, `Assert`.
+  - Assertions: `Visible`, `NotVisible`, `TextEquals`, `TextContains`, `ValueEquals`.
+  - Matching, candidate scoring, token overlap, and candidate-review gates are completely framework-agnostic.
+- **Web-Specific Extensions**:
+  - `TargetUrl`: Initial browser navigation entry point.
+  - `AssertionKind.UrlEquals` and `AssertionKind.UrlContains`: Playwright page URL assertions (`ToHaveURLAsync` / `toHaveURL`).
+- **Desktop-Specific Extensions**:
+  - `IntentDesktopPlanningRequest`: Dedicated planning request model that omits web URLs and allows optional `ApplicationExecutablePath` specification.
+  - `ApplicationExecutablePath`: Startup binary path configured in `FlaUiCSharpTestGenerationOptions`.
+  - Window-scoped resolution (`window.FindFirstDescendant`) and OS-level file dialog automation.
+- **Desktop Assertion Handling**:
+  - When web-specific assertions (`UrlEquals`, `UrlContains`) are targeted at desktop generators, `FlaUiCSharpTestGenerator` rejects them in `Strict` mode (`Assert.True(false, "Review: URL assertions are not supported on desktop targets.")`) or emits a `// TODO` review check in `Lenient` mode.
+  - `AssertionKindExtensions.IsWebOnly()` / `IsSupportedOnDesktop()` / `IsPlatformNeutral()` provide programmatically auditable classification.
+
 ### 2. Intent Planner
 
 The planner turns a business goal into stable automation steps:
@@ -404,3 +423,11 @@ elementlerine ayrılmıştır: üreteçler bu eylem için yalnızca select çağ
 Eşleştiricilerde iki temel koruma mekanizması devrededir:
 1. **Semantik Kapı (`MinimumSemanticScore = 0.01`):** Yalnızca eylem uyumu (ör. buton olması) yeterli sayılmaz; niyet ile hedef eleman arasında en az bir anlamlı token örtüşmesi aranır. `IntentTextScoring` durak kelime (stop-word) filtreleme, camelCase ayrıştırma ve çift yönlü anlamlı token eşleştirmesi kullanarak doğal dil ifadelerinden kaynaklanan skor seyreltmelerini önler. "Delete customer" niyetine karşı "Export Report" gibi alakasız eşleşmeler (`0.00`) otomatik olarak manuel incelemeye (`RequiresReview = true`) sevk edilir. *Bilinen sınır:* 0.01 eşiği "en az bir token örtüşsün" anlamına geldiğinden, tesadüfi tek token eşleşmeleri kapıyı geçebilir. Bu değer bir temel tahmindir ve #15 kıyaslama veri setiyle yeniden kalibre edilecektir.
 2. **Runner-Up Marj Kontrolü (`MinimumCandidateMargin = 0.05`):** En iyi iki aday arasındaki fark 0.05'in altındaysa sistem tahmin yürütmek yerine adımı incelemeye düşürür.
+
+**Platform Bağımsızlığı ve Platforma Özgü Uzantılar (#174):**
+Intent pipeline'ı, kesin olarak **platform bağımsız bir çekirdek** ve açıkça ayrılmış **platforma özgü uzantılar** etrafında mimarilendirilmiştir:
+- **Platform Bağımsız Çekirdek:** `Fill`, `Click`, `Select`, `Check`, `Uncheck`, `Hover`, `UploadFile`, `PressKey`, `Wait`, `Assert` eylemleri ve `Visible`, `NotVisible`, `TextEquals`, `TextContains`, `ValueEquals` doğrulama türleri hem web (Playwright) hem masaüstü (FlaUI) için tamamen ortaktır.
+- **Web'e Özgü Uzantılar:** `TargetUrl` (tarayıcı başlangıç URL'i) ve `AssertionKind.UrlEquals` / `UrlContains` (sayfa URL doğrulamaları).
+- **Masaüstüne Özgü Uzantılar:** `IntentDesktopPlanningRequest` (web URL'i içermeyen masaüstü planlama modeli), `ApplicationExecutablePath` (çalıştırılabilir dosya yolu), pencere kapsamlı element arama (`window.FindFirstDescendant`) ve işletim sistemi seviyesi dosya diyaloğu otomasyonu.
+- **Masaüstü URL Doğrulama Davranışı:** Web'e özgü URL doğrulamaları masaüstü üretecine geldiğinde, `Strict` modda açıkça reddedilir (`Assert.True(false, "Review: URL assertions are not supported on desktop targets.")`), `Lenient` modda ise `// TODO` inceleme yorumuyla pencere varlık kontrolüne düşürülür.
+
