@@ -281,7 +281,7 @@ This matters for how far the result generalises:
 
 ### 7. Whole-Tree Reconciliation: the Offline Probe (#98)
 
-§5's finding and §6's both point at the same structural gap: every mechanism measured so far resolves one locator at a time, in isolation. §98 asked a narrower question before proposing to fix that: when the heuristic wrongly heals a removed element onto a neighbour, is that neighbour usually *another authored locator's real identity* — something a joint solver, resolving every locator on the page at once, could recognise as "already claimed" and therefore refuse to hand to the removed one too?
+§5's finding and §6's both point at the same structural gap: every mechanism measured so far resolves one locator at a time, in isolation. #98 asked a narrower question before proposing to fix that: when the heuristic wrongly heals a removed element onto a neighbour, is that neighbour usually *another authored locator's real identity* — something a joint solver, resolving every locator on the page at once, could recognise as "already claimed" and therefore refuse to hand to the removed one too?
 
 **The probe, run against the existing 42 `RemovedElement` scenarios at default weights (no new mutation kind needed for this step).** Of the 17 false heals, **10 (59%) picked a neighbour that was itself one of the tree's other 41 authored locators**, recovered by structural fingerprint since `RemovedElement`'s AutomationId-opaquing mutation destroys the identifier every candidate is normally matched on.
 
@@ -670,8 +670,8 @@ xychart-beta
 #### Hipotez 3: Aday Küme Yoğunluğu (Cluster Density)
 *Hipotez:* Silinen elemanlar çok sayıda birbirine yakın skorlu aday kümesi üretir, gerçek elemanlarda ise küme seyrektir.
 *Deneysel Bulgular:* En iyi adayın $0.10$ puan yakınındaki ortalama aday sayısı:
-- **Silinen Elemanlar (Yanlış İyileştirmeler):** $1.71$
-- **Bileşik Mutasyon (Gerçek Elemanlar):** $3.08$
+- **Silinen Elemanlar (Yanlış İyileştirmeler):** $1.71$ (aralık $1 - 3$)
+- **Bileşik Mutasyon (Gerçek Elemanlar):** $3.08$ (aralık $1 - 5$)
 *Sonuç:* **Olumsuz (Ters yönde).** Gerçek eleman taşındığında yeni konumundaki komşularla da yarışır, bu nedenle küme yoğunluğu silinen elemanlardan daha yüksektir.
 
 #### Hipotez 4: Birleşik Filtre (Katı ControlType + Marj $\ge 0.08$)
@@ -962,9 +962,9 @@ Tek-hedefli sezgisel sinyaller (§5) ve çoklu-sağlayıcılı LLM mutabakatınd
   - **3 itiraz edilen yanlış iyileştirme**, hayatta kalan locator'larla çakışır; itiraz 3'ünü de tespit edip reddeder ($3 / 3 = \%100$).
   - **2 itiraz edilmeyen yanlış iyileştirme**, izlenmeyen tesadüfi elemanları talep eder; itiraz **$0$**'dır ve ikisi de ($2 / 2 = \%100$) tespit edilemez kalır.
 - **Tekli Locator Senaryoları** ($n=42$ HandBrake, $n=14$ ShareX):
-  - Tekli locator iyileştirmesinde locator'lar yalıtılmış çalışır. Adaya itiraz edecek başka bir locator bulunmadığından, aday itirazı tüm koşuların $\%100$'ünde tanımsal olarak $0$'dır.
+  - Tekli locator iyileştirmesinde locator'lar yalıtılmış çalışır. Adaya itiraz edecek başka bir locator bulunmadığından, aday itirazı tüm koşuların $\%100$'ünde tanımsal olarak $0$'dır ($0 / 17$ ve $0 / 8$ yanlış iyileştirme tespit edildi).
 
-*Sonuç:* **Genel bir yokluk dedektörü olarak negatif.** Aday itirazı kesin olarak çoklu-locator sahiplik çakışması korumasıdır. İtiraz edilmeyen yanlış iyileştirmelere karşı hiçbir görünürlüğü yoktur (her iki uygulamada itiraz edilmeyen silinmelerde $\%0$ tespit), çünkü silinen bir locator'ın yanlışlıkla kabul ettiği tesadüfi bir arka plan düğümü paketteki başka hiçbir test tarafından talep edilmemektedir.
+*Sonuç:* **Genel bir yokluk dedektörü olarak negatif.** Aday itirazı kesin olarak çoklu-locator sahiplik çakışması korumasıdır. İtiraz edilmeyen yanlış iyileştirmelere karşı hiçbir görünürlüğü yoktur (her iki uygulamada itiraz edilmeyen silinmelerde $0/15 = \%0$ tespit), çünkü silinen bir locator'ın yanlışlıkla kabul ettiği tesadüfi bir arka plan düğümü paketteki başka hiçbir test tarafından talep edilmemektedir.
 
 #### 2. Aday 2: Gerçek Zamansal / Çevresel Yeniden Keşif Jitter'ı
 *Hipotez:* #179'un ilk zamansal kararlılık testi, `SelfHealingResolver.Resolve`'un deterministik saf bir fonksiyon olduğu statik bellek-içi ağaçlar üzerinde çalışmıştı. Eğer yeniden keşif, DPI/çizim/kare-yakalama gürültüsünden kaynaklanan gerçekçi uzamsal pertürbasyon ($\pm 2\text{px} - \pm 5\text{px}$ sınırlayıcı kutu koordinat jitter'ı) ile bağımsız değerlendirme kareleri boyunca yapılırsa, silinen elemanların komşu yanıltıcıları kararsızlık gösterip ayrışırken, gerçek taşınmış kontroller kararlı kalır mı?

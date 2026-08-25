@@ -57,7 +57,7 @@ Each event in the report contains:
 - **`CandidateIdentity` & `ReconciliationDisposition`** (schema v8+): Nullable batch-only ownership telemetry. The identity is an opaque path within one captured tree, not a reusable locator; `null` on older or single-locator entries means reconciliation was not observed by that writer.
 - **`ReviewStatus`**:
   - `accepted`: High-confidence heuristic match ($\ge 50\%$).
-  - `accepted-with-llm`: Matches resolved via Gemini, Claude, OpenAI, or Ollama.
+  - `accepted-with-llm`: Matches resolved via an LLM provider (e.g. Gemini, Claude, OpenAI, Ollama, or any other configured provider).
   - `manual-review`: Borderline matches requiring QA engineer review.
 - **`PreviousSnapshot`, `AcceptedSnapshot` & `ProposedSnapshot`**: The previous locator, an accepted replacement, or the unaccepted candidate involved in a decline/failed retry.
 - **`ProviderErrors`** (schema v7+): Provider names and failure details. It remains available even when other providers reach consensus successfully.
@@ -122,7 +122,7 @@ Rapordaki her olay şu bilgileri içerir:
 - **`CandidateIdentity` & `ReconciliationDisposition`** (şema v8+): Nullable ve yalnızca batch sahiplik telemetrisi. Kimlik tek yakalanmış ağaç içindeki opak yoldur, yeniden kullanılabilir locator değildir; eski veya tek-locator girdilerindeki `null`, yazan sürümün uzlaştırma gözlemlemediğini belirtir.
 - **`ReviewStatus` (İnceleme Durumu):**
   - `accepted`: Yüksek güvenli sezgisel eşleşme ($\ge \%50$).
-  - `accepted-with-llm`: Yapay zeka (Gemini, Claude, OpenAI, Ollama) ile çözülen eşleşme.
+  - `accepted-with-llm`: Bir LLM sağlayıcısıyla (örn. Gemini, Claude, OpenAI, Ollama veya yapılandırılmış başka bir sağlayıcı) çözülen eşleşme.
   - `manual-review`: Sınırda kalan ve QA mühendisi onayı gerektiren eşleşme.
 - **`PreviousSnapshot`, `AcceptedSnapshot` & `ProposedSnapshot`**: Önceki locator, kabul edilen yeni locator veya reddedilen/başarısız retry'daki önerilen aday.
 - **`ProviderErrors`** (şema v7+): Sağlayıcı adları ve hata ayrıntıları. Diğer sağlayıcılar başarıyla uzlaşsa bile bu bilgi korunur.

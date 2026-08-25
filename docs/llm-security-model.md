@@ -42,9 +42,11 @@ The stale target `AutomationId` is deliberately omitted to reduce semantic ancho
 Candidate `AutomationId` values are still included. `TestIntent` appears in both the
 serialized target snapshot and a human-readable intent block when it is non-empty.
 
-No built-in classifier, redactor, allow-list, or secret scanner modifies these values
-before transmission. Bounding the shortlist limits volume and cost; it does not make
-the remaining content anonymous or safe to disclose.
+By default, a built-in redactor masks common sensitive patterns (see "PII, secrets, and
+operator controls" below) in this text before transmission. There is no classifier,
+allow-list, or secret scanner beyond that pattern-based redaction, and it can be disabled
+per caller. Bounding the shortlist limits volume and cost; neither the redaction pass nor
+the bounding makes the remaining content anonymous or safe to disclose.
 
 ### Named risks, current mitigations, and residual risk
 
@@ -115,6 +117,8 @@ Review the terms that apply to the exact account and endpoint before enabling it
 For example, the linked OpenAI documentation distinguishes abuse-monitoring retention
 from application-state storage and describes account eligibility for modified or zero
 data retention. Do not generalize one provider's or one endpoint's policy to another.
+No retention assumption for Kimi/Moonshot, Ollama Cloud, or custom endpoints is encoded
+in this library either.
 
 ### Local telemetry is sensitive too
 
@@ -171,9 +175,11 @@ Eski hedef `AutomationId`, semantik çapalamayı azaltmak için bilerek çıkar�
 `AutomationId` değerleri ise gönderilir. Boş değilse `TestIntent` hem serialize edilmiş
 hedef snapshot'ında hem de okunabilir intent bloğunda yer alır.
 
-Yerleşik bir sınıflandırıcı, redactor, allow-list veya secret scanner bu değerleri gönderim
-öncesinde değiştirmez. Aday listesini sınırlamak hacmi ve maliyeti sınırlar; kalan içeriği
-anonim veya açıklanması güvenli hâle getirmez.
+Varsayılan olarak yerleşik bir redactor, gönderim öncesinde bu metin içindeki yaygın hassas
+verileri maskeler (aşağıdaki "PII, sırlar ve operatör kontrolleri" bölümüne bakın). Bu desen
+tabanlı maskeleme dışında bir sınıflandırıcı, allow-list veya secret scanner yoktur ve çağıran
+taraf bunu devre dışı bırakabilir. Aday listesini sınırlamak hacmi ve maliyeti sınırlar; ne
+maskeleme ne de bu sınırlama kalan içeriği anonim veya açıklanması güvenli hâle getirir.
 
 ### Adlandırılmış riskler, mevcut önlemler ve kalan risk
 

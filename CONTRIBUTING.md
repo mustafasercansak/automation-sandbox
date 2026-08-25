@@ -33,6 +33,8 @@ Create a dedicated branch per issue:
 - Bug fixes: `fix/<issue-number>-<short-description>` (e.g. `fix/225-update-test-dependencies-warnings`)
 - Features / enhancements: `feat/<issue-number>-<short-description>` (e.g. `feat/223-package-security-audit-policy`)
 - Performance / Refactoring: `perf/<issue-number>-<short-description>` or `refactor/...`
+- Documentation-only changes: `docs/<issue-number>-<short-description>` (e.g. `docs/180-llm-security-model`)
+- Research / investigation spikes: `research/<issue-number>-<short-description>` (e.g. `research/179-absence-signals-investigation`)
 
 ---
 
