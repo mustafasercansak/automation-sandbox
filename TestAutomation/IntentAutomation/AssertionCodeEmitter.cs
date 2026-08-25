@@ -8,19 +8,22 @@ namespace IntentAutomation
     {
         public static bool IsLocatorRequired(AssertionKind kind, AssertGenerationMode mode)
         {
-            switch (kind)
+            // Web-only assertions (e.g. page URL) are evaluated against the page, not an element,
+            // so they never require a recorded element locator.
+            if (kind.IsWebOnly())
             {
-                case AssertionKind.UrlEquals:
-                case AssertionKind.UrlContains:
-                    return false;
-                case AssertionKind.None:
-                    // In Strict mode, an unmapped assertion emits an inconclusive/failure statement
-                    // and does not require a recorded element locator. In Lenient/Fallback mode,
-                    // it falls back to a visibility/presence check that does require a locator.
-                    return mode != AssertGenerationMode.Strict;
-                default:
-                    return true;
+                return false;
             }
+
+            if (kind == AssertionKind.None)
+            {
+                // In Strict mode, an unmapped assertion emits an inconclusive/failure statement
+                // and does not require a recorded element locator. In Lenient/Fallback mode,
+                // it falls back to a visibility/presence check that does require a locator.
+                return mode != AssertGenerationMode.Strict;
+            }
+
+            return true;
         }
 
         public static void EmitPlaywrightCSharp(
@@ -123,6 +126,24 @@ namespace IntentAutomation
             AssertGenerationMode mode,
             StringBuilder code)
         {
+            if (step.AssertionKind.IsWebOnly())
+            {
+                switch (mode)
+                {
+                    case AssertGenerationMode.Strict:
+                        code.AppendLine("            Assert.True(false, \"Review: URL assertions are not supported on desktop targets.\");");
+                        break;
+                    case AssertGenerationMode.Lenient:
+                        code.AppendLine($"            // TODO: Review unmapped desktop URL assertion: {CodeGenerationUtilities.EscapeComment(step.ExpectedOutcome)}");
+                        code.AppendLine("            Assert.NotNull(window);");
+                        break;
+                    case AssertGenerationMode.Fallback:
+                        code.AppendLine("            Assert.NotNull(window);");
+                        break;
+                }
+                return;
+            }
+
             switch (step.AssertionKind)
             {
                 case AssertionKind.Visible:
@@ -141,22 +162,6 @@ namespace IntentAutomation
                 case AssertionKind.ValueEquals:
                     // In FlaUI, AsTextBox().Text accesses editable input field values.
                     code.AppendLine($"            Assert.Equal(\"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\", window.{findExpression}!.AsTextBox().Text);");
-                    break;
-                case AssertionKind.UrlEquals:
-                case AssertionKind.UrlContains:
-                    switch (mode)
-                    {
-                        case AssertGenerationMode.Strict:
-                            code.AppendLine("            Assert.True(false, \"Review: URL assertions are not supported on desktop targets.\");");
-                            break;
-                        case AssertGenerationMode.Lenient:
-                            code.AppendLine($"            // TODO: Review unmapped desktop URL assertion: {CodeGenerationUtilities.EscapeComment(step.ExpectedOutcome)}");
-                            code.AppendLine("            Assert.NotNull(window);");
-                            break;
-                        case AssertGenerationMode.Fallback:
-                            code.AppendLine("            Assert.NotNull(window);");
-                            break;
-                    }
                     break;
                 default:
                     switch (mode)

@@ -78,46 +78,42 @@ namespace SelfHealing
                 platform,
                 cancellationToken).ConfigureAwait(false);
 
-            if (_mode == HealingMode.AutoHeal)
+            var confidentMatch = healResult.IsConfident && healResult.Matched != null;
+            if (_mode == HealingMode.AutoHeal && confidentMatch)
             {
-                if (healResult.IsConfident && healResult.Matched != null)
-                {
-                    PersistAcceptedHeal(locatorKey, expected, healResult, platform);
-                }
+                PersistAcceptedHeal(locatorKey, expected, healResult, platform);
+            }
 
-                RecordResolutionAttempt(
-                    locatorKey,
-                    expected,
-                    healResult,
-                    healResult.IsConfident && healResult.Matched != null
-                        ? HealingReportEntry.AcceptedUnverifiedOutcome
-                        : HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
-                    platform);
-            }
-            else if (_mode == HealingMode.Observe)
-            {
-                RecordResolutionAttempt(
-                    locatorKey,
-                    expected,
-                    healResult,
-                    healResult.IsConfident && healResult.Matched != null
-                        ? HealingReportEntry.ObservedOutcome
-                        : HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
-                    platform);
-            }
-            else // HealingMode.Review
-            {
-                RecordResolutionAttempt(
-                    locatorKey,
-                    expected,
-                    healResult,
-                    healResult.IsConfident && healResult.Matched != null
-                        ? HealingReportEntry.ManualReviewOutcome
-                        : HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
-                    platform);
-            }
+            RecordResolutionAttempt(
+                locatorKey,
+                expected,
+                healResult,
+                confidentMatch
+                    ? OutcomeForConfidentMatch(_mode, verifiedByRetry: false)
+                    : HealingReportEntry.OutcomeFromResolutionStatus(healResult.ResolutionStatus),
+                platform);
 
             return healResult;
+        }
+
+        /// <summary>
+        /// Maps a healing mode to the report outcome recorded when a confident candidate match was
+        /// found, so <see cref="ResolveAndRecordAsync"/> and <see cref="ExecuteWithHealingAsync{T}"/>
+        /// share a single source of truth instead of independently duplicating this mapping.
+        /// </summary>
+        private static string OutcomeForConfidentMatch(HealingMode mode, bool verifiedByRetry)
+        {
+            switch (mode)
+            {
+                case HealingMode.AutoHeal:
+                    return verifiedByRetry ? HealingReportEntry.AcceptedOutcome : HealingReportEntry.AcceptedUnverifiedOutcome;
+                case HealingMode.Observe:
+                    return HealingReportEntry.ObservedOutcome;
+                case HealingMode.Review:
+                    return HealingReportEntry.ManualReviewOutcome;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, "FailClosed does not resolve confident matches.");
+            }
         }
 
         private Task<HealResult> ResolveAsync(
@@ -296,7 +292,7 @@ namespace SelfHealing
                         locatorKey,
                         target,
                         healResult,
-                        HealingReportEntry.ObservedOutcome,
+                        OutcomeForConfidentMatch(_mode, verifiedByRetry: false),
                         platform);
                     throw new InvalidOperationException(
                         $"Self-healing observed candidate '{healResult.Matched?.AutomationId}' (score: {healResult.Score:F2}) for locator '{locatorKey}', but healing mode is Observe. Action was not retried and locator was not persisted.",
@@ -310,7 +306,7 @@ namespace SelfHealing
                         locatorKey,
                         target,
                         healResult,
-                        HealingReportEntry.ManualReviewOutcome,
+                        OutcomeForConfidentMatch(_mode, verifiedByRetry: false),
                         platform);
                     throw new InvalidOperationException(
                         $"Self-healing resolved candidate '{healResult.Matched?.AutomationId}' (score: {healResult.Score:F2}) for locator '{locatorKey}'. Healing mode is Review: candidate routed to review without executing or persisting.",
@@ -348,7 +344,7 @@ namespace SelfHealing
                     locatorKey,
                     target,
                     healResult,
-                    HealingReportEntry.AcceptedOutcome,
+                    OutcomeForConfidentMatch(_mode, verifiedByRetry: true),
                     platform);
                 return result;
             }
