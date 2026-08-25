@@ -217,6 +217,148 @@ namespace ScenarioRunner
             Assert.Equal(2, removedFalse088);
         }
 
+        [Fact]
+        public void ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern()
+        {
+            // #247 Candidate 1: Contested-Candidate Absence Signal on ShareX.
+            var root = LoadFixture();
+            var dataset = JointAssignmentGeneralizationDataset.Generate(root, "ShareX", "v21.0.0", FixtureFileName);
+            var baseline = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+            var joint = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            // In ShareX's 9 generalization scenarios (27 resolutions):
+            // - 5 baseline removals produce false heals.
+            // - 3 are contested by a surviving locator's stronger claim; joint reconciliation declines all 3 (3 / 3 = 100%).
+            // - 2 are uncontested removals; contention is 0, leaving both (2 / 2 = 100%) undetected.
+            var removedResults = baseline.Scenarios
+                .SelectMany(s => s.LocatorResults)
+                .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                .ToList();
+
+            var contestedCount = baseline.Scenarios.Sum(s =>
+                s.LocatorResults
+                    .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                    .Count(removed => s.LocatorResults.Any(other =>
+                        !ReferenceEquals(other, removed) &&
+                        !string.IsNullOrEmpty(removed.MatchedAutomationId) &&
+                        other.EngineAccepted &&
+                        string.Equals(other.MatchedAutomationId, removed.MatchedAutomationId, StringComparison.Ordinal))));
+
+            var uncontestedCount = removedResults.Count - contestedCount;
+
+            Assert.Equal(5, removedResults.Count);
+            Assert.Equal(3, contestedCount);
+            Assert.Equal(2, uncontestedCount);
+
+            Assert.Equal(3, joint.JointMetrics.CorrectDeclines - joint.BaselineMetrics.CorrectDeclines);
+            Assert.Equal(2, joint.JointMetrics.FalseHealsOnRemoved);
+        }
+
+        [Fact]
+        public void ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter()
+        {
+            // #247 Candidate 2: Genuine Temporal / Environmental Re-Discovery Perturbation Signal on ShareX.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "ShareX", "v21.0.0", FixtureFileName);
+            var removedScenarios = dataset.Scenarios
+                .Where(s => s.MutationKind == LocatorMutationKind.RemovedElement &&
+                            LocatorAblationGenerator.FindExpectedElement(root, s.OriginalAutomationId)?.ControlType != "DataItem")
+                .ToList();
+
+            var jitterRounds = new[]
+            {
+                (dx: 0, dy: 0),
+                (dx: 3, dy: -2),
+                (dx: -4, dy: 5),
+                (dx: 2, dy: 2),
+                (dx: -3, dy: -3),
+            };
+
+            var stableDecoyCount = 0;
+
+            foreach (var scenario in removedScenarios)
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(root, scenario);
+
+                string? initialDecoyFingerprint = null;
+                var allRoundsStable = true;
+
+                for (var round = 0; round < jitterRounds.Length; round++)
+                {
+                    var jitter = jitterRounds[round];
+                    var perturbedTree = ApplyCaptureJitter(mutatedRoot, jitter.dx, jitter.dy);
+                    var result = SelfHealingResolver.Resolve(expected, perturbedTree, new SimilarityWeights { MinimumConfidence = 0.50 }, log: _ => { });
+
+                    if (result.IsConfident && result.Matched != null)
+                    {
+                        var fingerprint = $"{result.Matched.ControlType}|{result.Matched.Name}|{result.Matched.ClassName}|{LocatorAblationGenerator.AncestorPathOf(perturbedTree, result.Matched)}";
+
+                        if (round == 0)
+                        {
+                            initialDecoyFingerprint = fingerprint;
+                        }
+                        else if (fingerprint != initialDecoyFingerprint)
+                        {
+                            allRoundsStable = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (round == 0)
+                        {
+                            initialDecoyFingerprint = "<DECLINED>";
+                        }
+                        else if (initialDecoyFingerprint != "<DECLINED>")
+                        {
+                            allRoundsStable = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (allRoundsStable)
+                {
+                    stableDecoyCount++;
+                }
+            }
+
+            Assert.Equal(14, removedScenarios.Count);
+            Assert.Equal(14, stableDecoyCount);
+        }
+
+        private static UiElementInfo ApplyCaptureJitter(UiElementInfo node, int deltaX, int deltaY)
+        {
+            var rect = !node.BoundingRectangle.IsEmpty
+                ? new BoundingRectangle(
+                    node.BoundingRectangle.X + deltaX,
+                    node.BoundingRectangle.Y + deltaY,
+                    node.BoundingRectangle.Width,
+                    node.BoundingRectangle.Height)
+                : node.BoundingRectangle;
+
+            var clone = new UiElementInfo
+            {
+                AutomationId = node.AutomationId,
+                Name = node.Name,
+                ClassName = node.ClassName,
+                ControlType = node.ControlType,
+                ParentControlType = node.ParentControlType,
+                SiblingIndex = node.SiblingIndex,
+                SiblingCount = node.SiblingCount,
+                BoundingRectangle = rect,
+                Children = new List<UiElementInfo>(node.Children.Count),
+            };
+
+            for (var i = 0; i < node.Children.Count; i++)
+            {
+                clone.Children.Add(ApplyCaptureJitter(node.Children[i], deltaX, deltaY));
+            }
+
+            return clone;
+        }
+
         private static UiElementInfo LoadFixture()
         {
             var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", FixtureFileName);

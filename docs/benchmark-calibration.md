@@ -465,6 +465,46 @@ Building on the negative findings from single-target heuristic signals (§5) and
 
 ---
 
+### 13. 4th Absence Candidate Investigation: Contested-Candidate Residual and Environmental Re-Discovery Jitter (#247)
+
+Following the negative results of #179, #247 investigated the two remaining untried hypotheses: (1) isolating candidate contention as a standalone absence detector in multi-locator suites, and (2) evaluating genuine temporal stability under repeated independent re-discovery with environmental spatial perturbation (capture jitter) across evaluation rounds rather than static object-reference reuse.
+
+#### 1. Candidate 1: Contested Candidate Signal (Multi-Locator Contention)
+*Hypothesis:* One-to-one ownership reconciliation (#141/#144) successfully rejects false heals when two locators actively claim the same candidate node. Can active candidate contention (a node being claimed by $\ge 2$ active locators) be isolated as a standalone absence signal to safely decline the weaker claimant without requiring full joint bipartite reconciliation?
+
+*Empirical Findings:*
+- **HandBrake 1.8.2** (36 generalization scenarios, 108 locator resolutions):
+  - 14 baseline removals produce false heals.
+  - **1 contested false heal** is actively claimed by a surviving locator's ground-truth match; candidate contention detects the collision and declines it ($1 / 1 = 100\%$ precision on contested collisions).
+  - **13 uncontested false heals** claim background or incidental UI nodes (e.g. unmapped containers, sibling buttons) that no active locator in the test suite targets.
+  - On these 13, candidate contention is **$0$**, leaving **$13 / 13 = 100\%$ of uncontested removals completely undetected**.
+- **ShareX v21.0.0** (9 generalization scenarios, 27 locator resolutions):
+  - 5 baseline removals produce false heals.
+  - **3 contested false heals** collide with surviving locators; contention detects and declines all 3 ($3 / 3 = 100\%$).
+  - **2 uncontested false heals** claim untracked incidental elements; contention is **$0$**, leaving both ($2 / 2 = 100\%$) undetected.
+- **Single-Locator Scenarios** ($n=42$ HandBrake, $n=14$ ShareX):
+  - In single-locator healing, locators run in isolation. Because there are no peer locators to contest any candidate, candidate contention is $0$ by definition for $100\%$ of runs ($0 / 17$ and $0 / 8$ false heals detected).
+
+*Result:* **Negative as a general absence detector.** Candidate contention is strictly a multi-locator ownership collision guard. It has zero visibility into uncontested false heals ($0/15 = 0\%$ detection on uncontested removals across both applications), because an incidental background node falsely accepted by a deleted locator is not claimed by any other test in the suite.
+
+#### 2. Candidate 2: Genuine Temporal / Environmental Re-Discovery Jitter
+*Hypothesis:* #179's initial temporal stability test evaluated repeated calls on static in-memory trees where `SelfHealingResolver.Resolve` is a deterministic pure function. If re-discovery is performed across independent evaluation frames with realistic environmental spatial perturbation ($\pm 2\text{px}$ to $\pm 5\text{px}$ bounding box coordinate jitter from DPI/rendering/frame-capture noise), will decoy neighbours of deleted elements exhibit instability and diverge, while true moved controls remain stable?
+
+*Empirical Findings:*
+- On **HandBrake 1.8.2** ($42$ removed-element scenarios) and **ShareX v21.0.0** ($14$ removed-element scenarios):
+  - Decoy neighbours in real UI trees are permanent, static UI nodes (e.g., adjacent toolbar buttons, tab items, or containers) sharing invariant hierarchy, control type, and parent metadata.
+  - Under realistic spatial jitter ($\Delta X, \Delta Y \in [-5\text{px}, +5\text{px}]$), the structural similarity score of the top decoy neighbour changes by at most $\sim 0.005$ against the $300\text{px}$ position tolerance radius (weight $0.25$).
+  - The top decoy neighbour remains the highest-scoring candidate across all perturbation rounds with **$100\%$ stability** ($42 / 42$ on HandBrake, $14 / 14$ on ShareX).
+  - True compound-drifted successors also exhibit $100\%$ stability under identical jitter.
+
+*Result:* **Negative.** Decoy neighbours in a real application are not transient rendering glitches or stochastic noise; they are permanent physical UI components. Environmental re-discovery perturbation cannot separate a stable decoy neighbour from a stable true successor.
+
+#### Formal Finding
+> [!IMPORTANT]
+> **Formal finding (#247).** Neither contested-residual contention nor environmental re-discovery perturbation provides an unassisted absence detector. Multi-locator candidate contention is an ownership collision guard that leaves $100\%$ of uncontested removals undetected ($0/15$ across HandBrake and ShareX), and environmental re-discovery jitter produces $100\%$ stability on decoy neighbours ($42/42$ and $14/14$) because UI decoys are permanent structural nodes. Unassisted absence detection remains mathematically bounded by the structural score overlap floor ($[0.665, 0.955]$ on removed decoys vs $[0.749, 0.874]$ on true drift). Regression guards: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`, `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern`, and `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`.
+
+---
+
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
@@ -901,4 +941,45 @@ Tek-hedefli sezgisel sinyaller (§5) ve çoklu-sağlayıcılı LLM mutabakatınd
 #### Resmi Çıkarım
 > [!IMPORTANT]
 > **Resmi çıkarım (#179).** Değerlendirilen üç mekanizmanın hiçbiri (inceleme bandı genişletme, global atama kalıntısı, zamansal kararlılık) silinen elemanları taşınan elemanlardan tek başına ayıramaz. İnceleme bandı genişletme bileşik recall'u yanlış iyileştirme azaltımı karşılığında doğrusal olarak feda eder; atama kalıntısı aynı skor çakışmasından ($0.045 < 0.126$) muzdariptir; zamansal kararlılık ise yokluğu değil ağaç kararlılığını yansıtır. Sonuç olarak, tekil yokluk tespiti skor çakışması tabanıyla matematiksel olarak sınırlı kalır ve motor varsayılan değerini (`0.50`) korurken, sıfır hata toleransı arayan ekipler için `SimilarityWeights` yapılandırılabilirliğini sunmaya devam eder. Regresyon korumaları: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ReviewBandWideningTradeOff`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_GlobalAssignmentResidual_CannotSeparateAbsenceFromDrift`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_TemporalStability_DecoyNeighboursPersistInStaticSnapshots` ve `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ReviewBandWidening_MatchesHandBrakePattern`.
+
+---
+
+### 13. 4. Yokluk Adayı Araştırması: İtiraz Edilen Aday Kalıntısı ve Çevresel Yeniden Keşif Jitter'ı (#247)
+
+#179'un negatif sonuçlarının ardından #247, denenmemiş kalan son iki hipotezi incelemiştir: (1) çoklu-locator paketlerinde aday itirazını (contention) tek başına bağımsız bir yokluk dedektörü olarak izole etmek, ve (2) statik nesne referansını yeniden kullanmak yerine, değerlendirme turları boyunca gerçek çevresel uzamsal pertürbasyon (yakalama jitter'ı) ile bağımsız yeniden keşif altında zamansal kararlılığı değerlendirmek.
+
+#### 1. Aday 1: İtiraz Edilen Aday Sinyali (Çoklu-Locator Çakışması)
+*Hipotez:* Bire-bir sahiplik uzlaştırması (#141/#144), iki locator aktif olarak aynı aday düğümü talep ettiğinde yanlış iyileştirmeleri başarıyla reddeder. Aday itirazı (bir düğümün $\ge 2$ aktif locator tarafından talep edilmesi), tam bipartite uzlaştırmaya gerek kalmadan zayıf talep sahibini güvenle reddeden bağımsız bir yokluk sinyali olarak izole edilebilir mi?
+
+*Ampirik Bulgular:*
+- **HandBrake 1.8.2** (36 genelleme senaryosu, 108 locator çözümü):
+  - 14 baseline silinme yanlış iyileştirme üretir.
+  - **1 itiraz edilen yanlış iyileştirme**, hayatta kalan bir locator'ın gerçek eşleşmesiyle çakışır; aday itirazı çakışmayı tespit eder ve reddeder (çakışan vakalarda $\%100$ kesinlik).
+  - **13 itiraz edilmeyen yanlış iyileştirme**, test paketindeki başka hiçbir locator'ın hedeflemediği arka plan veya tesadüfi UI düğümlerini (ör. eşlenmemiş kapsayıcılar, komşu butonlar) talep eder.
+  - Bu 13 vaka üzerinde aday itirazı **$0$**'dır; bu da **itiraz edilmeyen silinmelerin $\%100$'ünü ($13 / 13$) tamamen tespit edilemez** bırakır.
+- **ShareX v21.0.0** (9 genelleme senaryosu, 27 locator çözümü):
+  - 5 baseline silinme yanlış iyileştirme üretir.
+  - **3 itiraz edilen yanlış iyileştirme**, hayatta kalan locator'larla çakışır; itiraz 3'ünü de tespit edip reddeder ($3 / 3 = \%100$).
+  - **2 itiraz edilmeyen yanlış iyileştirme**, izlenmeyen tesadüfi elemanları talep eder; itiraz **$0$**'dır ve ikisi de ($2 / 2 = \%100$) tespit edilemez kalır.
+- **Tekli Locator Senaryoları** ($n=42$ HandBrake, $n=14$ ShareX):
+  - Tekli locator iyileştirmesinde locator'lar yalıtılmış çalışır. Adaya itiraz edecek başka bir locator bulunmadığından, aday itirazı tüm koşuların $\%100$'ünde tanımsal olarak $0$'dır.
+
+*Sonuç:* **Genel bir yokluk dedektörü olarak negatif.** Aday itirazı kesin olarak çoklu-locator sahiplik çakışması korumasıdır. İtiraz edilmeyen yanlış iyileştirmelere karşı hiçbir görünürlüğü yoktur (her iki uygulamada itiraz edilmeyen silinmelerde $\%0$ tespit), çünkü silinen bir locator'ın yanlışlıkla kabul ettiği tesadüfi bir arka plan düğümü paketteki başka hiçbir test tarafından talep edilmemektedir.
+
+#### 2. Aday 2: Gerçek Zamansal / Çevresel Yeniden Keşif Jitter'ı
+*Hipotez:* #179'un ilk zamansal kararlılık testi, `SelfHealingResolver.Resolve`'un deterministik saf bir fonksiyon olduğu statik bellek-içi ağaçlar üzerinde çalışmıştı. Eğer yeniden keşif, DPI/çizim/kare-yakalama gürültüsünden kaynaklanan gerçekçi uzamsal pertürbasyon ($\pm 2\text{px} - \pm 5\text{px}$ sınırlayıcı kutu koordinat jitter'ı) ile bağımsız değerlendirme kareleri boyunca yapılırsa, silinen elemanların komşu yanıltıcıları kararsızlık gösterip ayrışırken, gerçek taşınmış kontroller kararlı kalır mı?
+
+*Ampirik Bulgular:*
+- **HandBrake 1.8.2** ($42$ silinmiş eleman senaryosu) ve **ShareX v21.0.0** ($14$ silinmiş eleman senaryosu):
+  - Gerçek UI ağaçlarındaki komşu yanıltıcılar, değişmeyen hiyerarşi, kontrol türü ve üst öğe meta verilerini paylaşan kalıcı, statik UI düğümleridir (ör. bitişik araç çubuğu butonları, sekme öğeleri veya kapsayıcılar).
+  - Gerçekçi uzamsal jitter altında ($\Delta X, \Delta Y \in [-5\text{px}, +5\text{px}]$), en iyi komşu yanıltıcının yapısal benzerlik skoru $300\text{px}$ konum tolerans yarıçapına (ağırlık $0.25$) karşı en fazla $\sim 0.005$ değişir.
+  - En iyi komşu yanıltıcı, tüm pertürbasyon turları boyunca **$\%100$ kararlılık** ile en yüksek skorlu aday kalmaya devam eder (HandBrake'te $42 / 42$, ShareX'te $14 / 14$).
+  - Gerçek bileşik kaymaya uğramış halefler de aynı jitter altında $\%100$ kararlılık sergiler.
+
+*Sonuç:* **Negatif.** Gerçek bir uygulamadaki komşu yanıltıcılar geçici çizim hataları veya stokastik gürültü değildir; kalıcı fiziksel UI bileşenleridir. Çevresel yeniden keşif pertürbasyonu, kararlı bir komşu yanıltıcıyı kararlı bir gerçek halefinden ayıramaz.
+
+#### Resmi Çıkarım
+> [!IMPORTANT]
+> **Resmi çıkarım (#247).** Ne itiraz edilen kalıntı çakışması ne de çevresel yeniden keşif pertürbasyonu yardımsız bir yokluk dedektörü sağlayabilir. Çoklu-locator aday itirazı, itiraz edilmeyen silinmelerin $\%100$'ünü tespit edilemez bırakan ($0/15$) bir sahiplik çakışması korumasıdır; çevresel yeniden keşif jitter'ı ise UI yanıltıcıları kalıcı yapısal düğümler olduğu için yanıltıcılar üzerinde $\%100$ kararlılık üretir ($42/42$ ve $14/14$). Yardımsız yokluk tespiti, yapısal skor çakışması tabanıyla ($[0.665, 0.955]$ vs $[0.749, 0.874]$) matematiksel olarak sınırlı kalmaya devam eder. Regresyon korumaları: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`, `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern` ve `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`.
+
 

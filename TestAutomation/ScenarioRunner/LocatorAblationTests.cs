@@ -537,6 +537,157 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected()
+        {
+            // #247 Candidate 1: Contested-Candidate / Contested-Residual Absence Signal.
+            // Evaluates whether active candidate contention (claimed by >= 2 locators) provides an absence detector.
+            var root = LoadFixture();
+            var dataset = JointAssignmentGeneralizationDataset.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var baseline = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+            var joint = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            // In HandBrake's 36 generalization scenarios (108 locator resolutions):
+            // - 14 baseline removals produce false heals.
+            // - Only 1 is contested by a surviving locator's stronger claim; joint reconciliation declines it (1 / 1 = 100%).
+            // - 13 false heals claim untracked/incidental elements not targeted by any other locator.
+            // Contention on these 13 is 0, leaving 100% of uncontested false heals completely undetected.
+            var removedResults = baseline.Scenarios
+                .SelectMany(s => s.LocatorResults)
+                .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                .ToList();
+
+            var contestedCount = baseline.Scenarios.Sum(s =>
+                s.LocatorResults
+                    .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
+                    .Count(removed => s.LocatorResults.Any(other =>
+                        !ReferenceEquals(other, removed) &&
+                        !string.IsNullOrEmpty(removed.MatchedAutomationId) &&
+                        other.EngineAccepted &&
+                        string.Equals(other.MatchedAutomationId, removed.MatchedAutomationId, StringComparison.Ordinal))));
+
+            var uncontestedCount = removedResults.Count - contestedCount;
+
+            Assert.Equal(14, removedResults.Count);
+            Assert.Equal(1, contestedCount);
+            Assert.Equal(13, uncontestedCount);
+
+            // In the joint evaluator, the 1 contested false heal becomes CorrectDecline, while all 13 uncontested false heals persist.
+            Assert.Equal(1, joint.JointMetrics.CorrectDeclines - joint.BaselineMetrics.CorrectDeclines);
+            Assert.Equal(13, joint.JointMetrics.FalseHealsOnRemoved);
+        }
+
+        [Fact]
+        public void HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter()
+        {
+            // #247 Candidate 2: Genuine Temporal / Environmental Re-Discovery Perturbation (Capture Jitter) Signal.
+            // Evaluates whether repeated discovery with realistic spatial coordinate perturbation across rounds
+            // causes decoy neighbours of removed elements to destabilize compared to true moved controls.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "HandBrake", "1.8.2", FixtureFileName);
+            var removedScenarios = dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement).ToList();
+
+            var jitterRounds = new[]
+            {
+                (dx: 0, dy: 0),
+                (dx: 3, dy: -2),
+                (dx: -4, dy: 5),
+                (dx: 2, dy: 2),
+                (dx: -3, dy: -3),
+            };
+
+            var stableDecoyCount = 0;
+
+            foreach (var scenario in removedScenarios)
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutatedRoot = LocatorAblationGenerator.ApplyMutation(root, scenario);
+
+                string? initialDecoyFingerprint = null;
+                var allRoundsStable = true;
+
+                for (var round = 0; round < jitterRounds.Length; round++)
+                {
+                    var jitter = jitterRounds[round];
+                    var perturbedTree = ApplyCaptureJitter(mutatedRoot, jitter.dx, jitter.dy);
+                    var result = SelfHealingResolver.Resolve(expected, perturbedTree, new SimilarityWeights { MinimumConfidence = 0.50 }, log: _ => { });
+
+                    if (result.IsConfident && result.Matched != null)
+                    {
+                        var fingerprint = FingerprintKey(
+                            result.Matched.ControlType,
+                            result.Matched.Name,
+                            result.Matched.ClassName,
+                            LocatorAblationGenerator.AncestorPathOf(perturbedTree, result.Matched));
+
+                        if (round == 0)
+                        {
+                            initialDecoyFingerprint = fingerprint;
+                        }
+                        else if (fingerprint != initialDecoyFingerprint)
+                        {
+                            allRoundsStable = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (round == 0)
+                        {
+                            initialDecoyFingerprint = "<DECLINED>";
+                        }
+                        else if (initialDecoyFingerprint != "<DECLINED>")
+                        {
+                            allRoundsStable = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (allRoundsStable)
+                {
+                    stableDecoyCount++;
+                }
+            }
+
+            // Finding: Decoy neighbours in real UI trees are permanent, static UI nodes (adjacent buttons/toolbars).
+            // Under realistic measurement and coordinate jitter, their structural similarity remains invariant,
+            // resulting in 100% temporal stability across all 42 removed-element scenarios (42 / 42).
+            Assert.Equal(42, removedScenarios.Count);
+            Assert.Equal(42, stableDecoyCount);
+        }
+
+        private static UiElementInfo ApplyCaptureJitter(UiElementInfo node, int deltaX, int deltaY)
+        {
+            var rect = !node.BoundingRectangle.IsEmpty
+                ? new BoundingRectangle(
+                    node.BoundingRectangle.X + deltaX,
+                    node.BoundingRectangle.Y + deltaY,
+                    node.BoundingRectangle.Width,
+                    node.BoundingRectangle.Height)
+                : node.BoundingRectangle;
+
+            var clone = new UiElementInfo
+            {
+                AutomationId = node.AutomationId,
+                Name = node.Name,
+                ClassName = node.ClassName,
+                ControlType = node.ControlType,
+                ParentControlType = node.ParentControlType,
+                SiblingIndex = node.SiblingIndex,
+                SiblingCount = node.SiblingCount,
+                BoundingRectangle = rect,
+                Children = new List<UiElementInfo>(node.Children.Count),
+            };
+
+            for (var i = 0; i < node.Children.Count; i++)
+            {
+                clone.Children.Add(ApplyCaptureJitter(node.Children[i], deltaX, deltaY));
+            }
+
+            return clone;
+        }
+
+        [Fact]
         public void HandBrakeFixture_AblationPrompt_ContainsNoAutomationIdOrAblationMarkers()
         {
             var root = LoadFixture();
