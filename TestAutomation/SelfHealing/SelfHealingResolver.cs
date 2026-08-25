@@ -253,14 +253,12 @@ namespace SelfHealing
                 ResolutionStatus = matchedCandidate.EvidenceCoverage >= heuristicResult.EvidenceThreshold
                     ? HealResolutionStatus.Confident
                     : HealResolutionStatus.LowEvidence,
-                // Recorded for report continuity only - since #10 the acceptance rule is
-                // AgreedProviders.Count, not this threshold (see SimilarityWeights).
-                ConfidenceThreshold = w.MinimumLlmConfidence,
+                ConfidenceThreshold = w.MinimumConfidence,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
                 ConsensusThreshold = w.MinimumConsensusVotes,
                 // RunnerUpScore preserves the heuristic competition telemetry (c0 vs c1) that triggered
-                // fallback. The margin gate itself is not applied to LLM picks (which use MinimumLlmConfidence).
+                // fallback. The margin gate itself is not applied to LLM picks (which use the consensus quorum).
                 RunnerUpScore = heuristicResult.RunnerUpScore,
                 MarginThreshold = heuristicResult.MarginThreshold,
                 Candidates = heuristicResult.Candidates,

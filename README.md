@@ -218,7 +218,6 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 > **How a heuristic match is accepted vs. how an LLM pick is accepted:**
 > - `MinimumConfidence` (0.50): Threshold for accepting a heuristic match before falling back to LLM.
 > - **LLM picks use independent model agreement, not confidence.** At least `MinimumConsensusVotes` providers (2 by default) must independently name the same candidate. This is a quorum rule, not evidence of correctness: all 34 unanimous deleted-element verdicts in the measured runs were false heals. Self-reported confidence is recorded but never compared or thresholded — one model's 0.72 and another's 0.95 are not on the same scale. A single configured provider therefore never has its pick accepted, and disagreement (including a tie) falls back to the top heuristic candidate. See [docs/llm-providers.md](docs/llm-providers.md#-independent-model-agreement-consensus-api).
-> - `MinimumLlmConfidence` (0.50) remains on `SimilarityWeights` and is still recorded on results, but since the agreement quorum replaced confidence-based acceptance it no longer gates anything.
 
 ---
 

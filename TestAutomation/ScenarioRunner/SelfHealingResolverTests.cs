@@ -255,13 +255,11 @@ namespace ScenarioRunner
         public async Task ResolveAsync_LlmConsensus_IsConfidentEvenWhenSelfReportedConfidenceIsLow()
         {
             // The acceptance rule is agreement, not self-reported confidence (#19). Two
-            // providers converging at 0.2 each is stronger evidence than one at 0.99, and
-            // MinimumLlmConfidence - deliberately set high here - must not veto it.
+            // providers converging at 0.2 each is stronger evidence than one at 0.99.
             var (expected, currentTree) = BuildLowConfidenceScenario();
             var weights = new SimilarityWeights
             {
                 MinimumConfidence = 0.8,
-                MinimumLlmConfidence = 0.9,
             };
 
             var result = await SelfHealingResolver.ResolveAsync(
