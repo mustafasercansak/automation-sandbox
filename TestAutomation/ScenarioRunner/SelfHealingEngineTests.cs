@@ -1181,6 +1181,49 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HealingReportHtmlRenderer_ShowsConsensusInsteadOfANumber_ForLlmEntries()
+        {
+            // Regression guard (#253): an LLM row's threshold column must not print a number.
+            // ConfidenceThreshold does not describe how an LLM pick was accepted (consensus
+            // does) - printing it (even a deliberately non-meaningful 0.00 placeholder) would
+            // still look like a real bar the pick had to clear.
+            var accepted = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" };
+            var llmEntry = HealingReportEntry.FromHealResult(
+                "LoginPage.Email",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Llm,
+                    Score = 0.4,
+                    LlmConfidence = 0.7,
+                    ConfidenceThreshold = 0.0,
+                    AgreedProviders = new[] { "Claude", "Gemini" },
+                });
+
+            var heuristicEntry = HealingReportEntry.FromHealResult(
+                "LoginPage.Password",
+                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOldPw" },
+                accepted,
+                new HealResult
+                {
+                    Matched = accepted,
+                    Source = HealSource.Heuristic,
+                    Score = 0.9,
+                    ConfidenceThreshold = 0.5,
+                });
+
+            var doc = new HealingReportDocument();
+            doc.Events.Add(llmEntry);
+            doc.Events.Add(heuristicEntry);
+            var html = HealingReportHtmlRenderer.Render(doc);
+
+            Assert.Contains("0.70 / consensus", html);
+            Assert.Contains("0.90 / 0.50", html);
+        }
+
+        [Fact]
         public void HealingReportEntry_FromHealResult_LeavesAgreedProvidersNullOnHeuristicResults()
         {
             var entry = HealingReportEntry.FromHealResult(

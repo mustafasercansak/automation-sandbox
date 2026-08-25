@@ -255,13 +255,11 @@ namespace ScenarioRunner
         public async Task ResolveAsync_LlmConsensus_IsConfidentEvenWhenSelfReportedConfidenceIsLow()
         {
             // The acceptance rule is agreement, not self-reported confidence (#19). Two
-            // providers converging at 0.2 each is stronger evidence than one at 0.99, and
-            // MinimumLlmConfidence - deliberately set high here - must not veto it.
+            // providers converging at 0.2 each is stronger evidence than one at 0.99.
             var (expected, currentTree) = BuildLowConfidenceScenario();
             var weights = new SimilarityWeights
             {
                 MinimumConfidence = 0.8,
-                MinimumLlmConfidence = 0.9,
             };
 
             var result = await SelfHealingResolver.ResolveAsync(
@@ -273,6 +271,14 @@ namespace ScenarioRunner
             Assert.NotNull(result.ProviderAttempts);
             Assert.Equal(1, result.ProviderAttempts["AlphaLlm"]);
             Assert.Equal(1, result.ProviderAttempts["BetaLlm"]);
+
+            // Regression guard (#253): an LLM-sourced result's ConfidenceThreshold must not
+            // silently carry the heuristic's MinimumConfidence (0.8 here). That would make an
+            // unrelated setting look like the LLM's acceptance bar in reports/persisted
+            // locator history, when consensus (AgreedProviders vs ConsensusThreshold) is what
+            // actually decided this result.
+            Assert.NotEqual(weights.MinimumConfidence, result.ConfidenceThreshold);
+            Assert.Equal(0.0, result.ConfidenceThreshold);
         }
 
         [Fact]

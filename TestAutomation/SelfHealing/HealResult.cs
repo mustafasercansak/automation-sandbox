@@ -39,7 +39,7 @@ namespace SelfHealing
         // Runner-up margin (issue #4): a top candidate that barely beats the second-best is
         // ambiguous, not confident. Null when there is no runner-up (single candidate = no
         // competition). The margin gate applies to heuristic results only - LLM picks have
-        // their own acceptance rule (MinimumLlmConfidence).
+        // their own acceptance rule (consensus agreement).
 
         public double? RunnerUpScore { get; set; }
         public double MarginThreshold { get; set; } = SimilarityWeights.Default.MinimumCandidateMargin;

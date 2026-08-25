@@ -134,6 +134,12 @@ namespace SelfHealing
 
         private static string FormatScore(HealingReportEntry entry)
         {
+            // LlmConfidence is only ever populated for LLM-sourced entries (see HealResult):
+            // the same signal ClassifyReviewStatus uses to special-case the LLM path. LLM
+            // acceptance is gated by provider consensus, not a score threshold, so
+            // entry.ConfidenceThreshold does not describe what decided this row - showing it
+            // as a number would look like a real bar the entry had to clear.
+            var isLlm = entry.LlmConfidence.HasValue;
             var confidence = entry.LlmConfidence ?? entry.Score;
             // Evidence coverage next to the score: a manual-review badge alone doesn't tell
             // the reviewer whether the problem was a low score or thin evidence. Entries
@@ -141,9 +147,12 @@ namespace SelfHealing
             var evidence = entry.EvidenceCoverage.HasValue
                 ? " · evidence " + entry.EvidenceCoverage.Value.ToString("0.00", CultureInfo.InvariantCulture)
                 : " · evidence unknown";
+            var threshold = isLlm
+                ? "consensus"
+                : entry.ConfidenceThreshold.ToString("0.00", CultureInfo.InvariantCulture);
             return confidence.ToString("0.00", CultureInfo.InvariantCulture) +
                 " / " +
-                entry.ConfidenceThreshold.ToString("0.00", CultureInfo.InvariantCulture) +
+                threshold +
                 evidence;
         }
 
