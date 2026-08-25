@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using IntentAutomation;
@@ -86,13 +87,16 @@ namespace ScenarioRunner
         [Fact]
         public void SensitiveDataSanitizer_RegexTimeout_FailsSafeInsteadOfThrowingOrLeaking()
         {
-            // Regression guard for an unhandled RegexMatchTimeoutException: an injected
-            // near-zero timeout trips deterministically, rather than relying on a
-            // pathological/catastrophic-backtracking input to exceed the real 1-second
-            // production timeout.
-            var input = "password: " + new string('a', 2000);
+            // Regression guard for an unhandled RegexMatchTimeoutException. A classic
+            // catastrophic-backtracking pattern/input pair (exponential blowup) is used instead
+            // of a near-zero timeout on the real production patterns: none of those have nested
+            // quantifiers, so their matching is linear and cannot be reliably forced to time out
+            // - a near-zero timeout race against them is a coin flip on the machine's speed
+            // (verified: it passed locally but failed on a faster CI runner).
+            var catastrophic = new Regex(@"(a+)+b", RegexOptions.None, TimeSpan.FromMilliseconds(200));
+            var input = new string('a', 40) + "c"; // no trailing 'b': forces full exponential backtracking
 
-            var result = SensitiveDataSanitizer.RedactWithTimeout(input, TimeSpan.FromTicks(1));
+            var result = SensitiveDataSanitizer.RedactWithFirstStage(input, catastrophic);
 
             Assert.Equal("[REDACTION_TIMEOUT]", result);
         }

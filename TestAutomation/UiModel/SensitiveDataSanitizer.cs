@@ -78,22 +78,24 @@ namespace UiModel
         }
 
         /// <summary>
-        /// Test-only seam: runs the exact same redaction pipeline as <see cref="Redact"/>, but
-        /// against ad-hoc <see cref="Regex"/> instances built with an injected timeout, so
-        /// <see cref="RegexMatchTimeoutException"/> handling can be verified deterministically
-        /// (a near-zero timeout reliably trips) instead of relying on a pathological/catastrophic
-        /// -backtracking input to exceed the real 1-second production timeout.
+        /// Test-only seam: runs the exact same try/catch fail-safe pipeline as <see cref="Redact"/>,
+        /// but with the first-applied stage (key-value secrets) replaced by a caller-supplied
+        /// regex. This lets a test verify <see cref="RegexMatchTimeoutException"/> handling with a
+        /// classic catastrophic-backtracking pattern/input pair - exponential blowup that reliably
+        /// exceeds even a generous timeout on any machine - rather than racing a near-zero timeout
+        /// against the real (linear, non-backtracking) production patterns, none of which have
+        /// nested quantifiers and so cannot realistically be forced to time out this way.
         /// </summary>
-        internal static string? RedactWithTimeout(string? input, TimeSpan timeout)
+        internal static string? RedactWithFirstStage(string? input, Regex firstStageRegex)
         {
             return RedactCore(
                 input,
-                new Regex(KeyValueSecretPattern, RegexOptions.None, timeout),
-                new Regex(BearerTokenPattern, RegexOptions.None, timeout),
-                new Regex(PrefixedSecretPattern, RegexOptions.None, timeout),
-                new Regex(EmailPattern, RegexOptions.None, timeout),
-                new Regex(CreditCardPattern, RegexOptions.None, timeout),
-                new Regex(SsnPattern, RegexOptions.None, timeout));
+                firstStageRegex,
+                BearerTokenRegex,
+                PrefixedSecretRegex,
+                EmailRegex,
+                CreditCardRegex,
+                SsnRegex);
         }
 
         private static string? RedactCore(
