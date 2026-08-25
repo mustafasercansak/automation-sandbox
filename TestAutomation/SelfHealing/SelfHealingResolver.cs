@@ -253,7 +253,15 @@ namespace SelfHealing
                 ResolutionStatus = matchedCandidate.EvidenceCoverage >= heuristicResult.EvidenceThreshold
                     ? HealResolutionStatus.Confident
                     : HealResolutionStatus.LowEvidence,
-                ConfidenceThreshold = w.MinimumConfidence,
+                // Not a real gate for LLM picks - consensus (AgreedProviders.Count vs
+                // ConsensusThreshold) decides acceptance, not a score threshold. Reusing
+                // w.MinimumConfidence here (the heuristic's own gate) would look like a
+                // legitimate LLM threshold to anyone reading the report or persisted locator
+                // history, and silently conflate the two paths' calibration data - the exact
+                // misleading-field problem removing MinimumLlmConfidence was meant to fix. 0.0
+                // is a visibly non-meaningful placeholder instead. See HealingReportHtmlRenderer
+                // .FormatScore, which displays "consensus" for LLM rows rather than this value.
+                ConfidenceThreshold = 0.0,
                 EvidenceCoverage = matchedCandidate.EvidenceCoverage,
                 EvidenceThreshold = heuristicResult.EvidenceThreshold,
                 ConsensusThreshold = w.MinimumConsensusVotes,
