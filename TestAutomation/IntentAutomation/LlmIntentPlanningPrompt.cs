@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using UiModel;
 
 namespace IntentAutomation
 {
@@ -162,7 +163,8 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 return null;
             }
 
-            return textSanitizer != null ? textSanitizer(s) : s;
+            var sanitizer = textSanitizer ?? SensitiveDataSanitizer.Default;
+            return sanitizer(s);
         }
 
         private static string BuildScenarioName(string goal)

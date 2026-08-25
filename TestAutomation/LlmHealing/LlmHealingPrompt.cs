@@ -143,7 +143,8 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
                 return null;
             }
 
-            return textSanitizer != null ? textSanitizer(s) : s;
+            var sanitizer = textSanitizer ?? SensitiveDataSanitizer.Default;
+            return sanitizer(s);
         }
 
         private static double? RoundOrNull(double? value) => value.HasValue ? Math.Round(value.Value, 2) : (double?)null;

@@ -67,21 +67,27 @@ fact check, or correctness guarantee. The measured limitations are documented in
 
 ### PII, secrets, and operator controls
 
-By default, the library provides **no automatic built-in PII/secret classifier**, leaving text untouched unless configured. To allow operators to scrub sensitive values before transmission, an opt-in `TextSanitizer` hook (`Func<string, string>?`) is available on HTTP healing providers (`HttpLlmHealingProvider.TextSanitizer`), `LlmHealingPrompt.Build`, and `LlmIntentPlanner.TextSanitizer`. When configured, this delegate intercepts all element names, class names, test intents, URLs, and test data strings before the LLM prompt payload is constructed.
+By default, the library applies a built-in sensitive data redaction pass (`SensitiveDataSanitizer.Redact`) across all DOM/UI-tree and test intent text before constructing LLM prompts (`LlmHealingPrompt.Build` and `LlmIntentPlanningPrompt.Build`). Common patterns such as email addresses, credit/debit card numbers, bearer tokens, prefixed API keys/JWTs, key-value secrets (e.g. `password: ...`, `api_key = ...`), and US Social Security Numbers are automatically masked with standard replacement tokens (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`).
+
+Redaction is **opt-out**: operators who require raw, unmasked text can pass `SensitiveDataSanitizer.PassThrough` (or `text => text`) to `HttpLlmHealingProvider.TextSanitizer`, `LlmHealingPrompt.Build`, or `LlmIntentPlanner.TextSanitizer`. Custom sanitizers can also be supplied via the same hook (`Func<string, string>`).
+
+> [!CAUTION]
+> Pattern-based sanitization is a defence-in-depth layer, not a substitute for data isolation or access controls. It cannot detect proprietary, unstructured, or domain-specific confidential information. Do not send production or highly sensitive screens to third-party LLM providers.
 
 Suitable controls include:
 
-1. Configure an opt-in `TextSanitizer` delegate (e.g. regex masking for tokens, passwords, credit card patterns, or proprietary IDs) on provider instances or intent planners.
-2. Use heuristic-only resolution for authenticated, financial, health, production-data,
+1. Rely on default built-in redaction, or configure a custom `TextSanitizer` delegate (e.g. domain-specific proprietary ID masking) on provider instances or intent planners.
+2. Use `SensitiveDataSanitizer.PassThrough` only in isolated, synthetic test environments where masking is undesirable.
+3. Use heuristic-only resolution for authenticated, financial, health, production-data,
    or other sensitive screens.
-3. Capture synthetic or scrubbed test data, and keep secrets out of element names,
+4. Capture synthetic or scrubbed test data, and keep secrets out of element names,
    accessibility labels, IDs, and `TestIntent`.
-4. Configure only providers and regions approved by the application's data owner. A
+5. Configure only providers and regions approved by the application's data owner. A
    multi-provider quorum requires disclosure to multiple providers.
-5. If local processing is required, use an Ollama daemon on a controlled host and verify
+6. If local processing is required, use an Ollama daemon on a controlled host and verify
    `OLLAMA_HOST`. Ollama Cloud is remote, and a non-local `OLLAMA_HOST` is remote even
    though the provider class is named `OllamaHealingProvider`.
-6. Treat custom OpenAI-compatible endpoints as separate processors. Their transport,
+7. Treat custom OpenAI-compatible endpoints as separate processors. Their transport,
    logging, retention, subprocessors, and training policies are entirely operator-owned.
 
 ### Provider telemetry and retention
@@ -190,21 +196,27 @@ belgelenmiştir.
 
 ### PII, sırlar ve operatör kontrolleri
 
-Varsayılan olarak kütüphane **otomatik yerleşik bir PII/gizli bilgi sınıflandırıcısı** çalıştırmaz ve yapılandırılmadığı sürece metinleri olduğu gibi iletir. Operatörlerin hassas verileri gönderim öncesinde temizleyebilmesi veya maskeleyebilmesi için HTTP healing sağlayıcılarında (`HttpLlmHealingProvider.TextSanitizer`), `LlmHealingPrompt.Build` metodunda ve `LlmIntentPlanner.TextSanitizer` üzerinde isteğe bağlı (opt-in) bir `TextSanitizer` kancası (`Func<string, string>?`) sunulur. Yapılandırıldığında bu delege, LLM prompt yükü oluşturulmadan önce tüm eleman adlarını, sınıf adlarını, test intent'lerini, URL'leri ve test verilerini filtreler.
+Varsayılan olarak kütüphane, LLM prompt'ları (`LlmHealingPrompt.Build` ve `LlmIntentPlanningPrompt.Build`) oluşturulmadan önce tüm DOM/UI ağacı ve test intent metinleri üzerinde yerleşik bir hassas veri maskeleme adımı (`SensitiveDataSanitizer.Redact`) uygular. E-posta adresleri, kredi/banka kartı numaraları, bearer token'ları, ön ekli API anahtarları/JWT'ler, anahtar-değer sırları (ör. `password: ...`, `api_key = ...`) ve ABD Sosyal Güvenlik Numaraları standart maskeleme belirteçleriyle (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`) otomatik olarak maskelenir.
+
+Maskeleme **opt-out** (varsayılan olarak açık) olarak çalışır: ham metnin filtrelenmeden iletilmesini isteyen operatörler `HttpLlmHealingProvider.TextSanitizer`, `LlmHealingPrompt.Build` veya `LlmIntentPlanner.TextSanitizer` üzerine `SensitiveDataSanitizer.PassThrough` (veya `text => text`) geçebilir. Özel temizleyiciler de aynı kanca (`Func<string, string>`) üzerinden sağlanabilir.
+
+> [!CAUTION]
+> Desen tabanlı maskeleme bir derinlemesine savunma (defence-in-depth) katmanıdır; veri yalıtımı veya erişim kontrollerinin yerine geçmez. Yapılandırılmamış, tescilli veya sektöre özel gizli bilgileri tespit edemez. Üretim ortamlarını veya yüksek derecede hassas ekranları harici LLM sağlayıcılarına göndermeyin.
 
 Uygun kontroller şunları içerir:
 
-1. Sağlayıcı örnekleri veya intent planner üzerinde isteğe bağlı bir `TextSanitizer` delegesi (ör. token, şifre veya hassas veri maskeleme) yapılandırın.
-2. Kimlik doğrulamalı, finansal, sağlık, production-data veya başka hassas ekranlarda
+1. Varsayılan yerleşik maskelemeyi kullanın veya sağlayıcılar / intent planner üzerinde özel bir `TextSanitizer` delegesi yapılandırın.
+2. `SensitiveDataSanitizer.PassThrough` delegesini yalnızca maskelemenin istenmediği izole sentetik test ortamlarında kullanın.
+3. Kimlik doğrulamalı, finansal, sağlık, production-data veya başka hassas ekranlarda
    yalnızca sezgisel çözümü kullanın.
-3. Sentetik ya da temizlenmiş test verisi yakalayın; eleman adları, accessibility label,
+4. Sentetik ya da temizlenmiş test verisi yakalayın; eleman adları, accessibility label,
    kimlik ve `TestIntent` içine sır koymayın.
-4. Yalnızca veri sahibinin onayladığı sağlayıcıları ve bölgeleri yapılandırın. Çoklu
+5. Yalnızca veri sahibinin onayladığı sağlayıcıları ve bölgeleri yapılandırın. Çoklu
    sağlayıcı quorum'u verinin birden fazla sağlayıcıya açıklanmasını gerektirir.
-5. Yerel işleme gerekiyorsa denetlenen bir host'taki Ollama daemon'unu kullanın ve
+6. Yerel işleme gerekiyorsa denetlenen bir host'taki Ollama daemon'unu kullanın ve
    `OLLAMA_HOST` değerini doğrulayın. Ollama Cloud uzaktır; yerel olmayan bir `OLLAMA_HOST`
    da sınıf adı `OllamaHealingProvider` olsa bile uzaktır.
-6. Özel OpenAI-uyumlu endpoint'leri ayrı veri işleyenler olarak kabul edin. Transport,
+7. Özel OpenAI-uyumlu endpoint'leri ayrı veri işleyenler olarak kabul edin. Transport,
    loglama, retention, alt işleyen ve eğitim politikaları tamamen operatör sorumluluğundadır.
 
 ### Sağlayıcı telemetrisi ve retention
