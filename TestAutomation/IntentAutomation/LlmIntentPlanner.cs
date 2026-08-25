@@ -167,7 +167,7 @@ namespace IntentAutomation
                     if (response.IsSuccessStatusCode)
                     {
                         var text = ExtractText(responseBody);
-                        var scenario = LlmIntentPlanningPrompt.ParseScenario(text, request);
+                        var scenario = LlmIntentPlanningPrompt.ParseScenario(text, request, TextSanitizer);
                         return new IntentPlanningResult { Scenario = scenario };
                     }
 
