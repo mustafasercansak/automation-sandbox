@@ -45,7 +45,7 @@ namespace ScenarioRunner
             // STEP 1: Initialize the persistent locator repository
             // =========================================================================
             var repository = new LocatorRepository(_repositoryPath);
-            var engine = new SelfHealingEngine(repository);
+            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
 
             // =========================================================================
             // STEP 2: Define expected locator (from old version of the app)

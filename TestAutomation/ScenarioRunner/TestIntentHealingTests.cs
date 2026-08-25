@@ -63,7 +63,7 @@ namespace ScenarioRunner
         [Fact]
         public async Task SelfHealingEngine_PropagatesTestIntentDuringExecution()
         {
-            var engine = new SelfHealingEngine();
+            var engine = new SelfHealingEngine(mode: HealingMode.AutoHeal);
             // Full structural metadata on both sides: after the #3 evidence gate, a
             // ControlType-only 1.0 match is thin evidence (coverage 0.20) and is no longer
             // confident. This test is about intent propagation, so the match must be solid.

@@ -22,12 +22,18 @@ Before writing code, make sure you have:
 ---
 
 ### Step 2: Understanding the Concept
-Whenever you perform a test step, **Automation Sandbox** manages elements using a 3-step process:
+Whenever you perform a test step, **Automation Sandbox** manages elements using a 3-step process governed by its configured `HealingMode`:
 1. **Repository Check:** It looks up the saved element snapshot in `my_locators.locator.json`.
 2. **Execute Action:** It tries to perform your action (e.g. click).
-3. **Automatic Healing:** If the element was renamed or moved, it finds a candidate and retries your action with it. Only after that retry succeeds does it update `my_locators.locator.json`; a failed retry never becomes the repository's new baseline.
+3. **Healing Governance (`HealingMode`):** If the element was renamed or moved:
+   - **`HealingMode.Review` (Shipped Default):** Evaluates the live tree, records proposed candidates for offline QA review in telemetry/reports, and fails closed without retrying or mutating `my_locators.locator.json`.
+   - **`HealingMode.Observe`:** Evaluates candidates and logs/records telemetry without retrying or persisting.
+   - **`HealingMode.AutoHeal` (Opt-in):** Evaluates candidates, retries your action with the healed element, and automatically updates `my_locators.locator.json` only after the retry passes.
+   - **`HealingMode.FailClosed`:** Disables discovery and fails immediately on locator resolution errors.
 
 > **Which failures trigger healing?** By default, `ExecuteWithHealingAsync` only heals exceptions whose exact type name is a known locator/element-resolution failure (e.g. `ElementNotFoundException`, `NoSuchElementException`, FlaUI's `ElementNotAvailableException`). Any other exception (assertion, timeout, backend error) is rethrown without retrying your action — this reduces the risk of duplicate execution for a non-idempotent step (like placing an order), though it isn't an absolute guarantee: a multi-step action can still have a side effect occur before a correctly-classified locator failure, and the retry re-runs the whole action. Pass the optional `shouldHeal: ex => ...` parameter to define your own policy.
+
+> **Breaking change for existing consumers.** Earlier releases had no `HealingMode` setting and always behaved like `AutoHeal` (retried the action and persisted the healed locator automatically). As of this release, `SelfHealingEngine` defaults to `Review`, which evaluates candidates but never retries or persists them. If your existing code depends on the old automatic behavior, pass `mode: HealingMode.AutoHeal` explicitly when constructing `SelfHealingEngine` — see the code sample below.
 
 ---
 
@@ -57,8 +63,8 @@ class Program
             new OllamaHealingProvider(host: "http://localhost:11434")
         };
 
-        // 3. Create the SelfHealingEngine instance
-        var engine = new SelfHealingEngine(repository, llmProviders: llmProviders);
+        // 3. Create the SelfHealingEngine instance (opt into AutoHeal for automatic retry & persistence)
+        var engine = new SelfHealingEngine(repository, llmProviders: llmProviders, mode: HealingMode.AutoHeal);
 
         // 4. Define what element you expect to find
         var expectedElement = new UiElementInfo
@@ -118,12 +124,18 @@ Koda başlamadan önce bilgisayarınızda şunların kurulu olduğundan emin olu
 ---
 
 ### Adım 2: Çalışma Mantığını Anlama
-Bir test adımı çalıştırdığınızda **Automation Sandbox** 3 adımda işlemleri yönetir:
+Bir test adımı çalıştırdığınızda **Automation Sandbox** 3 adımda işlemleri yönetir ve bunu yapılandırılan `HealingMode` ile denetler:
 1. **Depo Kontrolü:** `my_locators.locator.json` dosyasından kaydedilmiş eleman bilgilerini okur.
 2. **Eylemi Çalıştırma:** Tıklama veya metin yazma eyleminizi dener.
-3. **Otomatik İyileştirme (Self-Healing):** Elemanın adı/ID'si değiştiği için hata alınırsa, bir aday bulur ve eylemi bu adayla yeniden dener. `my_locators.locator.json` yalnızca bu ikinci deneme başarılı olduktan sonra güncellenir; başarısız bir deneme repository'nin yeni referans noktası olmaz.
+3. **İyileştirme Yönetimi (`HealingMode`):** Elemanın adı/ID'si değiştiği için hata alınırsa:
+   - **`HealingMode.Review` (Varsayılan):** Canlı ağacı inceler, önerilen adayları çevrimdışı QA incelemesi için raporlara kaydeder; eylemi tekrar denemeden ve `my_locators.locator.json`'ı değiştirmeden testi güvenle durdurur (`fail-closed`).
+   - **`HealingMode.Observe`:** Adayları çözümler ve telemetriyi kaydeder; tekrar deneme veya kaydetme yapmaz.
+   - **`HealingMode.AutoHeal` (İsteğe Bağlı):** Adayı bulur, eylemi bu adayla otomatik yeniden dener ve yalnızca bu deneme başarılı olursa `my_locators.locator.json`'ı günceller.
+   - **`HealingMode.FailClosed`:** İyileştirme keşfini tamamen kapatır ve locator hatalarında derhal durur.
 
 > **Hangi hatalar iyileştirmeyi tetikler?** `ExecuteWithHealingAsync` varsayılan olarak yalnızca istisnanın tam tip adı bilinen bir locator/eleman çözümleme hatasıyla eşleşiyorsa iyileştirme yapar (örn. `ElementNotFoundException`, `NoSuchElementException`, FlaUI'nin `ElementNotAvailableException`'ı). Diğer tüm hatalar (assertion, zaman aşımı, backend hatası) eyleminizi tekrar çalıştırmadan geri fırlatılır — bu, sipariş verme gibi tekrar çalıştırılamayan bir adımda yinelenen çalıştırma riskini azaltır, ancak mutlak bir garanti değildir: çok adımlı bir action'da, doğru sınıflandırılmış bir locator hatasından önce bir side effect zaten gerçekleşmiş olabilir ve retry tüm action'ı yeniden çalıştırır. Kendi politikanızı tanımlamak için isteğe bağlı `shouldHeal: ex => ...` parametresini kullanın.
+
+> **Mevcut kullanıcılar için kırıcı değişiklik.** Önceki sürümlerde `HealingMode` ayarı yoktu ve davranış her zaman `AutoHeal` gibiydi (eylem yeniden denenir, iyileştirilen locator otomatik olarak kaydedilirdi). Bu sürümden itibaren `SelfHealingEngine` varsayılan olarak `Review` moduyla çalışır; adayları değerlendirir ama asla yeniden denemez veya kaydetmez. Mevcut kodunuz eski otomatik davranışa bağımlıysa, `SelfHealingEngine`'i oluştururken `mode: HealingMode.AutoHeal` parametresini açıkça geçin — aşağıdaki kod örneğine bakın.
 
 ---
 
@@ -153,8 +165,8 @@ class Program
             new OllamaHealingProvider(host: "http://localhost:11434")
         };
 
-        // 3. Create the SelfHealingEngine instance
-        var engine = new SelfHealingEngine(repository, llmProviders: llmProviders);
+        // 3. Create the SelfHealingEngine instance (otomatik iyileştirme ve kaydetme için AutoHeal modu seçilebilir)
+        var engine = new SelfHealingEngine(repository, llmProviders: llmProviders, mode: HealingMode.AutoHeal);
 
         // 4. Define what element you expect to find
         var expectedElement = new UiElementInfo
