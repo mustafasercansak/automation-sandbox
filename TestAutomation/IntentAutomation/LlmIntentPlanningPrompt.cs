@@ -56,7 +56,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
 ]}}";
         }
 
-        public static IntentScenario ParseScenario(string rawText, IntentPlanningRequest request)
+        public static IntentScenario ParseScenario(string rawText, IntentPlanningRequest request, Func<string, string>? textSanitizer = null)
         {
             var json = FindFirstResponseJsonObject(rawText);
             if (json is null)
@@ -77,10 +77,17 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 TargetUrl = request.TargetUrl?.Trim() ?? "",
             };
 
+            // The model only ever sees the sanitized rendering of TestData/TargetUrl (see Build
+            // above), so a step whose value the model copied verbatim from the prompt comes back
+            // as the redaction token, not the real data. Map those tokens back to the original
+            // values here so generated Fill/Navigate/etc. steps use real data, not "[REDACTED_*]"
+            // literals. Only unambiguous restorations are applied (see BuildRestoreMap).
+            var restoreMap = BuildRestoreMap(request.TestData, request.TargetUrl, textSanitizer);
+
             var order = 1;
             foreach (var stepElement in stepsElement.EnumerateArray())
             {
-                scenario.Steps.Add(ParseStep(stepElement, order++));
+                scenario.Steps.Add(ParseStep(stepElement, order++, restoreMap));
             }
 
             if (scenario.Steps.Count == 0)
@@ -91,7 +98,52 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
             return scenario;
         }
 
-        private static IntentStep ParseStep(JsonElement element, int order)
+        private static IReadOnlyDictionary<string, string> BuildRestoreMap(
+            IDictionary<string, string>? testData,
+            string? targetUrl,
+            Func<string, string>? textSanitizer)
+        {
+            var sanitizer = textSanitizer ?? SensitiveDataSanitizer.Default;
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            var ambiguous = new HashSet<string>(StringComparer.Ordinal);
+
+            void Track(string? original)
+            {
+                if (string.IsNullOrEmpty(original))
+                {
+                    return;
+                }
+
+                var sanitized = sanitizer(original!) ?? "";
+                if (sanitized == original || ambiguous.Contains(sanitized))
+                {
+                    return;
+                }
+
+                if (map.TryGetValue(sanitized, out var existing) && existing != original)
+                {
+                    // Two different original values redact to the same token: restoring either
+                    // one would be a guess, so leave the token in place rather than risk
+                    // substituting the wrong secret back into the generated test.
+                    map.Remove(sanitized);
+                    ambiguous.Add(sanitized);
+                    return;
+                }
+
+                map[sanitized] = original!;
+            }
+
+            foreach (var pair in testData ?? new Dictionary<string, string>())
+            {
+                Track(pair.Value);
+            }
+
+            Track(targetUrl);
+
+            return map;
+        }
+
+        private static IntentStep ParseStep(JsonElement element, int order, IReadOnlyDictionary<string, string> restoreMap)
         {
             var actionTypeText = GetString(element, "actionType");
             if (string.IsNullOrWhiteSpace(actionTypeText) || !Enum.TryParse<IntentActionType>(actionTypeText, ignoreCase: true, out var actionType) || actionType == IntentActionType.Unknown)
@@ -131,12 +183,17 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
                 Order = order,
                 ActionType = actionType,
                 TargetDescription = targetDescription!,
-                Value = GetString(element, "value") ?? "",
+                Value = RestoreOriginal(GetString(element, "value") ?? "", restoreMap),
                 TestIntent = testIntent,
                 ExpectedOutcome = expectedOutcome,
                 AssertionKind = assertionKind,
-                ExpectedValue = expectedValue,
+                ExpectedValue = RestoreOriginal(expectedValue, restoreMap),
             };
+        }
+
+        private static string RestoreOriginal(string value, IReadOnlyDictionary<string, string> restoreMap)
+        {
+            return restoreMap.TryGetValue(value, out var original) ? original : value;
         }
 
         private static string? GetString(JsonElement element, string propertyName)

@@ -39,6 +39,64 @@ namespace ScenarioRunner
             Assert.Equal("", SensitiveDataSanitizer.Redact(""));
         }
 
+        [Theory]
+        [InlineData("skip-intro-button-001325")]
+        [InlineData("ghost-mode-toggle-btn-0013")]
+        [InlineData("skeleton-loader-panel")]
+        [InlineData("ghoul-hunter-achievement-icon")]
+        public void SensitiveDataSanitizer_DoesNotOverRedactOrdinaryKebabCaseIdentifiers(string automationId)
+        {
+            // Regression guard for a false-positive bug: the bare 2-3 letter API-key prefixes
+            // (sk, gho, ghp, ...) used to match with no required separator, so any ordinary
+            // AutomationId/Name that happened to start with one of them (English words, not
+            // secrets) was redacted in its entirety - defeating the LLM's ability to
+            // disambiguate the exact element it names.
+            Assert.Equal(automationId, SensitiveDataSanitizer.Redact(automationId));
+        }
+
+        [Theory]
+        [InlineData("btn-sk-12345678901234567890")]
+        [InlineData("OPENAI_API_KEY=sk-abcdefghij1234567890")]
+        [InlineData("token: ghp_1234567890abcdef1234567890")]
+        [InlineData("gitlab: glpat-1234567890abcdef1234")]
+        [InlineData("slack token xoxb-1234567890-abcdefghij")]
+        [InlineData("AWS key AKIAIOSFODNN7EXAMPLE in use")]
+        public void SensitiveDataSanitizer_StillRedactsRealPrefixedSecrets(string input)
+        {
+            // The fix above must not regress detection of genuine secrets that use their
+            // real-world separator character after the short prefix.
+            var redacted = SensitiveDataSanitizer.Redact(input);
+            Assert.Contains("[REDACTED_SECRET]", redacted);
+        }
+
+        [Theory]
+        [InlineData("password: my secret pass", "secret pass")]
+        [InlineData("password: abc,def123456", "def123456")]
+        [InlineData("api_key = value with spaces here", "spaces here")]
+        public void SensitiveDataSanitizer_DoesNotLeakPartialSecretAfterFirstSpaceOrComma(string input, string leakedFragment)
+        {
+            // Regression guard: the value terminator used to stop at the first whitespace or
+            // comma, leaving the remainder of a multi-word or comma-separated secret in plain
+            // text immediately next to the redaction token.
+            var redacted = SensitiveDataSanitizer.Redact(input);
+            Assert.DoesNotContain(leakedFragment, redacted);
+            Assert.Contains("[REDACTED_SECRET]", redacted);
+        }
+
+        [Fact]
+        public void SensitiveDataSanitizer_RegexTimeout_FailsSafeInsteadOfThrowingOrLeaking()
+        {
+            // Regression guard for an unhandled RegexMatchTimeoutException: an injected
+            // near-zero timeout trips deterministically, rather than relying on a
+            // pathological/catastrophic-backtracking input to exceed the real 1-second
+            // production timeout.
+            var input = "password: " + new string('a', 2000);
+
+            var result = SensitiveDataSanitizer.RedactWithTimeout(input, TimeSpan.FromTicks(1));
+
+            Assert.Equal("[REDACTION_TIMEOUT]", result);
+        }
+
         [Fact]
         public void LlmHealingPrompt_Default_RedactsCommonSensitivePatterns()
         {
@@ -218,6 +276,69 @@ namespace ScenarioRunner
             Assert.Contains("[REDACTED_EMAIL]", prompt);
             Assert.Contains("[REDACTED_SECRET]", prompt);
             Assert.Contains("[REDACTED_CARD]", prompt);
+        }
+
+        [Fact]
+        public void LlmIntentPlanningPrompt_ParseScenario_RestoresOriginalTestDataValue_WhenModelEchoesRedactionToken()
+        {
+            // Regression guard: the model never sees real TestData (only the sanitized
+            // rendering), so if it copies the value verbatim into a step, that value is the
+            // redaction token, not the real data. Without restoration, generated Fill steps
+            // would literally type "[REDACTED_EMAIL]" instead of the real test data.
+            var request = new IntentPlanningRequest
+            {
+                Goal = "Log in",
+                TestData = new Dictionary<string, string> { { "Email", "jane@example.com" } },
+            };
+
+            var rawResponse = "{\"steps\":[{\"actionType\":\"Fill\",\"targetDescription\":\"Email field\",\"value\":\"[REDACTED_EMAIL]\"}]}";
+
+            var scenario = LlmIntentPlanningPrompt.ParseScenario(rawResponse, request);
+
+            Assert.Equal("jane@example.com", scenario.Steps[0].Value);
+        }
+
+        [Fact]
+        public void LlmIntentPlanningPrompt_ParseScenario_RestoresOriginalTargetUrl_WhenModelEchoesRedactionToken()
+        {
+            var request = new IntentPlanningRequest
+            {
+                Goal = "Open the reset link",
+                TargetUrl = "https://internal.corp.local/reset?token=ghp_1234567890abcdef1234567890",
+            };
+
+            var sanitizedUrl = SensitiveDataSanitizer.Default(request.TargetUrl);
+            Assert.NotEqual(request.TargetUrl, sanitizedUrl); // sanity check the fixture actually gets redacted
+
+            var rawResponse = "{\"steps\":[{\"actionType\":\"Navigate\",\"targetDescription\":\"Reset page\",\"value\":" +
+                System.Text.Json.JsonSerializer.Serialize(sanitizedUrl) + "}]}";
+
+            var scenario = LlmIntentPlanningPrompt.ParseScenario(rawResponse, request);
+
+            Assert.Equal(request.TargetUrl, scenario.Steps[0].Value);
+        }
+
+        [Fact]
+        public void LlmIntentPlanningPrompt_ParseScenario_DoesNotRestoreAmbiguousRedactionToken()
+        {
+            // Two different TestData values that redact to the exact same token: restoring
+            // either one would be a guess, so the parsed step keeps the (still-safe) redaction
+            // token rather than risk substituting the wrong secret into the generated test.
+            var request = new IntentPlanningRequest
+            {
+                Goal = "Log in",
+                TestData = new Dictionary<string, string>
+                {
+                    { "PrimaryEmail", "alice@example.com" },
+                    { "SecondaryEmail", "bob@example.org" },
+                },
+            };
+
+            var rawResponse = "{\"steps\":[{\"actionType\":\"Fill\",\"targetDescription\":\"Email field\",\"value\":\"[REDACTED_EMAIL]\"}]}";
+
+            var scenario = LlmIntentPlanningPrompt.ParseScenario(rawResponse, request);
+
+            Assert.Equal("[REDACTED_EMAIL]", scenario.Steps[0].Value);
         }
 
         [Fact]
