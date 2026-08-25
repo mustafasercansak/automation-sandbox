@@ -33,6 +33,8 @@ Whenever you perform a test step, **Automation Sandbox** manages elements using 
 
 > **Which failures trigger healing?** By default, `ExecuteWithHealingAsync` only heals exceptions whose exact type name is a known locator/element-resolution failure (e.g. `ElementNotFoundException`, `NoSuchElementException`, FlaUI's `ElementNotAvailableException`). Any other exception (assertion, timeout, backend error) is rethrown without retrying your action — this reduces the risk of duplicate execution for a non-idempotent step (like placing an order), though it isn't an absolute guarantee: a multi-step action can still have a side effect occur before a correctly-classified locator failure, and the retry re-runs the whole action. Pass the optional `shouldHeal: ex => ...` parameter to define your own policy.
 
+> **Breaking change for existing consumers.** Earlier releases had no `HealingMode` setting and always behaved like `AutoHeal` (retried the action and persisted the healed locator automatically). As of this release, `SelfHealingEngine` defaults to `Review`, which evaluates candidates but never retries or persists them. If your existing code depends on the old automatic behavior, pass `mode: HealingMode.AutoHeal` explicitly when constructing `SelfHealingEngine` — see the code sample below.
+
 ---
 
 ### Step 3: Complete Working Code Example
@@ -132,6 +134,8 @@ Bir test adımı çalıştırdığınızda **Automation Sandbox** 3 adımda işl
    - **`HealingMode.FailClosed`:** İyileştirme keşfini tamamen kapatır ve locator hatalarında derhal durur.
 
 > **Hangi hatalar iyileştirmeyi tetikler?** `ExecuteWithHealingAsync` varsayılan olarak yalnızca istisnanın tam tip adı bilinen bir locator/eleman çözümleme hatasıyla eşleşiyorsa iyileştirme yapar (örn. `ElementNotFoundException`, `NoSuchElementException`, FlaUI'nin `ElementNotAvailableException`'ı). Diğer tüm hatalar (assertion, zaman aşımı, backend hatası) eyleminizi tekrar çalıştırmadan geri fırlatılır — bu, sipariş verme gibi tekrar çalıştırılamayan bir adımda yinelenen çalıştırma riskini azaltır, ancak mutlak bir garanti değildir: çok adımlı bir action'da, doğru sınıflandırılmış bir locator hatasından önce bir side effect zaten gerçekleşmiş olabilir ve retry tüm action'ı yeniden çalıştırır. Kendi politikanızı tanımlamak için isteğe bağlı `shouldHeal: ex => ...` parametresini kullanın.
+
+> **Mevcut kullanıcılar için kırıcı değişiklik.** Önceki sürümlerde `HealingMode` ayarı yoktu ve davranış her zaman `AutoHeal` gibiydi (eylem yeniden denenir, iyileştirilen locator otomatik olarak kaydedilirdi). Bu sürümden itibaren `SelfHealingEngine` varsayılan olarak `Review` moduyla çalışır; adayları değerlendirir ama asla yeniden denemez veya kaydetmez. Mevcut kodunuz eski otomatik davranışa bağımlıysa, `SelfHealingEngine`'i oluştururken `mode: HealingMode.AutoHeal` parametresini açıkça geçin — aşağıdaki kod örneğine bakın.
 
 ---
 
