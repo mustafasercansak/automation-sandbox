@@ -5,7 +5,7 @@ title: LLM Providers Guide - Automation Sandbox
 
 # 🤖 LLM Providers Guide / Yapay Zeka Sağlayıcıları Rehberi
 
-Automation Sandbox includes built-in AI providers and an environment-driven factory for low-confidence healing fallback ($Score < 50\%$).
+Automation Sandbox includes built-in AI providers and an environment-driven factory for LLM healing fallback, triggered when the heuristic match is not confident (score, evidence coverage, or candidate margin below threshold).
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Guide](#-english-guide)
@@ -24,11 +24,13 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Very Low | Cloud |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
+| **Groq** | Explicit (`GROQ_MODEL`) | `GROQ_API_KEY` + `GROQ_MODEL` | Low | Cloud |
+| **OpenRouter** | Explicit (`OPENROUTER_MODEL`) | `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` | Varies (per routed model) | Cloud |
 | **Cloudflare Workers AI** | Explicit (`CLOUDFLARE_MODEL`) | Token + account ID + model | Free daily allocation | Cloud |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **100% Free (\$0)** | Local by default; host-controlled |
 
 > [!CAUTION]
-> Provider setup is also a data-disclosure decision. DOM/UI text is untrusted, there is no automatic PII/secret redaction, and every configured provider receives the bounded prompt. Read the [LLM Healing Security Model](llm-security-model.md) before adding cloud or remote endpoints.
+> Provider setup is also a data-disclosure decision. DOM/UI text is untrusted, and every configured provider receives the bounded prompt. Built-in redaction masks common PII/secret patterns by default but is not exhaustive and can be disabled (`SensitiveDataSanitizer.PassThrough`). Read the [LLM Healing Security Model](llm-security-model.md) before adding cloud or remote endpoints.
 
 ### 🏭 Dynamic Environment Provider Factory (`LlmProviderFactory`)
 
@@ -46,6 +48,8 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider`
   - `GROK_API_KEY` (+ optional `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`)
   - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
+  - `GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Groq"`) — both required; there is no guessed default model
+  - `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"OpenRouter"`) — both required; the model id decides which underlying model answers
   - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Cloudflare"`)
   - `MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Mistral"`)
   - `NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Nvidia"`)
@@ -188,11 +192,13 @@ Choose a model family different from the other voters. Two endpoints serving the
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
 | **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
 | **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
+| **Groq** | Açıkça belirtilir (`GROQ_MODEL`) | `GROQ_API_KEY` + `GROQ_MODEL` | Düşük | Bulut |
+| **OpenRouter** | Açıkça belirtilir (`OPENROUTER_MODEL`) | `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` | Yönlendirilen modele göre değişir | Bulut |
 | **Cloudflare Workers AI** | Açıkça belirtilir (`CLOUDFLARE_MODEL`) | Token + hesap kimliği + model | Günlük ücretsiz kota | Bulut |
 | **Ollama** | `llama3.2` | `OLLAMA_HOST` / `OLLAMA_MODEL` | **%100 Ücretsiz (\$0)** | Varsayılan yerel; host'a bağlı |
 
 > [!CAUTION]
-> Sağlayıcı kurulumu aynı zamanda bir veri ifşası kararıdır. DOM/UI metni güvenilmeyen girdidir, otomatik PII/secret redaction yoktur ve yapılandırılmış her sağlayıcı sınırlı prompt'u alır. Bulut veya uzak endpoint eklemeden önce [LLM Healing Güvenlik Modelini](llm-security-model.md) okuyun.
+> Sağlayıcı kurulumu aynı zamanda bir veri ifşası kararıdır. DOM/UI metni güvenilmeyen girdidir ve yapılandırılmış her sağlayıcı sınırlı prompt'u alır. Yerleşik maskeleme varsayılan olarak yaygın PII/secret desenlerini maskeler, ancak kapsamlı değildir ve devre dışı bırakılabilir (`SensitiveDataSanitizer.PassThrough`). Bulut veya uzak endpoint eklemeden önce [LLM Healing Güvenlik Modelini](llm-security-model.md) okuyun.
 
 ### 🏭 Dinamik Sağlayıcı Fabrikası (`LlmProviderFactory`)
 
@@ -205,7 +211,7 @@ Choose a model family different from the other voters. Two endpoints serving the
 
 Cloudflare için `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ve `CLOUDFLARE_MODEL` değerlerinin üçü de zorunludur. Tam yapılandırma `"Cloudflare"` adlı bir `OpenAiHealingProvider` oluşturur; herhangi biri eksikse bozuk bir uç nokta veya tahmini model üretmek yerine sağlayıcı atlanır.
 
-Aynı kural Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`), NVIDIA NIM (`NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `"Nvidia"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; ikisi de OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
+Aynı kural Groq (`GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `"Groq"`), OpenRouter (`OPENROUTER_API_KEY` + `OPENROUTER_MODEL` $\rightarrow$ `"OpenRouter"`), Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`), NVIDIA NIM (`NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `"Nvidia"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; hepsi OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
 
 > [!WARNING]
 > `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.

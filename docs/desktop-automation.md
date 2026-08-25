@@ -49,9 +49,9 @@ class DesktopTest
         var mainWindow = app.GetMainWindow(automation);
 
         // 3. Capture live UI tree
-        DiscoveryResult result = UiTreeWalker.Walk(mainWindow, options);
+        DiscoveryResult result = UiTreeWalker.Discover(mainWindow, options);
 
-        Console.WriteLine($"Captured {result.CapturedElements} controls in {result.ElapsedMilliseconds}ms.");
+        Console.WriteLine($"Captured {result.CapturedCount} controls in {result.Elapsed.TotalMilliseconds}ms.");
 
         // 4. Resolve broken locator against captured live tree
         var expected = new UiElementInfo
@@ -109,9 +109,9 @@ class DesktopTest
         var mainWindow = app.GetMainWindow(automation);
 
         // 3. Capture live UI tree
-        DiscoveryResult result = UiTreeWalker.Walk(mainWindow, options);
+        DiscoveryResult result = UiTreeWalker.Discover(mainWindow, options);
 
-        Console.WriteLine($"Captured {result.CapturedElements} controls in {result.ElapsedMilliseconds}ms.");
+        Console.WriteLine($"Captured {result.CapturedCount} controls in {result.Elapsed.TotalMilliseconds}ms.");
 
         // 4. Resolve broken locator against captured live tree
         var expected = new UiElementInfo

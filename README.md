@@ -34,12 +34,12 @@ auditable healing report; an illustrative excerpt looks like this:
 ```json
 {
   "SchemaVersion": 8,
-  "TargetLocator": "#btn-submit",
+  "LocatorKey": "#btn-submit",
   "Outcome": "accepted",
   "AgreedProviders": [],
   "ProviderAttempts": {},
   "EvidenceCoverage": 0.85,
-  "TotalScore": 0.78,
+  "Score": 0.78,
   "RunnerUpScore": 0.32,
   "ProposedSnapshot": { "AutomationId": "checkout-confirm", "Name": "Confirm order" }
 }
@@ -187,7 +187,7 @@ sequenceDiagram
 > The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers. Independent agreement is the quorum rule that permits a pick; it is not a correctness guarantee. See [Independent Model Agreement](docs/llm-providers.md#-independent-model-agreement-consensus-api).
 >
 > [!CAUTION]
-> DOM/UI text and `TestIntent` are untrusted input. The Top-N prompt still sends target metadata plus candidate names and automation IDs to every configured provider; there is no automatic PII/secret redaction or prompt-injection defence. See the [LLM Healing Security Model](docs/llm-security-model.md) before enabling cloud providers.
+> DOM/UI text and `TestIntent` are untrusted input. The Top-N prompt still sends target metadata plus candidate names and automation IDs to every configured provider; built-in PII/secret redaction is applied by default (opt-out), but there is no prompt-injection defence. See the [LLM Healing Security Model](docs/llm-security-model.md) before enabling cloud providers.
 
 ---
 
@@ -583,9 +583,14 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 - `OPENAI_API_KEY` (+ `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ OpenAI (`gpt-4o-mini`)
 - `GROK_API_KEY` (+ `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ Grok (`grok-2-latest`)
 - `KIMI_API_KEY` (+ `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ Kimi (`moonshot-v1-8k`)
+- `GROQ_API_KEY` + `GROQ_MODEL` (+ `GROQ_ENDPOINT`) $\rightarrow$ Groq (both required; no guessed model)
+- `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` (+ `OPENROUTER_ENDPOINT`) $\rightarrow$ OpenRouter (both required; no guessed model)
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ Cloudflare Workers AI (no guessed model)
+- `MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ Mistral (both required; no guessed model)
+- `NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ NVIDIA NIM (both required; no guessed model)
+- `OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ Ollama Cloud (both required; separate from the local daemon below)
 - `OLLAMA_HOST` / `OLLAMA_MODEL` / `OLLAMA_ENABLED=true` $\rightarrow$ Ollama (`llama3.2`)
-- `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, Groq, etc.); every entry requires an explicit `Name`, `Endpoint`, `Model`, and API key source. Malformed JSON or a missing endpoint/model is skipped with a credential-safe diagnostic instead of falling back to OpenAI defaults or disabling the built-in providers. Use the three-argument `CreateConfiguredProviders` overload to route diagnostics to an application logger; the existing overload writes them to standard error.
+- `LLM_CUSTOM_PROVIDERS` JSON array $\rightarrow$ Custom OpenAI-compatible endpoints (DeepSeek, Cerebras, etc.); every entry requires an explicit `Name`, `Endpoint`, `Model`, and API key source. Malformed JSON or a missing endpoint/model is skipped with a credential-safe diagnostic instead of falling back to OpenAI defaults or disabling the built-in providers. Use the three-argument `CreateConfiguredProviders` overload to route diagnostics to an application logger; the existing overload writes them to standard error.
 
 See [docs/llm-providers.md](docs/llm-providers.md) for full configuration and agreement-quorum details, and the [LLM Healing Security Model](docs/llm-security-model.md) for disclosed fields, provider retention, and report-handling requirements.
 
