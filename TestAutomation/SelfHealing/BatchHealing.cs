@@ -197,37 +197,95 @@ namespace SelfHealing
 
             foreach (var contention in contentions)
             {
-                var ranked = contention
-                    .OrderByDescending(i => i.Result.Score)
-                    .ThenBy(i => i.Request.LocatorKey, StringComparer.Ordinal)
-                    .ToList();
-                var ownershipMargin = ranked[0].Result.Score - ranked[1].Result.Score;
+                var allHeuristic = contention.All(i => i.Result.Source == HealSource.Heuristic);
+                var allLlm = contention.All(i => i.Result.Source == HealSource.Llm);
 
-                if (CandidateMargin.HasSufficientMargin(
-                    ranked[0].Result.Score,
-                    ranked[1].Result.Score,
-                    weights.MinimumCandidateMargin))
+                if (allHeuristic)
                 {
-                    ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
-                    foreach (var loser in ranked.Skip(1))
-                    {
-                        RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
-                    }
+                    var ranked = contention
+                        .OrderByDescending(i => i.Result.Score)
+                        .ThenBy(i => i.Request.LocatorKey, StringComparer.Ordinal)
+                        .ToList();
+                    var ownershipMargin = ranked[0].Result.Score - ranked[1].Result.Score;
 
-                    log?.Invoke(
-                        $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
-                        $"with ownership margin {ownershipMargin:F3}; {ranked.Count - 1} weaker claim(s) declined.");
+                    if (CandidateMargin.HasSufficientMargin(
+                        ranked[0].Result.Score,
+                        ranked[1].Result.Score,
+                        weights.MinimumCandidateMargin))
+                    {
+                        ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
+                        foreach (var loser in ranked.Skip(1))
+                        {
+                            RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
+                        }
+
+                        log?.Invoke(
+                            $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
+                            $"with ownership margin {ownershipMargin:F3}; {ranked.Count - 1} weaker claim(s) declined.");
+                    }
+                    else
+                    {
+                        foreach (var claimant in ranked)
+                        {
+                            RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
+                        }
+
+                        log?.Invoke(
+                            $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous ownership margin " +
+                            $"{ownershipMargin:F3} below {weights.MinimumCandidateMargin:F3}; all {ranked.Count} claims declined.");
+                    }
+                }
+                else if (allLlm)
+                {
+                    var ranked = contention
+                        .OrderByDescending(i => i.Result.AgreedProviders.Count)
+                        .ThenBy(i => i.Request.LocatorKey, StringComparer.Ordinal)
+                        .ToList();
+                    var voteMargin = ranked[0].Result.AgreedProviders.Count - ranked[1].Result.AgreedProviders.Count;
+
+                    if (voteMargin >= 1)
+                    {
+                        ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
+                        foreach (var loser in ranked.Skip(1))
+                        {
+                            RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
+                        }
+
+                        log?.Invoke(
+                            $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
+                            $"by LLM consensus vote margin ({ranked[0].Result.AgreedProviders.Count} vs {ranked[1].Result.AgreedProviders.Count}); " +
+                            $"{ranked.Count - 1} weaker claim(s) declined.");
+                    }
+                    else
+                    {
+                        foreach (var claimant in ranked)
+                        {
+                            RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
+                        }
+
+                        log?.Invoke(
+                            $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous LLM consensus tie " +
+                            $"({ranked[0].Result.AgreedProviders.Count} votes each); all {ranked.Count} claims declined.");
+                    }
                 }
                 else
                 {
+                    // Mixed contention between Heuristic and LLM consensus claims. Because heuristic score
+                    // and LLM consensus quorum operate on fundamentally incommensurable scales, neither can
+                    // establish a valid structural score margin over the other. All claimants are declined
+                    // as ambiguous for manual review.
+                    var ranked = contention
+                        .OrderBy(i => i.Request.LocatorKey, StringComparer.Ordinal)
+                        .ToList();
+
                     foreach (var claimant in ranked)
                     {
                         RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
                     }
 
                     log?.Invoke(
-                        $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous ownership margin " +
-                        $"{ownershipMargin:F3} below {weights.MinimumCandidateMargin:F3}; all {ranked.Count} claims declined.");
+                        $"[SelfHealing] Batch candidate '{contention.Key}' has mixed-source contention between heuristic " +
+                        $"and LLM consensus claims; all {ranked.Count} claims declined as ambiguous.");
                 }
             }
 
