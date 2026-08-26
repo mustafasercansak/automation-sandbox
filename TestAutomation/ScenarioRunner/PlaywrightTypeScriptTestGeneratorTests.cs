@@ -196,6 +196,30 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsUrlContainsAssertion_ProducesEscapedRegExpPattern()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify query parameters in URL",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        AssertionKind = AssertionKind.UrlContains,
+                        ExpectedValue = "https://example.test/items?id=1&name=it's-a-test",
+                        ExpectedOutcome = "Navigates to query page",
+                    }
+                }
+            };
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, new List<IntentLocatorRecordingResult>());
+
+            Assert.Contains("await expect(page).toHaveURL(new RegExp('https://example\\\\.test/items\\\\?id=1&name=it\\\'s-a-test'));", code);
+        }
+
+        [Fact]
         public void Generate_EmitsSkip_WhenAssertionKindIsNone_InStrictMode()
         {
             var scenario = new IntentScenario
