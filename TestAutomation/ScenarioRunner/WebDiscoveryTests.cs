@@ -321,5 +321,67 @@ namespace ScenarioRunner
             Assert.Equal("Button", tree.Children[0].ControlType);
             Assert.Equal("submit-btn", tree.Children[0].AutomationId);
         }
+
+        [Theory]
+        [InlineData("checkbox", "CheckBox")]
+        [InlineData("radio", "RadioButton")]
+        [InlineData("combobox", "ComboBox")]
+        [InlineData("textbox", "Edit")]
+        [InlineData("searchbox", "Edit")]
+        [InlineData("link", "Hyperlink")]
+        [InlineData("progressbar", "ProgressBar")]
+        [InlineData("slider", "Slider")]
+        [InlineData("spinbutton", "Spinner")]
+        [InlineData("splitbutton", "SplitButton")]
+        [InlineData("statusbar", "StatusBar")]
+        [InlineData("tab", "TabItem")]
+        [InlineData("tablist", "Tab")]
+        [InlineData("tabpanel", "Pane")]
+        [InlineData("table", "Table")]
+        [InlineData("grid", "DataGrid")]
+        [InlineData("menuitem", "MenuItem")]
+        [InlineData("menubar", "MenuBar")]
+        [InlineData("listitem", "ListItem")]
+        [InlineData("treeitem", "TreeItem")]
+        [InlineData("toolbar", "ToolBar")]
+        [InlineData("tooltip", "ToolTip")]
+        public void WebElementMapper_MapsAriaRolesToCanonicalUiaControlTypes(string ariaRole, string expectedControlType)
+        {
+            var webElement = new WebElementInfo
+            {
+                TagName = "div",
+                Role = ariaRole,
+                AccessibleName = "Sample",
+            };
+
+            var uiElement = WebElementMapper.ToUiElementTree(webElement);
+
+            Assert.Equal(expectedControlType, uiElement.ControlType);
+        }
+
+        [Fact]
+        public void WebElementMapper_WebDiscoveredFormControls_ScoreFullControlTypeCreditInSimilarityScorer()
+        {
+            var webCheckbox = new WebElementInfo
+            {
+                TagName = "input",
+                Role = "checkbox",
+                AccessibleName = "Accept Terms",
+                TestId = "chk-terms",
+            };
+            var webTree = WebElementMapper.ToUiElementTree(webCheckbox);
+
+            var uiaBaseline = new UiElementInfo
+            {
+                ControlType = "CheckBox",
+                Name = "Accept Terms",
+                AutomationId = "chk-terms",
+            };
+
+            var score = SimilarityScorer.ScoreCandidate(uiaBaseline, webTree);
+
+            Assert.NotNull(score.Components.ControlTypeScore);
+            Assert.Equal(1.0, score.Components.ControlTypeScore!.Value);
+        }
     }
 }
