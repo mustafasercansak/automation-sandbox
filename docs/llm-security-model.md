@@ -52,16 +52,14 @@ the bounding makes the remaining content anonymous or safe to disclose.
 
 | Risk | Current mitigation | What it does **not** mitigate |
 | :--- | :--- | :--- |
-| A model invents an element that was not offered | Synthetic candidate IDs form a closed shortlist; the hallucination guard discards votes whose ID is outside it before counting agreement. | Prompt injection, a malicious or mistaken choice *inside* the shortlist, sensitive-data disclosure, or a false heal. |
+| A model invents an element that was not offered | Synthetic candidate IDs form a closed shortlist; the hallucination guard discards votes whose ID is outside it before counting agreement. | Malicious or mistaken choice *inside* the shortlist, sensitive-data disclosure, or a false heal. |
+| Prompt injection in DOM/UI text (e.g. "ignore previous instructions") attempts to hijack locator choice | Structural XML boundary tags (`<target_element>`, `<candidate_shortlist>`, `<test_intent>`), explicit system security directive instructing the model to treat element content as passive data only, JSON attribute escaping, synthetic candidateId closed set, hallucination guard, and multi-provider consensus quorum. | A subtle in-context jailbreak that successfully deceives all consensus providers into picking an incorrect in-shortlist candidate. |
 | The stale target ID semantically anchors the model | The target's old `AutomationId` is omitted from the prompt. | Sensitive target `Name`, `ClassName`, `TestIntent`, candidate names/IDs, or adversarial text in any of those fields. |
 | An unexpectedly large tree causes unbounded disclosure | Only the scored Top-N shortlist is sent; no screenshot or full tree is sent. | PII or secrets contained in those selected elements, disclosure to every configured provider, or repeated disclosure during retries. |
 | One provider returns an arbitrary high-confidence answer | At least `MinimumConsensusVotes` independent provider votes must name the same in-shortlist candidate; self-reported confidence does not gate acceptance. | Correctness or security. Providers can share the same bad assumption, and agreement is explicitly not evidence that an element still exists. |
 | A provider stalls or rate-limits a run | Bounded retries and per-attempt/total timeouts limit how long the call can occupy the resolver. See “Timeouts & Resilience Patterns” in the [provider guide](llm-providers.md). | Confidentiality. Every retry resends the prompt, and these controls do not change provider retention. |
 
-The candidate-ID protocol is an **output-integrity boundary**, not a prompt-injection
-defence. There is currently no instruction/data separation that can prevent UI text such
-as “ignore previous instructions” from influencing a model. Do not use LLM healing on
-screens whose captured fields cannot be disclosed to every configured provider.
+The candidate-ID protocol, prompt boundary tags, and security directives form an **instruction/data separation and output-integrity boundary**. Untrusted DOM text is enclosed within `<target_element>`, `<candidate_shortlist>`, and `<test_intent>` XML tags, and guarded with explicit security directives prohibiting the LLM from executing or following instructions embedded inside element names or attributes. Furthermore, the Hallucination Guard strictly enforces that returned candidate IDs must belong to the pre-scored shortlist, and the multi-model consensus quorum requires independent agreement across multiple provider architectures.
 
 Independent agreement also remains a locator-selection quorum—not a security review,
 fact check, or correctness guarantee. The measured limitations are documented in the
@@ -185,16 +183,14 @@ maskeleme ne de bu sınırlama kalan içeriği anonim veya açıklanması güven
 
 | Risk | Mevcut önlem | **Azaltmadığı** risk |
 | :--- | :--- | :--- |
-| Model sunulmayan bir eleman uydurur | Sentetik aday kimlikleri kapalı bir liste oluşturur; hallucination guard liste dışı kimliğe verilen oyu uzlaşma sayımından önce atar. | Prompt injection, liste içindeki kötü niyetli veya hatalı seçim, hassas veri ifşası ya da yanlış healing. |
+| Model sunulmayan bir eleman uydurur | Sentetik aday kimlikleri kapalı bir liste oluşturur; hallucination guard liste dışı kimliğe verilen oyu uzlaşma sayımından önce atar. | Liste içindeki kötü niyetli veya hatalı seçim, hassas veri ifşası ya da yanlış healing. |
+| DOM/UI metnindeki prompt injection (ör. "önceki talimatları yok say") locator seçimini ele geçirmeye çalışır | Yapısal XML sınır etiketleri (`<target_element>`, `<candidate_shortlist>`, `<test_intent>`), modelin eleman içeriğini yalnızca pasif veri olarak değerlendirmesini emreden açık sistem güvenlik direktifi, JSON öznitelik kaçışı, sentetik candidateId kapalı kümesi, hallucination guard ve çoklu sağlayıcı uzlaşma quorum'u. | Liste içindeki yanlış bir adayı seçmesi için tüm uzlaşma sağlayıcılarını başarıyla aldatan incelikli bir in-context jailbreak. |
 | Eski hedef kimliği modeli semantik olarak çapalar | Hedefin eski `AutomationId` değeri prompt'tan çıkarılır. | Hassas hedef `Name`, `ClassName`, `TestIntent`, aday adları/kimlikleri veya bu alanlardaki saldırgan metin. |
 | Beklenmedik büyüklükteki ağaç sınırsız veri ifşasına yol açar | Yalnızca skorlanmış Top-N aday listesi gönderilir; ekran görüntüsü ve tam ağaç gönderilmez. | Seçilen elemanlardaki PII/sırlar, tüm yapılandırılmış sağlayıcılara ifşa veya retry sırasında tekrarlanan ifşa. |
 | Tek sağlayıcı keyfî ve yüksek-confidence bir cevap verir | En az `MinimumConsensusVotes` bağımsız sağlayıcı oyu aynı liste içi adayı göstermelidir; modelin confidence değeri kabulü belirlemez. | Doğruluk veya güvenlik. Sağlayıcılar aynı hatalı varsayımı paylaşabilir; uzlaşma elemanın hâlâ var olduğunu kanıtlamaz. |
 | Sağlayıcı çalışmayı bekletir veya rate limit uygular | Sınırlı retry ile deneme/operasyon timeout'ları çağrının resolver'ı ne kadar süre meşgul edeceğini sınırlar. [Sağlayıcı rehberindeki](llm-providers.md) “Zaman Aşımı ve Dayanıklılık” bölümüne bakın. | Gizlilik. Her retry prompt'u yeniden gönderir ve bu kontroller sağlayıcı retention politikasını değiştirmez. |
 
-Aday-kimliği protokolü bir **çıktı bütünlüğü sınırıdır**; prompt-injection savunması
-değildir. “Önceki talimatları yok say” gibi UI metinlerinin modeli etkilemesini engelleyen
-bir talimat/veri ayrımı şu anda yoktur. Yakalanan alanları tüm yapılandırılmış sağlayıcılara
-açıklayamayacağınız ekranlarda LLM healing kullanmayın.
+Aday-kimliği protokolü, prompt sınır etiketleri ve güvenlik direktifleri bir **talimat/veri ayrımı ve çıktı bütünlüğü sınırı** oluşturur. Güvenilmeyen DOM metni `<target_element>`, `<candidate_shortlist>` ve `<test_intent>` XML etiketleri içine alınır ve LLM'in eleman adları veya öznitelikleri içine gömülmüş talimatları yürütmesini ya da takip etmesini engelleyen açık güvenlik direktifleriyle korunur. Ayrıca Hallucination Guard, döndürülen aday kimliklerinin önceden skorlanmış aday listesine ait olmasını zorunlu kılar ve çoklu model uzlaşma quorum'u birden fazla sağlayıcı mimarisinde bağımsız anlaşma gerektirir.
 
 Bağımsız uzlaşma da yalnızca locator seçimi quorum'udur; güvenlik incelemesi, doğrulama
 veya doğruluk garantisi değildir. Ölçülmüş sınırlar [benchmark rehberinde](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)
