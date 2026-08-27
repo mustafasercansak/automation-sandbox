@@ -53,7 +53,7 @@ namespace IntentAutomation
                     code.AppendLine($"            await Expect(Page).ToHaveURLAsync(\"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\");");
                     break;
                 case AssertionKind.UrlContains:
-                    code.AppendLine($"            await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(\"{CodeGenerationUtilities.EscapeRegex(step.ExpectedValue)}\"));");
+                    code.AppendLine($"            await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(\"{CodeGenerationUtilities.EscapeString(CodeGenerationUtilities.EscapeRegex(step.ExpectedValue))}\"));");
                     break;
                 default:
                     switch (mode)
@@ -100,7 +100,7 @@ namespace IntentAutomation
                     code.AppendLine($"  await expect(page).toHaveURL('{CodeGenerationUtilities.EscapeSingleQuoted(step.ExpectedValue)}');");
                     break;
                 case AssertionKind.UrlContains:
-                    code.AppendLine($"  await expect(page).toHaveURL(new RegExp('{CodeGenerationUtilities.EscapeRegex(step.ExpectedValue)}'));");
+                    code.AppendLine($"  await expect(page).toHaveURL(new RegExp('{CodeGenerationUtilities.EscapeSingleQuoted(CodeGenerationUtilities.EscapeRegex(step.ExpectedValue))}'));");
                     break;
                 default:
                     switch (mode)
