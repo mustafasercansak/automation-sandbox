@@ -73,11 +73,96 @@ namespace WebDiscovery
             };
         }
 
+        private static readonly Dictionary<string, string> AriaRoleToControlType =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "alert", "Text" },
+                { "alertdialog", "Window" },
+                { "appbar", "AppBar" },
+                { "article", "Document" },
+                { "banner", "Header" },
+                { "button", "Button" },
+                { "calendar", "Calendar" },
+                { "cell", "DataItem" },
+                { "checkbox", "CheckBox" },
+                { "columnheader", "HeaderItem" },
+                { "combobox", "ComboBox" },
+                { "custom", "Custom" },
+                { "datagrid", "DataGrid" },
+                { "dataitem", "DataItem" },
+                { "dialog", "Window" },
+                { "document", "Document" },
+                { "edit", "Edit" },
+                { "form", "Group" },
+                { "grid", "DataGrid" },
+                { "gridcell", "DataItem" },
+                { "group", "Group" },
+                { "header", "Header" },
+                { "headeritem", "HeaderItem" },
+                { "heading", "Text" },
+                { "hyperlink", "Hyperlink" },
+                { "image", "Image" },
+                { "img", "Image" },
+                { "link", "Hyperlink" },
+                { "list", "List" },
+                { "listbox", "List" },
+                { "listitem", "ListItem" },
+                { "log", "StatusBar" },
+                { "main", "Document" },
+                { "menu", "Menu" },
+                { "menubar", "MenuBar" },
+                { "menuitem", "MenuItem" },
+                { "menuitemcheckbox", "MenuItem" },
+                { "menuitemradio", "MenuItem" },
+                { "navigation", "Group" },
+                { "option", "ListItem" },
+                { "pane", "Pane" },
+                { "progressbar", "ProgressBar" },
+                { "radio", "RadioButton" },
+                { "radiobutton", "RadioButton" },
+                { "radiogroup", "Group" },
+                { "region", "Group" },
+                { "row", "DataItem" },
+                { "rowheader", "HeaderItem" },
+                { "scrollbar", "ScrollBar" },
+                { "search", "Group" },
+                { "searchbox", "Edit" },
+                { "semanticzoom", "SemanticZoom" },
+                { "separator", "Separator" },
+                { "slider", "Slider" },
+                { "spinbutton", "Spinner" },
+                { "spinner", "Spinner" },
+                { "splitbutton", "SplitButton" },
+                { "status", "StatusBar" },
+                { "statusbar", "StatusBar" },
+                { "tab", "TabItem" },
+                { "tabitem", "TabItem" },
+                { "tablist", "Tab" },
+                { "tabpanel", "Pane" },
+                { "switch", "CheckBox" },
+                { "table", "DataGrid" },
+                { "text", "Text" },
+                { "textbox", "Edit" },
+                { "thumb", "Thumb" },
+                { "timer", "StatusBar" },
+                { "titlebar", "TitleBar" },
+                { "toolbar", "ToolBar" },
+                { "tooltip", "ToolTip" },
+                { "tree", "Tree" },
+                { "treegrid", "DataGrid" },
+                { "treeitem", "TreeItem" },
+                { "window", "Window" },
+            };
+
         private static string NormalizeRole(string role)
         {
-            return role.Equals("textbox", StringComparison.OrdinalIgnoreCase)
-                ? "Edit"
-                : char.ToUpperInvariant(role[0]) + role.Substring(1).ToLowerInvariant();
+            var trimmed = role.Trim();
+            if (AriaRoleToControlType.TryGetValue(trimmed, out var controlType))
+            {
+                return controlType;
+            }
+
+            return char.ToUpperInvariant(trimmed[0]) + trimmed.Substring(1).ToLowerInvariant();
         }
 
         private static string ToClassName(WebElementInfo element)
