@@ -121,6 +121,11 @@ namespace SelfHealing
     /// <summary>
     /// Calibrates an application UI tree against synthetic mutations to recommend an optimal <see cref="ThresholdProfile"/>.
     /// </summary>
+    // Deliberately does not share mutation/probing logic with ScenarioRunner's
+    // LocatorAblationGenerator/LocatorAblationHarness: those live in the test project, one layer
+    // above SelfHealing in the dependency graph (UiModel <- SelfHealing <- ScenarioRunner), so
+    // SelfHealing cannot reference them without an upward/circular dependency. TreeCalibrator is
+    // this library's own shipped, dependency-free equivalent for single-tree calibration.
     public static class TreeCalibrator
     {
         private enum ProbeMutationKind
@@ -154,7 +159,7 @@ namespace SelfHealing
                 throw new ArgumentNullException(nameof(root));
             }
 
-            var allElements = Flatten(root).ToList();
+            var allElements = root.Flatten().ToList();
             var eligibleElements = allElements
                 .Where(e => !string.IsNullOrEmpty(e.AutomationId) && e != root)
                 .Take(maxProbedElements)
@@ -315,10 +320,13 @@ namespace SelfHealing
             {
                 return true;
             }
-            return ReferenceEquals(matched, original) ||
-                   (matched.ControlType == original.ControlType &&
-                    matched.Name == original.Name &&
-                    matched.BoundingRectangle == original.BoundingRectangle);
+
+            // matched is always resolved against a CloneTree()'d tree, so it can never be the
+            // same object as original (which comes from the un-cloned source tree) - only the
+            // value-based fallback below can ever apply.
+            return matched.ControlType == original.ControlType &&
+                   matched.Name == original.Name &&
+                   matched.BoundingRectangle == original.BoundingRectangle;
         }
 
         private static List<CalibrationProbe> GenerateProbes(
@@ -331,10 +339,22 @@ namespace SelfHealing
             {
                 var target = targetElements[i];
 
+                // Path (child-index sequence from sourceRoot) is computed once per target and
+                // resolved against each independently cloned tree below. This identifies the
+                // exact same node by tree position rather than by AutomationId/attribute value,
+                // so trees with duplicate AutomationIds (or duplicate ControlType+Name+Bounds
+                // tuples) - the very case self-healing exists for - still mutate/remove the
+                // correct node instead of silently hitting the first value-equal match.
+                var targetPath = GetPathToNode(sourceRoot, target);
+                if (targetPath == null)
+                {
+                    continue;
+                }
+
                 // 1. Rename mutation
                 {
                     var mutatedTree = CloneTree(sourceRoot);
-                    var matchedInClone = FindCorrespondingElement(mutatedTree, target);
+                    var matchedInClone = ResolvePath(mutatedTree, targetPath);
                     if (matchedInClone != null)
                     {
                         matchedInClone.AutomationId = $"calib-mutated-rename-{i}";
@@ -352,7 +372,7 @@ namespace SelfHealing
                 if (!string.IsNullOrEmpty(target.Name))
                 {
                     var mutatedTree = CloneTree(sourceRoot);
-                    var matchedInClone = FindCorrespondingElement(mutatedTree, target);
+                    var matchedInClone = ResolvePath(mutatedTree, targetPath);
                     if (matchedInClone != null)
                     {
                         matchedInClone.AutomationId = $"calib-mutated-namedrift-{i}";
@@ -371,7 +391,7 @@ namespace SelfHealing
                 if (target.BoundingRectangle.Width > 0 && target.BoundingRectangle.Height > 0)
                 {
                     var mutatedTree = CloneTree(sourceRoot);
-                    var matchedInClone = FindCorrespondingElement(mutatedTree, target);
+                    var matchedInClone = ResolvePath(mutatedTree, targetPath);
                     if (matchedInClone != null)
                     {
                         matchedInClone.AutomationId = $"calib-mutated-posshift-{i}";
@@ -394,7 +414,7 @@ namespace SelfHealing
                 // 4. Removal / Decoy scenario
                 {
                     var mutatedTree = CloneTree(sourceRoot);
-                    var removed = RemoveElement(mutatedTree, target);
+                    var removed = RemoveAtPath(mutatedTree, targetPath);
                     if (removed)
                     {
                         probes.Add(new CalibrationProbe
@@ -409,6 +429,65 @@ namespace SelfHealing
             }
 
             return probes;
+        }
+
+        /// <summary>
+        /// Returns the sequence of child indices from <paramref name="root"/> down to
+        /// <paramref name="target"/> (by reference), or null if target is not in this tree.
+        /// </summary>
+        private static IReadOnlyList<int>? GetPathToNode(UiElementInfo root, UiElementInfo target)
+        {
+            if (ReferenceEquals(root, target))
+            {
+                return Array.Empty<int>();
+            }
+
+            for (var i = 0; i < root.Children.Count; i++)
+            {
+                var childPath = GetPathToNode(root.Children[i], target);
+                if (childPath != null)
+                {
+                    var path = new List<int>(childPath.Count + 1) { i };
+                    path.AddRange(childPath);
+                    return path;
+                }
+            }
+
+            return null;
+        }
+
+        private static UiElementInfo? ResolvePath(UiElementInfo root, IReadOnlyList<int> path)
+        {
+            var current = root;
+            foreach (var index in path)
+            {
+                if (index < 0 || index >= current.Children.Count)
+                {
+                    return null;
+                }
+
+                current = current.Children[index];
+            }
+
+            return current;
+        }
+
+        private static bool RemoveAtPath(UiElementInfo root, IReadOnlyList<int> path)
+        {
+            if (path.Count == 0)
+            {
+                return false;
+            }
+
+            var parent = ResolvePath(root, new List<int>(path.Take(path.Count - 1)));
+            var lastIndex = path[path.Count - 1];
+            if (parent == null || lastIndex < 0 || lastIndex >= parent.Children.Count)
+            {
+                return false;
+            }
+
+            parent.Children.RemoveAt(lastIndex);
+            return true;
         }
 
         private static UiElementInfo CloneElementShallow(UiElementInfo element)
@@ -428,65 +507,18 @@ namespace SelfHealing
             };
         }
 
+        // A plain recursive clone (not a JSON round trip): GenerateProbes clones the source tree
+        // up to 4 times per probed element, so avoiding JSON serialize+deserialize overhead here
+        // matters at realistic tree sizes and probe counts.
         private static UiElementInfo CloneTree(UiElementInfo root)
         {
-            var json = UiTreeSerializer.ToJson(root);
-            return UiTreeSerializer.FromJson(json);
-        }
-
-        private static UiElementInfo? FindCorrespondingElement(UiElementInfo treeRoot, UiElementInfo target)
-        {
-            foreach (var node in Flatten(treeRoot))
-            {
-                if (!string.IsNullOrEmpty(target.AutomationId) && node.AutomationId == target.AutomationId)
-                {
-                    return node;
-                }
-                if (node.ControlType == target.ControlType &&
-                    node.Name == target.Name &&
-                    node.BoundingRectangle == target.BoundingRectangle)
-                {
-                    return node;
-                }
-            }
-            return null;
-        }
-
-        private static bool RemoveElement(UiElementInfo treeRoot, UiElementInfo target)
-        {
-            return RemoveRecursive(treeRoot, target);
-        }
-
-        private static bool RemoveRecursive(UiElementInfo current, UiElementInfo target)
-        {
-            for (var i = 0; i < current.Children.Count; i++)
-            {
-                var child = current.Children[i];
-                if ((!string.IsNullOrEmpty(target.AutomationId) && child.AutomationId == target.AutomationId) ||
-                    (child.ControlType == target.ControlType && child.Name == target.Name && child.BoundingRectangle == target.BoundingRectangle))
-                {
-                    current.Children.RemoveAt(i);
-                    return true;
-                }
-
-                if (RemoveRecursive(child, target))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static IEnumerable<UiElementInfo> Flatten(UiElementInfo root)
-        {
-            yield return root;
+            var clone = CloneElementShallow(root);
             foreach (var child in root.Children)
             {
-                foreach (var descendant in Flatten(child))
-                {
-                    yield return descendant;
-                }
+                clone.Children.Add(CloneTree(child));
             }
+
+            return clone;
         }
     }
 }
