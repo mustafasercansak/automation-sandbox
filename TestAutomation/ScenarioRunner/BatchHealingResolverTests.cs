@@ -281,6 +281,43 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveBatchAsync_LlmConsensusContention_TiedQuorumDeclinesBothAsAmbiguous()
+        {
+            // Issue #268: pure-LLM contention with an equal AgreedProviders vote count on both sides
+            // (voteMargin == 0) must decline all claimants as ambiguous, mirroring the all-heuristic
+            // tie behavior, rather than picking ranked[0] as an arbitrary winner.
+            var first = Element("Button", "Save", "a-live");
+            var second = Element("Button", "Save", "b-live");
+
+            var lowConfidence1 = Element("Button", "Save", "old-1");
+            var lowConfidence2 = Element("Button", "Save", "old-2");
+
+            var providerA = new SelectiveVoteProvider("Alpha", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+            var providerB = new SelectiveVoteProvider("Beta", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+
+            var batch = await SelfHealingResolver.ResolveBatchAsync(
+                new[]
+                {
+                    new BatchHealingRequest("tied.one", lowConfidence1),
+                    new BatchHealingRequest("tied.two", lowConfidence2),
+                },
+                Tree(first, second),
+                new ILlmHealingProvider[] { providerA, providerB },
+                log: _ => { });
+
+            Assert.Equal(1, batch.ContestedCandidateCount);
+            Assert.Equal(2, batch.ReconciliationDeclineCount);
+
+            Assert.False(batch.Items[0].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, batch.Items[0].ReconciliationDisposition);
+            Assert.Equal(2, batch.Items[0].Result.AgreedProviders.Count);
+
+            Assert.False(batch.Items[1].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, batch.Items[1].ReconciliationDisposition);
+            Assert.Equal(2, batch.Items[1].Result.AgreedProviders.Count);
+        }
+
+        [Fact]
         public void ResolveBatch_DuplicateLocatorKeysFailBeforeResolution()
         {
             var expected = Element("Button", "Save", "old-save");

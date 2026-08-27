@@ -207,33 +207,19 @@ namespace SelfHealing
                         .ThenBy(i => i.Request.LocatorKey, StringComparer.Ordinal)
                         .ToList();
                     var ownershipMargin = ranked[0].Result.Score - ranked[1].Result.Score;
-
-                    if (CandidateMargin.HasSufficientMargin(
+                    var wonByMargin = CandidateMargin.HasSufficientMargin(
                         ranked[0].Result.Score,
                         ranked[1].Result.Score,
-                        weights.MinimumCandidateMargin))
-                    {
-                        ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
-                        foreach (var loser in ranked.Skip(1))
-                        {
-                            RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
-                        }
+                        weights.MinimumCandidateMargin);
 
-                        log?.Invoke(
-                            $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
-                            $"with ownership margin {ownershipMargin:F3}; {ranked.Count - 1} weaker claim(s) declined.");
-                    }
-                    else
-                    {
-                        foreach (var claimant in ranked)
-                        {
-                            RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
-                        }
-
-                        log?.Invoke(
-                            $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous ownership margin " +
-                            $"{ownershipMargin:F3} below {weights.MinimumCandidateMargin:F3}; all {ranked.Count} claims declined.");
-                    }
+                    ApplyContentionOutcome(
+                        ranked,
+                        wonByMargin,
+                        $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
+                            $"with ownership margin {ownershipMargin:F3}; {ranked.Count - 1} weaker claim(s) declined.",
+                        $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous ownership margin " +
+                            $"{ownershipMargin:F3} below {weights.MinimumCandidateMargin:F3}; all {ranked.Count} claims declined.",
+                        log);
                 }
                 else if (allLlm)
                 {
@@ -243,30 +229,15 @@ namespace SelfHealing
                         .ToList();
                     var voteMargin = ranked[0].Result.AgreedProviders.Count - ranked[1].Result.AgreedProviders.Count;
 
-                    if (voteMargin >= 1)
-                    {
-                        ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
-                        foreach (var loser in ranked.Skip(1))
-                        {
-                            RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
-                        }
-
-                        log?.Invoke(
-                            $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
+                    ApplyContentionOutcome(
+                        ranked,
+                        voteMargin >= 1,
+                        $"[SelfHealing] Batch candidate '{contention.Key}' assigned to '{ranked[0].Request.LocatorKey}' " +
                             $"by LLM consensus vote margin ({ranked[0].Result.AgreedProviders.Count} vs {ranked[1].Result.AgreedProviders.Count}); " +
-                            $"{ranked.Count - 1} weaker claim(s) declined.");
-                    }
-                    else
-                    {
-                        foreach (var claimant in ranked)
-                        {
-                            RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
-                        }
-
-                        log?.Invoke(
-                            $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous LLM consensus tie " +
-                            $"({ranked[0].Result.AgreedProviders.Count} votes each); all {ranked.Count} claims declined.");
-                    }
+                            $"{ranked.Count - 1} weaker claim(s) declined.",
+                        $"[SelfHealing] Batch candidate '{contention.Key}' has ambiguous LLM consensus tie " +
+                            $"({ranked[0].Result.AgreedProviders.Count} votes each); all {ranked.Count} claims declined.",
+                        log);
                 }
                 else
                 {
@@ -290,6 +261,36 @@ namespace SelfHealing
             }
 
             return new BatchHealingResult(items);
+        }
+
+        // Shared by the allHeuristic and allLlm contention branches, which differ only in how
+        // ranked[]/margin are computed - not in what happens once a winner is (or isn't) decided.
+        private static void ApplyContentionOutcome(
+            List<BatchHealingItemResult> ranked,
+            bool wonByMargin,
+            string wonLogMessage,
+            string ambiguousLogMessage,
+            Action<string>? log)
+        {
+            if (wonByMargin)
+            {
+                ranked[0].Result.ReconciliationDisposition = BatchReconciliationDisposition.WonContention;
+                foreach (var loser in ranked.Skip(1))
+                {
+                    RejectClaim(loser, BatchReconciliationDisposition.DeclinedByStrongerClaim);
+                }
+
+                log?.Invoke(wonLogMessage);
+            }
+            else
+            {
+                foreach (var claimant in ranked)
+                {
+                    RejectClaim(claimant, BatchReconciliationDisposition.DeclinedAmbiguousContention);
+                }
+
+                log?.Invoke(ambiguousLogMessage);
+            }
         }
 
         private static void RejectClaim(
