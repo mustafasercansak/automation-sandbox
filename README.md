@@ -190,7 +190,7 @@ sequenceDiagram
 > The hallucination guard runs **before** the vote is counted, so a provider naming a candidate outside its shortlist forfeits only its own vote. Self-reported confidence is recorded but never compared across providers. Independent agreement is the quorum rule that permits a pick; it is not a correctness guarantee. See [Independent Model Agreement](docs/llm-providers.md#-independent-model-agreement-consensus-api).
 >
 > [!CAUTION]
-> DOM/UI text and `TestIntent` are untrusted input. The Top-N prompt still sends target metadata plus candidate names and automation IDs to every configured provider; built-in PII/secret redaction is applied by default (opt-out), but there is no prompt-injection defence. See the [LLM Healing Security Model](docs/llm-security-model.md) before enabling cloud providers.
+> DOM/UI text and `TestIntent` are untrusted input. The Top-N prompt still sends target metadata plus candidate names and automation IDs to every configured provider; built-in PII/secret redaction is applied by default (opt-out). Structural boundary tags and security directives mitigate prompt injection from that text, but they are not a disclosure control — do not enable cloud providers on screens whose captured fields cannot be disclosed to them. See the [LLM Healing Security Model](docs/llm-security-model.md) before enabling cloud providers.
 
 ---
 
