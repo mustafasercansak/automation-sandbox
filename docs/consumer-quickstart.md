@@ -72,7 +72,87 @@ Use the same `SelfHealingEngine` integration with a real tree from
 `AutomationSandbox.PlaywrightLiveExploration` for web. The sample keeps capture synthetic
 so package installation and healing behavior are runnable on Windows, Linux, and macOS.
 
-### 4. Repeat the clean package-install verification
+### 4. xUnit & NUnit Test Helpers (Before vs. After)
+
+Instead of manually instantiating `LocatorRepository`, managing temp files, and wiring `SelfHealingEngine` in every test class, use `SelfHealingTestFixture` or `SelfHealingTestBase` from `SelfHealing.Testing`:
+
+#### Before: Manual Boilerplate Wiring
+```csharp
+// Manual wiring in every test class:
+public class CheckoutTests : IDisposable
+{
+    private readonly string _repoPath;
+    private readonly LocatorRepository _repo;
+    private readonly SelfHealingEngine _engine;
+
+    public CheckoutTests()
+    {
+        _repoPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".locator.json");
+        _repo = new LocatorRepository(_repoPath);
+        _engine = new SelfHealingEngine(_repo, mode: HealingMode.AutoHeal);
+    }
+
+    [Fact]
+    public async Task ClickCheckout_HealsButton()
+    {
+        var result = await _engine.ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+
+    public void Dispose()
+    {
+        File.Delete(_repoPath);
+        File.Delete(_repoPath + ".lock");
+    }
+}
+```
+
+#### After: Clean xUnit Class Fixture
+```csharp
+using SelfHealing.Testing;
+
+public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
+{
+    private readonly SelfHealingTestFixture _healing;
+
+    public CheckoutTests(SelfHealingTestFixture healing) => _healing = healing;
+
+    [Fact]
+    public async Task ClickCheckout_HealsButton()
+    {
+        await _healing.ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+}
+```
+
+#### After: Clean NUnit Test Fixture (or Base Class)
+```csharp
+using NUnit.Framework;
+using SelfHealing.Testing;
+
+[TestFixture]
+public class CheckoutTests : SelfHealingTestBase
+{
+    [Test]
+    public async Task ClickCheckout_HealsButton()
+    {
+        await ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+}
+```
+
+### 5. Repeat the clean package-install verification
 
 From the repository root, run:
 
@@ -154,7 +234,87 @@ web için `AutomationSandbox.WebDiscovery` / `AutomationSandbox.PlaywrightLiveEx
 ile yakalanmış gerçek bir ağaç üzerinde kullanın. Örnek, paket kurulumu ve healing
 davranışının Windows, Linux ve macOS'ta çalışabilmesi için sentetik capture kullanır.
 
-### 4. Temiz paket-kurulum doğrulamasını tekrarlama
+### 4. xUnit & NUnit Test Yardımcıları (Önce vs. Sonra)
+
+Her test sınıfında manuel olarak `LocatorRepository` başlatmak, geçici dosyaları yönetmek ve `SelfHealingEngine` bağlamak yerine `SelfHealing.Testing` altındaki `SelfHealingTestFixture` veya `SelfHealingTestBase` kullanın:
+
+#### Önce: Manuel Şablon Kod (Boilerplate)
+```csharp
+// Her test sınıfında tekrarlanan manuel bağlantı:
+public class CheckoutTests : IDisposable
+{
+    private readonly string _repoPath;
+    private readonly LocatorRepository _repo;
+    private readonly SelfHealingEngine _engine;
+
+    public CheckoutTests()
+    {
+        _repoPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".locator.json");
+        _repo = new LocatorRepository(_repoPath);
+        _engine = new SelfHealingEngine(_repo, mode: HealingMode.AutoHeal);
+    }
+
+    [Fact]
+    public async Task ClickCheckout_HealsButton()
+    {
+        var result = await _engine.ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+
+    public void Dispose()
+    {
+        File.Delete(_repoPath);
+        File.Delete(_repoPath + ".lock");
+    }
+}
+```
+
+#### Sonra: Temiz xUnit Class Fixture
+```csharp
+using SelfHealing.Testing;
+
+public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
+{
+    private readonly SelfHealingTestFixture _healing;
+
+    public CheckoutTests(SelfHealingTestFixture healing) => _healing = healing;
+
+    [Fact]
+    public async Task ClickCheckout_HealsButton()
+    {
+        await _healing.ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+}
+```
+
+#### Sonra: Temiz NUnit Test Fixture (veya Taban Sınıf)
+```csharp
+using NUnit.Framework;
+using SelfHealing.Testing;
+
+[TestFixture]
+public class CheckoutTests : SelfHealingTestBase
+{
+    [Test]
+    public async Task ClickCheckout_HealsButton()
+    {
+        await ExecuteWithHealingAsync(
+            "Checkout.Submit",
+            expectedLocator,
+            element => ClickButton(element),
+            () => CaptureTree());
+    }
+}
+```
+
+### 5. Temiz paket-kurulum doğrulamasını tekrarlama
 
 Repository kökünden şu komutu çalıştırın:
 
