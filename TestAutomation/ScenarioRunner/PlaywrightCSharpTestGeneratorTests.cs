@@ -183,6 +183,31 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsUrlContainsAssertion_ProducesCompilableCSharpWithEscapedRegex()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify query parameters in URL",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        AssertionKind = AssertionKind.UrlContains,
+                        ExpectedValue = "https://example.test/items?id=1&name=test",
+                        ExpectedOutcome = "Navigates to query page",
+                    }
+                }
+            };
+
+            var code = new PlaywrightCSharpTestGenerator().Generate(scenario, new List<IntentLocatorRecordingResult>());
+
+            Assert.Contains("await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(\"https://example\\\\.test/items\\\\?id=1&name=test\"));", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        [Fact]
         public void Generate_EmitsInconclusive_WhenAssertionKindIsNone_InStrictMode_EvenWithoutRecordedLocator()
         {
             var scenario = new IntentScenario
