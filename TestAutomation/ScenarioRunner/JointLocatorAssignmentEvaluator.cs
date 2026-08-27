@@ -94,26 +94,67 @@ namespace ScenarioRunner
 
                 foreach (var claimGroup in competingClaims)
                 {
-                    var ranked = claimGroup
-                        .OrderByDescending(r => r.AssignmentUtility)
-                        .ThenBy(r => r.Joint.OriginalAutomationId, StringComparer.Ordinal)
-                        .ToList();
-                    var claimantMargin = ranked[0].AssignmentUtility - ranked[1].AssignmentUtility;
+                    // Heuristic Score and LLM-consensus AgreedProviders vote counts are incommensurable
+                    // scales (#268) - mirror the production BatchHealing.Reconcile split: rank same-source
+                    // contentions on their own scale, and decline mixed-source contentions outright rather
+                    // than comparing a heuristic AssignmentUtility against an LLM claim's unrelated score.
+                    var allHeuristic = claimGroup.All(r => r.Joint.Source == HealSource.Heuristic);
+                    var allLlm = claimGroup.All(r => r.Joint.Source == HealSource.Llm);
 
-                    if (claimantMargin >= w.MinimumCandidateMargin)
+                    if (allHeuristic)
                     {
-                        ranked[0].Disposition = JointAssignmentDisposition.WonContention;
-                        foreach (var loser in ranked.Skip(1))
+                        var ranked = claimGroup
+                            .OrderByDescending(r => r.AssignmentUtility)
+                            .ThenBy(r => r.Joint.OriginalAutomationId, StringComparer.Ordinal)
+                            .ToList();
+                        var claimantMargin = ranked[0].AssignmentUtility - ranked[1].AssignmentUtility;
+
+                        if (claimantMargin >= w.MinimumCandidateMargin)
                         {
-                            Decline(loser, JointAssignmentDisposition.DeclinedByStrongerClaim);
+                            ranked[0].Disposition = JointAssignmentDisposition.WonContention;
+                            foreach (var loser in ranked.Skip(1))
+                            {
+                                Decline(loser, JointAssignmentDisposition.DeclinedByStrongerClaim);
+                            }
+                        }
+                        else
+                        {
+                            // The ordinal ordering above exists only to keep reports deterministic. It
+                            // must never decide a near-tie: every claimant is declined when evidence does
+                            // not separate their ownership by the same margin the resolver already uses.
+                            foreach (var claimant in ranked)
+                            {
+                                Decline(claimant, JointAssignmentDisposition.DeclinedAmbiguousContention);
+                            }
+                        }
+                    }
+                    else if (allLlm)
+                    {
+                        var ranked = claimGroup
+                            .OrderByDescending(r => r.Joint.AgreedProviders.Count)
+                            .ThenBy(r => r.Joint.OriginalAutomationId, StringComparer.Ordinal)
+                            .ToList();
+                        var voteMargin = ranked[0].Joint.AgreedProviders.Count - ranked[1].Joint.AgreedProviders.Count;
+
+                        if (voteMargin >= 1)
+                        {
+                            ranked[0].Disposition = JointAssignmentDisposition.WonContention;
+                            foreach (var loser in ranked.Skip(1))
+                            {
+                                Decline(loser, JointAssignmentDisposition.DeclinedByStrongerClaim);
+                            }
+                        }
+                        else
+                        {
+                            foreach (var claimant in ranked)
+                            {
+                                Decline(claimant, JointAssignmentDisposition.DeclinedAmbiguousContention);
+                            }
                         }
                     }
                     else
                     {
-                        // The ordinal ordering above exists only to keep reports deterministic. It
-                        // must never decide a near-tie: every claimant is declined when evidence does
-                        // not separate their ownership by the same margin the resolver already uses.
-                        foreach (var claimant in ranked)
+                        foreach (var claimant in claimGroup)
                         {
                             Decline(claimant, JointAssignmentDisposition.DeclinedAmbiguousContention);
                         }

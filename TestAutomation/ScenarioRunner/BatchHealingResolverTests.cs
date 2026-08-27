@@ -151,6 +151,173 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ResolveBatchAsync_MixedSourceContention_DeclinesAllClaimantsAsAmbiguous()
+        {
+            // Issue #268: A confident heuristic claim and an independently confident LLM consensus claim
+            // contest the same live candidate. Because heuristic score (e.g. 0.55) and LLM consensus
+            // (2 provider votes) operate on incompatible scales, the heuristic claim must not win
+            // purely by score subtraction. Both claims must be declined for manual review.
+            var live1 = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Submit",
+                AutomationId = "live-submit-1",
+                ParentControlType = "Window",
+                ParentAutomationId = "root",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 100, 30),
+            };
+            var live2 = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Submit",
+                AutomationId = "live-submit-2",
+                ParentControlType = "Window",
+                ParentAutomationId = "root",
+                SiblingIndex = 1,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(600, 600, 100, 30),
+            };
+
+            // Heuristic expected matches live1 with high margin over live2 due to position
+            var heuristicExpected = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Submit",
+                AutomationId = "old-submit-heuristic",
+                ParentControlType = "Window",
+                ParentAutomationId = "root",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(100, 100, 100, 30),
+            };
+
+            // LLM expected has low heuristic similarity (0.467 < 0.50) due to ControlType mismatch, triggering LLM fallback
+            var llmExpected = new UiElementInfo
+            {
+                ControlType = "Custom",
+                Name = "Order",
+                AutomationId = "old-order-llm",
+                ParentControlType = "Window",
+                ParentAutomationId = "root",
+                SiblingIndex = 0,
+                SiblingCount = 2,
+            };
+
+            // Providers vote for c0 (live1)
+            var providers = new ILlmHealingProvider[]
+            {
+                new FixedVoteProvider("Alpha", "c0", confidence: 0.90),
+                new FixedVoteProvider("Beta", "c0", confidence: 0.85),
+            };
+
+            var batch = await SelfHealingResolver.ResolveBatchAsync(
+                new[]
+                {
+                    new BatchHealingRequest("heuristic.claim", heuristicExpected),
+                    new BatchHealingRequest("llm.claim", llmExpected),
+                },
+                Tree(live1, live2),
+                providers,
+                log: _ => { });
+
+            var heuristicItem = batch.Items[0];
+            var llmItem = batch.Items[1];
+
+            Assert.True(heuristicItem.WasIndependentlyConfident, "heuristic item was independently confident");
+            Assert.Equal(HealSource.Heuristic, heuristicItem.Result.Source);
+            Assert.Same(live1, heuristicItem.Result.Matched);
+            Assert.False(heuristicItem.Result.IsConfident);
+            Assert.True(heuristicItem.Result.RejectedByReconciliation);
+            Assert.Equal(HealResolutionStatus.OwnershipConflict, heuristicItem.Result.ResolutionStatus);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, heuristicItem.ReconciliationDisposition);
+
+            Assert.True(llmItem.WasIndependentlyConfident, "llm item was independently confident");
+            Assert.Equal(HealSource.Llm, llmItem.Result.Source);
+            Assert.Same(live1, llmItem.Result.Matched);
+            Assert.False(llmItem.Result.IsConfident);
+            Assert.True(llmItem.Result.RejectedByReconciliation);
+            Assert.Equal(HealResolutionStatus.OwnershipConflict, llmItem.Result.ResolutionStatus);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, llmItem.ReconciliationDisposition);
+
+            Assert.Equal(1, batch.ContestedCandidateCount);
+            Assert.Equal(2, batch.ReconciliationDeclineCount);
+        }
+
+        [Fact]
+        public async Task ResolveBatchAsync_LlmConsensusContention_HigherQuorumWins()
+        {
+            var first = Element("Button", "Save", "a-live");
+            var second = Element("Button", "Save", "b-live");
+
+            var lowConfidence1 = Element("Button", "Save", "old-1");
+            var lowConfidence2 = Element("Button", "Save", "old-2");
+
+            var providerA = new SelectiveVoteProvider("Alpha", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+            var providerB = new SelectiveVoteProvider("Beta", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+            var providerC = new SelectiveVoteProvider("Gamma", new Dictionary<string, string> { { "old-1", "c0" } });
+
+            var batch = await SelfHealingResolver.ResolveBatchAsync(
+                new[]
+                {
+                    new BatchHealingRequest("three.votes", lowConfidence1),
+                    new BatchHealingRequest("two.votes", lowConfidence2),
+                },
+                Tree(first, second),
+                new ILlmHealingProvider[] { providerA, providerB, providerC },
+                log: _ => { });
+
+            Assert.Equal(1, batch.ContestedCandidateCount);
+            Assert.Equal(1, batch.ReconciliationDeclineCount);
+
+            Assert.True(batch.Items[0].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.WonContention, batch.Items[0].ReconciliationDisposition);
+            Assert.Equal(3, batch.Items[0].Result.AgreedProviders.Count);
+
+            Assert.False(batch.Items[1].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedByStrongerClaim, batch.Items[1].ReconciliationDisposition);
+            Assert.Equal(2, batch.Items[1].Result.AgreedProviders.Count);
+        }
+
+        [Fact]
+        public async Task ResolveBatchAsync_LlmConsensusContention_TiedQuorumDeclinesBothAsAmbiguous()
+        {
+            // Issue #268: pure-LLM contention with an equal AgreedProviders vote count on both sides
+            // (voteMargin == 0) must decline all claimants as ambiguous, mirroring the all-heuristic
+            // tie behavior, rather than picking ranked[0] as an arbitrary winner.
+            var first = Element("Button", "Save", "a-live");
+            var second = Element("Button", "Save", "b-live");
+
+            var lowConfidence1 = Element("Button", "Save", "old-1");
+            var lowConfidence2 = Element("Button", "Save", "old-2");
+
+            var providerA = new SelectiveVoteProvider("Alpha", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+            var providerB = new SelectiveVoteProvider("Beta", new Dictionary<string, string> { { "old-1", "c0" }, { "old-2", "c0" } });
+
+            var batch = await SelfHealingResolver.ResolveBatchAsync(
+                new[]
+                {
+                    new BatchHealingRequest("tied.one", lowConfidence1),
+                    new BatchHealingRequest("tied.two", lowConfidence2),
+                },
+                Tree(first, second),
+                new ILlmHealingProvider[] { providerA, providerB },
+                log: _ => { });
+
+            Assert.Equal(1, batch.ContestedCandidateCount);
+            Assert.Equal(2, batch.ReconciliationDeclineCount);
+
+            Assert.False(batch.Items[0].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, batch.Items[0].ReconciliationDisposition);
+            Assert.Equal(2, batch.Items[0].Result.AgreedProviders.Count);
+
+            Assert.False(batch.Items[1].Result.IsConfident);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedAmbiguousContention, batch.Items[1].ReconciliationDisposition);
+            Assert.Equal(2, batch.Items[1].Result.AgreedProviders.Count);
+        }
+
+        [Fact]
         public void ResolveBatch_DuplicateLocatorKeysFailBeforeResolution()
         {
             var expected = Element("Button", "Save", "old-save");
@@ -287,6 +454,48 @@ namespace ScenarioRunner
                     MatchedCandidateId = _candidateId,
                     Confidence = _confidence,
                     Reasoning = "fixed vote",
+                    AttemptCount = 1,
+                });
+            }
+        }
+
+        private sealed class SelectiveVoteProvider : ILlmHealingProvider
+        {
+            private readonly IReadOnlyDictionary<string, string> _votesByAutomationId;
+
+            public SelectiveVoteProvider(string name, IReadOnlyDictionary<string, string> votesByAutomationId)
+            {
+                Name = name;
+                _votesByAutomationId = votesByAutomationId;
+            }
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                if (expected.AutomationId != null && _votesByAutomationId.TryGetValue(expected.AutomationId, out var candidateId))
+                {
+                    return Task.FromResult(new LlmHealingResult
+                    {
+                        ProviderName = Name,
+                        Success = true,
+                        MatchedCandidateId = candidateId,
+                        Confidence = 0.9,
+                        Reasoning = "selective vote match",
+                        AttemptCount = 1,
+                    });
+                }
+
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = false,
+                    ErrorMessage = "No vote mapped",
                     AttemptCount = 1,
                 });
             }
