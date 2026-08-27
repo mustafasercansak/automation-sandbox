@@ -53,11 +53,10 @@ has utility `0`; an accepted claim's assignment utility is its structural candid
 For every candidate:
 
 - one accepted claimant is preserved;
-- when the leading claim exceeds the runner-up by at least `MinimumCandidateMargin`, the
-  leader wins and the remaining claims are declined;
-- when that ownership margin is smaller, every claimant is declined for manual review;
-- ordinal locator-key ordering makes output and diagnostics deterministic, but never breaks
-  an ambiguous tie.
+- when all contending claims are heuristic-sourced and the leading claim exceeds the runner-up by at least `MinimumCandidateMargin`, the leader wins and the remaining claims are declined;
+- when all contending claims are LLM-consensus-sourced and one claim has strictly more agreeing providers, the higher-quorum claim wins;
+- when contending claims have mixed sources (heuristic vs. LLM consensus) or when the ownership margin is insufficient or tied, every claimant is declined for manual review (`ownership-conflict`);
+- ordinal locator-key ordering makes output and diagnostics deterministic, but never breaks an ambiguous tie.
 
 This is top-claim ownership reconciliation, not a global runner-up optimizer. That narrower
 objective is deliberate: the frozen #141/#143 dataset showed it could remove contested
@@ -124,11 +123,10 @@ Eşleşmemenin utility değeri `0`, kabul edilmiş talebin atama utility değeri
 skorudur. Her aday için:
 
 - tek kabul edilmiş talep korunur;
-- lider talep runner-up'ı en az `MinimumCandidateMargin` kadar geçerse lider kazanır ve
-  kalan talepler reddedilir;
-- sahiplik marjı daha küçükse tüm talepler manuel incelemeye bırakılır;
-- ordinal locator-key sırası çıktı ve tanıları deterministik yapar, fakat belirsiz eşitliği
-  çözmek için kullanılmaz.
+- tüm tartışmalı talepler sezgisel kaynaklı olduğunda ve lider talep runner-up'ı en az `MinimumCandidateMargin` kadar geçerse lider kazanır ve kalan talepler reddedilir;
+- tüm tartışmalı talepler LLM uzlaşı kaynaklı olduğunda ve bir talep kesin olarak daha fazla onaylayan sağlayıcıya sahipse yüksek uzlaşılı talep kazanır;
+- tartışmalı talepler karışık kaynaklı olduğunda (sezgisel ve LLM uzlaşısı) veya sahiplik marjı yetersiz ya da eşit olduğunda tüm talepler manuel incelemeye bırakılır (`ownership-conflict`);
+- ordinal locator-key sırası çıktı ve tanıları deterministik yapar, fakat belirsiz eşitliği çözmek için kullanılmaz.
 
 Bu davranış global bir runner-up optimizasyonu değil, yalnızca top-claim sahiplik
 uzlaştırmasıdır. #141/#143 sabit veri kümesinde yeni kabul edilmiş eşleşme üretmeden
