@@ -171,6 +171,22 @@ jobs:
         shell: pwsh
         run: ./samples/PlaywrightEndToEndQuickstart/verify.ps1
 
+  calibration-cli:
+    name: Calibration CLI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run calibration CLI verification
+        shell: pwsh
+        run: ./samples/CalibrationCli/verify.ps1
+
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest
@@ -197,7 +213,7 @@ jobs:
 
   build-and-test:
     name: build-and-test
-    needs: [test, nuget-consumer, docs-build-preview]
+    needs: [test, nuget-consumer, calibration-cli, docs-build-preview]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -211,9 +227,13 @@ jobs:
             echo "NuGet consumer verification failed: ${{ needs.nuget-consumer.result }}"
             exit 1
           fi
+          if [ "${{ needs.calibration-cli.result }}" != "success" ]; then
+            echo "Calibration CLI verification failed: ${{ needs.calibration-cli.result }}"
+            exit 1
+          fi
           if [ "${{ needs.docs-build-preview.result }}" != "success" ]; then
             echo "Docs build preview verification failed: ${{ needs.docs-build-preview.result }}"
             exit 1
           fi
-          echo "All matrix test jobs, NuGet consumer, and docs build verification passed."
+          echo "All matrix test jobs, NuGet consumer, Calibration CLI, and docs build verification passed."
 
