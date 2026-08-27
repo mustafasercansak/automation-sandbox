@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LlmHealing;
@@ -10,6 +12,24 @@ using UiModel;
 
 namespace ScenarioRunner
 {
+    public sealed class AblationRunMetricsExport
+    {
+        public string DatasetName { get; set; } = "";
+        public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
+        public int TotalScenarios { get; set; }
+        public int SuccessorScenarios { get; set; }
+        public int RemovalScenarios { get; set; }
+        public double Precision { get; set; }
+        public double AutoHealRecall { get; set; }
+        public double CompoundDriftRecall { get; set; }
+        public double FalseHealRate { get; set; }
+        public double ManualReviewRate { get; set; }
+        public int CorrectHeals { get; set; }
+        public int FalseHeals { get; set; }
+        public int MissedHeals { get; set; }
+        public int CorrectDeclines { get; set; }
+        public int FalseHealsOnRemoved { get; set; }
+    }
     // What the engine did with a scenario whose correct answer is known.
     public enum AblationOutcome
     {
@@ -200,6 +220,51 @@ namespace ScenarioRunner
         // providers naming the same candidate. Below this there is nothing to agree or disagree
         // about, so the scenario yields no measurement either way.
         public const int MinimumProvidersForConsensus = 2;
+
+        public static AblationRunMetricsExport CreateMetricsExport(AblationRunReport report, string datasetName)
+        {
+            if (report == null)
+            {
+                throw new ArgumentNullException(nameof(report));
+            }
+
+            var m = report.Metrics;
+            var compoundScenarios = report.Results.Where(r => r.MutationKind == LocatorMutationKind.CompoundDrift).ToList();
+            var compoundCorrect = compoundScenarios.Count(r => r.Outcome == AblationOutcome.CorrectHeal);
+            var compoundRecall = compoundScenarios.Count == 0 ? 0.0 : (double)compoundCorrect / compoundScenarios.Count;
+
+            return new AblationRunMetricsExport
+            {
+                DatasetName = datasetName,
+                TimestampUtc = DateTime.UtcNow,
+                TotalScenarios = report.Results.Count,
+                SuccessorScenarios = m.SuccessorScenarios,
+                RemovalScenarios = m.RemovalScenarios,
+                Precision = m.Precision,
+                AutoHealRecall = m.AutoHealRecall,
+                CompoundDriftRecall = compoundRecall,
+                FalseHealRate = m.FalseHealRate,
+                ManualReviewRate = m.ManualReviewRate,
+                CorrectHeals = m.CorrectHeals,
+                FalseHeals = m.FalseHeals,
+                MissedHeals = m.MissedHeals,
+                CorrectDeclines = m.CorrectDeclines,
+                FalseHealsOnRemoved = m.FalseHealsOnRemoved
+            };
+        }
+
+        public static string EmitMetricsArtifact(AblationRunReport report, string datasetName, string? directory = null)
+        {
+            var export = CreateMetricsExport(report, datasetName);
+            var envDir = Environment.GetEnvironmentVariable("ABLATION_METRICS_OUTPUT_DIR");
+            var dir = directory ?? (!string.IsNullOrEmpty(envDir) ? envDir : Path.Combine(AppContext.BaseDirectory, "TestResults"));
+            Directory.CreateDirectory(dir);
+            var safeName = datasetName.Replace(" ", "_").Replace(".", "_").ToLowerInvariant();
+            var jsonPath = Path.Combine(dir, $"ablation-metrics-{safeName}.json");
+            var json = JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(jsonPath, json);
+            return jsonPath;
+        }
 
         public static AblationRunReport Run(
             LocatorAblationDataset dataset,

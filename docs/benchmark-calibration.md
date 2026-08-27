@@ -170,6 +170,14 @@ Console.WriteLine(report.ToMarkdownReport());
 
 The calibrator evaluates synthetic perturbations (renames, label drifts, position shifts, removals) against the UI tree and outputs a decision summary recommending the optimal profile.
 
+##### Continuous CI Telemetry Tracking
+
+To prevent accuracy and recall regressions from going unnoticed between benchmark runs, the CI pipeline (`.github/workflows/ci.yml`) automatically executes the benchmark ablation harnesses (`LocatorAblationTests` and `ShareXAblationTests`) and publishes telemetry metrics (`ablation-metrics-*.json` and step summaries) on every commit. The CI summary surfaces:
+- **Precision** and **False-Heal Rate** on surviving and deleted controls
+- **Auto-Heal Recall** and **Compound-Drift Recall**
+- **Manual Review Rate**
+- Full outcome distributions across HandBrake and ShareX benchmark suites.
+
 ---
 
 ### 5. Offline Absence Signal Investigation (#95)
@@ -687,6 +695,14 @@ Console.WriteLine(report.ToMarkdownReport());
 ```
 
 Kalibratör, UI ağacı üzerinde sentetik sapmaları (yeniden adlandırma, etiket kayması, konum kayması, silinme) değerlendirir ve en uygun profili öneren bir karar özeti üretir.
+
+##### Sürekli CI Telemetrisi Takibi
+
+Doğruluk ve recall regresyonlarının sürümler arasında fark edilmeden geçmesini önlemek için CI işlem hattı (`.github/workflows/ci.yml`), benchmark ablasyon araçlarını (`LocatorAblationTests` ve `ShareXAblationTests`) her commit'te otomatik olarak çalıştırır ve telemetri metriklerini (`ablation-metrics-*.json` ve özet tabloları) yayınlar. CI özeti şunları yüzeye çıkarır:
+- Hayatta kalan ve silinen kontrollerde **Kesinlik** ve **Yanlış İyileştirme Oranı**
+- **Otomatik İyileştirme Kapsamı** ve **Bileşik Kayma Kapsamı**
+- **Manuel İnceleme Oranı**
+- HandBrake ve ShareX benchmark paketlerindeki tam sonuç dağılımı.
 
 ---
 
