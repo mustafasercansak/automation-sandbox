@@ -146,6 +146,31 @@ jobs:
         shell: pwsh
         run: ./samples/HeuristicHealingQuickstart/verify.ps1
 
+  playwright-sample:
+    name: Playwright End-to-End Sample
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      # Build once so the generated playwright.ps1 install script exists in the sample's
+      # own build output before verify.ps1 runs it via `dotnet run`.
+      - name: Build sample
+        run: dotnet build samples/PlaywrightEndToEndQuickstart --configuration Debug
+
+      - name: Install Playwright Chromium (one-time browser download for the sample's live run)
+        shell: pwsh
+        run: pwsh ./samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium
+
+      - name: Run sample verification
+        shell: pwsh
+        run: ./samples/PlaywrightEndToEndQuickstart/verify.ps1
+
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest

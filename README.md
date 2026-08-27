@@ -50,7 +50,9 @@ that outcome for review and does not persist the proposed locator.
 
 ---
 
-> 🚀 **First run:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
+> 🌐 **Try it Live (Web & Playwright):** Run the end-to-end browser sample (`dotnet run --project samples/PlaywrightEndToEndQuickstart`) demonstrating real Playwright live DOM capture, safe healing of a refactored button, and false-heal prevention on a deleted element across two app versions with interactive HTML reporting. See the [Playwright End-to-End Quickstart](samples/PlaywrightEndToEndQuickstart/README.md).
+
+> 🚀 **Published Package Quickstart:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
@@ -92,6 +94,7 @@ that outcome for review and does not persist the proposed locator.
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
 | **NuGet Preview Packaging** | ✅ Implemented | Seven validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
+| **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
 | **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
 | **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, and generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `Discovery.ApplicationConnector`. |
 | **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
