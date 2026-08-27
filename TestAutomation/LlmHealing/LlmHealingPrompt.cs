@@ -47,7 +47,7 @@ namespace LlmHealing
             var intentText = Sanitize(expected.TestIntent, textSanitizer);
             var intentHeader = string.IsNullOrWhiteSpace(intentText)
                 ? ""
-                : $"\n<test_intent>\nTEST INTENT (Goal of this test step):\n\"{intentText}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n</test_intent>\n";
+                : $"\n<test_intent>\nTEST INTENT (Goal of this test step):\n\"{EscapeForPromptTag(intentText!)}\"\nUse this intent to pick the candidate that best fulfills this intended action even if names or labels were refactored.\n</test_intent>\n";
 
             return
 $@"You are diagnosing a broken UI test locator for a {effectivePlatform} application.
@@ -146,6 +146,12 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
                 positionScore = RoundOrNull(c.Components.PositionScore),
             },
         };
+
+        // intentText is spliced into intentHeader as raw text (unlike expectedForPrompt/candidatesJson,
+        // which are JSON-encoded and so already have '<'/'>' escaped by the default encoder). Without
+        // this, a TestIntent value containing a literal "</test_intent>" could close the boundary tag
+        // early and have the rest of its own text read back as trusted top-level prompt instructions.
+        private static string EscapeForPromptTag(string s) => s.Replace("<", "&lt;").Replace(">", "&gt;");
 
         private static string? Sanitize(string? s, Func<string, string>? textSanitizer)
         {

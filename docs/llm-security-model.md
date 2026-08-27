@@ -61,6 +61,11 @@ the bounding makes the remaining content anonymous or safe to disclose.
 
 The candidate-ID protocol, prompt boundary tags, and security directives form an **instruction/data separation and output-integrity boundary**. Untrusted DOM text is enclosed within `<target_element>`, `<candidate_shortlist>`, and `<test_intent>` XML tags, and guarded with explicit security directives prohibiting the LLM from executing or following instructions embedded inside element names or attributes. Furthermore, the Hallucination Guard strictly enforces that returned candidate IDs must belong to the pre-scored shortlist, and the multi-model consensus quorum requires independent agreement across multiple provider architectures.
 
+This boundary reduces the risk that embedded UI text hijacks locator selection, but it is
+not a disclosure control: every field sent in `<target_element>` and `<candidate_shortlist>`
+is still readable by each configured provider. Do not use LLM healing on screens whose
+captured fields cannot be disclosed to every configured provider.
+
 Independent agreement also remains a locator-selection quorum—not a security review,
 fact check, or correctness guarantee. The measured limitations are documented in the
 [benchmark guide](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97).
@@ -191,6 +196,11 @@ maskeleme ne de bu sınırlama kalan içeriği anonim veya açıklanması güven
 | Sağlayıcı çalışmayı bekletir veya rate limit uygular | Sınırlı retry ile deneme/operasyon timeout'ları çağrının resolver'ı ne kadar süre meşgul edeceğini sınırlar. [Sağlayıcı rehberindeki](llm-providers.md) “Zaman Aşımı ve Dayanıklılık” bölümüne bakın. | Gizlilik. Her retry prompt'u yeniden gönderir ve bu kontroller sağlayıcı retention politikasını değiştirmez. |
 
 Aday-kimliği protokolü, prompt sınır etiketleri ve güvenlik direktifleri bir **talimat/veri ayrımı ve çıktı bütünlüğü sınırı** oluşturur. Güvenilmeyen DOM metni `<target_element>`, `<candidate_shortlist>` ve `<test_intent>` XML etiketleri içine alınır ve LLM'in eleman adları veya öznitelikleri içine gömülmüş talimatları yürütmesini ya da takip etmesini engelleyen açık güvenlik direktifleriyle korunur. Ayrıca Hallucination Guard, döndürülen aday kimliklerinin önceden skorlanmış aday listesine ait olmasını zorunlu kılar ve çoklu model uzlaşma quorum'u birden fazla sağlayıcı mimarisinde bağımsız anlaşma gerektirir.
+
+Bu sınır, gömülü UI metninin locator seçimini ele geçirme riskini azaltır; ancak bir ifşa
+kontrolü değildir: `<target_element>` ve `<candidate_shortlist>` içinde gönderilen her alan
+yapılandırılmış her sağlayıcı tarafından hâlâ okunabilir. Yakalanan alanları tüm
+yapılandırılmış sağlayıcılara açıklayamayacağınız ekranlarda LLM healing kullanmayın.
 
 Bağımsız uzlaşma da yalnızca locator seçimi quorum'udur; güvenlik incelemesi, doğrulama
 veya doğruluk garantisi değildir. Ölçülmüş sınırlar [benchmark rehberinde](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)
