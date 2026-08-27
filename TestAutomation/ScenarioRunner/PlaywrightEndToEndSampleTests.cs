@@ -56,7 +56,7 @@ namespace ScenarioRunner
             var v1Dom = await explorer.CaptureAsync(new Uri(_v1HtmlPath).AbsoluteUri);
             var v1Tree = WebElementMapper.ToUiElementTree(v1Dom);
 
-            var v1Elements = Flatten(v1Tree).ToList();
+            var v1Elements = v1Tree.Flatten().ToList();
             var v1CheckoutBtn = Assert.Single(v1Elements, e => e.AutomationId == "checkout-btn");
             var v1ApplyPromoBtn = Assert.Single(v1Elements, e => e.AutomationId == "apply-promo-btn");
 
@@ -129,18 +129,6 @@ namespace ScenarioRunner
             }
 
             throw new InvalidOperationException("Could not find repository root directory.");
-        }
-
-        private static System.Collections.Generic.IEnumerable<UiElementInfo> Flatten(UiElementInfo node)
-        {
-            yield return node;
-            foreach (var child in node.Children)
-            {
-                foreach (var descendant in Flatten(child))
-                {
-                    yield return descendant;
-                }
-            }
         }
     }
 }

@@ -26,6 +26,13 @@ Bu .NET 8 console örneği, `Microsoft.Playwright` .NET SDK kullanarak gerçek b
 
 ## How to run / Nasıl çalıştırılır
 
+This sample launches a real headless Chromium via the `Microsoft.Playwright` .NET SDK.
+If browsers aren't already cached on your machine, do a one-time download first (after
+a Debug build): `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+/ Bu örnek, `Microsoft.Playwright` .NET SDK'sı üzerinden gerçek bir headless Chromium
+başlatır. Tarayıcılar makinenizde önbelleğe alınmamışsa, önce (bir Debug build sonrası)
+tek seferlik bir indirme yapın: `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+
 Single command from repository root / Depo kökünden tek bir komutla:
 
 ```bash

@@ -22,8 +22,14 @@ internal static class Program
 
         if (!File.Exists(v1Path) || !File.Exists(v2Path))
         {
-            v1Path = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "v1.html"));
-            v2Path = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "v2.html"));
+            // wwwroot is copied next to the built assembly by the project's CopyToOutputDirectory
+            // item (PlaywrightEndToEndQuickstart.csproj). Directory.GetCurrentDirectory() is the
+            // invoker's shell cwd, not the project directory - under `dotnet run --project`, run
+            // from the repo root as the README instructs, it never matches baseDir, so retrying
+            // there cannot recover a missing/stale build output. Fail with an actionable message.
+            throw new FileNotFoundException(
+                $"Could not find wwwroot/v1.html and v2.html next to the built assembly ({baseDir}). " +
+                "Rebuild the sample first: dotnet build samples/PlaywrightEndToEndQuickstart");
         }
 
         var reportJsonPath = Path.Combine(Directory.GetCurrentDirectory(), "healing-report.json");
@@ -46,7 +52,7 @@ internal static class Program
             var v1Tree = WebElementMapper.ToUiElementTree(v1Dom);
 
             // Locate v1 controls to store in baseline repository
-            var v1Flattened = Flatten(v1Tree).ToList();
+            var v1Flattened = v1Tree.Flatten().ToList();
             var v1CheckoutBtn = v1Flattened.FirstOrDefault(e => e.AutomationId == "checkout-btn")
                 ?? throw new InvalidOperationException("Could not find checkout-btn in v1 DOM.");
             var v1ApplyPromoBtn = v1Flattened.FirstOrDefault(e => e.AutomationId == "apply-promo-btn")
@@ -88,11 +94,9 @@ internal static class Program
 
             // Record both results into the healing report
             var outcomeSubmit = HealingReportEntry.OutcomeFromResolutionStatus(submitItem.Result.ResolutionStatus);
-            var outcomePromo = submitItem.Result.RejectedByReconciliation
+            var outcomePromo = promoItem.Result.RejectedByReconciliation
                 ? HealingReportEntry.OwnershipConflictOutcome
-                : (promoItem.Result.RejectedByReconciliation
-                    ? HealingReportEntry.OwnershipConflictOutcome
-                    : HealingReportEntry.OutcomeFromResolutionStatus(promoItem.Result.ResolutionStatus));
+                : HealingReportEntry.OutcomeFromResolutionStatus(promoItem.Result.ResolutionStatus);
 
             reportSink.Record(HealingReportEntry.FromResolutionAttempt(
                 "Checkout.SubmitButton",
@@ -105,7 +109,7 @@ internal static class Program
                 "Checkout.ApplyPromoButton",
                 v1ApplyPromoBtn,
                 promoItem.Result,
-                promoItem.Result.RejectedByReconciliation ? HealingReportEntry.OwnershipConflictOutcome : HealingReportEntry.OutcomeFromResolutionStatus(promoItem.Result.ResolutionStatus),
+                outcomePromo,
                 platform: "web-playwright"));
 
             // Verify Step A: Moved/Renamed button safely healed
@@ -152,18 +156,6 @@ internal static class Program
             Console.WriteLine(ex.StackTrace);
             Console.ResetColor();
             return 1;
-        }
-    }
-
-    private static System.Collections.Generic.IEnumerable<UiElementInfo> Flatten(UiElementInfo node)
-    {
-        yield return node;
-        foreach (var child in node.Children)
-        {
-            foreach (var descendant in Flatten(child))
-            {
-                yield return descendant;
-            }
         }
     }
 }
