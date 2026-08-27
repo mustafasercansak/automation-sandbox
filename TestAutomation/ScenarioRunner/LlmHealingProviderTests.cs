@@ -1140,6 +1140,119 @@ namespace ScenarioRunner
             }
         }
 
+        [Fact]
+        public async Task CustomProvider_DirectImplementation_RespectsHallucinationGuardAndQuorum()
+        {
+            var customProvider1 = new SampleCustomProvider("CustomA", "c0", 0.95);
+            var customProvider2 = new SampleCustomProvider("CustomB", "c0", 0.90);
+
+            var treeRoot = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "txtEmailRenamed",
+                        Name = "Email",
+                        ParentControlType = "Window",
+                        SiblingIndex = 2,
+                        SiblingCount = 7,
+                        BoundingRectangle = new BoundingRectangle(112, 70, 200, 23)
+                    }
+                }
+            };
+
+            var healResult = await SelfHealingResolver.ResolveAsync(
+                Expected,
+                treeRoot,
+                llmProviders: new[] { customProvider1, customProvider2 },
+                weights: new SimilarityWeights { MinimumConfidence = 0.99 }, // force LLM fallback
+                log: _ => { });
+
+            Assert.True(healResult.IsConfident);
+            Assert.Equal(HealSource.Llm, healResult.Source);
+            Assert.Equal("txtEmailRenamed", healResult.Matched?.AutomationId);
+            Assert.Contains("CustomA", healResult.AgreedProviders);
+            Assert.Contains("CustomB", healResult.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task CustomProvider_HallucinatedCandidate_IsFilteredBeforeCountingQuorum()
+        {
+            // Provider returns candidate "c99" which is not in the shortlist
+            var hallucinatingProvider = new SampleCustomProvider("HallucinatingProvider", "c99", 0.99);
+            var honestProvider = new SampleCustomProvider("HonestProvider", "c0", 0.90);
+
+            var treeRoot = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "txtEmailRenamed",
+                        Name = "Email",
+                        ParentControlType = "Window",
+                        SiblingIndex = 2,
+                        SiblingCount = 7,
+                        BoundingRectangle = new BoundingRectangle(112, 70, 200, 23)
+                    }
+                }
+            };
+
+            var healResult = await SelfHealingResolver.ResolveAsync(
+                Expected,
+                treeRoot,
+                llmProviders: new[] { hallucinatingProvider, honestProvider },
+                weights: new SimilarityWeights { MinimumConfidence = 0.99 },
+                log: _ => { });
+
+            // Quorum of 2 failed because hallucinated vote was discarded
+            Assert.Equal(HealResolutionStatus.NoConsensus, healResult.ResolutionStatus);
+            Assert.False(healResult.IsConfident);
+        }
+
+        private sealed class SampleCustomProvider : ILlmHealingProvider
+        {
+            private readonly string _candidateToReturn;
+            private readonly double _confidence;
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public SampleCustomProvider(string name, string candidateToReturn, double confidence)
+            {
+                Name = name;
+                _candidateToReturn = candidateToReturn;
+                _confidence = confidence;
+            }
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                // Verify candidates shortlist is non-empty
+                var matched = candidates.FirstOrDefault(c => c.CandidateId == _candidateToReturn);
+                var validCandidateId = matched != null ? _candidateToReturn : null;
+
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = validCandidateId,
+                    Confidence = _confidence,
+                    Reasoning = "Custom heuristics matched target element."
+                });
+            }
+        }
+
         private sealed class FakeProvider : ILlmHealingProvider
         {
             private readonly Action _onResolve;

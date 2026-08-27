@@ -179,6 +179,144 @@ Choose a model family different from the other voters. Two endpoints serving the
 
 `OpenAiHealingProvider` also supports other OpenAI-compatible endpoints such as Azure OpenAI, vLLM, and LM Studio. GitHub Models is not an option: its inference API was fully retired on July 30, 2026.
 
+### 🛠️ Custom LLM Providers (`ILlmHealingProvider` / `HttpLlmHealingProvider`)
+
+If you want to integrate a proprietary internal model, a cloud vendor without an OpenAI-compatible interface, or a custom heuristic-AI pipeline, you can implement `ILlmHealingProvider` directly or subclass `HttpLlmHealingProvider`.
+
+#### 1. Option A: Subclassing `HttpLlmHealingProvider` (Recommended for REST Endpoints)
+
+`HttpLlmHealingProvider` encapsulates constructor parameter validation, retry with exponential backoff (`LlmHttpTransport`), transient error detection (HTTP 429/500s), per-attempt and total timeout ceilings, text sanitization, prompt construction (`LlmHealingPrompt.BuildPrompt`), and the **Hallucination Guard**.
+
+You only need to supply `CreateRequest` and `ExtractText`:
+
+```csharp
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using LlmHealing;
+
+public sealed class CustomApiHealingProvider : HttpLlmHealingProvider
+{
+    private readonly string _endpoint;
+    private readonly string? _apiKey;
+
+    public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+    protected override string UnavailableErrorMessage => "CUSTOM_API_KEY environment variable is not configured.";
+
+    public CustomApiHealingProvider(
+        string endpoint = "https://ai.internal.corp/v1/heal",
+        string? apiKey = null,
+        string? name = null)
+        : base(
+            defaultName: "InternalAi",
+            defaultTimeout: TimeSpan.FromSeconds(15),
+            defaultTotalTimeout: TimeSpan.FromSeconds(35),
+            name: name)
+    {
+        _endpoint = endpoint;
+        _apiKey = apiKey ?? Environment.GetEnvironmentVariable("CUSTOM_API_KEY");
+    }
+
+    protected override HttpRequestMessage CreateRequest(string prompt)
+    {
+        var payload = JsonSerializer.Serialize(new { prompt = prompt });
+        var request = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        }
+        return request;
+    }
+
+    protected override string ExtractText(string responseBody)
+    {
+        using var doc = JsonDocument.Parse(responseBody);
+        // Extracts the raw JSON text containing {"candidateId": "c0", "confidence": 0.95, "reasoning": "..."}
+        return doc.RootElement.GetProperty("reply").GetString() ?? string.Empty;
+    }
+}
+```
+
+#### 2. Option B: Direct Implementation of `ILlmHealingProvider`
+
+For non-HTTP models, local in-process models (e.g. ONNX runtime), or custom agent frameworks, implement `ILlmHealingProvider` directly:
+
+```csharp
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LlmHealing;
+using UiModel;
+
+public sealed class MyLocalModelProvider : ILlmHealingProvider
+{
+    public string Name => "MyLocalModel";
+    public bool IsAvailable => true;
+
+    public Task<LlmHealingResult> ResolveAsync(
+        UiElementInfo expected,
+        IReadOnlyList<CandidateScore> candidates,
+        string? platform = null,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. Evaluate your model on the shortlist:
+        var chosenId = "c0"; // e.g. from local model inference
+
+        // 2. Hallucination Guard Contract:
+        // Must match an existing CandidateId from the provided candidate shortlist!
+        var validCandidate = candidates.FirstOrDefault(c => c.CandidateId == chosenId);
+
+        if (validCandidate == null)
+        {
+            return Task.FromResult(new LlmHealingResult
+            {
+                ProviderName = Name,
+                Success = false,
+                ErrorMessage = "Model returned candidateId outside shortlist."
+            });
+        }
+
+        return Task.FromResult(new LlmHealingResult
+        {
+            ProviderName = Name,
+            Success = true,
+            MatchedCandidateId = validCandidate.CandidateId,
+            Confidence = 0.92,
+            Reasoning = "Matched control type and layout position."
+        });
+    }
+}
+```
+
+#### 3. Hallucination Guard Contract & Quorum Rules
+
+1. **Shortlist Candidate IDs (`c0`, `c1`, ...):** The engine passes a synthetic shortlist where candidates are identified solely by opaque candidate IDs (`c0`, `c1`, ...). The provider must return one of these IDs in `MatchedCandidateId`.
+2. **Invalid IDs are Discarded:** If a provider hallucinates an ID that is not present in the candidate shortlist (or returns an unparseable response), its vote is marked invalid and discarded without failing other providers' votes.
+3. **Quorum Requirement:** LLM healing acceptance requires at least **two** independent providers to agree on the same `CandidateId`. A single custom provider will have its verdict recorded in reports and telemetry, but will safely fallback to the heuristic outcome unless paired with a second independent provider.
+
+#### 4. Registering Custom Providers
+
+Pass custom providers directly to `SelfHealingResolver.ResolveAsync`, `SelfHealingEngine`, or `SelfHealingTestFixture`:
+
+```csharp
+// Combine custom provider with built-in discovered providers:
+var providers = LlmProviderFactory.CreateConfiguredProviders().ToList();
+providers.Add(new CustomApiHealingProvider(apiKey: "secret-token"));
+
+// Use in SelfHealingEngine:
+var engine = new SelfHealingEngine(repository, llmProviders: providers);
+
+// Or in SelfHealingTestFixture:
+var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
+{
+    LlmProviders = providers
+});
+```
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -321,3 +459,141 @@ Oluşan sağlayıcının adı `Cloudflare`, uç noktası `https://api.cloudflare
 Diğer oy verenlerden farklı bir model ailesi seçin. Aynı temel modeli sunan iki uç nokta bağımsız mutabakat oluşturmaz. Ücretsiz kota düşük hacimli nightly veya manuel değerlendirmeye uygundur; her PR için garantili release gate olarak kullanılmamalıdır.
 
 `OpenAiHealingProvider`, Azure OpenAI, vLLM ve LM Studio gibi diğer OpenAI uyumlu uç noktaları da destekler. GitHub Models artık seçenek değildir: inference API 30 Temmuz 2026 tarihinde tamamen kapatılmıştır.
+
+### 🛠️ Özel Yapay Zeka Sağlayıcıları (`ILlmHealingProvider` / `HttpLlmHealingProvider`)
+
+Kurum içi özel bir modeli, OpenAI uyumlu olmayan bir bulut sağlayıcısını veya kendi AI/akıl yürütme motorunuzu entegre etmek istiyorsanız, doğrudan `ILlmHealingProvider` arayüzünü uygulayabilir veya `HttpLlmHealingProvider` sınıfından türetebilirsiniz.
+
+#### 1. A Seçeneği: `HttpLlmHealingProvider` Taban Sınıfını Genişletme (REST Uç Noktaları İçin Önerilen)
+
+`HttpLlmHealingProvider`, parametre doğrulamalarını, `LlmHttpTransport` ile üstel geri çekilmeli yeniden denemeleri (retry), geçici HTTP 429/500 hata ayrımını, zaman aşımı tavanlarını, hassas veri maskelemeyi (`TextSanitizer`), prompt üretimini (`LlmHealingPrompt.BuildPrompt`) ve **Hallucination Guard (Halüsinasyon Koruması)** mantığını otomatik olarak yönetir.
+
+Yalnızca `CreateRequest` ve `ExtractText` metodlarını tanımlamanız yeterlidir:
+
+```csharp
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using LlmHealing;
+
+public sealed class CustomApiHealingProvider : HttpLlmHealingProvider
+{
+    private readonly string _endpoint;
+    private readonly string? _apiKey;
+
+    public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+    protected override string UnavailableErrorMessage => "CUSTOM_API_KEY ortam değişkeni tanımlı değil.";
+
+    public CustomApiHealingProvider(
+        string endpoint = "https://ai.internal.corp/v1/heal",
+        string? apiKey = null,
+        string? name = null)
+        : base(
+            defaultName: "InternalAi",
+            defaultTimeout: TimeSpan.FromSeconds(15),
+            defaultTotalTimeout: TimeSpan.FromSeconds(35),
+            name: name)
+    {
+        _endpoint = endpoint;
+        _apiKey = apiKey ?? Environment.GetEnvironmentVariable("CUSTOM_API_KEY");
+    }
+
+    protected override HttpRequestMessage CreateRequest(string prompt)
+    {
+        var payload = JsonSerializer.Serialize(new { prompt = prompt });
+        var request = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+        }
+        return request;
+    }
+
+    protected override string ExtractText(string responseBody)
+    {
+        using var doc = JsonDocument.Parse(responseBody);
+        // {"candidateId": "c0", "confidence": 0.95, "reasoning": "..."} içeren ham JSON metnini ayıklar
+        return doc.RootElement.GetProperty("reply").GetString() ?? string.Empty;
+    }
+}
+```
+
+#### 2. B Seçeneği: Doğrudan `ILlmHealingProvider` Arayüzünü Uygulama
+
+HTTP dışı modeller, işlem içi yerel modeller (ör. ONNX) veya özel ajan mimarileri için `ILlmHealingProvider` arayüzünü doğrudan uygulayabilirsiniz:
+
+```csharp
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LlmHealing;
+using UiModel;
+
+public sealed class MyLocalModelProvider : ILlmHealingProvider
+{
+    public string Name => "MyLocalModel";
+    public bool IsAvailable => true;
+
+    public Task<LlmHealingResult> ResolveAsync(
+        UiElementInfo expected,
+        IReadOnlyList<CandidateScore> candidates,
+        string? platform = null,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. Modelinizi aday listesi üzerinde çalıştırın:
+        var chosenId = "c0"; // ör. yerel model çıkarımından gelen sonuç
+
+        // 2. Hallucination Guard (Halüsinasyon Koruması) Sözleşmesi:
+        // Yalnızca aday listesinde bulunan geçerli bir CandidateId döndürülmelidir!
+        var validCandidate = candidates.FirstOrDefault(c => c.CandidateId == chosenId);
+
+        if (validCandidate == null)
+        {
+            return Task.FromResult(new LlmHealingResult
+            {
+                ProviderName = Name,
+                Success = false,
+                ErrorMessage = "Model aday listesi dışından geçersiz bir CandidateId döndürdü."
+            });
+        }
+
+        return Task.FromResult(new LlmHealingResult
+        {
+            ProviderName = Name,
+            Success = true,
+            MatchedCandidateId = validCandidate.CandidateId,
+            Confidence = 0.92,
+            Reasoning = "Kontrol türü ve düzen konumu eşleşti."
+        });
+    }
+}
+```
+
+#### 3. Hallucination Guard ve Uzlaşma (Quorum) Kuralları
+
+1. **Aday Listesi ID'leri (`c0`, `c1`, ...):** Motor, adayları yalnızca sentetik kimliklerle (`c0`, `c1`, ...) tanımlayan sınırlandırılmış bir liste iletir. Sağlayıcı `MatchedCandidateId` alanında bu ID'lerden birini döndürmelidir.
+2. **Geçersiz ID'ler Elenir:** Bir sağlayıcı listede olmayan hayali bir ID döndürürse veya yanıt ayrıştırılamazsa, o sağlayıcının oyu geçersiz sayılıp elenir; diğer sağlayıcıların oyları bundan etkilenmez.
+3. **Uzlaşma Şartı:** LLM iyileştirmesinin kabul edilmesi için en az **iki** bağımsız sağlayıcının aynı `CandidateId` üzerinde anlaşması gerekir. Tek bir özel sağlayıcı telemetriye kaydedilir fakat uzlaşma için ikinci bir sağlayıcıyla eşleştirilmedikçe güvenli olarak sezgisel sonuca geri döner.
+
+#### 4. Özel Sağlayıcıları Kaydetme ve Kullanma
+
+Özel sağlayıcıları `SelfHealingResolver.ResolveAsync`, `SelfHealingEngine` veya `SelfHealingTestFixture` içine doğrudan parametre olarak verebilirsiniz:
+
+```csharp
+// Yerleşik sağlayıcılar ile özel sağlayıcıyı birleştirme:
+var providers = LlmProviderFactory.CreateConfiguredProviders().ToList();
+providers.Add(new CustomApiHealingProvider(apiKey: "secret-token"));
+
+// SelfHealingEngine ile kullanım:
+var engine = new SelfHealingEngine(repository, llmProviders: providers);
+
+// Veya SelfHealingTestFixture ile kullanım:
+var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
+{
+    LlmProviders = providers
+});
+```
