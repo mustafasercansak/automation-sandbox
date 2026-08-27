@@ -337,7 +337,7 @@ namespace ScenarioRunner
         [InlineData("tab", "TabItem")]
         [InlineData("tablist", "Tab")]
         [InlineData("tabpanel", "Pane")]
-        [InlineData("table", "Table")]
+        [InlineData("table", "DataGrid")]
         [InlineData("grid", "DataGrid")]
         [InlineData("menuitem", "MenuItem")]
         [InlineData("menubar", "MenuBar")]
@@ -345,6 +345,9 @@ namespace ScenarioRunner
         [InlineData("treeitem", "TreeItem")]
         [InlineData("toolbar", "ToolBar")]
         [InlineData("tooltip", "ToolTip")]
+        [InlineData("switch", "CheckBox")]
+        [InlineData("form", "Group")]
+        [InlineData("navigation", "Group")]
         public void WebElementMapper_MapsAriaRolesToCanonicalUiaControlTypes(string ariaRole, string expectedControlType)
         {
             var webElement = new WebElementInfo
