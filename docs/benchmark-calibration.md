@@ -141,6 +141,35 @@ xychart-beta
 > [!NOTE]
 > **Why Blindly Setting 0.95 is Counterproductive:** Moving `MinimumConfidence` from `0.90` to `0.95` eliminates the final 2 false heals ($3 \rightarrow 1$), but at the expense of sacrificing 11 true heals ($52 \rightarrow 41$), forcing three-quarters of all locators into manual human review ($76.1\%$). This is why the engine avoids hardcoding an arbitrary high threshold: the optimal operating point depends directly on each team's tolerance for false positives vs. manual review burden.
 
+#### Preset Profiles & Application Tree Calibration
+
+To simplify choosing an operating point without manually tuning individual weights, the engine provides named **`ThresholdProfile`** presets and an automated tree calibrator:
+
+| Profile | Target Use Case | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` |
+| :--- | :--- | :---: | :---: | :---: |
+| **`Balanced`** (Recommended) | Default production baseline balancing high auto-heal recall ($>75\%$) with strong false-positive suppression. | `0.75` | `0.05` | `0.40` |
+| **`Conservative`** | High-consequence or regulated suites where false-green test executions must be strictly minimized. | `0.90` | `0.08` | `0.50` |
+| **`Aggressive`** | Rapid exploratory automation or suites with sparse sibling ambiguity prioritizing automated recovery. | `0.50` | `0.03` | `0.30` |
+
+```csharp
+// Using preset profiles with SelfHealingEngine
+var engine = SelfHealingEngine.Create(ThresholdProfile.Balanced);
+
+// Or via SimilarityWeights directly
+var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
+```
+
+##### Per-Application Calibration Command
+
+Because UI structure differs between applications (e.g. dense tabular layouts vs sparse forms), you can run synthetic calibration directly on any captured `UiElementInfo` tree:
+
+```csharp
+var report = TreeCalibrator.Calibrate(capturedTree, applicationName: "MyApp");
+Console.WriteLine(report.ToMarkdownReport());
+```
+
+The calibrator evaluates synthetic perturbations (renames, label drifts, position shifts, removals) against the UI tree and outputs a decision summary recommending the optimal profile.
+
 ---
 
 ### 5. Offline Absence Signal Investigation (#95)
@@ -629,6 +658,35 @@ xychart-beta
 
 > [!NOTE]
 > **Neden Körlemesine 0.95 Seçilmemelidir:** Eşik $0.90$'dan $0.95$'e çıkarıldığında, son 2 yanlış iyileştirme elenir ($3 \rightarrow 1$), ancak bunun bedeli $11$ doğru iyileştirmenin feda edilmesidir ($52 \rightarrow 41$) ve geçerli locator'ların dörtte üçünden fazlası insan incelemesine yönlendirilir ($\%76.1$). Bu nedenle motor tek bir katı eşik dayatmaz; en uygun çalışma noktası ekibin yanlış pozitif toleransı ile manuel inceleme yükü arasındaki tercihe bağlıdır.
+
+#### Hazır Eşik Profilleri ve Ağaç Kalibrasyonu
+
+Bireysel ağırlıkları elle ayarlamak zorunda kalmadan çalışma noktası seçmeyi kolaylaştırmak için motor hazır **`ThresholdProfile`** preset'leri ve otomatik ağaç kalibratörü sunar:
+
+| Profil | Hedef Kullanım Senaryosu | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` |
+| :--- | :--- | :---: | :---: | :---: |
+| **`Balanced`** (Önerilen) | Yüksek otomatik iyileştirme kapsamı ($>\%75$) ile güçlü yanlış pozitif baskılamasını dengeleyen varsayılan üretim temeli. | `0.75` | `0.05` | `0.40` |
+| **`Conservative`** | Yanlış yeşil (false-green) test çalıştırmalarının kesinlikle en aza indirilmesi gereken kritik veya regüle edilmiş test paketleri. | `0.90` | `0.08` | `0.50` |
+| **`Aggressive`** | Otomatik kurtarmayı önceliklendiren hızlı keşif otomasyonu veya seyrek kardeş belirsizliği olan arayüzler. | `0.50` | `0.03` | `0.30` |
+
+```csharp
+// Hazır profilleri SelfHealingEngine ile kullanma
+var engine = SelfHealingEngine.Create(ThresholdProfile.Balanced);
+
+// Veya doğrudan SimilarityWeights üzerinden
+var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
+```
+
+##### Uygulama Bazlı Kalibrasyon Komutu
+
+Uygulamalar arasındaki UI yapıları farklılık gösterdiği için (örneğin yoğun tablo düzenleri vs seyrek formlar), yakalanan herhangi bir `UiElementInfo` ağacı üzerinde doğrudan sentetik kalibrasyon çalıştırabilirsiniz:
+
+```csharp
+var report = TreeCalibrator.Calibrate(capturedTree, applicationName: "MyApp");
+Console.WriteLine(report.ToMarkdownReport());
+```
+
+Kalibratör, UI ağacı üzerinde sentetik sapmaları (yeniden adlandırma, etiket kayması, konum kayması, silinme) değerlendirir ve en uygun profili öneren bir karar özeti üretir.
 
 ---
 

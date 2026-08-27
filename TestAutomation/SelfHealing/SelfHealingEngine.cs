@@ -43,6 +43,24 @@ namespace SelfHealing
         }
 
         /// <summary>
+        /// Creates a <see cref="SelfHealingEngine"/> configured with a preset <see cref="ThresholdProfile"/>.
+        /// </summary>
+        public static SelfHealingEngine Create(
+            ThresholdProfile profile,
+            LocatorRepository? repository = null,
+            IEnumerable<ILlmHealingProvider>? llmProviders = null,
+            IHealingReportSink? reportSink = null,
+            HealingMode mode = HealingMode.Review)
+        {
+            return new SelfHealingEngine(
+                repository: repository,
+                weights: SimilarityWeights.FromProfile(profile),
+                llmProviders: llmProviders,
+                reportSink: reportSink,
+                mode: mode);
+        }
+
+        /// <summary>
         /// Resolves a candidate and immediately persists a confident match without proving it
         /// through an action. Use <see cref="ExecuteWithHealingAsync{T}"/> when persistence must
         /// happen only after the healed action succeeds.
