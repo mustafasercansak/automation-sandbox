@@ -161,7 +161,13 @@ var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
 
 ##### Per-Application Calibration Command
 
-Because UI structure differs between applications (e.g. dense tabular layouts vs sparse forms), you can run synthetic calibration directly on any captured `UiElementInfo` tree:
+Because UI structure differs between applications (e.g. dense tabular layouts vs sparse forms), you can run synthetic calibration directly on any captured `UiElementInfo` tree from the command line, without writing any code:
+
+```bash
+dotnet run --project samples/CalibrationCli -- <tree.json> --app MyApp
+```
+
+This runs `TreeCalibrator.Calibrate` against the tree and prints (and saves) a markdown report a consumer can act on directly, with no need to read this page first: a recommended profile, its reasoning, and a precision/recall/false-heal comparison across `Aggressive`/`Balanced`/`Conservative`. See [samples/CalibrationCli/README.md](../samples/CalibrationCli/README.md) for the full option list. To call the calibrator from your own code instead:
 
 ```csharp
 var report = TreeCalibrator.Calibrate(capturedTree, applicationName: "MyApp");
@@ -687,7 +693,13 @@ var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
 
 ##### Uygulama Bazlı Kalibrasyon Komutu
 
-Uygulamalar arasındaki UI yapıları farklılık gösterdiği için (örneğin yoğun tablo düzenleri vs seyrek formlar), yakalanan herhangi bir `UiElementInfo` ağacı üzerinde doğrudan sentetik kalibrasyon çalıştırabilirsiniz:
+Uygulamalar arasındaki UI yapıları farklılık gösterdiği için (örneğin yoğun tablo düzenleri vs seyrek formlar), yakalanan herhangi bir `UiElementInfo` ağacı üzerinde hiç kod yazmadan, komut satırından doğrudan sentetik kalibrasyon çalıştırabilirsiniz:
+
+```bash
+dotnet run --project samples/CalibrationCli -- <tree.json> --app MyApp
+```
+
+Bu komut `TreeCalibrator.Calibrate`'i ağaca karşı çalıştırır ve önce bu sayfayı okumaya gerek kalmadan doğrudan aksiyon alınabilecek bir markdown rapor basar (ve kaydeder): önerilen bir profil, gerekçesi ve `Aggressive`/`Balanced`/`Conservative` arasında bir precision/recall/false-heal karşılaştırması. Tüm seçenekler için [samples/CalibrationCli/README.md](../samples/CalibrationCli/README.md) dosyasına bakın. Kalibratörü kendi kodunuzdan çağırmak isterseniz:
 
 ```csharp
 var report = TreeCalibrator.Calibrate(capturedTree, applicationName: "MyApp");

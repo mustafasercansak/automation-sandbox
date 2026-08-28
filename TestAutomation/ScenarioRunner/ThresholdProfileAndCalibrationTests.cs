@@ -83,6 +83,60 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void TreeCalibrator_DuplicateAutomationIds_ProbesAndRemovesTheCorrectSibling()
+        {
+            // Regression test: TreeCalibrator used to match probe targets in a cloned tree by
+            // AutomationId/attribute value, so two elements sharing an AutomationId (the exact
+            // scenario self-healing exists for) made every probe for the second duplicate mutate
+            // or remove the FIRST duplicate instead. For a "Removed" probe this left the intended
+            // target untouched in the mutated tree, so the resolver found it unchanged, accepted
+            // it, and the probe was wrongly recorded as a false heal on a removed control - even
+            // though nothing was actually removed.
+            var root = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Name = "Main Window",
+                BoundingRectangle = new BoundingRectangle(0, 0, 800, 600)
+            };
+
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "dupBtn",
+                Name = "First",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainWindow",
+                BoundingRectangle = new BoundingRectangle(10, 50, 80, 30),
+                SiblingIndex = 0,
+                SiblingCount = 2
+            });
+            root.Children.Add(new UiElementInfo
+            {
+                ControlType = "Button",
+                AutomationId = "dupBtn",
+                Name = "Second",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainWindow",
+                BoundingRectangle = new BoundingRectangle(500, 400, 80, 30),
+                SiblingIndex = 1,
+                SiblingCount = 2
+            });
+
+            var report = TreeCalibrator.Calibrate(root, "DuplicateIdApp");
+
+            // One removal probe per duplicate sibling.
+            var aggressive = report.ProfileResults.Single(r => r.Profile == ThresholdProfile.Aggressive);
+            Assert.Equal(2, aggressive.RemovalScenarios);
+
+            // Each duplicate's own removal probe must remove that specific sibling, not always
+            // the first one - so both are correctly declined and neither is falsely healed as
+            // "still present" under even the most permissive (Aggressive) profile.
+            Assert.Equal(0, aggressive.FalseHealsOnRemoved);
+            Assert.Equal(2, aggressive.CorrectDeclines);
+        }
+
+        [Fact]
         public void HandBrakeFixture_ConservativeProfile_ReducesFalseHealsOnRemovedControls()
         {
             var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "HandBrake_1.8.2.tree.json");
