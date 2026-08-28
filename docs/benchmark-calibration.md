@@ -16,7 +16,7 @@ This guide provides a comprehensive technical overview of the real-world false-p
 ## 🇬🇧 English Guide
 
 ### 1. Problem: Why Synthetic Speed Benchmarks Are Not Enough
-Synthetic benchmarks (such as `SyntheticTreeBenchmarkTests`) measure tree traversal performance and scoring latency ($\sim 23\text{ms}$ across 3,000+ candidate nodes on developer hardware). However, a production-grade locator self-healing engine cannot be validated on execution speed alone:
+Synthetic benchmarks (such as `SyntheticTreeBenchmarkTests`) measure tree traversal performance and scoring latency. The latest local run scored 3,000 candidates in 20ms and 10,000 candidates in 27ms; both figures are environment-dependent, while the 10,000-control case has a CI-safe 5-second bound. Resolution remains $O(N)$, so working memory grows linearly with the flattened candidate list rather than with a quadratic pairwise matrix. However, a production-grade locator self-healing engine cannot be validated on execution speed alone:
 1. **False-Positive Risk:** A healing engine that indiscriminately accepts incorrect elements produces "false green" tests that pass while exercising unintended UI components.
 2. **Overfit in Bundled Case Studies:** Bundled demo apps (`WinFormsApp`, `WpfApp`) contain hand-crafted refactoring scenarios, creating a high risk of overfitting heuristics to specific known edge cases.
 3. **The Disappearance Problem:** When a UI refactor completely deletes an element, the engine must decline and prompt a human for review rather than latching onto an adjacent button or container.
@@ -551,7 +551,7 @@ Following the negative results of #179, #247 investigated the two remaining untr
 ## 🇹🇷 Türkçe Kılavuz
 
 ### 1. Problem: Sentetik Hız Testleri Neden Yetersizdir?
-Sentetik testler (`SyntheticTreeBenchmarkTests`), ağaç dolaşımı ve skorlama gecikmesini ($\sim 23\text{ms}$ / 3.000+ kontrol) başarıyla doğrular. Ancak gerçek bir kendi kendini iyileştirme (self-healing) motoru yalnızca hıza bakılarak değerlendirilemez:
+Sentetik testler (`SyntheticTreeBenchmarkTests`), ağaç dolaşımı ve skorlama gecikmesini ölçer. En son yerel koşu 3.000 adayı 20ms'de, 10.000 adayı 27ms'de skorladı; iki değer de ortama bağlıdır, 10.000 kontrollü durum ise CI için güvenli 5 saniyelik bir sınıra sahiptir. Çözümleme $O(N)$ kalır; bu nedenle çalışma belleği karesel bir ikili karşılaştırma matrisi yerine düzleştirilmiş aday listesiyle doğrusal büyür. Ancak gerçek bir kendi kendini iyileştirme (self-healing) motoru yalnızca hıza bakılarak değerlendirilemez:
 1. **Yanlış Pozitif (False Positive) Riski:** Yanlış bir elemanı doğru sanıp tıklayan bir motor, testlerin "sahte yeşil" (false green) geçmesine ve hataların gözden kaçmasına sebep olur.
 2. **Hazır Senaryolarda Aşırı Öğrenme (Overfitting):** Projedeki örnek uygulamalar (`WinFormsApp`, `WpfApp`) bilinen yapay senaryolar içerir.
 3. **Silinen Eleman Problemi:** Bir arayüz güncellemesinde bir buton tamamen silindiğinde, motor komşu bir butonu seçmemeli; durup testi insan incelemesine (`manual review`) yönlendirmelidir.
@@ -1067,5 +1067,3 @@ Tek-hedefli sezgisel sinyaller (§5) ve çoklu-sağlayıcılı LLM mutabakatınd
 #### Resmi Çıkarım
 > [!IMPORTANT]
 > **Resmi çıkarım (#247).** Ne itiraz edilen kalıntı çakışması ne de çevresel yeniden keşif pertürbasyonu yardımsız bir yokluk dedektörü sağlayabilir. Çoklu-locator aday itirazı, itiraz edilmeyen silinmelerin $\%100$'ünü tespit edilemez bırakan ($0/15$) bir sahiplik çakışması korumasıdır; çevresel yeniden keşif jitter'ı ise UI yanıltıcıları kalıcı yapısal düğümler olduğu için yanıltıcılar üzerinde $\%100$ kararlılık üretir ($42/42$ ve $14/14$). Yardımsız yokluk tespiti, yapısal skor çakışması tabanıyla ($[0.665, 0.955]$ vs $[0.749, 0.874]$) matematiksel olarak sınırlı kalmaya devam eder. Regresyon korumaları: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`, `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern` ve `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`.
-
-
