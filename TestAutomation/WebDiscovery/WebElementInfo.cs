@@ -14,6 +14,7 @@ namespace WebDiscovery
         public string TestId { get; set; } = "";
         public string ClassName { get; set; } = "";
         public string CssSelector { get; set; } = "";
+        public bool IsStructuralCssSelector { get; set; }
         public bool IsHidden { get; set; }
         public bool IsOffscreen { get; set; }
 

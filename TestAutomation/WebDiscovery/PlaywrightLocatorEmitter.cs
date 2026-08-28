@@ -65,8 +65,10 @@ namespace WebDiscovery
                 {
                     Strategy = "Css",
                     Expression = $"{framePrefix}Locator(\"{EscapeCSharpString(element.CssSelector)}\")",
-                    Confidence = 0.55,
-                    Reason = "CSS selector is a fallback when semantic locators are unavailable",
+                    Confidence = element.IsStructuralCssSelector ? 0.35 : 0.55,
+                    Reason = element.IsStructuralCssSelector
+                        ? "structural CSS selector is a last-resort fallback"
+                        : "CSS selector is a fallback when semantic locators are unavailable",
                 });
             }
 
