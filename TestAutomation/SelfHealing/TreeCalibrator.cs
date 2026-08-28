@@ -436,12 +436,24 @@ namespace SelfHealing
 
         private static UiElementInfo? FindCorrespondingElement(UiElementInfo treeRoot, UiElementInfo target)
         {
+            // AutomationId is checked in a dedicated first pass across the whole tree so that it always
+            // wins over the structural fallback below, regardless of traversal order. Interleaving the two
+            // checks per-node let a structurally-identical sibling (same ControlType/Name/BoundingRectangle,
+            // common for separators or unlabeled rows) shadow the real AutomationId match if it happened to
+            // come first in the flattened order.
+            if (!string.IsNullOrEmpty(target.AutomationId))
+            {
+                foreach (var node in Flatten(treeRoot))
+                {
+                    if (node.AutomationId == target.AutomationId)
+                    {
+                        return node;
+                    }
+                }
+            }
+
             foreach (var node in Flatten(treeRoot))
             {
-                if (!string.IsNullOrEmpty(target.AutomationId) && node.AutomationId == target.AutomationId)
-                {
-                    return node;
-                }
                 if (node.ControlType == target.ControlType &&
                     node.Name == target.Name &&
                     node.BoundingRectangle == target.BoundingRectangle)
@@ -454,22 +466,22 @@ namespace SelfHealing
 
         private static bool RemoveElement(UiElementInfo treeRoot, UiElementInfo target)
         {
-            return RemoveRecursive(treeRoot, target);
+            var match = FindCorrespondingElement(treeRoot, target);
+            return match != null && RemoveByReference(treeRoot, match);
         }
 
-        private static bool RemoveRecursive(UiElementInfo current, UiElementInfo target)
+        private static bool RemoveByReference(UiElementInfo current, UiElementInfo match)
         {
             for (var i = 0; i < current.Children.Count; i++)
             {
                 var child = current.Children[i];
-                if ((!string.IsNullOrEmpty(target.AutomationId) && child.AutomationId == target.AutomationId) ||
-                    (child.ControlType == target.ControlType && child.Name == target.Name && child.BoundingRectangle == target.BoundingRectangle))
+                if (ReferenceEquals(child, match))
                 {
                     current.Children.RemoveAt(i);
                     return true;
                 }
 
-                if (RemoveRecursive(child, target))
+                if (RemoveByReference(child, match))
                 {
                     return true;
                 }

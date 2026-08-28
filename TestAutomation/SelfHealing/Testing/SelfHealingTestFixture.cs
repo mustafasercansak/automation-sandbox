@@ -44,7 +44,9 @@ namespace SelfHealing.Testing
         public IEnumerable<ILlmHealingProvider>? LlmProviders { get; set; }
 
         /// <summary>
-        /// Optional telemetry report sink. Defaults to environment file sink.
+        /// Optional telemetry report sink. Defaults to an isolated temporary file scoped to this fixture,
+        /// so tests never write into a shared, environment-configured healing report (e.g. the CI benchmark
+        /// telemetry file) unless explicitly asked to.
         /// </summary>
         public IHealingReportSink? ReportSink { get; set; }
 
@@ -63,6 +65,7 @@ namespace SelfHealing.Testing
     {
         private readonly bool _isTemporaryRepository;
         private readonly bool _autoDeleteOnDispose;
+        private readonly string? _temporaryReportPath;
         private bool _disposed;
 
         public LocatorRepository Repository { get; }
@@ -106,11 +109,24 @@ namespace SelfHealing.Testing
 
             var weights = opt.CustomWeights ?? SimilarityWeights.FromProfile(opt.Profile);
 
+            IHealingReportSink reportSink;
+            if (opt.ReportSink != null)
+            {
+                reportSink = opt.ReportSink;
+            }
+            else
+            {
+                _temporaryReportPath = Path.Combine(
+                    Path.GetTempPath(),
+                    "AutomationSandbox.TestFixture." + Guid.NewGuid().ToString("N") + ".healing-report.json");
+                reportSink = new HealingReportFileSink(_temporaryReportPath);
+            }
+
             Engine = new SelfHealingEngine(
                 repository: Repository,
                 weights: weights,
                 llmProviders: opt.LlmProviders,
-                reportSink: opt.ReportSink,
+                reportSink: reportSink,
                 mode: opt.Mode);
         }
 
@@ -208,10 +224,20 @@ namespace SelfHealing.Testing
                 return;
             }
 
-            if (disposing && _isTemporaryRepository && _autoDeleteOnDispose)
+            if (disposing && _autoDeleteOnDispose)
             {
-                TryDeleteFile(RepositoryPath);
-                TryDeleteFile(RepositoryPath + ".lock");
+                if (_isTemporaryRepository)
+                {
+                    TryDeleteFile(RepositoryPath);
+                    TryDeleteFile(RepositoryPath + ".lock");
+                }
+
+                if (_temporaryReportPath != null)
+                {
+                    TryDeleteFile(_temporaryReportPath);
+                    TryDeleteFile(_temporaryReportPath + ".lock");
+                    TryDeleteFile(Path.ChangeExtension(_temporaryReportPath, ".html"));
+                }
             }
 
             _disposed = true;
