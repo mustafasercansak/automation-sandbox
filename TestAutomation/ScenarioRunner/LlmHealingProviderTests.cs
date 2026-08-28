@@ -1182,9 +1182,13 @@ namespace ScenarioRunner
         [Fact]
         public async Task CustomProvider_HallucinatedCandidate_IsFilteredBeforeCountingQuorum()
         {
-            // Provider returns candidate "c99" which is not in the shortlist
-            var hallucinatingProvider = new SampleCustomProvider("HallucinatingProvider", "c99", 0.99);
-            var honestProvider = new SampleCustomProvider("HonestProvider", "c0", 0.90);
+            // Both providers agree on candidate "c99", which is not in the shortlist either of
+            // them was sent. If the hallucination guard did not run before votes are grouped and
+            // counted, these two matching votes would reach quorum and "win" the consensus vote
+            // on a candidate that was never a real option - proving the guard runs before
+            // agreement is evaluated, not merely that a lone dissenting vote gets outvoted.
+            var hallucinatingProviderA = new SampleCustomProvider("HallucinatingProviderA", "c99", 0.99);
+            var hallucinatingProviderB = new SampleCustomProvider("HallucinatingProviderB", "c99", 0.95);
 
             var treeRoot = new UiElementInfo
             {
@@ -1208,11 +1212,16 @@ namespace ScenarioRunner
             var healResult = await SelfHealingResolver.ResolveAsync(
                 Expected,
                 treeRoot,
-                llmProviders: new[] { hallucinatingProvider, honestProvider },
+                llmProviders: new[] { hallucinatingProviderA, hallucinatingProviderB },
                 weights: new SimilarityWeights { MinimumConfidence = 0.99 },
                 log: _ => { });
 
-            // Quorum of 2 failed because hallucinated vote was discarded
+            // Both votes named "c99", but the guard discards a vote for any candidateId absent
+            // from the shortlist before votes are grouped, so no valid votes ever reach the
+            // agreement/quorum step - the two-way agreement on "c99" never gets a chance to count.
+            // (Matched still holds the pre-LLM heuristic candidate - lack of LLM confirmation
+            // doesn't erase it - so IsConfident/ResolutionStatus, not Matched, is what proves the
+            // hallucinated consensus was rejected.)
             Assert.Equal(HealResolutionStatus.NoConsensus, healResult.ResolutionStatus);
             Assert.False(healResult.IsConfident);
         }
@@ -1238,15 +1247,15 @@ namespace ScenarioRunner
                 string? platform = null,
                 CancellationToken cancellationToken = default)
             {
-                // Verify candidates shortlist is non-empty
-                var matched = candidates.FirstOrDefault(c => c.CandidateId == _candidateToReturn);
-                var validCandidateId = matched != null ? _candidateToReturn : null;
-
+                // Returns _candidateToReturn as-is, even if it names an id outside the shortlist
+                // it was sent, so tests can simulate a hallucinating provider and verify that
+                // SelfHealingResolver's own out-of-shortlist guard is what discards the vote,
+                // rather than the provider filtering itself before the resolver ever sees it.
                 return Task.FromResult(new LlmHealingResult
                 {
                     ProviderName = Name,
                     Success = true,
-                    MatchedCandidateId = validCandidateId,
+                    MatchedCandidateId = _candidateToReturn,
                     Confidence = _confidence,
                     Reasoning = "Custom heuristics matched target element."
                 });

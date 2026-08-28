@@ -185,9 +185,9 @@ If you want to integrate a proprietary internal model, a cloud vendor without an
 
 #### 1. Option A: Subclassing `HttpLlmHealingProvider` (Recommended for REST Endpoints)
 
-`HttpLlmHealingProvider` encapsulates constructor parameter validation, retry with exponential backoff (`LlmHttpTransport`), transient error detection (HTTP 429/500s), per-attempt and total timeout ceilings, text sanitization, prompt construction (`LlmHealingPrompt.BuildPrompt`), and the **Hallucination Guard**.
+`HttpLlmHealingProvider` encapsulates constructor parameter validation, retry with exponential backoff (`LlmHttpTransport`), transient error detection (HTTP 429/500s), per-attempt and total timeout ceilings, text sanitization, prompt construction (`LlmHealingPrompt.Build`), and the **Hallucination Guard**.
 
-You only need to supply `CreateRequest` and `ExtractText`:
+You need to supply four members: `IsAvailable`, `UnavailableErrorMessage`, `CreateRequest`, and `ExtractText`:
 
 ```csharp
 using System.Net.Http;
@@ -466,9 +466,9 @@ Kurum içi özel bir modeli, OpenAI uyumlu olmayan bir bulut sağlayıcısını 
 
 #### 1. A Seçeneği: `HttpLlmHealingProvider` Taban Sınıfını Genişletme (REST Uç Noktaları İçin Önerilen)
 
-`HttpLlmHealingProvider`, parametre doğrulamalarını, `LlmHttpTransport` ile üstel geri çekilmeli yeniden denemeleri (retry), geçici HTTP 429/500 hata ayrımını, zaman aşımı tavanlarını, hassas veri maskelemeyi (`TextSanitizer`), prompt üretimini (`LlmHealingPrompt.BuildPrompt`) ve **Hallucination Guard (Halüsinasyon Koruması)** mantığını otomatik olarak yönetir.
+`HttpLlmHealingProvider`, parametre doğrulamalarını, `LlmHttpTransport` ile üstel geri çekilmeli yeniden denemeleri (retry), geçici HTTP 429/500 hata ayrımını, zaman aşımı tavanlarını, hassas veri maskelemeyi (`TextSanitizer`), prompt üretimini (`LlmHealingPrompt.Build`) ve **Hallucination Guard (Halüsinasyon Koruması)** mantığını otomatik olarak yönetir.
 
-Yalnızca `CreateRequest` ve `ExtractText` metodlarını tanımlamanız yeterlidir:
+Dört üyeyi tanımlamanız gerekir: `IsAvailable`, `UnavailableErrorMessage`, `CreateRequest` ve `ExtractText`:
 
 ```csharp
 using System.Net.Http;
