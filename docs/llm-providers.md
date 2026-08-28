@@ -216,6 +216,20 @@ Aynı kural Groq (`GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `"Groq"`), OpenRou
 > [!WARNING]
 > `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.
 
+Ek OpenAI uyumlu uç noktaları yapılandırmak için `LLM_CUSTOM_PROVIDERS` değerine bir JSON dizisi verin:
+
+```json
+[
+  {
+    "name": "DeepSeek",
+    "endpoint": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "apiKeyEnvVar": "DEEPSEEK_API_KEY",
+    "timeoutSeconds": 20
+  }
+]
+```
+
 `LLM_CUSTOM_PROVIDERS` dizisindeki her giriş boş olmayan `name`, `endpoint`, `model`
 ve doğrudan `apiKey` ya da çözümlenebilir bir `apiKeyEnvVar` içermelidir. `endpoint`
 ve `model`, `OPENAI_*` değişkenlerinden devralınmaz. Bu alanlardan biri eksikse özel
