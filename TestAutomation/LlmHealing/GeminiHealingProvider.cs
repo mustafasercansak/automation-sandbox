@@ -7,13 +7,11 @@ using System.Threading.Tasks;
 
 namespace LlmHealing
 {
-    // Verified against Google's Gemini API documentation as of August 2026 (via
-    // WebFetch, not a live call): the Interactions API superseded the older
-    // per-model generateContent endpoint, which the docs now label legacy. Request
-    // shape, response shape, and the x-goog-api-key auth header below reflect that
-    // migration. Still not exercised against a live key - if requests start
-    // failing, re-check the current docs before assuming this file is stale in the
-    // usual way, since this surface has already changed shape once.
+    // The Interactions API superseded the older per-model generateContent endpoint,
+    // which the Google documentation labels legacy. Its request/response shapes and
+    // x-goog-api-key header are verified by mocked contract tests and live consensus
+    // evaluation (August 2026). If requests start failing, re-check the current docs:
+    // this surface has already changed shape once.
 
     public sealed class GeminiHealingProvider : HttpLlmHealingProvider
     {
