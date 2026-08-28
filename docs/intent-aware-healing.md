@@ -107,6 +107,10 @@ public async Task KullaniciTıklarIntentIle(string intent)
 ### 2. Intent Nasıl Yazılır? (3 Adımlı Formül)
 $$\text{TestIntent} = \text{[Eylem Fiili]} + \text{[İş Bağlamı]} + \text{[Hedef / Sonuç]}$$
 
+#### ✅ İyi Intent Örnekleri:
+- `"Kurumsal e-posta adresini 2FA giriş formuna gir"`
+- `"Ödemeyi tamamlamak için birincil ödeme onay butonuna tıkla"`
+
 ---
 
 ### 3. Çok Dilli BDD Intent Desteği
