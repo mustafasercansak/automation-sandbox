@@ -28,7 +28,8 @@ namespace UiModel
         internal const string BearerTokenPattern = @"(?i)(Bearer\s+)[A-Za-z0-9_\-\.]{16,}";
         private static readonly Regex BearerTokenRegex = new(BearerTokenPattern, RegexOptions.Compiled, RegexTimeout);
 
-        // Common prefixed API keys and tokens (OpenAI, GitHub, GitLab, Slack, AWS, JWT).
+        // Common prefixed API keys and tokens (OpenAI, Stripe, Google/GCP, GitHub, GitLab,
+        // Slack, AWS, JWT).
         // Each prefix requires its real-world separator (e.g. "sk-", "ghp_") rather than
         // matching bare on the 2-3 letter prefix alone - otherwise ordinary kebab-case
         // AutomationIds/Names like "skip-intro-button" or "ghost-mode-toggle" (which
@@ -38,7 +39,7 @@ namespace UiModel
         // to disambiguate elements. AWS AKIA/ASIA keys have no separator in the real format,
         // but requiring an uppercase-only suffix keeps them from matching lowercase identifiers.
         internal const string PrefixedSecretPattern =
-            @"(?<=^|[^a-zA-Z0-9])(?:sk-[a-zA-Z0-9_\-]{16,}|gh[pousr]_[a-zA-Z0-9_\-]{16,}|glpat-[a-zA-Z0-9_\-]{16,}|xox[bp]-[a-zA-Z0-9_\-]{16,}|(?:AKIA|ASIA)[0-9A-Z]{16})(?=$|[^a-zA-Z0-9])|(?<=^|[^a-zA-Z0-9])eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+(?=$|[^a-zA-Z0-9])";
+            @"(?<=^|[^a-zA-Z0-9])(?:sk-[a-zA-Z0-9_\-]{16,}|(?:sk|pk|rk)_(?:live|test)_[a-zA-Z0-9]{16,}|AIza[0-9A-Za-z_\-]{35}|gh[pousr]_[a-zA-Z0-9_\-]{16,}|glpat-[a-zA-Z0-9_\-]{16,}|xox[bp]-[a-zA-Z0-9_\-]{16,}|(?:AKIA|ASIA)[0-9A-Z]{16})(?=$|[^a-zA-Z0-9])|(?<=^|[^a-zA-Z0-9])eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+(?=$|[^a-zA-Z0-9])";
         private static readonly Regex PrefixedSecretRegex = new(PrefixedSecretPattern, RegexOptions.Compiled, RegexTimeout);
 
         // Key-value secret patterns (password: secret, api_key=secret, access_token: secret, etc.).

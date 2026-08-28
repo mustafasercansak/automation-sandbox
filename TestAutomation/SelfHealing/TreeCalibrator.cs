@@ -520,5 +520,72 @@ namespace SelfHealing
 
             return clone;
         }
+
+        private static UiElementInfo? FindCorrespondingElement(UiElementInfo treeRoot, UiElementInfo target)
+        {
+            // AutomationId is checked in a dedicated first pass across the whole tree so that it always
+            // wins over the structural fallback below, regardless of traversal order. Interleaving the two
+            // checks per-node let a structurally-identical sibling (same ControlType/Name/BoundingRectangle,
+            // common for separators or unlabeled rows) shadow the real AutomationId match if it happened to
+            // come first in the flattened order.
+            if (!string.IsNullOrEmpty(target.AutomationId))
+            {
+                foreach (var node in Flatten(treeRoot))
+                {
+                    if (node.AutomationId == target.AutomationId)
+                    {
+                        return node;
+                    }
+                }
+            }
+
+            foreach (var node in Flatten(treeRoot))
+            {
+                if (node.ControlType == target.ControlType &&
+                    node.Name == target.Name &&
+                    node.BoundingRectangle == target.BoundingRectangle)
+                {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        private static bool RemoveElement(UiElementInfo treeRoot, UiElementInfo target)
+        {
+            var match = FindCorrespondingElement(treeRoot, target);
+            return match != null && RemoveByReference(treeRoot, match);
+        }
+
+        private static bool RemoveByReference(UiElementInfo current, UiElementInfo match)
+        {
+            for (var i = 0; i < current.Children.Count; i++)
+            {
+                var child = current.Children[i];
+                if (ReferenceEquals(child, match))
+                {
+                    current.Children.RemoveAt(i);
+                    return true;
+                }
+
+                if (RemoveByReference(child, match))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static IEnumerable<UiElementInfo> Flatten(UiElementInfo root)
+        {
+            yield return root;
+            foreach (var child in root.Children)
+            {
+                foreach (var descendant in Flatten(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
     }
 }

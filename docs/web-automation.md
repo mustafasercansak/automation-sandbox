@@ -32,6 +32,10 @@ selector survive compilation instead of being consumed by the C# parser.
 An ID locator follows the browser's `CSS.escape()` identifier rules, including leading
 digits, whitespace, control characters, and CSS punctuation such as `#` and `[`, before
 the resulting selector is escaped for C# source.
+When no ID, test ID, or name is available, capture emits an ancestor-qualified structural
+CSS selector using `:nth-of-type(...)`. Such a selector is marked with
+`WebElementInfo.IsStructuralCssSelector` and emitted at `0.35` confidence, below the
+`0.55` confidence used for attribute-based CSS fallback selectors.
 When the same suggestion is converted to TypeScript, the generator reads the complete
 C# string literal before re-emitting it, so an escaped quote in an accessible name does
 not truncate the generated `getByRole(..., { name })` locator.
@@ -183,6 +187,10 @@ tarafından tüketilmeden derlenmiş koda ulaşır.
 ID locator'ı; baştaki rakamlar, boşluklar, kontrol karakterleri ile `#` ve `[` gibi CSS
 noktalama işaretleri dahil olmak üzere tarayıcının `CSS.escape()` identifier kurallarını
 uygular, ardından oluşan seçiciyi C# kaynak kodu için kaçırır.
+ID, test ID veya name olmadığında tarama; `:nth-of-type(...)` kullanan, üst öğelerle
+nitelenmiş yapısal bir CSS seçicisi üretir. Bu seçici `WebElementInfo.IsStructuralCssSelector`
+ile işaretlenir ve öznitelik tabanlı CSS fallback seçicilerinin `0.55` değerinden düşük olan
+`0.35` güvenle yayımlanır.
 Aynı öneri TypeScript'e dönüştürülürken üretici C# string literal'ının tamamını okur; bu
 sayede erişilebilir addaki kaçırılmış bir çift tırnak, üretilen
 `getByRole(..., { name })` locator'ını yarıda kesmez.

@@ -39,13 +39,26 @@ namespace WebDiscovery
       || '').trim();
   }
 
+  function structuralSelectorOf(element) {
+    const parts = [];
+    for (let current = element; current && current.nodeType === 1; current = current.parentElement) {
+      const tagName = current.tagName.toLowerCase();
+      const siblings = Array.from(current.parentElement ? current.parentElement.children : []).filter(
+        sibling => sibling.tagName === current.tagName);
+      const index = siblings.indexOf(current) + 1;
+      parts.unshift(siblings.length > 1 ? `${tagName}:nth-of-type(${index})` : tagName);
+      if (tagName === 'body') break;
+    }
+    return parts.join(' > ');
+  }
+
   function cssSelectorOf(element) {
     if (element.id) return '#' + CSS.escape(element.id);
     const testId = element.getAttribute('data-testid') || element.getAttribute('data-test');
     if (testId) return `[data-testid=""${CSS.escape(testId)}""]`;
     const name = element.getAttribute('name');
     if (name) return `${element.tagName.toLowerCase()}[name=""${CSS.escape(name)}""]`;
-    return element.tagName.toLowerCase();
+    return structuralSelectorOf(element);
   }
 
   function rectOf(element) {
@@ -75,7 +88,7 @@ namespace WebDiscovery
     if (element.id) return `iframe#${CSS.escape(element.id)}`;
     const src = element.getAttribute('src');
     if (src) return `iframe[src='${src.replace(/'/g, '\\\'')}']`;
-    return 'iframe';
+    return structuralSelectorOf(element);
   }
 
   function scopeOf(element, parentScope) {
@@ -140,6 +153,10 @@ namespace WebDiscovery
       TestId: element.getAttribute('data-testid') || element.getAttribute('data-test') || '',
       ClassName: typeof element.className === 'string' ? element.className : '',
       CssSelector: cssSelectorOf(element),
+      IsStructuralCssSelector: !element.id
+        && !element.getAttribute('data-testid')
+        && !element.getAttribute('data-test')
+        && !element.getAttribute('name'),
       IsHidden: visibility.IsHidden,
       IsOffscreen: visibility.IsOffscreen,
       IsCrossOriginFrame: crossOriginFrame,
