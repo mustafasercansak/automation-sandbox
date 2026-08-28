@@ -47,6 +47,53 @@ namespace SelfHealing
         public double MinCandidateScore { get; set; } = 0.05;
         public static SimilarityWeights Default => new();
 
+        /// <summary>
+        /// Creates a <see cref="SimilarityWeights"/> instance configured according to the specified preset <see cref="ThresholdProfile"/>.
+        /// </summary>
+        public static SimilarityWeights FromProfile(ThresholdProfile profile)
+        {
+            switch (profile)
+            {
+                case ThresholdProfile.Conservative:
+                    return new SimilarityWeights
+                    {
+                        MinimumConfidence = 0.90,
+                        MinimumCandidateMargin = 0.08,
+                        MinimumEvidenceWeight = 0.50
+                    };
+                case ThresholdProfile.Aggressive:
+                    return new SimilarityWeights
+                    {
+                        MinimumConfidence = 0.50,
+                        MinimumCandidateMargin = 0.03,
+                        MinimumEvidenceWeight = 0.30
+                    };
+                case ThresholdProfile.Balanced:
+                default:
+                    return new SimilarityWeights
+                    {
+                        MinimumConfidence = 0.75,
+                        MinimumCandidateMargin = 0.05,
+                        MinimumEvidenceWeight = 0.40
+                    };
+            }
+        }
+
+        /// <summary>
+        /// Balanced profile (~0.75 confidence, 0.05 margin, 0.40 evidence). Recommended baseline balancing recall and false-heal suppression.
+        /// </summary>
+        public static SimilarityWeights Balanced => FromProfile(ThresholdProfile.Balanced);
+
+        /// <summary>
+        /// Conservative profile (~0.90 confidence, 0.08 margin, 0.50 evidence). Minimizes false heals, prioritizing safety over autonomous recall.
+        /// </summary>
+        public static SimilarityWeights Conservative => FromProfile(ThresholdProfile.Conservative);
+
+        /// <summary>
+        /// Aggressive profile (~0.50 confidence, 0.03 margin, 0.30 evidence). Maximizes autonomous recall across compound refactors.
+        /// </summary>
+        public static SimilarityWeights Aggressive => FromProfile(ThresholdProfile.Aggressive);
+
         public void Validate()
         {
             ValidateNonNegative(ControlTypeWeight, nameof(ControlTypeWeight));
