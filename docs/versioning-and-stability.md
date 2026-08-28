@@ -150,9 +150,16 @@ Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHeal
 
 Automation Sandbox [Semantic Versioning 2.0.0](https://semver.org/) standardını uygular:
 
-- **1.0 Öncesi (`0.x.y`):** `0.X.0` sürümleri mimari iyileştirmeler veya kırıcı değişiklikler içerebilir; tüm değişiklikler sürüm notlarında açıkça belgelenir. `0.X.Y` yama sürümleri geriye dönük uyumludur.
-- **1.0 Sonrası (`1.0.0+`):** `X.0.0` kırıcı değişiklikler içindir. `1.X.0` geriye dönük uyumlu yeni özellikler ekler. `1.0.X` hata düzeltmelerini kapsar.
-- **Kullanımdan Kaldırma (Deprecation):** Kaldırılması planlanan genel API'ler silinmeden önce en az bir minör sürüm boyunca `[Obsolete]` ile işaretlenir.
+#### 1.0 Öncesi Yaşam Döngüsü (`0.x.y`)
+- **Ön sürüm etiketleri (`v0.2.0-beta.x` / `preview.x`):** Erken doğrulama için yayımlanan önizleme artifact'ları.
+- **Minör sürüm artışları (`0.2.x` $\rightarrow$ `0.3.0`):** Gerekli mimari iyileştirmeler veya kırıcı değişiklikler içerebilir. Her kırıcı değişiklik, sürüm notlarında (`docs/release-notes/`) geçiş yönergeleriyle belirtilmelidir.
+- **Yama sürüm artışları (`0.2.0` $\rightarrow$ `0.2.1`):** Kesinlikle geriye dönük uyumlu hata düzeltmeleri, performans iyileştirmeleri ve kırıcı olmayan eklemeler.
+
+#### 1.0 Sonrası Yaşam Döngüsü (`1.0.0+`)
+- **Majör sürümler (`X.0.0`):** Kırıcı API değişiklikleri, deprecation kaldırmaları veya çalışma zamanı hedefi değişiklikleri için ayrılmıştır.
+- **Minör sürümler (`1.X.0`):** Geriye dönük uyumlu özellikler, yeni sağlayıcı entegrasyonları veya ek skor sinyalleri.
+- **Yama sürümleri (`1.0.X`):** Geriye dönük uyumlu hata düzeltmeleri, güvenlik yamaları ve dokümantasyon güncellemeleri.
+- **Kullanımdan kaldırma süresi:** Kaldırılması planlanan her genel API, silinmeden önce en az bir minör sürüm döngüsü boyunca `[Obsolete]` ile işaretlenmelidir.
 
 ---
 
