@@ -1140,6 +1140,128 @@ namespace ScenarioRunner
             }
         }
 
+        [Fact]
+        public async Task CustomProvider_DirectImplementation_RespectsHallucinationGuardAndQuorum()
+        {
+            var customProvider1 = new SampleCustomProvider("CustomA", "c0", 0.95);
+            var customProvider2 = new SampleCustomProvider("CustomB", "c0", 0.90);
+
+            var treeRoot = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "txtEmailRenamed",
+                        Name = "Email",
+                        ParentControlType = "Window",
+                        SiblingIndex = 2,
+                        SiblingCount = 7,
+                        BoundingRectangle = new BoundingRectangle(112, 70, 200, 23)
+                    }
+                }
+            };
+
+            var healResult = await SelfHealingResolver.ResolveAsync(
+                Expected,
+                treeRoot,
+                llmProviders: new[] { customProvider1, customProvider2 },
+                weights: new SimilarityWeights { MinimumConfidence = 0.99 }, // force LLM fallback
+                log: _ => { });
+
+            Assert.True(healResult.IsConfident);
+            Assert.Equal(HealSource.Llm, healResult.Source);
+            Assert.Equal("txtEmailRenamed", healResult.Matched?.AutomationId);
+            Assert.Contains("CustomA", healResult.AgreedProviders);
+            Assert.Contains("CustomB", healResult.AgreedProviders);
+        }
+
+        [Fact]
+        public async Task CustomProvider_HallucinatedCandidate_IsFilteredBeforeCountingQuorum()
+        {
+            // Both providers agree on candidate "c99", which is not in the shortlist either of
+            // them was sent. If the hallucination guard did not run before votes are grouped and
+            // counted, these two matching votes would reach quorum and "win" the consensus vote
+            // on a candidate that was never a real option - proving the guard runs before
+            // agreement is evaluated, not merely that a lone dissenting vote gets outvoted.
+            var hallucinatingProviderA = new SampleCustomProvider("HallucinatingProviderA", "c99", 0.99);
+            var hallucinatingProviderB = new SampleCustomProvider("HallucinatingProviderB", "c99", 0.95);
+
+            var treeRoot = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "Edit",
+                        AutomationId = "txtEmailRenamed",
+                        Name = "Email",
+                        ParentControlType = "Window",
+                        SiblingIndex = 2,
+                        SiblingCount = 7,
+                        BoundingRectangle = new BoundingRectangle(112, 70, 200, 23)
+                    }
+                }
+            };
+
+            var healResult = await SelfHealingResolver.ResolveAsync(
+                Expected,
+                treeRoot,
+                llmProviders: new[] { hallucinatingProviderA, hallucinatingProviderB },
+                weights: new SimilarityWeights { MinimumConfidence = 0.99 },
+                log: _ => { });
+
+            // Both votes named "c99", but the guard discards a vote for any candidateId absent
+            // from the shortlist before votes are grouped, so no valid votes ever reach the
+            // agreement/quorum step - the two-way agreement on "c99" never gets a chance to count.
+            // (Matched still holds the pre-LLM heuristic candidate - lack of LLM confirmation
+            // doesn't erase it - so IsConfident/ResolutionStatus, not Matched, is what proves the
+            // hallucinated consensus was rejected.)
+            Assert.Equal(HealResolutionStatus.NoConsensus, healResult.ResolutionStatus);
+            Assert.False(healResult.IsConfident);
+        }
+
+        private sealed class SampleCustomProvider : ILlmHealingProvider
+        {
+            private readonly string _candidateToReturn;
+            private readonly double _confidence;
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public SampleCustomProvider(string name, string candidateToReturn, double confidence)
+            {
+                Name = name;
+                _candidateToReturn = candidateToReturn;
+                _confidence = confidence;
+            }
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                // Returns _candidateToReturn as-is, even if it names an id outside the shortlist
+                // it was sent, so tests can simulate a hallucinating provider and verify that
+                // SelfHealingResolver's own out-of-shortlist guard is what discards the vote,
+                // rather than the provider filtering itself before the resolver ever sees it.
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = _candidateToReturn,
+                    Confidence = _confidence,
+                    Reasoning = "Custom heuristics matched target element."
+                });
+            }
+        }
+
         private sealed class FakeProvider : ILlmHealingProvider
         {
             private readonly Action _onResolve;
