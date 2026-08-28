@@ -98,6 +98,7 @@ namespace ScenarioRunner
             Assert.Equal(29, dataset.Scenarios.Select(s => s.OriginalAutomationId).Distinct().Count());
 
             var report = LocatorAblationHarness.Run(dataset, root, new SimilarityWeights { MinimumConfidence = 0.50 });
+            LocatorAblationHarness.EmitMetricsArtifact(report, "ShareX v21.0.0");
             var m = report.Metrics;
 
             Assert.Equal(30, m.CorrectHeals);

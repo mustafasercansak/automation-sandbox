@@ -95,6 +95,7 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           SELF_HEALING_REPORT_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.json
           SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.html
+          ABLATION_METRICS_OUTPUT_DIR: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
 
       - name: Summarize code coverage for ${{ matrix.coverage-label }}
@@ -105,6 +106,14 @@ jobs:
             -CoverageSearchPath ./TestAutomation/ScenarioRunner/TestResults `
             -LegLabel '${{ matrix.coverage-label }}' `
             -PlatformNote '${{ matrix.coverage-note }}'
+
+      - name: Summarize locator ablation metrics for ${{ matrix.coverage-label }}
+        if: always()
+        shell: pwsh
+        run: |
+          ./.github/scripts/write-ablation-summary.ps1 `
+            -AblationSearchPath ./TestAutomation/ScenarioRunner/TestResults `
+            -LegLabel '${{ matrix.coverage-label }}'
 
       - name: Upload test results
         if: always()
@@ -119,6 +128,14 @@ jobs:
         with:
           name: code-coverage-${{ matrix.os }}
           path: TestAutomation/ScenarioRunner/TestResults/**/coverage.cobertura.xml
+
+      - name: Upload ablation metrics telemetry
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ablation-metrics-${{ matrix.os }}
+          path: TestAutomation/ScenarioRunner/TestResults/ablation-metrics-*.json
+          if-no-files-found: ignore
 
       - name: Upload self-healing report
         if: always() && matrix.run-flaui

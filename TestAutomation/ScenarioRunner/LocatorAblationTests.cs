@@ -245,6 +245,7 @@ namespace ScenarioRunner
 
             var report = LocatorAblationHarness.Run(dataset, root);
 
+            LocatorAblationHarness.EmitMetricsArtifact(report, "HandBrake 1.8.2");
             Console.WriteLine(LocatorAblationHarness.ToMarkdownSummary(report, "HandBrake 1.8.2"));
 
             // Deliberately asserts shape, not values: pinning today's accuracy would turn a genuine
