@@ -87,8 +87,8 @@ namespace ScenarioRunner
                 };
 
                 var competingClaims = scenario.LocatorResults
-                    .Where(r => r.Joint.EngineAccepted && !string.IsNullOrEmpty(r.Joint.MatchedAutomationId))
-                    .GroupBy(r => r.Joint.MatchedAutomationId!, StringComparer.Ordinal)
+                    .Where(r => r.Joint.EngineAccepted && r.Joint.MatchedElement != null)
+                    .GroupBy(r => r.Joint.MatchedElement!, StringComparer.Ordinal)
                     .Where(g => g.Count() > 1)
                     .ToList();
 
@@ -162,8 +162,8 @@ namespace ScenarioRunner
                 }
 
                 scenario.UnresolvedSharedCandidateClaims = scenario.LocatorResults
-                    .Where(r => r.Joint.EngineAccepted && !string.IsNullOrEmpty(r.Joint.MatchedAutomationId))
-                    .GroupBy(r => r.Joint.MatchedAutomationId!, StringComparer.Ordinal)
+                    .Where(r => r.Joint.EngineAccepted && r.Joint.MatchedElement != null)
+                    .GroupBy(r => r.Joint.MatchedElement!, StringComparer.Ordinal)
                     .Count(g => g.Count() > 1);
                 report.Scenarios.Add(scenario);
             }
