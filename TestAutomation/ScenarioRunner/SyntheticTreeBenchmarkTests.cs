@@ -4,9 +4,10 @@ using SelfHealing;
 namespace ScenarioRunner
 {
     // Pure-logic benchmark: no FlaUI/Windows dependency, so unlike the live UIA scenario
-    // tests this can run on any OS/CI runner. A correctness+timing smoke test, not a hard
-    // performance gate - shared CI runners are noisy, so this only logs elapsed time rather
-    // than asserting a wall-clock bound (see the milestone plan for why).
+    // tests this can run on any OS/CI runner. A correctness+timing smoke test, not a tight
+    // performance gate - shared CI runners are noisy, so the wall-clock assertion below uses
+    // a deliberately generous 5s bound (local runs land in tens of milliseconds) rather than
+    // asserting anything close to actual expected latency (see the milestone plan for why).
 
     public class SyntheticTreeBenchmarkTests
     {
