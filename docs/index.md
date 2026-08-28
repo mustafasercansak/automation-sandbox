@@ -49,6 +49,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🔐 [**LLM Security Model**](llm-security-model.md) | Trust boundaries, disclosed fields, prompt-injection and PII limitations, provider retention, and local report handling. |
 | 📄 [**JSON Schema Reference**](json-schema.md) | Field-by-field breakdown of the `.locator.json` repository file. |
 | 📦 [**NuGet Packaging**](nuget-packaging.md) | Creating preview `.nupkg` artifacts and preparing a publish checklist. |
+| 🛡️ [**API Stability & Beta-Exit Criteria**](versioning-and-stability.md) | Public API contracts, semantic versioning policy, and concrete checkable beta-exit criteria for 1.0. |
 
 ---
 
@@ -83,6 +84,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🔐 [**LLM Güvenlik Modeli**](llm-security-model.md) | Güven sınırları, açıklanan alanlar, prompt injection ve PII sınırları, sağlayıcı retention ve yerel rapor güvenliği. |
 | 📄 [**JSON Şema Rehberi**](json-schema.md) | `.locator.json` kayıt dosyasının alan alan detaylı açıklaması. |
 | 📦 [**NuGet Paketleme**](nuget-packaging.md) | Preview `.nupkg` artifact üretimi ve yayın kontrol listesi. |
+| 🛡️ [**API Kararlılığı & Beta Çıkış Kriterleri**](versioning-and-stability.md) | Genel API sözleşmeleri, semantik sürümleme politikası ve 1.0 için somut kontrol listesi. |
 
 ---
 

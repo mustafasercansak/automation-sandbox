@@ -32,6 +32,8 @@ per run via `publish_to_nuget` rather than automatic on every release.
 | `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic + LLM-backed planning, web and desktop candidate matching, locator recording, Playwright C#/TypeScript and FlaUI test generation, intent flow reports, and pipeline orchestration. |
 | `AutomationSandbox.PlaywrightLiveExploration` | `PlaywrightLiveExplorer`: live browser page capture (Microsoft.Playwright .NET SDK) into a `WebElementInfo` snapshot. |
 
+For the public API surface definition, semantic versioning rules, and checkable criteria required to graduate to 1.0 GA, see the [API Stability & Beta-Exit Criteria](versioning-and-stability.md) guide.
+
 ## Create Preview Packages
 
 In GitHub Actions:
