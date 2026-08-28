@@ -72,7 +72,7 @@ fact check, or correctness guarantee. The measured limitations are documented in
 
 ### PII, secrets, and operator controls
 
-By default, the library applies a built-in sensitive data redaction pass (`SensitiveDataSanitizer.Redact`) across all DOM/UI-tree and test intent text before constructing LLM prompts (`LlmHealingPrompt.Build` and `LlmIntentPlanningPrompt.Build`). Common patterns such as email addresses, credit/debit card numbers, bearer tokens, prefixed API keys/JWTs, key-value secrets (e.g. `password: ...`, `api_key = ...`), and US Social Security Numbers are automatically masked with standard replacement tokens (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`).
+By default, the library applies a built-in sensitive data redaction pass (`SensitiveDataSanitizer.Redact`) across all DOM/UI-tree and test intent text before constructing LLM prompts (`LlmHealingPrompt.Build` and `LlmIntentPlanningPrompt.Build`). Common patterns such as email addresses, credit/debit card numbers, bearer tokens, prefixed API keys/JWTs (including Stripe `sk_live_`/`pk_test_`/`rk_live_` keys and Google/GCP `AIza` keys), key-value secrets (e.g. `password: ...`, `api_key = ...`), and US Social Security Numbers are automatically masked with standard replacement tokens (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`).
 
 Redaction is **opt-out**: operators who require raw, unmasked text can pass `SensitiveDataSanitizer.PassThrough` (or `text => text`) to `HttpLlmHealingProvider.TextSanitizer`, `LlmHealingPrompt.Build`, or `LlmIntentPlanner.TextSanitizer`. Custom sanitizers can also be supplied via the same hook (`Func<string, string>`).
 
@@ -208,7 +208,7 @@ belgelenmiştir.
 
 ### PII, sırlar ve operatör kontrolleri
 
-Varsayılan olarak kütüphane, LLM prompt'ları (`LlmHealingPrompt.Build` ve `LlmIntentPlanningPrompt.Build`) oluşturulmadan önce tüm DOM/UI ağacı ve test intent metinleri üzerinde yerleşik bir hassas veri maskeleme adımı (`SensitiveDataSanitizer.Redact`) uygular. E-posta adresleri, kredi/banka kartı numaraları, bearer token'ları, ön ekli API anahtarları/JWT'ler, anahtar-değer sırları (ör. `password: ...`, `api_key = ...`) ve ABD Sosyal Güvenlik Numaraları standart maskeleme belirteçleriyle (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`) otomatik olarak maskelenir.
+Varsayılan olarak kütüphane, LLM prompt'ları (`LlmHealingPrompt.Build` ve `LlmIntentPlanningPrompt.Build`) oluşturulmadan önce tüm DOM/UI ağacı ve test intent metinleri üzerinde yerleşik bir hassas veri maskeleme adımı (`SensitiveDataSanitizer.Redact`) uygular. E-posta adresleri, kredi/banka kartı numaraları, bearer token'ları, ön ekli API anahtarları/JWT'ler (Stripe `sk_live_`/`pk_test_`/`rk_live_` ve Google/GCP `AIza` anahtarları dahil), anahtar-değer sırları (ör. `password: ...`, `api_key = ...`) ve ABD Sosyal Güvenlik Numaraları standart maskeleme belirteçleriyle (`[REDACTED_EMAIL]`, `[REDACTED_CARD]`, `[REDACTED_SECRET]`, `[REDACTED_SSN]`) otomatik olarak maskelenir.
 
 Maskeleme **opt-out** (varsayılan olarak açık) olarak çalışır: ham metnin filtrelenmeden iletilmesini isteyen operatörler `HttpLlmHealingProvider.TextSanitizer`, `LlmHealingPrompt.Build` veya `LlmIntentPlanner.TextSanitizer` üzerine `SensitiveDataSanitizer.PassThrough` (veya `text => text`) geçebilir. Özel temizleyiciler de aynı kanca (`Func<string, string>`) üzerinden sağlanabilir.
 

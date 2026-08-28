@@ -34,6 +34,18 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void SensitiveDataSanitizer_RedactsStripeAndGoogleApiKeys()
+        {
+            var stripeKey = "sk_live_" + new string('a', 24);
+            var restrictedStripeKey = "rk_test_" + new string('b', 24);
+            var googleKey = "AIza" + new string('C', 35);
+
+            Assert.Equal("Stripe key: [REDACTED_SECRET]", SensitiveDataSanitizer.Redact("Stripe key: " + stripeKey));
+            Assert.Equal("Stripe restricted key: [REDACTED_SECRET]", SensitiveDataSanitizer.Redact("Stripe restricted key: " + restrictedStripeKey));
+            Assert.Equal("GCP key: [REDACTED_SECRET]", SensitiveDataSanitizer.Redact("GCP key: " + googleKey));
+        }
+
+        [Fact]
         public void SensitiveDataSanitizer_NullOrEmpty_ReturnsAsIs()
         {
             Assert.Null(SensitiveDataSanitizer.Redact(null));
