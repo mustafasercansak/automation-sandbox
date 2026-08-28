@@ -27,7 +27,7 @@ flowchart TD
         LlmHealing["LlmHealing: ILlmHealingProvider, HttpLlmHealingProvider, Built-in Providers"]
         WebDiscovery["WebDiscovery: WebElementInfo, WebElementMapper, PlaywrightLocatorEmitter"]
         Discovery["Discovery: UiTreeWalker, ApplicationConnector, DiscoveryOptions"]
-        Intent["IntentAutomation: IIntentPlanner, IntentAction, Playwright/FlaUi Generators, IntentAutomationPipeline"]
+        Intent["IntentAutomation: IIntentPlanner, IntentActionType, Playwright/FlaUi Generators, IntentAutomationPipeline"]
     end
 
     subgraph Extensibility ["Tier 2: Extensibility Points (SemVer Gated)"]
@@ -47,14 +47,14 @@ flowchart TD
 ```
 
 #### Tier 1: Stable Public API
-The following packages, namespaces, and core types represent the committed public contract:
-- **`AutomationSandbox.UiModel`**: `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`**: `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`**: `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`**: `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`**: `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`**: `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentAction`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
-- **`AutomationSandbox.PlaywrightLiveExploration`**: `PlaywrightLiveExplorer`.
+The following NuGet packages and their core types represent the committed public contract. The C# namespace for each package is its unprefixed short name (e.g. `using UiModel;`, not `using AutomationSandbox.UiModel;`):
+- **`AutomationSandbox.UiModel`** (namespace `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (namespace `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (namespace `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (namespace `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (namespace `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (namespace `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### Tier 2: Extensibility Points
 Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
@@ -88,10 +88,10 @@ To exit beta and release `1.0.0`, all of the following conditions must be satisf
 - [ ] **Benchmark Safety Bound:** Heuristic false-heal rate $\le 10.0\%$ on the HandBrake 1.8.2 benchmark suite under `ThresholdProfile.Balanced` (`0.75` confidence threshold).
 - [ ] **Multi-Application Verification:** Proven calibration and telemetry across both HandBrake (WPF) and ShareX (WinForms) fixtures without unexplained variance.
 - [ ] **Zero Open P0/P1 Safety Issues:** No open issues labeled `safety`, `security`, or `correctness` with P0 or P1 priority.
-- [ ] **Cross-Platform CI Stability:** 100% passing tests across Windows (`net48`, `net8.0`) and Linux (`net8.0`) matrix with zero unhandled flaky retries.
+- [ ] **Cross-Platform CI Stability:** 100% passing tests across the Windows (`net48`) and Linux (`net8.0`) CI matrix legs with zero unhandled flaky retries.
 - [ ] **Supply Chain Security:** Zero High or Critical advisories under `dotnet list package --vulnerable` / `NuGetAudit` across all target frameworks.
 - [ ] **Complete Bilingual Documentation Parity:** 100% structural and conceptual parity between English and Turkish documentation across all guides in `docs/`.
-- [ ] **Verified Consumer Quickstarts:** Automated CI execution of both standalone sample projects (`HeuristicHealingQuickstart` and `PlaywrightEndToEndQuickstart`) restoring purely from nuget.org / published artifacts.
+- [ ] **Verified Consumer Quickstarts:** Automated CI execution of both standalone sample projects: `HeuristicHealingQuickstart` restoring purely from nuget.org / published artifacts, and `PlaywrightEndToEndQuickstart` built and run in CI against the current source tree.
 
 ---
 
@@ -101,15 +101,42 @@ To exit beta and release `1.0.0`, all of the following conditions must be satisf
 
 Automation Sandbox, kararlı genel sözleşmeler, genişletilebilir sağlayıcı yüzeyleri ve deneysel/dahili alt sistemler arasında ayrım yapar.
 
+```mermaid
+flowchart TD
+    subgraph StablePublic ["1. Kademe: Kararlı Genel API (Geriye Dönük Uyumluluk Garantili)"]
+        UiModel["UiModel: UiElementInfo, BoundingRectangle, CandidateScore, LocatorRepository"]
+        SelfHealing["SelfHealing: SelfHealingEngine, SimilarityWeights, ThresholdProfile, HealingMode, HealResult"]
+        LlmHealing["LlmHealing: ILlmHealingProvider, HttpLlmHealingProvider, Hazır Sağlayıcılar"]
+        WebDiscovery["WebDiscovery: WebElementInfo, WebElementMapper, PlaywrightLocatorEmitter"]
+        Discovery["Discovery: UiTreeWalker, ApplicationConnector, DiscoveryOptions"]
+        Intent["IntentAutomation: IIntentPlanner, IntentActionType, Playwright/FlaUi Üreticileri, IntentAutomationPipeline"]
+    end
+
+    subgraph Extensibility ["2. Kademe: Genişletilebilirlik Noktaları (SemVer ile Korunur)"]
+        CustomProviders["Özel ILlmHealingProvider / HttpLlmHealingProvider Implementasyonları"]
+        CustomSinks["IHealingReportSink / Özel Telemetri Sink'leri"]
+        CustomPlanners["IIntentPlanner Implementasyonları"]
+    end
+
+    subgraph Experimental ["3. Kademe: Dahili ve Deneysel Araçlar (Değişime Açık)"]
+        Evaluators["JointLocatorAssignmentEvaluator (Çevrimdışı Uzlaşma Araştırması)"]
+        SyntheticHarness["LocatorAblationHarness ve Benchmark Veri Setleri"]
+        InternalTests["ScenarioRunner İç Bileşenleri"]
+    end
+
+    StablePublic --> Extensibility
+    Extensibility --> Experimental
+```
+
 #### 1. Kademe: Kararlı Genel API
-Aşağıdaki paketler, ad alanları ve temel türler taahhüt edilen genel sözleşmeyi temsil eder:
-- **`AutomationSandbox.UiModel`**: `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`**: `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`**: `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`**: `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`**: `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`**: `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentAction`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
-- **`AutomationSandbox.PlaywrightLiveExploration`**: `PlaywrightLiveExplorer`.
+Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmeyi temsil eder. Her paketin C# ad alanı, önek almamış kısa adıdır (örn. `using AutomationSandbox.UiModel;` değil, `using UiModel;`):
+- **`AutomationSandbox.UiModel`** (ad alanı `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (ad alanı `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (ad alanı `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (ad alanı `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (ad alanı `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (ad alanı `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
 Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.
@@ -133,10 +160,10 @@ Automation Sandbox [Semantic Versioning 2.0.0](https://semver.org/) standardın�
 
 Beta sürecini tamamlayıp `1.0.0` genel sürümüne geçmek için aşağıdaki tüm koşulların sağlanması gerekir:
 
-- [ ] **Benchmark Güvenlik Sınırı:** HandBrake 1.8.2 benchmark paketinde `ThresholdProfile.Balanced` altında sezgisel yanlış iyileştirme oranı $\le \%10.0$ olmalıdır.
+- [ ] **Benchmark Güvenlik Sınırı:** HandBrake 1.8.2 benchmark paketinde `ThresholdProfile.Balanced` (`0.75` güven eşiği) altında sezgisel yanlış iyileştirme oranı $\le \%10.0$ olmalıdır.
 - [ ] **Çoklu Uygulama Doğrulaması:** HandBrake (WPF) ve ShareX (WinForms) veri setlerinde tutarlı ve doğrulanmış kalibrasyon.
 - [ ] **Sıfır Açık P0/P1 Güvenlik Hatası:** `safety`, `security` veya `correctness` etiketli hiçbir açık P0/P1 sorun kalmamalıdır.
-- [ ] **Çapraz Platform CI Kararlılığı:** Windows (`net48`, `net8.0`) ve Linux (`net8.0`) CI iş hatlarında $\%100$ başarı.
-- [ ] **Tedarik Zinciri Güvenliği:** `NuGetAudit` / `dotnet list package --vulnerable` taramasında sıfır Yüksek/Kritik güvenlik açığı.
+- [ ] **Çapraz Platform CI Kararlılığı:** Windows (`net48`) ve Linux (`net8.0`) CI iş hatlarında, ele alınmamış kararsız (flaky) yeniden denemeler olmaksızın $\%100$ başarı.
+- [ ] **Tedarik Zinciri Güvenliği:** Tüm hedef framework'lerde `NuGetAudit` / `dotnet list package --vulnerable` taramasında sıfır Yüksek/Kritik güvenlik açığı.
 - [ ] **Tam Çift Dilli Belge Uyumu:** `docs/` altındaki tüm rehberlerde İngilizce ve Türkçe içerikler arasında $\%100$ yapısal ve kavramsal uyum.
-- [ ] **Doğrulanmış Başlangıç Örnekleri:** Bağımsız `HeuristicHealingQuickstart` ve `PlaywrightEndToEndQuickstart` örneklerinin CI üzerinde doğrudan nuget.org paketleriyle başarıyla çalışması.
+- [ ] **Doğrulanmış Başlangıç Örnekleri:** Bağımsız örnek projelerin CI üzerinde otomatik çalıştırılması: `HeuristicHealingQuickstart` doğrudan nuget.org / yayımlanmış paketlerden restore edilerek, `PlaywrightEndToEndQuickstart` ise mevcut kaynak ağacına karşı derlenip çalıştırılarak.
