@@ -159,12 +159,12 @@ namespace ScenarioRunner
         {
             var englishStructure = DescribeStructure(englishSection);
             var turkishStructure = DescribeStructure(turkishSection);
-            Assert.Equal(
-                englishStructure.HeadingLevels,
-                turkishStructure.HeadingLevels);
-            Assert.Equal(
-                englishStructure.FencedCodeBlockCount,
-                turkishStructure.FencedCodeBlockCount);
+            Assert.True(
+                englishStructure.HeadingLevels.SequenceEqual(turkishStructure.HeadingLevels),
+                $"{fileName} has different English/Turkish heading levels.");
+            Assert.True(
+                englishStructure.FencedCodeBlockCount == turkishStructure.FencedCodeBlockCount,
+                $"{fileName} has different English/Turkish fenced-code-block counts.");
         }
 
         private static DocumentationStructure DescribeStructure(string section)
