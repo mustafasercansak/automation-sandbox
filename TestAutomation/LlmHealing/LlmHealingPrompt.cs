@@ -121,8 +121,41 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
 
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
-            var candidateId = root.TryGetProperty("candidateId", out var idProp) ? idProp.GetString() : null;
-            var confidence = root.TryGetProperty("confidence", out var confProp) ? confProp.GetDouble() : 0.0;
+
+            string? candidateId = null;
+            if (root.TryGetProperty("candidateId", out var idProp))
+            {
+                if (idProp.ValueKind == JsonValueKind.String)
+                {
+                    candidateId = idProp.GetString();
+                }
+                else if (idProp.ValueKind == JsonValueKind.Number)
+                {
+                    candidateId = idProp.GetRawText();
+                }
+            }
+
+            double confidence = 0.0;
+            if (root.TryGetProperty("confidence", out var confProp))
+            {
+                if (confProp.ValueKind == JsonValueKind.Number)
+                {
+                    if (confProp.TryGetDouble(out var num))
+                    {
+                        confidence = num;
+                    }
+                }
+                else if (confProp.ValueKind == JsonValueKind.String)
+                {
+                    var str = confProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(str) &&
+                        double.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                    {
+                        confidence = parsed;
+                    }
+                }
+            }
+
             var reasoning = root.TryGetProperty("reasoning", out var reasonProp) ? reasonProp.GetString() ?? "" : "";
             return (string.IsNullOrWhiteSpace(candidateId) ? null : candidateId, confidence, reasoning);
         }
