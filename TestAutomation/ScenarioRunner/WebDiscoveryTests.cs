@@ -410,5 +410,18 @@ namespace ScenarioRunner
             Assert.NotNull(score.Components.ControlTypeScore);
             Assert.Equal(1.0, score.Components.ControlTypeScore!.Value);
         }
+
+        [Fact]
+        public void WebElementMapper_FormTagAndFormRole_BothMapToGroup()
+        {
+            var formByTag = new WebElementInfo { TagName = "form", AccessibleName = "CustomerForm" };
+            var formByRole = new WebElementInfo { TagName = "div", Role = "form", AccessibleName = "CustomerForm" };
+
+            var uiTag = WebElementMapper.ToUiElementTree(formByTag);
+            var uiRole = WebElementMapper.ToUiElementTree(formByRole);
+
+            Assert.Equal("Group", uiTag.ControlType);
+            Assert.Equal("Group", uiRole.ControlType);
+        }
     }
 }
