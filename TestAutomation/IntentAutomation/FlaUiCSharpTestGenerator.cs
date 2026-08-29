@@ -156,12 +156,15 @@ namespace IntentAutomation
                         string.Equals(snapshot?.ControlType, "Custom", StringComparison.OrdinalIgnoreCase))
                     {
                         code.AppendLine($"            window.{findExpression}!.AsButton().Invoke();");
-                        code.AppendLine("            var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;");
+                        // ControlType is fully qualified: the emitted file's using list does not
+                        // include FlaUI.Core.Definitions, and FindExpression above already emits
+                        // the qualified form for the same reason.
+                        code.AppendLine("            var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;");
                         code.AppendLine("            Assert.NotNull(fileDialog);");
-                        code.AppendLine("            var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))?.AsTextBox();");
+                        code.AppendLine("            var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Edit))?.AsTextBox();");
                         code.AppendLine("            Assert.NotNull(fileNameEdit);");
                         code.AppendLine($"            fileNameEdit!.Text = \"{CodeGenerationUtilities.EscapeString(step.Value)}\";");
-                        code.AppendLine("            var openButton = fileDialog.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName(\"Open\").Or(cf.ByName(\"Aç\"))))?.AsButton() ?? fileDialog.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button))?.AsButton();");
+                        code.AppendLine("            var openButton = fileDialog.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button).And(cf.ByName(\"Open\").Or(cf.ByName(\"Aç\"))))?.AsButton() ?? fileDialog.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button))?.AsButton();");
                         code.AppendLine("            Assert.NotNull(openButton);");
                         code.AppendLine("            openButton!.Invoke();");
                     }

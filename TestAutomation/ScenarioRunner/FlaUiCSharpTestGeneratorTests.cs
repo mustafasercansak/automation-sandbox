@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using IntentAutomation;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -137,9 +138,9 @@ namespace ScenarioRunner
 
             Assert.Contains("Mouse.MoveTo(window.FindFirstDescendant(cf => cf.ByAutomationId(\"btnHover\"))!.GetClickablePoint());", code);
             Assert.Contains("window.FindFirstDescendant(cf => cf.ByAutomationId(\"btnUpload\"))!.AsButton().Invoke();", code);
-            Assert.Contains("var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;", code);
+            Assert.Contains("var fileDialog = Retry.WhileNull(() => window.ModalWindows.FirstOrDefault() ?? window.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Window)), timeout: TimeSpan.FromSeconds(5)).Result;", code);
             Assert.Contains("Assert.NotNull(fileDialog);", code);
-            Assert.Contains("var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))?.AsTextBox();", code);
+            Assert.Contains("var fileNameEdit = fileDialog!.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Edit))?.AsTextBox();", code);
             Assert.Contains("Assert.NotNull(fileNameEdit);", code);
             Assert.Contains("fileNameEdit!.Text = \"C:\\\\temp\\\\resume.pdf\";", code);
             Assert.Contains("openButton!.Invoke();", code);
@@ -643,6 +644,18 @@ namespace ScenarioRunner
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
                 .ToList();
             Assert.Empty(errors);
+
+            // ParseText only validates syntax, not name binding, so an unqualified type that
+            // won't resolve (the #303 UploadFile ControlType bug: CS0246, semantic not syntactic)
+            // still parses clean. The emitted file's using list has no FlaUI.Core.Definitions, so
+            // every ControlType reference must be fully qualified.
+            var unqualified = Regex.Matches(code, @"(?<!FlaUI\.Core\.Definitions\.)\bControlType\.")
+                .Select(m => m.Index)
+                .ToList();
+            Assert.True(
+                unqualified.Count == 0,
+                "Generated code contains an unqualified 'ControlType.' reference; it must be 'FlaUI.Core.Definitions.ControlType.' because the emitted using list omits that namespace. Offsets: "
+                    + string.Join(", ", unqualified));
         }
 
         private static IntentDesktopLocatorRecordingResult Recorded(string locatorKey, string automationId)
