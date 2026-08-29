@@ -156,7 +156,18 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
                 }
             }
 
-            var reasoning = root.TryGetProperty("reasoning", out var reasonProp) ? reasonProp.GetString() ?? "" : "";
+            var reasoning = "";
+            if (root.TryGetProperty("reasoning", out var reasonProp))
+            {
+                reasoning = reasonProp.ValueKind switch
+                {
+                    JsonValueKind.String => reasonProp.GetString() ?? "",
+                    JsonValueKind.Null => "",
+                    JsonValueKind.Undefined => "",
+                    _ => reasonProp.GetRawText()
+                };
+            }
+
             return (string.IsNullOrWhiteSpace(candidateId) ? null : candidateId, confidence, reasoning);
         }
 
