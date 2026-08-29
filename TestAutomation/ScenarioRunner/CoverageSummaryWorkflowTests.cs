@@ -22,6 +22,124 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void CiWorkflow_CollectsWindowsCoverageWithDotnetCoverageAndLinuxWithCoverlet()
+        {
+            // #289: coverlet.collector 8.0+ ships no .NET Framework-loadable collector, so the
+            // net48 leg must collect via dotnet-coverage (static instrumentation, settings-
+            // filtered to repo assemblies) while the Linux net8.0 leg keeps XPlat/coverlet.
+            var workflow = File.ReadAllText(Path.Combine(RepositoryRoot(), ".github", "workflows", "ci.yml"));
+
+            Assert.Contains("Run tests with Code Coverage (Windows, dotnet-coverage)", workflow, StringComparison.Ordinal);
+            Assert.Contains("Run tests with Code Coverage (Linux, coverlet)", workflow, StringComparison.Ordinal);
+            Assert.Contains("dotnet tool install --global dotnet-coverage --version ", workflow, StringComparison.Ordinal);
+            Assert.Contains("--settings ./.github/config/windows-coverage.runsettings", workflow, StringComparison.Ordinal);
+            // Static instrumentation of the net48 output: dynamic instrumentation misses the
+            // net48-only Discovery assembly, which is the whole point of the Windows leg. The
+            // framework segment tracks the matrix so it survives a future target being added.
+            Assert.Contains("--include-files \"TestAutomation/ScenarioRunner/bin/Debug/${{ matrix.framework }}/*.dll\"", workflow, StringComparison.Ordinal);
+            Assert.Contains("--output-format cobertura", workflow, StringComparison.Ordinal);
+            Assert.Contains("DOTNET_COVERAGE_TELEMETRY_OPTOUT: '1'", workflow, StringComparison.Ordinal);
+            Assert.Contains("--collect:\"XPlat Code Coverage\"", workflow, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void CiWorkflow_HardFailsWhenWindowsCoverageDropsNet48OnlyAssemblies()
+        {
+            // #289 follow-up: a green run plus a rendered coverage table is not proof that
+            // Discovery was measured - the net48 testhost dropped it silently once. CI must
+            // run assert-coverage-assemblies.ps1 (no always(), so only on a successful
+            // collection) over the full expected assembly set.
+            var workflow = File.ReadAllText(Path.Combine(RepositoryRoot(), ".github", "workflows", "ci.yml"));
+
+            Assert.Contains("Verify Windows coverage includes net48-only assemblies", workflow, StringComparison.Ordinal);
+            Assert.Contains(".github/scripts/assert-coverage-assemblies.ps1", workflow, StringComparison.Ordinal);
+            Assert.Contains(
+                "-RequiredAssembly UiModel,SelfHealing,LlmHealing,Discovery,WebDiscovery,IntentAutomation,PlaywrightLiveExploration",
+                workflow,
+                StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void AssertCoverageAssembliesScript_PassesWhenEveryRequiredAssemblyIsPresent()
+        {
+            var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDirectory);
+            try
+            {
+                var reportDirectory = Path.Combine(testDirectory, "report");
+                Directory.CreateDirectory(reportDirectory);
+                File.WriteAllText(
+                    Path.Combine(reportDirectory, "coverage.cobertura.xml"),
+                    "<coverage line-rate=\"0.8\"><packages>" +
+                    "<package name=\"Discovery\" line-rate=\"0.6\" />" +
+                    "<package name=\"UiModel\" line-rate=\"0.9\" />" +
+                    "</packages></coverage>");
+
+                var result = RunAssertScript(testDirectory, "Discovery,UiModel");
+
+                Assert.True(
+                    result.ExitCode == 0,
+                    "Assertion script failed unexpectedly. stdout: " + result.StandardOutput + " stderr: " + result.StandardError);
+            }
+            finally
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void AssertCoverageAssembliesScript_FailsWhenNet48OnlyAssemblyIsMissing()
+        {
+            var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDirectory);
+            try
+            {
+                var reportDirectory = Path.Combine(testDirectory, "report");
+                Directory.CreateDirectory(reportDirectory);
+                File.WriteAllText(
+                    Path.Combine(reportDirectory, "coverage.cobertura.xml"),
+                    "<coverage line-rate=\"0.9\"><packages>" +
+                    "<package name=\"UiModel\" line-rate=\"0.9\" />" +
+                    "</packages></coverage>");
+
+                var result = RunAssertScript(testDirectory, "Discovery,UiModel");
+
+                Assert.False(
+                    result.ExitCode == 0,
+                    "Assertion script should fail when Discovery is absent from the report.");
+                Assert.Contains("Discovery", result.StandardOutput + result.StandardError, StringComparison.Ordinal);
+            }
+            finally
+            {
+                Directory.Delete(testDirectory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void WindowsCoverageSettings_IncludeOnlyRepositoryAssemblies()
+        {
+            var settings = File.ReadAllText(
+                Path.Combine(RepositoryRoot(), ".github", "config", "windows-coverage.runsettings"));
+
+            string[] assemblies =
+            {
+                "UiModel",
+                "SelfHealing",
+                "LlmHealing",
+                "Discovery",
+                "WebDiscovery",
+                "IntentAutomation",
+                "PlaywrightLiveExploration",
+            };
+            foreach (var assembly in assemblies)
+            {
+                Assert.Contains(assembly, settings, StringComparison.Ordinal);
+            }
+
+            Assert.Contains("<ModulePaths>", settings, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void CoverageSummaryScript_RendersOverallAndPerAssemblyRowsWithoutCombiningLegs()
         {
             var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));
@@ -161,6 +279,29 @@ namespace ScenarioRunner
                     "\" -LegLabel \"" + legLabel +
                     "\" -SummaryPath \"" + summaryPath +
                     "\" -PlatformNote \"" + platformNote + "\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+
+            using var process = Process.Start(startInfo)
+                ?? throw new InvalidOperationException("Could not start pwsh.");
+            var standardOutput = process.StandardOutput.ReadToEnd();
+            var standardError = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return new ProcessResult(process.ExitCode, standardOutput, standardError);
+        }
+
+        private static ProcessResult RunAssertScript(string coveragePath, string requiredAssemblies)
+        {
+            var scriptPath = Path.Combine(RepositoryRoot(), ".github", "scripts", "assert-coverage-assemblies.ps1");
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "pwsh",
+                Arguments = "-NoProfile -File \"" + scriptPath +
+                    "\" -CoverageSearchPath \"" + coveragePath +
+                    "\" -RequiredAssembly " + requiredAssemblies,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

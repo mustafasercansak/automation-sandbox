@@ -241,9 +241,9 @@ namespace ScenarioRunner
                     .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
                     .Count(removed => s.LocatorResults.Any(other =>
                         !ReferenceEquals(other, removed) &&
-                        !string.IsNullOrEmpty(removed.MatchedAutomationId) &&
+                        !string.IsNullOrEmpty(removed.MatchedElement) &&
                         other.EngineAccepted &&
-                        string.Equals(other.MatchedAutomationId, removed.MatchedAutomationId, StringComparison.Ordinal))));
+                        string.Equals(other.MatchedElement, removed.MatchedElement, StringComparison.Ordinal))));
 
             var uncontestedCount = removedResults.Count - contestedCount;
 
