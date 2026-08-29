@@ -77,13 +77,13 @@ This guide explains the `.locator.json` repository file structure used to store 
   - **`HealedAt`**: UTC timestamp of the healing event.
   - **`Source`**: Who produced the accepted match — `"heuristic"`, or the LLM provider name for an LLM-consensus heal.
   - **`Score`**: The total similarity score of the accepted candidate.
-  - **`ConfidenceThreshold`**: The `MinimumConfidence` threshold in effect when the heal was accepted.
+  - **`ConfidenceThreshold`**: For a heuristic heal, the `MinimumConfidence` score gate in effect when the heal was accepted. For an LLM-consensus heal this is `0.0` — a deliberate placeholder, because acceptance is decided by the provider consensus quorum, not by a score threshold.
   - **`LlmConfidence`**: Mean self-reported confidence of the agreeing LLM providers (`null` for heuristic heals). Recorded for audit only; it is never compared or thresholded.
   - **`LlmProviderName`**: The provider that produced the LLM pick (`null` for heuristic heals).
   - **`PreviousSnapshot`**: The stored snapshot before the heal (`null` if not recorded).
   - **`AcceptedSnapshot`**: The newly accepted snapshot after the heal (`null` if not recorded).
   - **`ScoreBreakdown`**: The per-signal `ScoreComponents` of the accepted candidate (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`; each is `null` when that signal was missing on both sides).
-  - **`DivergedFromHeuristic`**: `true` when an LLM heal picked a different element than the heuristic top candidate, `false` when it agreed; `null` on entries saved before this field existed ("unknown / not recorded").
+  - **`DivergedFromHeuristic`**: `true` when an LLM heal picked a different element than the heuristic top candidate, `false` when it agreed. `null` for heuristic heals (the comparison only applies to LLM picks) and for entries saved before this field existed ("unknown / not recorded").
 
 ---
 
@@ -151,10 +151,10 @@ This guide explains the `.locator.json` repository file structure used to store 
   - **`HealedAt`**: İyileştirme olayının UTC zaman damgası.
   - **`Source`**: Kabul edilen eşleşmeyi üreten kaynak — `"heuristic"` ya da LLM uzlaşmasıyla iyileştirmede LLM sağlayıcısının adı.
   - **`Score`**: Kabul edilen adayın toplam benzerlik skoru.
-  - **`ConfidenceThreshold`**: İyileştirme kabul edildiğinde geçerli olan `MinimumConfidence` eşiği.
+  - **`ConfidenceThreshold`**: Sezgisel iyileştirmede, iyileştirme kabul edildiğinde geçerli olan `MinimumConfidence` skor eşiği. LLM uzlaşmasıyla iyileştirmede bu değer `0.0`'dır — kabul kararını bir skor eşiği değil sağlayıcı uzlaşma çoğunluğu verdiği için kasıtlı bir yer tutucudur.
   - **`LlmConfidence`**: Uzlaşan LLM sağlayıcılarının ortalama öz-bildirim güven değeri (sezgisel iyileştirmelerde `null`). Yalnızca denetim amaçlı kaydedilir; hiçbir zaman karşılaştırılmaz veya eşiklenmez.
   - **`LlmProviderName`**: LLM seçimini üreten sağlayıcı (sezgisel iyileştirmelerde `null`).
   - **`PreviousSnapshot`**: İyileştirmeden önceki kayıtlı snapshot (kaydedilmediyse `null`).
   - **`AcceptedSnapshot`**: İyileştirmeden sonra kabul edilen yeni snapshot (kaydedilmediyse `null`).
   - **`ScoreBreakdown`**: Kabul edilen adayın sinyal bazlı `ScoreComponents` dökümü (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`; ilgili sinyal her iki tarafta da eksikse değer `null` olur).
-  - **`DivergedFromHeuristic`**: LLM iyileştirmesi sezgisel en iyi adaydan farklı bir eleman seçtiyse `true`, aynı fikirdeyse `false`; bu alan eklenmeden önce kaydedilmiş girdilerde `null` ("bilinmiyor / kaydedilmedi").
+  - **`DivergedFromHeuristic`**: LLM iyileştirmesi sezgisel en iyi adaydan farklı bir eleman seçtiyse `true`, aynı fikirdeyse `false`. Sezgisel iyileştirmelerde `null` (bu karşılaştırma yalnızca LLM seçimleri için anlamlıdır); ayrıca bu alan eklenmeden önce kaydedilmiş girdilerde de `null` ("bilinmiyor / kaydedilmedi").
