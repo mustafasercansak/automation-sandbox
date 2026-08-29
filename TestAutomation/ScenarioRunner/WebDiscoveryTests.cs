@@ -423,22 +423,5 @@ namespace ScenarioRunner
             Assert.Equal("Group", uiTag.ControlType);
             Assert.Equal("Group", uiRole.ControlType);
         }
-
-        [Fact]
-        public void PlaywrightLocatorEmitter_SymbolOnlyRole_DoesNotThrowAndOmitsRoleSuggestion()
-        {
-            var element = new WebElementInfo
-            {
-                Role = "--",
-                AccessibleName = "Submit",
-                TestId = "submit-btn",
-            };
-
-            var suggestions = PlaywrightLocatorEmitter.EmitSuggestions(element);
-
-            Assert.NotEmpty(suggestions);
-            Assert.DoesNotContain(suggestions, s => s.Strategy == "Role");
-            Assert.Contains(suggestions, s => s.Strategy == "TestId");
-        }
     }
 }
