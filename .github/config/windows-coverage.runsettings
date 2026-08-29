@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Windows net48 coverage collection settings for dotnet-coverage (#289).
+     Only the repository's own assemblies are instrumented; without this include list the
+     report would be polluted by the test platform, xunit, and FlaUI modules. Paths match
+     Windows separators because this file is only used by the windows-latest CI leg. -->
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*[\\/](UiModel|SelfHealing|LlmHealing|Discovery|WebDiscovery|IntentAutomation|PlaywrightLiveExploration)\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+  </CodeCoverage>
+</Configuration>

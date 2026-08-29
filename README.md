@@ -660,8 +660,11 @@ dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --collect:"XPlat
 
 CI renders the collected Cobertura data into each matrix job's GitHub Step Summary. Windows
 `net48` and Linux `net8.0` are labelled and reported separately, with overall and per-assembly
-line/branch coverage. The figures are visibility aids only: they are never combined into one
-headline percentage, published as a badge, or used as a threshold that can fail the build.
+line/branch coverage. The Linux leg collects with coverlet (`XPlat Code Coverage`); the Windows
+`net48` leg uses Microsoft's `dotnet-coverage` tool instead, because coverlet 8.0+ no longer
+ships a .NET Framework-loadable collector (#289). The figures are visibility aids only: they
+are never combined into one headline percentage, published as a badge, or used as a threshold
+that can fail the build.
 
 ### Package Security Audit
 
