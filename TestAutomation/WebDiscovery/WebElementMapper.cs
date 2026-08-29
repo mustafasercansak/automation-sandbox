@@ -65,7 +65,7 @@ namespace WebDiscovery
                 "select" => "ComboBox",
                 "table" => "DataGrid",
                 "a" => "Hyperlink",
-                "form" => "Form",
+                "form" => "Group",
                 "main" => "Document",
                 "section" => "Group",
                 "fieldset" => "Group",
