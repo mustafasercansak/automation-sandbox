@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace UiModel
 {
     // Owns read-modify-write access to a single .locator.json file on disk. The load-modify-save
@@ -5,7 +8,7 @@ namespace UiModel
     // callers - e.g. parallel xUnit test collections healing against the same repository file -
     // serialize instead of racing and silently dropping each other's updates.
     // In-memory document and O(1) lookup dictionary are cached across repeated Find/Load calls
-    // and invalidated whenever the underlying file's mtime or length changes (dirty-check).
+    // and invalidated whenever the underlying file's content changes (verified via content hash, dirty-check).
     public sealed class LocatorRepository
     {
         private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(10);
@@ -14,6 +17,7 @@ namespace UiModel
         private readonly object _syncRoot = new object();
         private DateTime _lastWriteTimeUtc = DateTime.MinValue;
         private long _lastLength = -1;
+        private byte[]? _cachedContentHash;
         private bool _cachedFileExists;
         private LocatorRepositoryDocument? _cachedDocument;
         private Dictionary<string, LocatorRecord>? _cachedLookup;
@@ -49,6 +53,7 @@ namespace UiModel
             }
 
             var json = LocatorRepositorySerializer.ToJson(document);
+            var jsonBytes = Encoding.UTF8.GetBytes(json);
             var directory = Path.GetDirectoryName(FilePath);
             if (!string.IsNullOrEmpty(directory))
             {
@@ -58,7 +63,7 @@ namespace UiModel
             // Write to a temp file then atomically replace/move it into place, so a crash or a
             // concurrent reader mid-write never observes a half-written repository file.
             var tempPath = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            File.WriteAllText(tempPath, json);
+            File.WriteAllBytes(tempPath, jsonBytes);
             try
             {
                 if (File.Exists(FilePath))
@@ -84,6 +89,7 @@ namespace UiModel
                 _cachedFileExists = fileInfo.Exists;
                 _lastWriteTimeUtc = fileInfo.Exists ? fileInfo.LastWriteTimeUtc : DateTime.MinValue;
                 _lastLength = fileInfo.Exists ? fileInfo.Length : -1;
+                _cachedContentHash = fileInfo.Exists ? ComputeContentHash(jsonBytes) : null;
                 _cachedDocument = document;
                 _cachedLookup = BuildLookupIndex(document);
             }
@@ -118,6 +124,7 @@ namespace UiModel
                     _cachedFileExists = false;
                     _lastWriteTimeUtc = DateTime.MinValue;
                     _lastLength = -1;
+                    _cachedContentHash = null;
                     _cachedDocument = new LocatorRepositoryDocument();
                     _cachedLookup = new Dictionary<string, LocatorRecord>(StringComparer.Ordinal);
                 }
@@ -128,20 +135,55 @@ namespace UiModel
             var lastWrite = fileInfo.LastWriteTimeUtc;
             var length = fileInfo.Length;
 
-            if (_cachedFileExists && _cachedDocument != null && _lastWriteTimeUtc == lastWrite && _lastLength == length)
+            var bytes = File.ReadAllBytes(FilePath);
+            var currentHash = ComputeContentHash(bytes);
+
+            if (_cachedFileExists && _cachedDocument != null && HashesMatch(_cachedContentHash, currentHash))
             {
+                _lastWriteTimeUtc = lastWrite;
+                _lastLength = length;
                 return;
             }
 
-            var json = File.ReadAllText(FilePath);
+            var json = Encoding.UTF8.GetString(bytes);
             var doc = LocatorRepositorySerializer.FromJson(json);
             var lookup = BuildLookupIndex(doc);
 
             _cachedFileExists = true;
             _lastWriteTimeUtc = lastWrite;
             _lastLength = length;
+            _cachedContentHash = currentHash;
             _cachedDocument = doc;
             _cachedLookup = lookup;
+        }
+
+        private static byte[] ComputeContentHash(byte[] bytes)
+        {
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(bytes);
+        }
+
+        private static bool HashesMatch(byte[]? a, byte[]? b)
+        {
+            if (ReferenceEquals(a, b))
+            {
+                return true;
+            }
+
+            if (a == null || b == null || a.Length != b.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static Dictionary<string, LocatorRecord> BuildLookupIndex(LocatorRepositoryDocument document)

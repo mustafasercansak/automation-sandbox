@@ -184,6 +184,71 @@ namespace ScenarioRunner
             Assert.Equal("first", found!.Snapshot.AutomationId);
         }
 
+        [Fact]
+        public void Find_WhenSecondInstanceModifiesFileWithCollidingMtimeAndLength_InvalidatesCache()
+        {
+            var repo1 = new LocatorRepository(_filePath);
+            var repo2 = new LocatorRepository(_filePath);
+
+            repo1.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail_AAAA" });
+
+            var firstFromRepo1 = repo1.Find("CustomerForm.Email");
+            Assert.NotNull(firstFromRepo1);
+            Assert.Equal("txtEmail_AAAA", firstFromRepo1!.Snapshot.AutomationId);
+
+            var originalFileInfo = new FileInfo(_filePath);
+            var originalMtime = originalFileInfo.LastWriteTimeUtc;
+
+            // Second instance updates the record. "AAAA" -> "BBBB" keeps the AutomationId itself the
+            // same length, but Upsert also stamps a fresh UpdatedAt timestamp, whose serialized
+            // fractional-second digits System.Text.Json trims to their significant length -- so the
+            // resulting file length can still drift by a byte or two between writes and isn't
+            // something this test can reliably force, only mtime is (below).
+            repo2.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail_BBBB" });
+
+            // Force mtime on disk to match the original timestamp exactly so mtime collides even
+            // though length may or may not.
+            File.SetLastWriteTimeUtc(_filePath, originalMtime);
+            var updatedFileInfo = new FileInfo(_filePath);
+            Assert.Equal(originalMtime, updatedFileInfo.LastWriteTimeUtc);
+
+            // First instance must detect the content hash mismatch and return the updated record
+            var updatedFromRepo1 = repo1.Find("CustomerForm.Email");
+            Assert.NotNull(updatedFromRepo1);
+            Assert.Equal("txtEmail_BBBB", updatedFromRepo1!.Snapshot.AutomationId);
+        }
+
+        [Fact]
+        public void Upsert_WhenConcurrentInstanceModifiesFileWithCollidingMtimeAndLength_DoesNotLoseUpdate()
+        {
+            var repo1 = new LocatorRepository(_filePath);
+            var repo2 = new LocatorRepository(_filePath);
+
+            // Process 1 writes key 1
+            repo1.Upsert("Key1", new UiElementInfo { AutomationId = "btnSubmitA" });
+            var originalMtime = new FileInfo(_filePath).LastWriteTimeUtc;
+
+            // Process 2 updates key 1. Same-length AutomationId, but the file's actual byte length can
+            // still drift a little via Upsert's own UpdatedAt timestamp -- only mtime is forced below.
+            repo2.Upsert("Key1", new UiElementInfo { AutomationId = "btnSubmitB" });
+
+            // Force mtime on disk to match original mtime
+            File.SetLastWriteTimeUtc(_filePath, originalMtime);
+            Assert.Equal(originalMtime, new FileInfo(_filePath).LastWriteTimeUtc);
+
+            // Process 1 now performs an Upsert for Key2. It must not use stale cached document (which lacked btnSubmitB)
+            repo1.Upsert("Key2", new UiElementInfo { AutomationId = "btnCancel" });
+
+            var loadedDoc = repo1.Load();
+            var key1Record = loadedDoc.Locators.FirstOrDefault(r => r.LocatorKey == "Key1");
+            var key2Record = loadedDoc.Locators.FirstOrDefault(r => r.LocatorKey == "Key2");
+
+            Assert.NotNull(key1Record);
+            Assert.Equal("btnSubmitB", key1Record!.Snapshot.AutomationId);
+            Assert.NotNull(key2Record);
+            Assert.Equal("btnCancel", key2Record!.Snapshot.AutomationId);
+        }
+
         public void Dispose()
         {
             if (Directory.Exists(_directory))
