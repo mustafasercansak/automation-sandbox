@@ -649,9 +649,13 @@ namespace ScenarioRunner
             // won't resolve (the #303 UploadFile ControlType bug: CS0246, semantic not syntactic)
             // still parses clean. The emitted file's using list has no FlaUI.Core.Definitions, so
             // every ControlType reference must be fully qualified.
-            var unqualified = Regex.Matches(code, @"(?<!FlaUI\.Core\.Definitions\.)\bControlType\.")
-                .Select(m => m.Index)
-                .ToList();
+            // MatchCollection is only non-generic IEnumerable on net48, so no LINQ over it here.
+            var unqualified = new List<int>();
+            foreach (Match match in Regex.Matches(code, @"(?<!FlaUI\.Core\.Definitions\.)\bControlType\."))
+            {
+                unqualified.Add(match.Index);
+            }
+
             Assert.True(
                 unqualified.Count == 0,
                 "Generated code contains an unqualified 'ControlType.' reference; it must be 'FlaUI.Core.Definitions.ControlType.' because the emitted using list omits that namespace. Offsets: "
