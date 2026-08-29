@@ -899,6 +899,199 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void MultiLocatorBaseline_DuplicateMatchedAutomationIdsOnDistinctElements_AreNotContention()
+        {
+            // #272: two locators heal to two genuinely different elements that happen to share a
+            // duplicate AutomationId — the canonical case self-healing targets. String equality on
+            // the id would manufacture a contention here; element identity must not.
+            var root = new UiElementInfo
+            {
+                ControlType = "Window",
+                Name = "Stub",
+                AutomationId = "MainWindow",
+                BoundingRectangle = new BoundingRectangle(0, 0, 800, 600),
+            };
+            var save = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Save",
+                AutomationId = "btnSave",
+                BoundingRectangle = new BoundingRectangle(10, 10, 80, 30),
+            };
+            var cancel = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Cancel",
+                AutomationId = "btnCancel",
+                BoundingRectangle = new BoundingRectangle(300, 10, 80, 30),
+            };
+            root.Children.Add(save);
+            root.Children.Add(cancel);
+
+            var dataset = new LocatorAblationDataset();
+            dataset.Scenarios.Add(new LocatorAblationScenario
+            {
+                ScenarioId = "duplicate-id",
+                ApplicationName = "StubApp",
+                SourceVersion = "1.0",
+                SourceTreeFileName = "stub.json",
+                MutationKind = LocatorMutationKind.MultiLocator,
+                Mutations = new List<LocatorAblationMutation>
+                {
+                    RenameTo("btnSave", "dupId", save, root),
+                    RenameTo("btnCancel", "dupId", cancel, root),
+                },
+            });
+
+            var report = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+
+            var scenario = Assert.Single(report.Scenarios);
+            Assert.Equal(2, scenario.LocatorResults.Count);
+            Assert.All(scenario.LocatorResults, r => Assert.True(r.EngineAccepted));
+            Assert.All(scenario.LocatorResults, r => Assert.Equal(AblationOutcome.CorrectHeal, r.Outcome));
+
+            // The AutomationId string collides; the elements do not.
+            Assert.All(scenario.LocatorResults, r => Assert.Equal("dupId", r.MatchedAutomationId));
+            Assert.Equal(2, scenario.LocatorResults.Select(r => r.MatchedElement).Distinct().Count());
+            Assert.Equal(0, scenario.SharedCandidateClaims);
+            Assert.Equal(0, scenario.RemovedFalseHealsClaimingCompetingSuccessor);
+        }
+
+        [Fact]
+        public void MultiLocatorBaseline_EmptyMatchedAutomationIdOnSameElement_IsContention()
+        {
+            // #272: the removed "btnB" falsely heals onto the renamed "btnA", whose AutomationId is
+            // now empty (common in WPF/legacy UI). The old !IsNullOrEmpty(MatchedAutomationId) filter
+            // silently excluded exactly this genuine collision from the contention count.
+            var root = new UiElementInfo
+            {
+                ControlType = "Window",
+                Name = "Stub",
+                AutomationId = "MainWindow",
+                BoundingRectangle = new BoundingRectangle(0, 0, 800, 600),
+            };
+            var action = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Action",
+                AutomationId = "btnA",
+                BoundingRectangle = new BoundingRectangle(10, 10, 100, 30),
+            };
+            var actionCopy = new UiElementInfo
+            {
+                ControlType = "Button",
+                Name = "Action",
+                AutomationId = "btnB",
+                BoundingRectangle = new BoundingRectangle(120, 10, 100, 30),
+            };
+            root.Children.Add(action);
+            root.Children.Add(actionCopy);
+
+            var dataset = new LocatorAblationDataset();
+            dataset.Scenarios.Add(new LocatorAblationScenario
+            {
+                ScenarioId = "empty-id-collision",
+                ApplicationName = "StubApp",
+                SourceVersion = "1.0",
+                SourceTreeFileName = "stub.json",
+                MutationKind = LocatorMutationKind.MultiLocator,
+                Mutations = new List<LocatorAblationMutation>
+                {
+                    RenameTo("btnA", null, action, root),
+                    Remove("btnB"),
+                },
+            });
+
+            var report = LocatorAblationHarness.RunMultiLocatorBaseline(dataset, root);
+
+            var scenario = Assert.Single(report.Scenarios);
+            var renamed = Assert.Single(scenario.LocatorResults, r => r.OriginalAutomationId == "btnA");
+            var removed = Assert.Single(scenario.LocatorResults, r => r.OriginalAutomationId == "btnB");
+
+            // Both claims landed on the same element, whose AutomationId is empty.
+            Assert.True(renamed.EngineAccepted);
+            Assert.True(removed.EngineAccepted);
+            Assert.Equal(AblationOutcome.CorrectHeal, renamed.Outcome);
+            Assert.Equal(AblationOutcome.FalseHealOnRemoved, removed.Outcome);
+            Assert.Equal("", renamed.MatchedAutomationId);
+            Assert.Equal("", removed.MatchedAutomationId);
+            Assert.Equal(renamed.MatchedElement, removed.MatchedElement);
+
+            Assert.Equal(1, scenario.SharedCandidateClaims);
+            Assert.Equal(1, scenario.RemovedFalseHealsClaimingCompetingSuccessor);
+        }
+
+        [Fact]
+        public void JointAssignment_DuplicateAutomationIdsOnDistinctElements_AreNotContention()
+        {
+            // #272: same matched AutomationId string, different matched elements. String-equality
+            // grouping would manufacture a contention here and decline real heals.
+            var baseline = new MultiLocatorBaselineReport
+            {
+                Scenarios = new List<MultiLocatorScenarioResult>
+                {
+                    new MultiLocatorScenarioResult
+                    {
+                        ScenarioId = "duplicate-id",
+                        SharedCandidateClaims = 0,
+                        LocatorResults = new List<AblationScenarioResult>
+                        {
+                            AcceptedClaim("btnSave", LocatorMutationKind.RenamedAutomationId, AblationOutcome.CorrectHeal, "dupId", 0.95, matchedElement: "Button['Save'] under Window['Stub']"),
+                            AcceptedClaim("btnCancel", LocatorMutationKind.RenamedAutomationId, AblationOutcome.CorrectHeal, "dupId", 0.93, matchedElement: "Button['Cancel'] under Window['Stub']"),
+                        },
+                    },
+                },
+            };
+
+            var report = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            var results = Assert.Single(report.Scenarios).LocatorResults;
+            Assert.All(results, r => Assert.True(r.Joint.EngineAccepted));
+            Assert.All(results, r => Assert.Equal(JointAssignmentDisposition.PreservedUncontested, r.Disposition));
+            Assert.Equal(0, report.UnresolvedSharedCandidateCollisions);
+        }
+
+        [Fact]
+        public void JointAssignment_EmptyAutomationIdCollision_IsReconciled()
+        {
+            // #272: a genuine collision on an element whose AutomationId is empty. The old
+            // !IsNullOrEmpty filter excluded exactly this claim pair, so neither claim was
+            // reconciled and the collision stayed invisible in UnresolvedSharedCandidateClaims.
+            var baseline = new MultiLocatorBaselineReport
+            {
+                Scenarios = new List<MultiLocatorScenarioResult>
+                {
+                    new MultiLocatorScenarioResult
+                    {
+                        ScenarioId = "empty-id-collision",
+                        SharedCandidateClaims = 1,
+                        LocatorResults = new List<AblationScenarioResult>
+                        {
+                            AcceptedClaim("removed", LocatorMutationKind.RemovedElement, AblationOutcome.FalseHealOnRemoved, "", 0.70, matchedElement: "Button['Action'] under Window['Stub']"),
+                            AcceptedClaim("survivor", LocatorMutationKind.RenamedAutomationId, AblationOutcome.CorrectHeal, "", 0.95, matchedElement: "Button['Action'] under Window['Stub']"),
+                        },
+                    },
+                },
+            };
+
+            var report = JointLocatorAssignmentEvaluator.Evaluate(baseline);
+
+            var results = Assert.Single(report.Scenarios).LocatorResults;
+            var winner = Assert.Single(results, r => r.Joint.OriginalAutomationId == "survivor");
+            Assert.True(winner.Joint.EngineAccepted);
+            Assert.Equal(JointAssignmentDisposition.WonContention, winner.Disposition);
+            Assert.Equal(AblationOutcome.CorrectHeal, winner.Joint.Outcome);
+
+            var loser = Assert.Single(results, r => r.Joint.OriginalAutomationId == "removed");
+            Assert.False(loser.Joint.EngineAccepted);
+            Assert.Equal(JointAssignmentDisposition.DeclinedByStrongerClaim, loser.Disposition);
+            Assert.Equal(AblationOutcome.CorrectDecline, loser.Joint.Outcome);
+            Assert.Null(loser.Joint.MatchedElement);
+
+            Assert.Equal(0, report.UnresolvedSharedCandidateCollisions);
+        }
+
+        [Fact]
         public void HandBrakeFixture_JointAssignment_ResolvesReciprocalContentionButNotIncidentalFalseHeal()
         {
             var root = LoadFixture();
@@ -1646,12 +1839,40 @@ namespace ScenarioRunner
         private static AblationScenarioResult Result(LocatorMutationKind kind, AblationOutcome outcome) =>
             new AblationScenarioResult { MutationKind = kind, Outcome = outcome };
 
+        // A hand-written rename recipe. The generator never produces duplicate or empty mutated ids,
+        // so the #272 identity fixtures have to write the recipe directly; ground truth is the
+        // structural fingerprint, which a pure rename leaves intact.
+        private static LocatorAblationMutation RenameTo(
+            string originalAutomationId,
+            string? mutatedAutomationId,
+            UiElementInfo element,
+            UiElementInfo sourceRoot) =>
+            new LocatorAblationMutation
+            {
+                MutationKind = LocatorMutationKind.RenamedAutomationId,
+                ExpectedOutcome = LocatorExpectedOutcome.Successor,
+                OriginalAutomationId = originalAutomationId,
+                MutatedAutomationId = mutatedAutomationId,
+                GroundTruth = LocatorAblationGenerator.Fingerprint(
+                    element,
+                    LocatorAblationGenerator.AncestorPathOf(sourceRoot, element)),
+            };
+
+        private static LocatorAblationMutation Remove(string originalAutomationId) =>
+            new LocatorAblationMutation
+            {
+                MutationKind = LocatorMutationKind.RemovedElement,
+                ExpectedOutcome = LocatorExpectedOutcome.NoSuccessor,
+                OriginalAutomationId = originalAutomationId,
+            };
+
         private static AblationScenarioResult AcceptedClaim(
             string originalAutomationId,
             LocatorMutationKind kind,
             AblationOutcome outcome,
             string matchedAutomationId,
-            double score) =>
+            double score,
+            string? matchedElement = null) =>
             new AblationScenarioResult
             {
                 ScenarioId = "scenario#" + originalAutomationId,
@@ -1661,7 +1882,7 @@ namespace ScenarioRunner
                 EngineAccepted = true,
                 ResolutionStatus = HealResolutionStatus.Confident,
                 MatchedAutomationId = matchedAutomationId,
-                MatchedElement = matchedAutomationId,
+                MatchedElement = matchedElement ?? matchedAutomationId,
                 Score = score,
             };
 

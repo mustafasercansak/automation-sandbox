@@ -399,9 +399,14 @@ namespace ScenarioRunner
                     });
                 }
 
+                // Contention is a question of element identity, not of the AutomationId string:
+                // the id can be duplicated across distinct elements or empty on a genuine collision —
+                // the exact defect class this framework exists to heal. Group by the path-qualified
+                // structural fingerprint recorded at match time instead (#272), the same discipline
+                // the production ownership guard applies with its reference-identity map.
                 var acceptedClaims = scenarioResult.LocatorResults
-                    .Where(r => r.EngineAccepted && !string.IsNullOrEmpty(r.MatchedAutomationId))
-                    .GroupBy(r => r.MatchedAutomationId!, StringComparer.Ordinal)
+                    .Where(r => r.EngineAccepted && r.MatchedElement != null)
+                    .GroupBy(r => r.MatchedElement!, StringComparer.Ordinal)
                     .Where(g => g.Count() > 1)
                     .ToList();
                 scenarioResult.SharedCandidateClaims = acceptedClaims.Count;
