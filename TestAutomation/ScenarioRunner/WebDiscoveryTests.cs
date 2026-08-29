@@ -434,7 +434,7 @@ namespace ScenarioRunner
                 TestId = "submit-btn",
             };
 
-            var suggestions = PlaywrightLocatorEmitter.EmitSuggestions(element);
+            var suggestions = PlaywrightLocatorEmitter.Suggest(element);
 
             Assert.NotEmpty(suggestions);
             Assert.DoesNotContain(suggestions, s => s.Strategy == "Role");

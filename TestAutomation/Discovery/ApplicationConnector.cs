@@ -29,13 +29,43 @@ namespace Discovery
         public static ApplicationConnector Launch(string exePath)
         {
             var app = Application.Launch(exePath);
-            return new ApplicationConnector(app, new UIA3Automation());
+            try
+            {
+                var automation = new UIA3Automation();
+                return new ApplicationConnector(app, automation);
+            }
+            catch
+            {
+                try
+                {
+                    if (!app.HasExited)
+                    {
+                        app.Close(killIfCloseFails: true);
+                    }
+                }
+                catch
+                {
+                    // Best effort cleanup on startup failure
+                }
+
+                app.Dispose();
+                throw;
+            }
         }
 
         public static ApplicationConnector Attach(string processName)
         {
             var app = Application.Attach(processName);
-            return new ApplicationConnector(app, new UIA3Automation());
+            try
+            {
+                var automation = new UIA3Automation();
+                return new ApplicationConnector(app, automation);
+            }
+            catch
+            {
+                app.Dispose();
+                throw;
+            }
         }
 
         public Window GetMainWindow(TimeSpan? timeout = null)
