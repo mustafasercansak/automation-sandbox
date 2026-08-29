@@ -26,13 +26,12 @@ namespace WebDiscovery
                 });
             }
 
-            var ariaRole = ToAriaRole(element.Role);
-            if (!string.IsNullOrWhiteSpace(ariaRole) && !string.IsNullOrWhiteSpace(element.AccessibleName))
+            if (!string.IsNullOrWhiteSpace(element.Role) && !string.IsNullOrWhiteSpace(element.AccessibleName))
             {
                 suggestions.Add(new PlaywrightLocatorSuggestion
                 {
                     Strategy = "Role",
-                    Expression = $"{framePrefix}GetByRole(AriaRole.{ariaRole}, new() {{ Name = \"{EscapeCSharpString(element.AccessibleName)}\" }})",
+                    Expression = $"{framePrefix}GetByRole(AriaRole.{ToAriaRole(element.Role)}, new() {{ Name = \"{EscapeCSharpString(element.AccessibleName)}\" }})",
                     Confidence = 0.90,
                     Reason = "role plus accessible name matches user-visible semantics",
                 });
@@ -97,17 +96,7 @@ namespace WebDiscovery
 
         private static string ToAriaRole(string role)
         {
-            if (string.IsNullOrWhiteSpace(role))
-            {
-                return "";
-            }
-
             var normalized = role.Replace("-", "").Replace("_", "");
-            if (string.IsNullOrEmpty(normalized))
-            {
-                return "";
-            }
-
             return normalized.Equals("textbox", StringComparison.OrdinalIgnoreCase)
                 ? "Textbox"
                 : char.ToUpperInvariant(normalized[0]) + normalized.Substring(1).ToLowerInvariant();
