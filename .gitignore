@@ -18,3 +18,7 @@ TestResults/
 !.github/
 !.github/**
 
+
+# Python
+__pycache__/
+*.pyc
