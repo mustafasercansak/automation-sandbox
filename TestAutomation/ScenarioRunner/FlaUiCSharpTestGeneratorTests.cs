@@ -69,6 +69,7 @@ namespace ScenarioRunner
 
             var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordingResults);
 
+            Assert.Contains("using FlaUI.Core.Definitions;", code);
             Assert.Contains("public class CreateCustomer : IDisposable", code);
             Assert.Contains("public void CreateACustomerRecord()", code);
             Assert.Contains("Navigate step has no desktop equivalent", code);
