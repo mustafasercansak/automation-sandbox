@@ -100,11 +100,22 @@ dotnet nuget add source ./nupkgs --name automation-sandbox-local
 dotnet add package AutomationSandbox.SelfHealing --prerelease --source automation-sandbox-local
 ```
 
+## Software Bill of Materials (SBOM)
+
+Every release run generates one CycloneDX JSON SBOM per published package
+(`UiModel.bom.json`, `SelfHealing.bom.json`, and so on) using the pinned
+[CycloneDX .NET tool](https://github.com/CycloneDX/cyclonedx-dotnet). Each BOM records
+the package's transitive NuGet dependency graph from the Release build, aggregated across
+all of the project's target frameworks, with project references included. The SBOMs are
+uploaded as the `release-sboms` workflow artifact and attached to the GitHub Release next
+to the `.nupkg` / `.snupkg` files, so consumers can audit what a package pulls in without
+trusting nuget.org metadata alone.
+
 ## Publish Checklist
 
 - CI is green on `main`.
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
-- GitHub Release assets include all seven packages and their symbol packages.
+- GitHub Release assets include all seven packages and their symbol packages, plus one CycloneDX SBOM (`.bom.json`) per package.
 - Package names, README, license, repository URL, and symbols are present.
 ## Version Bumps / Sürüm Güncelleme
 
@@ -126,7 +137,11 @@ The packaging workflows (`pack.yml`, `release.yml`) and `verify.ps1` resolve `<V
 feed'e yayın yapmaz. `Release Preview Packages` workflow'u ise `publish_to_nuget`
 etkinleştirildiğinde saklanan bir API anahtarı olmadan Trusted Publishing (OIDC) ile
 nuget.org'a yayın yapabilir. Yayınlanan yedi paketin tamamı nuget.org'da ve GitHub
-prerelease asset'lerinde bulunur. Yerel doğrulama için `Pack` artifact'leri ayrıca lokal
+prerelease asset'lerinde bulunur. Her release çalıştırması ayrıca yayınlanan her paket
+için bir CycloneDX JSON SBOM'u (`UiModel.bom.json` gibi) üretir; bu dosyalar paketin
+Release build'indeki geçişli NuGet bağımlılık grafiğini listeler ve `release-sboms`
+workflow artifact'i ile GitHub Release asset'leri üzerinden `.nupkg` / `.snupkg`
+dosyalarının yanında sunulur. Yerel doğrulama için `Pack` artifact'leri ayrıca lokal
 feed üzerinden tüketilebilir. Yayınlanan prerelease paketi doğrudan tüketmek için:
 
 ```powershell
