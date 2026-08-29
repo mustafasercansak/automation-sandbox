@@ -1,8 +1,7 @@
 <Project>
 
   <!-- Shared metadata for dotnet pack. Only applies where IsPackable isn't overridden
-
-       to false (the two demo apps, and ScenarioRunner as an IsTestProject). -->
+       to false (the two demo apps, NUnitFixtureTests, the samples, and ScenarioRunner as an IsTestProject). -->
 
   <PropertyGroup>
 

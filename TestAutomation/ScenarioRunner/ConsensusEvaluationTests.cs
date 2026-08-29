@@ -61,7 +61,9 @@ namespace ScenarioRunner
             {
                 ["GEMINI_API_KEY"] = "gemini-test-key",
                 ["GROK_API_KEY"] = "grok-test-key",
+                ["GROK_MODEL"] = "grok-2-1212",
                 ["KIMI_API_KEY"] = "kimi-test-key",
+                ["KIMI_MODEL"] = "moonshot-v1-8k",
             };
 
             var providers = LlmProviderFactory.CreateConfiguredProviders(getEnv: key => env.TryGetValue(key, out var val) ? val : null);
@@ -217,6 +219,8 @@ namespace ScenarioRunner
         [InlineData("MISTRAL_API_KEY", "MISTRAL_MODEL", "Mistral")]
         [InlineData("OLLAMA_CLOUD_API_KEY", "OLLAMA_CLOUD_MODEL", "OllamaCloud")]
         [InlineData("NVIDIA_API_KEY", "NVIDIA_MODEL", "Nvidia")]
+        [InlineData("GROK_API_KEY", "GROK_MODEL", "Grok")]
+        [InlineData("KIMI_API_KEY", "KIMI_MODEL", "Kimi")]
         public void LlmProviderFactory_SkipsProvider_WhenEitherKeyOrModelIsMissing(
             string keyVariable,
             string modelVariable,
@@ -598,7 +602,9 @@ namespace ScenarioRunner
             {
                 ["GEMINI_API_KEY"] = "mock-gemini-key",
                 ["GROK_API_KEY"] = "mock-grok-key",
+                ["GROK_MODEL"] = "grok-2-1212",
                 ["KIMI_API_KEY"] = "mock-kimi-key",
+                ["KIMI_MODEL"] = "moonshot-v1-8k",
             };
 
             var providers = LlmProviderFactory.CreateConfiguredProviders(

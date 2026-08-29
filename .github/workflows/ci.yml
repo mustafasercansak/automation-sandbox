@@ -97,8 +97,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
           # Optional cost control: set these as repo Variables (not Secrets - not
-          # sensitive) to override the hardcoded model defaults, e.g. to a cheaper
-          # tier than ClaudeHealingProvider's default (claude-opus-5). Unset falls
+          # sensitive) to override the hardcoded model defaults (e.g.
+          # ClaudeHealingProvider defaults to claude-haiku-4-5-20251001). Unset falls
           # back to each provider's own default.
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
@@ -138,8 +138,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
           # Optional cost control: set these as repo Variables (not Secrets - not
-          # sensitive) to override the hardcoded model defaults, e.g. to a cheaper
-          # tier than ClaudeHealingProvider's default (claude-opus-5). Unset falls
+          # sensitive) to override the hardcoded model defaults (e.g.
+          # ClaudeHealingProvider defaults to claude-haiku-4-5-20251001). Unset falls
           # back to each provider's own default.
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}

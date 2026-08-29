@@ -9,7 +9,7 @@
 
 An open-source **locator healing** and **intent-driven test generation** engine for Windows desktop and web.
 
-**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~12ms for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
+**Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~23ms for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
 ## A Broken Locator, in 30 Seconds
 
@@ -584,8 +584,8 @@ All cloud providers share the `HttpLlmHealingProvider` base architecture with au
 - `ANTHROPIC_API_KEY` (+ `ANTHROPIC_MODEL`) $\rightarrow$ Claude (`claude-haiku-4-5-20251001`)
 - `GEMINI_API_KEY` (+ `GEMINI_MODEL`) $\rightarrow$ Gemini (`gemini-3.6-flash`)
 - `OPENAI_API_KEY` (+ `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ OpenAI (`gpt-4o-mini`)
-- `GROK_API_KEY` (+ `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ Grok (`grok-2-latest`)
-- `KIMI_API_KEY` (+ `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ Kimi (`moonshot-v1-8k`)
+- `GROK_API_KEY` + `GROK_MODEL` (+ `GROK_ENDPOINT`) $\rightarrow$ Grok (both required; no guessed model)
+- `KIMI_API_KEY` + `KIMI_MODEL` (+ `KIMI_ENDPOINT`) $\rightarrow$ Kimi (both required; no guessed model)
 - `GROQ_API_KEY` + `GROQ_MODEL` (+ `GROQ_ENDPOINT`) $\rightarrow$ Groq (both required; no guessed model)
 - `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` (+ `OPENROUTER_ENDPOINT`) $\rightarrow$ OpenRouter (both required; no guessed model)
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ Cloudflare Workers AI (no guessed model)
@@ -703,15 +703,20 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 AutomationSandbox.sln
 ├── WinFormsApp/            .NET Framework 4.8 WinForms application under test
 ├── WpfApp/                 .NET 8 / .NET 10 WPF application under test
-└── TestAutomation/
-    ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
-    ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
-    ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
-    ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net8.0, net10.0)
-    ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
-    ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
-    ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
-    └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
+├── TestAutomation/
+│   ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
+│   ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
+│   ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
+│   ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net8.0, net10.0)
+│   ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
+│   ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
+│   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
+│   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net8.0)
+│   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
+└── samples/
+    ├── CalibrationCli/     CLI calibration tool for evaluating dataset ablation benchmarks (.NET 8)
+    ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 8)
+    └── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
 ```
 
 ---
