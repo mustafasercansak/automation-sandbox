@@ -14,7 +14,11 @@ internal static class Program
         try
         {
             var repository = new LocatorRepository(repositoryPath);
-            var engine = new SelfHealingEngine(repository);
+
+            // AutoHeal applies the healed locator and retries the action. The default
+            // HealingMode.Review only records a review entry and fails closed - use it when
+            // a human vets every heal.
+            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
 
             var staleLocator = new UiElementInfo
             {
