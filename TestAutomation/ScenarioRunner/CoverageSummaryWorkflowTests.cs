@@ -22,6 +22,21 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void ScenarioRunner_ConfiguresCoverletCollectorForNet48AndModernFrameworks()
+        {
+            var projPath = Path.Combine(RepositoryRoot(), "TestAutomation", "ScenarioRunner", "ScenarioRunner.csproj");
+            var content = File.ReadAllText(projPath);
+
+            Assert.Contains("coverlet.collector", content, StringComparison.Ordinal);
+            // Verify that net48 uses 6.0.4 (the latest release supporting .NET Framework / netstandard2.0 MSBuild targets)
+            Assert.Contains("Condition=\"'$(TargetFramework)' == 'net48'\"", content, StringComparison.Ordinal);
+            Assert.Contains("Version=\"6.0.4\"", content, StringComparison.Ordinal);
+            // Verify modern runtimes use latest version
+            Assert.Contains("Condition=\"'$(TargetFramework)' != 'net48'\"", content, StringComparison.Ordinal);
+            Assert.Contains("Version=\"10.0.1\"", content, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void CoverageSummaryScript_RendersOverallAndPerAssemblyRowsWithoutCombiningLegs()
         {
             var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));

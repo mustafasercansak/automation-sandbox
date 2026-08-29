@@ -15,7 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="10.0.1">
+    <!-- Coverlet 6.0.4 is required for net48 because coverlet 8.0+ dropped .NET Framework / netstandard2.0 MSBuild targets from build/ -->
+    <PackageReference Include="coverlet.collector" Version="6.0.4" Condition="'$(TargetFramework)' == 'net48'">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="10.0.1" Condition="'$(TargetFramework)' != 'net48'">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
