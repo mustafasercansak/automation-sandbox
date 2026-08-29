@@ -326,6 +326,62 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsNotNull_WithoutReviewComments_WhenAssertionKindIsNone_InFallbackMode()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify strange outcome",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        TargetDescription = "Outcome",
+                        AssertionKind = AssertionKind.None,
+                        ExpectedOutcome = "Complex unspecified desktop state",
+                    }
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Assert.Outcome", "pnlOutcome")
+            };
+
+            var code = new FlaUiCSharpTestGenerator(new FlaUiCSharpTestGenerationOptions { AssertGenerationMode = AssertGenerationMode.Fallback }).Generate(scenario, recordings);
+
+            Assert.DoesNotContain("// TODO:", code);
+            Assert.DoesNotContain("Assert.True(false", code);
+            Assert.Contains("Assert.NotNull(window.FindFirstDescendant(cf => cf.ByAutomationId(\"pnlOutcome\")));", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsWindowNotNull_WithoutReviewComments_WhenUrlAssertionInFallbackMode()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify navigation on desktop",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        AssertionKind = AssertionKind.UrlEquals,
+                        ExpectedValue = "https://example.test",
+                        ExpectedOutcome = "Navigates to https://example.test",
+                    }
+                }
+            };
+
+            var code = new FlaUiCSharpTestGenerator(new FlaUiCSharpTestGenerationOptions { AssertGenerationMode = AssertGenerationMode.Fallback }).Generate(scenario, new List<IntentDesktopLocatorRecordingResult>());
+
+            Assert.DoesNotContain("// TODO:", code);
+            Assert.DoesNotContain("Assert.True(false", code);
+            Assert.Contains("Assert.NotNull(window);", code);
+        }
+
+        [Fact]
         public void Generate_FallsBackToNameThenControlType_WhenAutomationIdIsMissing()
         {
             var scenario = new IntentScenario

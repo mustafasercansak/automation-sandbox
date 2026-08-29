@@ -331,6 +331,57 @@ namespace ScenarioRunner
             }
         }
 
+        [Fact]
+        public async Task CaptureAsync_CapturesShadowDomElements_WithShadowDomMarker()
+        {
+            var htmlPath = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_ShadowDom_" + Guid.NewGuid().ToString("N") + ".html");
+            try
+            {
+                File.WriteAllText(htmlPath, """
+                    <!doctype html>
+                    <html>
+                    <body>
+                        <div id="host"></div>
+                        <script>
+                            const host = document.getElementById('host');
+                            const shadow = host.attachShadow({ mode: 'open' });
+                            shadow.innerHTML = `
+                                <input data-testid="shadow-input" name="shadow-field" />
+                                <button data-testid="shadow-button">Shadow Submit</button>
+                            `;
+                        </script>
+                    </body>
+                    </html>
+                    """);
+
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(new Uri(htmlPath).AbsoluteUri);
+
+                var flattened = Flatten(dom).ToList();
+                var shadowInput = Assert.Single(flattened, e => e.TestId == "shadow-input");
+                var shadowButton = Assert.Single(flattened, e => e.TestId == "shadow-button");
+
+                Assert.Equal("shadow-dom", shadowInput.TreeScope);
+                Assert.Equal("shadow-dom", shadowButton.TreeScope);
+
+                var uiTree = WebElementMapper.ToUiElementTree(dom);
+                var uiElements = FlattenUiElements(uiTree).ToList();
+
+                var uiShadowInput = Assert.Single(uiElements, e => e.AutomationId == "shadow-input");
+                var uiShadowButton = Assert.Single(uiElements, e => e.AutomationId == "shadow-button");
+
+                Assert.Contains("[shadow-dom]", uiShadowInput.ClassName);
+                Assert.Contains("[shadow-dom]", uiShadowButton.ClassName);
+            }
+            finally
+            {
+                if (File.Exists(htmlPath))
+                {
+                    File.Delete(htmlPath);
+                }
+            }
+        }
+
         public void Dispose()
         {
             if (File.Exists(_htmlPath))
@@ -345,6 +396,18 @@ namespace ScenarioRunner
             foreach (var child in root.Children)
             {
                 foreach (var descendant in Flatten(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+
+        private static IEnumerable<UiElementInfo> FlattenUiElements(UiElementInfo root)
+        {
+            yield return root;
+            foreach (var child in root.Children)
+            {
+                foreach (var descendant in FlattenUiElements(child))
                 {
                     yield return descendant;
                 }

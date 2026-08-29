@@ -292,6 +292,36 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsFallbackVisibilityAssertion_WithoutTodoComments_WhenAssertGenerationModeIsFallback()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Verify complex state",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Assert,
+                        TargetDescription = "Outcome",
+                        ExpectedOutcome = "Complex unspecified business state",
+                        AssertionKind = (AssertionKind)999
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Assert.Outcome", "outcome-box", "page.GetByTestId(\"outcome-box\")")
+            };
+
+            var code = new PlaywrightCSharpTestGenerator(new PlaywrightCSharpTestGenerationOptions { AssertGenerationMode = AssertGenerationMode.Fallback }).Generate(scenario, recordings);
+
+            Assert.DoesNotContain("// TODO:", code);
+            Assert.DoesNotContain("Assert.Inconclusive", code);
+            Assert.Contains("await Expect(Page.GetByTestId(\"outcome-box\")).ToBeVisibleAsync();", code);
+        }
+
+        [Fact]
         public void Generate_EmitsCheckAndUncheckCalls_ForCheckAndUncheckSteps()
         {
             // #198: Check/Uncheck steps must emit checkable-element calls, never selectOption.
