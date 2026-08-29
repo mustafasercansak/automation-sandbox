@@ -368,7 +368,36 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void ParseResponse_HandlesNumericReasoning_WithoutThrowing()
+        {
+            var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": \"c0\", \"confidence\": 0.95, \"reasoning\": 42}");
+            Assert.Equal("c0", candidateId);
+            Assert.Equal(0.95, confidence, precision: 3);
+            Assert.Equal("42", reasoning);
+        }
 
+        [Fact]
+        public void ParseResponse_HandlesObjectOrArrayReasoning_WithoutThrowing()
+        {
+            var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": \"c1\", \"confidence\": 0.85, \"reasoning\": {\"step\": 1, \"match\": true}}");
+            Assert.Equal("c1", candidateId);
+            Assert.Equal(0.85, confidence, precision: 3);
+            Assert.Contains("step", reasoning);
+        }
+
+        [Fact]
+        public void ParseResponse_HandlesNullReasoning_WithoutThrowing()
+        {
+            var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": \"c0\", \"confidence\": 0.9, \"reasoning\": null}");
+            Assert.Equal("c0", candidateId);
+            Assert.Equal(0.9, confidence, precision: 3);
+            Assert.Equal("", reasoning);
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_WithoutApiKey_SkipsTheHttpCallEntirely()
         {
             var callCount = 0;
