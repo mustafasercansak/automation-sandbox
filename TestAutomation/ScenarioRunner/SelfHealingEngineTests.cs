@@ -1009,11 +1009,14 @@ namespace ScenarioRunner
 
                 Assert.True(File.Exists(htmlPath));
                 var htmlContent = File.ReadAllText(htmlPath);
-                Assert.Contains("<!DOCTYPE html>", htmlContent);
+                Assert.Contains("<!doctype html>", htmlContent);
 
-                // Ensure no leftover temp files exist
-                var tempFiles = Directory.GetFiles(Path.GetDirectoryName(htmlPath)!, "*.tmp");
-                Assert.Empty(tempFiles);
+                // No leftover temp files for this sink. Scope the scan to this sink's own
+                // path prefix - the report lives under the shared system temp dir, so a bare
+                // "*.tmp" scan would trip over every other process's temp files.
+                var prefix = Path.GetFileName(_tempReportPath);
+                var leftoverTempFiles = Directory.GetFiles(Path.GetDirectoryName(htmlPath)!, prefix + "*.tmp");
+                Assert.Empty(leftoverTempFiles);
             }
             finally
             {
