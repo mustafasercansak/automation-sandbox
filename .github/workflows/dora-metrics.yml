@@ -18,17 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Calculate DORA & Reliability Metrics
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
-          python3 scripts/calculate_dora.py --days 30 --format markdown --output dora-report.md
-          cat dora-report.md >> "$GITHUB_STEP_SUMMARY"
+          scripts/calculate_dora.ps1 -Days 30 -Format markdown -Output dora-report.md
+          Get-Content dora-report.md >> $env:GITHUB_STEP_SUMMARY
 
       - name: Upload report artifact
         uses: actions/upload-artifact@v7

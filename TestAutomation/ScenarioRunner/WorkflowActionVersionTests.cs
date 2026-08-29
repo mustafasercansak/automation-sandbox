@@ -12,7 +12,6 @@ namespace ScenarioRunner
         {
             "actions/checkout@v7",
             "actions/setup-dotnet@v6",
-            "actions/setup-python@v5",
             "actions/upload-artifact@v7",
             "actions/download-artifact@v8",
             "actions/configure-pages@v6",
