@@ -90,8 +90,18 @@ namespace PlaywrightLiveExploration
 
         public async ValueTask DisposeAsync()
         {
-            await _browser.CloseAsync().ConfigureAwait(false);
-            _playwright.Dispose();
+            try
+            {
+                await _browser.CloseAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // Suppress browser close errors so Playwright driver disposal always completes.
+            }
+            finally
+            {
+                _playwright.Dispose();
+            }
         }
     }
 }
