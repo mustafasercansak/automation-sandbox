@@ -70,26 +70,28 @@ namespace LlmHealing
                     name: "OpenAI"));
             }
 
-            // 4. Grok (xAI)
+            // 4. Grok (xAI) - requires an explicit model id, as xAI model names rotate frequently.
             var grokKey = Env("GROK_API_KEY") ?? Env("XAI_API_KEY");
-            if (grokKey != null)
+            var grokModel = Env("GROK_MODEL") ?? Env("XAI_MODEL");
+            if (grokKey != null && grokModel != null)
             {
                 providers.Add(new OpenAiHealingProvider(
                     httpClient: httpClient,
                     apiKey: grokKey,
-                    model: Env("GROK_MODEL") ?? Env("XAI_MODEL") ?? "grok-2-latest",
+                    model: grokModel,
                     endpoint: Env("GROK_ENDPOINT") ?? Env("XAI_ENDPOINT") ?? "https://api.x.ai/v1",
                     name: "Grok"));
             }
 
-            // 5. Kimi (Moonshot)
+            // 5. Kimi (Moonshot) - requires an explicit model id.
             var kimiKey = Env("KIMI_API_KEY") ?? Env("MOONSHOT_API_KEY");
-            if (kimiKey != null)
+            var kimiModel = Env("KIMI_MODEL") ?? Env("MOONSHOT_MODEL");
+            if (kimiKey != null && kimiModel != null)
             {
                 providers.Add(new OpenAiHealingProvider(
                     httpClient: httpClient,
                     apiKey: kimiKey,
-                    model: Env("KIMI_MODEL") ?? Env("MOONSHOT_MODEL") ?? "moonshot-v1-8k",
+                    model: kimiModel,
                     endpoint: Env("KIMI_ENDPOINT") ?? Env("MOONSHOT_ENDPOINT") ?? "https://api.moonshot.cn/v1",
                     name: "Kimi"));
             }
@@ -98,13 +100,13 @@ namespace LlmHealing
             // and they are unrelated companies. Separate keys, separate endpoints, separate
             // provider names; ILlmHealingProvider.Name uniqueness is what keeps their votes
             // distinguishable when both are configured.
-            // Both of these require their model to be configured explicitly, and are skipped
-            // otherwise. There is no safe default to fall back on: a guessed id is worse than
-            // none - "grok-2-latest" was a guess and was never once valid - and leaving it null
-            // is worse still, because OpenAiHealingProvider would then fall back to OPENAI_MODEL
-            // (set for a different vendor in the same run) and finally to "gpt-4o-mini", sending
-            // an OpenAI model name to Groq. Skipping is the loud failure: the provider is simply
-            // absent from ConfiguredProviders in the report, rather than present and wrong.
+            // Third-party OpenAI-compatible providers require their model to be configured explicitly,
+            // and are skipped otherwise. There is no safe default to fall back on: a guessed id is worse
+            // than none - a guessed id was never once valid - and leaving it null is worse still,
+            // because OpenAiHealingProvider would then fall back to OPENAI_MODEL (set for a different
+            // vendor in the same run) and finally to "gpt-4o-mini", sending an OpenAI model name to another provider.
+            // Skipping is the loud failure: the provider is simply absent from ConfiguredProviders in
+            // the report, rather than present and wrong.
             var groqKey = Env("GROQ_API_KEY");
             var groqModel = Env("GROQ_MODEL");
             if (groqKey != null && groqModel != null)

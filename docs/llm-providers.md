@@ -22,8 +22,8 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
 | **Gemini** | `gemini-3.6-flash` | `GEMINI_API_KEY` | Very Low | Cloud |
 | **Claude** | `claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` | Very Low | Cloud |
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Very Low | Cloud |
-| **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Low | Cloud |
-| **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Low | Cloud |
+| **Grok (xAI)** | Explicit (`GROK_MODEL`) | `GROK_API_KEY` + `GROK_MODEL` | Low | Cloud |
+| **Kimi (Moonshot)** | Explicit (`KIMI_MODEL`) | `KIMI_API_KEY` + `KIMI_MODEL` | Low | Cloud |
 | **Groq** | Explicit (`GROQ_MODEL`) | `GROQ_API_KEY` + `GROQ_MODEL` | Low | Cloud |
 | **OpenRouter** | Explicit (`OPENROUTER_MODEL`) | `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` | Varies (per routed model) | Cloud |
 | **Cloudflare Workers AI** | Explicit (`CLOUDFLARE_MODEL`) | Token + account ID + model | Free daily allocation | Cloud |
@@ -46,8 +46,8 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   - `ANTHROPIC_API_KEY` (+ optional `ANTHROPIC_MODEL`) $\rightarrow$ `ClaudeHealingProvider`
   - `GEMINI_API_KEY` (+ optional `GEMINI_MODEL`) $\rightarrow$ `GeminiHealingProvider`
   - `OPENAI_API_KEY` (+ optional `OPENAI_MODEL`, `OPENAI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider`
-  - `GROK_API_KEY` (+ optional `GROK_MODEL`, `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`)
-  - `KIMI_API_KEY` (+ optional `KIMI_MODEL`, `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`)
+  - `GROK_API_KEY` + `GROK_MODEL` (+ optional `GROK_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Grok"`) — both required; there is no guessed default model
+  - `KIMI_API_KEY` + `KIMI_MODEL` (+ optional `KIMI_ENDPOINT`) $\rightarrow$ `OpenAiHealingProvider` (named `"Kimi"`) — both required; there is no guessed default model
   - `GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Groq"`) — both required; there is no guessed default model
   - `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"OpenRouter"`) — both required; the model id decides which underlying model answers
   - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_MODEL` $\rightarrow$ `OpenAiHealingProvider` (named `"Cloudflare"`)
@@ -328,8 +328,8 @@ var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
 | **Gemini** | `gemini-3.6-flash` | `GEMINI_API_KEY` | Çok Düşük | Bulut |
 | **Claude** | `claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` | Çok Düşük | Bulut |
 | **OpenAI** | `gpt-4o-mini` | `OPENAI_API_KEY` | Çok Düşük | Bulut |
-| **Grok (xAI)** | `grok-2-latest` | `GROK_API_KEY` / `XAI_API_KEY` | Düşük | Bulut |
-| **Kimi (Moonshot)** | `moonshot-v1-8k` | `KIMI_API_KEY` / `MOONSHOT_API_KEY` | Düşük | Bulut |
+| **Grok (xAI)** | Açıkça belirtilir (`GROK_MODEL`) | `GROK_API_KEY` + `GROK_MODEL` | Düşük | Bulut |
+| **Kimi (Moonshot)** | Açıkça belirtilir (`KIMI_MODEL`) | `KIMI_API_KEY` + `KIMI_MODEL` | Düşük | Bulut |
 | **Groq** | Açıkça belirtilir (`GROQ_MODEL`) | `GROQ_API_KEY` + `GROQ_MODEL` | Düşük | Bulut |
 | **OpenRouter** | Açıkça belirtilir (`OPENROUTER_MODEL`) | `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` | Yönlendirilen modele göre değişir | Bulut |
 | **Cloudflare Workers AI** | Açıkça belirtilir (`CLOUDFLARE_MODEL`) | Token + hesap kimliği + model | Günlük ücretsiz kota | Bulut |
@@ -349,7 +349,7 @@ var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
 
 Cloudflare için `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` ve `CLOUDFLARE_MODEL` değerlerinin üçü de zorunludur. Tam yapılandırma `"Cloudflare"` adlı bir `OpenAiHealingProvider` oluşturur; herhangi biri eksikse bozuk bir uç nokta veya tahmini model üretmek yerine sağlayıcı atlanır.
 
-Aynı kural Groq (`GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `"Groq"`), OpenRouter (`OPENROUTER_API_KEY` + `OPENROUTER_MODEL` $\rightarrow$ `"OpenRouter"`), Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`), NVIDIA NIM (`NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `"Nvidia"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; hepsi OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
+Aynı kural Grok (`GROK_API_KEY` + `GROK_MODEL` $\rightarrow$ `"Grok"`), Kimi (`KIMI_API_KEY` + `KIMI_MODEL` $\rightarrow$ `"Kimi"`), Groq (`GROQ_API_KEY` + `GROQ_MODEL` $\rightarrow$ `"Groq"`), OpenRouter (`OPENROUTER_API_KEY` + `OPENROUTER_MODEL` $\rightarrow$ `"OpenRouter"`), Mistral (`MISTRAL_API_KEY` + `MISTRAL_MODEL` $\rightarrow$ `"Mistral"`), NVIDIA NIM (`NVIDIA_API_KEY` + `NVIDIA_MODEL` $\rightarrow$ `"Nvidia"`) ve Ollama Cloud (`OLLAMA_CLOUD_API_KEY` + `OLLAMA_CLOUD_MODEL` $\rightarrow$ `"OllamaCloud"`) için de geçerlidir; hepsi OpenAI uyumludur, ayrı sağlayıcı sınıfı gerektirmez.
 
 > [!WARNING]
 > `OLLAMA_CLOUD_*` ile `OLLAMA_*` bilinçli olarak ayrıdır ve karıştırılmamalıdır. Yerel değişkenler `localhost:11434` adresini hedefleyen bir sağlayıcı kurar; CI runner'ında orada çalışan bir daemon yoktur. Dolayısıyla `OLLAMA_MODEL`'i bir bulut modeline yönlendirmek, her istekte başarısız olan ama **yine de iki sağlayıcılı mutabakat eşiğine sayılan** bir sağlayıcı üretir — sağlayıcı eklemenin amacının tam tersi.
