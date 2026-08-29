@@ -26,10 +26,5 @@ namespace WebDiscovery
 
             return WebElementMapper.ToUiElementTree(webElementRoot);
         }
-
-        public static UiElementInfo FromWebElement(WebElementInfo webElementRoot)
-        {
-            return WebElementMapper.ToUiElementTree(webElementRoot);
-        }
     }
 }
