@@ -87,6 +87,38 @@ jobs:
       - name: Pack PlaywrightLiveExploration
         run: dotnet pack TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExploration.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      # SBOM (#274): one CycloneDX JSON BOM per published package, generated from the
+      # Release dependency graph so consumers can audit the full transitive closure
+      # independent of nuget.org metadata. CycloneDX 6.x runs on the .NET 10 runtime,
+      # which the setup-dotnet step above installs. No -tfm filter: the tool aggregates
+      # every target framework of a project and deduplicates packages shared across them.
+      - name: Generate SBOMs (CycloneDX)
+        shell: pwsh
+        run: |
+          dotnet tool install --global CycloneDX --version 6.2.0
+          New-Item -ItemType Directory -Path ./sbom -Force | Out-Null
+          $projects = @(
+            'UiModel',
+            'SelfHealing',
+            'LlmHealing',
+            'Discovery',
+            'WebDiscovery',
+            'IntentAutomation',
+            'PlaywrightLiveExploration'
+          )
+          foreach ($name in $projects) {
+            dotnet-CycloneDX "TestAutomation/$name/$name.csproj" `
+              --output ./sbom --output-format json --filename "$name.bom.json" `
+              --configuration Release --include-project-references --set-type Library
+            if ($LASTEXITCODE -ne 0) { throw "CycloneDX SBOM generation failed for $name" }
+          }
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-sboms
+          path: ./sbom/*.json
+
       - name: Validate package contents
         shell: pwsh
         run: ./eng/Validate-NuGetPackages.ps1 -PackageDirectory ./nupkgs -Version $env:PACKAGE_VERSION
@@ -154,6 +186,7 @@ jobs:
             "release", "create", "$env:TAG_NAME",
             "./nupkgs/*.nupkg",
             "./nupkgs/*.snupkg",
+            "./sbom/*.json",
             "--target", "${{ github.sha }}",
             "--title", "$env:TAG_NAME",
             "--notes-file", "release-notes.md"
