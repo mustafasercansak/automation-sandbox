@@ -169,6 +169,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # `gh release view` exits non-zero when the release does not exist - the normal
+          # case for a first release. Newer runner images set
+          # $PSNativeCommandUseErrorActionPreference = $true in the pwsh shell wrapper, which
+          # turns that expected non-zero exit into a terminating error and fails the step.
+          $PSNativeCommandUseErrorActionPreference = $false
           gh release view $env:TAG_NAME *> $null
           $exists = if ($LASTEXITCODE -eq 0) { "true" } else { "false" }
           "exists=$exists" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
