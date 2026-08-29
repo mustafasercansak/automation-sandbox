@@ -198,16 +198,19 @@ namespace ScenarioRunner
 
             var originalFileInfo = new FileInfo(_filePath);
             var originalMtime = originalFileInfo.LastWriteTimeUtc;
-            var originalLength = originalFileInfo.Length;
 
-            // Second instance updates the record with identical string length
+            // Second instance updates the record. "AAAA" -> "BBBB" keeps the AutomationId itself the
+            // same length, but Upsert also stamps a fresh UpdatedAt timestamp, whose serialized
+            // fractional-second digits System.Text.Json trims to their significant length -- so the
+            // resulting file length can still drift by a byte or two between writes and isn't
+            // something this test can reliably force, only mtime is (below).
             repo2.Upsert("CustomerForm.Email", new UiElementInfo { AutomationId = "txtEmail_BBBB" });
 
-            // Force mtime on disk to match the original timestamp exactly so mtime and length collide
+            // Force mtime on disk to match the original timestamp exactly so mtime collides even
+            // though length may or may not.
             File.SetLastWriteTimeUtc(_filePath, originalMtime);
             var updatedFileInfo = new FileInfo(_filePath);
             Assert.Equal(originalMtime, updatedFileInfo.LastWriteTimeUtc);
-            Assert.Equal(originalLength, updatedFileInfo.Length);
 
             // First instance must detect the content hash mismatch and return the updated record
             var updatedFromRepo1 = repo1.Find("CustomerForm.Email");
@@ -225,7 +228,8 @@ namespace ScenarioRunner
             repo1.Upsert("Key1", new UiElementInfo { AutomationId = "btnSubmitA" });
             var originalMtime = new FileInfo(_filePath).LastWriteTimeUtc;
 
-            // Process 2 updates key 1 with equal length
+            // Process 2 updates key 1. Same-length AutomationId, but the file's actual byte length can
+            // still drift a little via Upsert's own UpdatedAt timestamp -- only mtime is forced below.
             repo2.Upsert("Key1", new UiElementInfo { AutomationId = "btnSubmitB" });
 
             // Force mtime on disk to match original mtime
