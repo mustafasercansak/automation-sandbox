@@ -176,7 +176,11 @@ namespace ScenarioRunner
                     if (result.Joint.EngineAccepted)
                     {
                         Assert.True(result.Baseline.EngineAccepted);
-                        Assert.Equal(result.Baseline.MatchedAutomationId, result.Joint.MatchedAutomationId);
+                        // Joint reconciliation only ever declines an independent match; it never
+                        // re-matches. Compare the path-qualified element fingerprint, not the
+                        // AutomationId string, so two distinct elements sharing an id (or both
+                        // empty) cannot pass this as "the same match" (#292).
+                        Assert.Equal(result.Baseline.MatchedElement, result.Joint.MatchedElement);
                     }
                 });
 
@@ -226,6 +230,15 @@ namespace ScenarioRunner
             Assert.Equal(contestedRemovedFalse, measurement.ContestedRemovedFalseHeals);
             Assert.Equal(uncontestedRemovedFalse, measurement.UncontestedRemovedFalseHeals);
             Assert.Equal(unidentifiedRemovedFalse, measurement.UnidentifiedRemovedFalseHeals);
+
+            // contested + uncontested partition the removed-locator false heals; unidentified
+            // (empty-AutomationId) is an informational subset of uncontested, never its own bucket.
+            Assert.Equal(
+                baselineRemovedFalse,
+                measurement.ContestedRemovedFalseHeals + measurement.UncontestedRemovedFalseHeals);
+            Assert.True(
+                measurement.UnidentifiedRemovedFalseHeals <= measurement.UncontestedRemovedFalseHeals,
+                "Unidentified removed false heals must remain a subset of the uncontested count.");
         }
 
         private static void AssertMetrics(
@@ -324,6 +337,11 @@ namespace ScenarioRunner
                 Report = report,
                 ContestedRemovedFalseHeals = contestedRemovedFalseHeals,
                 UncontestedRemovedFalseHeals = report.BaselineMetrics.FalseHealsOnRemoved - contestedRemovedFalseHeals,
+                // Deliberately keyed on the AutomationId string, not MatchedElement: this
+                // metric measures exactly the id-observability gap - removed-locator false
+                // heals whose match carries no AutomationId - which is a property of the id,
+                // independent of the fingerprint-based contention check above. It is an
+                // informational subset of the uncontested count, not a partition member.
                 UnidentifiedRemovedFalseHeals = baseline.Scenarios
                     .SelectMany(s => s.LocatorResults)
                     .Count(r =>
