@@ -33,6 +33,9 @@ namespace ScenarioRunner
             Assert.Contains("Run tests with Code Coverage (Linux, coverlet)", workflow, StringComparison.Ordinal);
             Assert.Contains("dotnet tool install --global dotnet-coverage --version ", workflow, StringComparison.Ordinal);
             Assert.Contains("--settings ./.github/config/windows-coverage.runsettings", workflow, StringComparison.Ordinal);
+            // Static instrumentation of the net48 output: dynamic instrumentation misses the
+            // net48-only Discovery assembly, which is the whole point of the Windows leg.
+            Assert.Contains("--include-files \"TestAutomation/ScenarioRunner/bin/Debug/net48/*.dll\"", workflow, StringComparison.Ordinal);
             Assert.Contains("--output-format cobertura", workflow, StringComparison.Ordinal);
             Assert.Contains("DOTNET_COVERAGE_TELEMETRY_OPTOUT: '1'", workflow, StringComparison.Ordinal);
             Assert.Contains("--collect:\"XPlat Code Coverage\"", workflow, StringComparison.Ordinal);
