@@ -385,6 +385,61 @@ namespace ScenarioRunner
             Assert.Contains("candidate r/0", html);
         }
 
+        [Fact]
+        public async Task ResolveBatchAsync_WhenCancellationRequestedBeforeStart_ThrowsOperationCanceledException()
+        {
+            var candidate = Element("Button", "Save", automationId: "live-save");
+            var tree = Tree(candidate);
+            var req1 = new BatchHealingRequest("req1", Element("Button", "Save", automationId: "stale-1"));
+            var req2 = new BatchHealingRequest("req2", Element("Button", "Save", automationId: "stale-2"));
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            {
+                await SelfHealingResolver.ResolveBatchAsync(
+                    new[] { req1, req2 },
+                    tree,
+                    cancellationToken: cts.Token);
+            });
+        }
+
+        [Fact]
+        public async Task ResolveBatchAsync_WhenCancelledMidBatch_ThrowsOperationCanceledException_AndDoesNotProcessRemainingRequests()
+        {
+            var candidate = Element("Button", "Save", automationId: "live-save");
+            var tree = Tree(candidate);
+            var req1 = new BatchHealingRequest("req1", Element("Button", "Save", automationId: "stale-1"));
+            var req2 = new BatchHealingRequest("req2", Element("Button", "Save", automationId: "stale-2"));
+            var req3 = new BatchHealingRequest("req3", Element("Button", "Save", automationId: "stale-3"));
+
+            using var cts = new CancellationTokenSource();
+            var processedRequests = new List<string>();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            {
+                await SelfHealingResolver.ResolveBatchAsync(
+                    new[] { req1, req2, req3 },
+                    tree,
+                    log: msg =>
+                    {
+                        if (msg.Contains("stale-1"))
+                        {
+                            processedRequests.Add("stale-1");
+                            cts.Cancel();
+                        }
+                        else if (msg.Contains("stale-2"))
+                        {
+                            processedRequests.Add("stale-2");
+                        }
+                    },
+                    cancellationToken: cts.Token);
+            });
+
+            Assert.DoesNotContain("stale-2", processedRequests);
+        }
+
         private static UiElementInfo Tree(params UiElementInfo[] children) => new UiElementInfo
         {
             ControlType = "Window",
