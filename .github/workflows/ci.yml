@@ -111,8 +111,20 @@ jobs:
         shell: pwsh
         run: |
           dotnet tool install --global dotnet-coverage --version 18.10.0
+          # Two filters, both required, doing different jobs:
+          #  * --include-files statically instruments the repo DLLs in the net48 test
+          #    output. Dynamic instrumentation in the net48 testhost silently missed the
+          #    net48-only Discovery assembly (#289); static instrumentation is the
+          #    documented reliable path for .NET Framework modules.
+          #  * windows-coverage.runsettings <ModulePaths> decides what lands in the
+          #    report, keeping third-party modules in that directory (xunit, FlaUI, the
+          #    test platform) out.
+          # Removing either one reopens the #289 gap. The framework segment tracks the
+          # matrix so it stays correct if the Windows leg ever adds a target; Debug
+          # matches --configuration Debug on the dotnet test line below.
           dotnet-coverage collect `
             --settings ./.github/config/windows-coverage.runsettings `
+            --include-files "TestAutomation/ScenarioRunner/bin/Debug/${{ matrix.framework }}/*.dll" `
             --output-format cobertura `
             --output ./TestAutomation/ScenarioRunner/TestResults/coverage.cobertura.xml `
             -- dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
@@ -144,6 +156,18 @@ jobs:
             -CoverageSearchPath ./TestAutomation/ScenarioRunner/TestResults `
             -LegLabel '${{ matrix.coverage-label }}' `
             -PlatformNote '${{ matrix.coverage-note }}'
+
+      # #289 regression guard: dynamic instrumentation in the net48 testhost can silently
+      # drop the net48-only Discovery assembly while still producing a green run and a
+      # (shorter) coverage table. No always() here - this should only speak up when the
+      # coverage collection above actually succeeded.
+      - name: Verify Windows coverage includes net48-only assemblies
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          ./.github/scripts/assert-coverage-assemblies.ps1 `
+            -CoverageSearchPath ./TestAutomation/ScenarioRunner/TestResults `
+            -RequiredAssembly UiModel,SelfHealing,LlmHealing,Discovery,WebDiscovery,IntentAutomation,PlaywrightLiveExploration
 
       - name: Summarize locator ablation metrics for ${{ matrix.coverage-label }}
         if: always()

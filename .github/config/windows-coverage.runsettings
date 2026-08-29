@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Windows net48 coverage collection settings for dotnet-coverage (#289).
-     Only the repository's own assemblies are instrumented; without this include list the
-     report would be polluted by the test platform, xunit, and FlaUI modules. Paths match
-     Windows separators because this file is only used by the windows-latest CI leg. -->
+     This <ModulePaths> list controls what lands in the report: only the repository's own
+     assemblies, so the test platform, xunit and FlaUI modules stay out. It is the partner
+     of the ci.yml --include-files flag, which controls what gets statically instrumented -
+     the two are not redundant, and dropping either reopens the #289 Discovery gap. Paths
+     match Windows separators because this file is only used by the windows-latest CI leg. -->
 <Configuration>
   <CodeCoverage>
     <ModulePaths>
