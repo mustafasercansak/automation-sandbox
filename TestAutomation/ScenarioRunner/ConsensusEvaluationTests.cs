@@ -602,7 +602,9 @@ namespace ScenarioRunner
             {
                 ["GEMINI_API_KEY"] = "mock-gemini-key",
                 ["GROK_API_KEY"] = "mock-grok-key",
+                ["GROK_MODEL"] = "grok-2-1212",
                 ["KIMI_API_KEY"] = "mock-kimi-key",
+                ["KIMI_MODEL"] = "moonshot-v1-8k",
             };
 
             var providers = LlmProviderFactory.CreateConfiguredProviders(
