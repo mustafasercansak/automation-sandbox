@@ -334,10 +334,37 @@ namespace ScenarioRunner
         }
 
         [Fact]
-
         public void ParseResponse_ThrowsFormatException_WhenThereIsNoJsonObject()
         {
             Assert.Throws<FormatException>(() => LlmHealingPrompt.ParseResponse("I don't know which element matches."));
+        }
+
+        [Fact]
+        public void ParseResponse_HandlesStringValuedConfidence()
+        {
+            var (candidateId, confidence, reasoning) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": \"c0\", \"confidence\": \"0.95\", \"reasoning\": \"matched accurately\"}");
+            Assert.Equal("c0", candidateId);
+            Assert.Equal(0.95, confidence, precision: 3);
+            Assert.Equal("matched accurately", reasoning);
+        }
+
+        [Fact]
+        public void ParseResponse_HandlesNumericCandidateId()
+        {
+            var (candidateId, confidence, _) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": 0, \"confidence\": 0.88, \"reasoning\": \"zero-indexed candidate\"}");
+            Assert.Equal("0", candidateId);
+            Assert.Equal(0.88, confidence, precision: 3);
+        }
+
+        [Fact]
+        public void ParseResponse_HandlesMalformedConfidence_WithoutThrowing()
+        {
+            var (candidateId, confidence, _) = LlmHealingPrompt.ParseResponse(
+                "{\"candidateId\": \"c2\", \"confidence\": \"not-a-number\", \"reasoning\": \"uncalibrated\"}");
+            Assert.Equal("c2", candidateId);
+            Assert.Equal(0.0, confidence);
         }
 
         [Fact]
