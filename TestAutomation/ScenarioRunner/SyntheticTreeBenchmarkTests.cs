@@ -4,18 +4,18 @@ using SelfHealing;
 namespace ScenarioRunner
 {
     // Pure-logic benchmark: no FlaUI/Windows dependency, so unlike the live UIA scenario
-    // tests this can run on any OS/CI runner. A correctness+timing smoke test, not a hard
-    // performance gate - shared CI runners are noisy, so this only logs elapsed time rather
-    // than asserting a wall-clock bound (see the milestone plan for why).
+    // tests this can run on any OS/CI runner. A correctness+timing smoke test, not a tight
+    // performance gate - shared CI runners are noisy, so the wall-clock assertion below uses
+    // a deliberately generous 5s bound (local runs land in tens of milliseconds) rather than
+    // asserting anything close to actual expected latency (see the milestone plan for why).
 
     public class SyntheticTreeBenchmarkTests
     {
-        [Fact]
-
-        public void Resolve_FindsTargetAmongThousandsOfDecoys_AndStaysConfident()
+        [Theory]
+        [InlineData(30, 100)]
+        [InlineData(100, 100)]
+        public void Resolve_FindsTargetAmongThousandsOfDecoys_AndStaysConfident(int groupCount, int controlsPerGroup)
         {
-            const int groupCount = 30;
-            const int controlsPerGroup = 100; // 3000 leaf controls total
             var controlTypes = new[] { "Edit", "Button", "Label", "CheckBox", "ComboBox" };
             var random = new Random(42); // deterministic across runs
             var root = new UiElementInfo { ControlType = "Window", AutomationId = "MainForm" };
@@ -79,6 +79,8 @@ namespace ScenarioRunner
             Assert.NotNull(result.Matched);
             Assert.Equal("txtEmail_renamed", result.Matched!.AutomationId);
             Assert.True(result.IsConfident, $"Expected a confident match at scale, but score was: {result.Score}");
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+                $"Expected {groupCount * controlsPerGroup} candidates to resolve within the CI-safe 5s bound, but took {stopwatch.ElapsedMilliseconds}ms.");
         }
 
         [Theory]

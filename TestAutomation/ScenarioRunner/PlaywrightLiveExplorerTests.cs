@@ -81,6 +81,59 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task CaptureAsync_UsesUniqueStructuralSelectorsForUnannotatedSiblingsAndFrames()
+        {
+            var htmlPath = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_StructuralSelectors_" + Guid.NewGuid().ToString("N") + ".html");
+            try
+            {
+                File.WriteAllText(htmlPath, """
+                    <!doctype html>
+                    <html>
+                    <body>
+                        <section><button>First</button><button>Second</button></section>
+                        <iframe srcdoc="&lt;button&gt;First frame&lt;/button&gt;"></iframe>
+                        <iframe srcdoc="&lt;button&gt;Second frame&lt;/button&gt;"></iframe>
+                    </body>
+                    </html>
+                    """);
+
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(new Uri(htmlPath).AbsoluteUri);
+                var flattened = Flatten(dom).ToList();
+                var buttons = flattened.Where(element => element.TagName == "button" && element.FrameAncestry.Count == 0).ToList();
+                var frameButtons = flattened.Where(element => element.TagName == "button" && element.FrameAncestry.Count == 1).ToList();
+
+                Assert.Equal(2, buttons.Count);
+                Assert.Equal(2, frameButtons.Count);
+                Assert.All(buttons, button => Assert.True(button.IsStructuralCssSelector));
+                Assert.Equal(2, buttons.Select(button => button.CssSelector).Distinct().Count());
+                Assert.Equal(2, frameButtons.Select(button => button.FrameAncestry.Single()).Distinct().Count());
+
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+                var page = await browser.NewPageAsync();
+                await page.GotoAsync(new Uri(htmlPath).AbsoluteUri);
+
+                foreach (var button in buttons)
+                {
+                    Assert.Equal(1, await page.Locator(button.CssSelector).CountAsync());
+                }
+
+                foreach (var frameButton in frameButtons)
+                {
+                    Assert.Equal(1, await page.FrameLocator(frameButton.FrameAncestry.Single()).Locator(frameButton.CssSelector).CountAsync());
+                }
+            }
+            finally
+            {
+                if (File.Exists(htmlPath))
+                {
+                    File.Delete(htmlPath);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CaptureAsync_CapturesBelowTheFoldOffscreenElements_PreservesGeometryAndMatches()
         {
             var longHtmlPath = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_LongPage_" + Guid.NewGuid().ToString("N") + ".html");

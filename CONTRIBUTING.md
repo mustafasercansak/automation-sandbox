@@ -36,6 +36,12 @@ Create a dedicated branch per issue:
 - Documentation-only changes: `docs/<issue-number>-<short-description>` (e.g. `docs/180-llm-security-model`)
 - Research / investigation spikes: `research/<issue-number>-<short-description>` (e.g. `research/179-absence-signals-investigation`)
 
+### Bilingual Documentation
+Documentation that includes both English and Turkish lives in one Markdown file, with the
+English section before the `## Türkçe` section. Keep the two sections structurally aligned:
+matching heading levels and fenced code-block counts. CI enforces this structure, but does
+not evaluate translation quality. Single-language documentation is not subject to this check.
+
 ---
 
 ## 2. Technology Stack & Target Framework Constraints

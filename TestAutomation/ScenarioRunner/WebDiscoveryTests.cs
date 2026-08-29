@@ -214,6 +214,28 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void PlaywrightLocatorEmitter_StructuralCssFallbackHasLowerConfidence()
+        {
+            var structuralElement = new WebElementInfo
+            {
+                TagName = "button",
+                CssSelector = "body > section > button:nth-of-type(2)",
+                IsStructuralCssSelector = true,
+            };
+            var stableElement = new WebElementInfo
+            {
+                TagName = "button",
+                CssSelector = "button[data-state='save']",
+            };
+
+            var structuralSuggestion = Assert.Single(PlaywrightLocatorEmitter.Suggest(structuralElement));
+            var stableSuggestion = Assert.Single(PlaywrightLocatorEmitter.Suggest(stableElement));
+
+            Assert.Equal("page.Locator(\"body > section > button:nth-of-type(2)\")", structuralSuggestion.Expression);
+            Assert.True(structuralSuggestion.Confidence < stableSuggestion.Confidence);
+        }
+
+        [Fact]
         public void SelfHealingResolver_CanHealWebElementMappedThroughUiModel()
         {
             var expected = new WebElementInfo
@@ -298,6 +320,8 @@ namespace ScenarioRunner
             Assert.Contains("IsOffscreen", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("FrameAncestry", PlaywrightDomCaptureScript.JavaScript);
             Assert.Contains("frameSelectorOf", PlaywrightDomCaptureScript.JavaScript);
+            Assert.Contains("structuralSelectorOf", PlaywrightDomCaptureScript.JavaScript);
+            Assert.Contains("nth-of-type", PlaywrightDomCaptureScript.JavaScript);
         }
 
         [Fact]
