@@ -53,7 +53,7 @@ The following NuGet packages and their core types represent the committed public
 - **`AutomationSandbox.LlmHealing`** (namespace `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
 - **`AutomationSandbox.WebDiscovery`** (namespace `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
 - **`AutomationSandbox.Discovery`** (namespace `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (namespace `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
+- **`AutomationSandbox.IntentAutomation`** (namespace `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
 - **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### Tier 2: Extensibility Points
@@ -135,7 +135,7 @@ Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmey
 - **`AutomationSandbox.LlmHealing`** (ad alanı `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
 - **`AutomationSandbox.WebDiscovery`** (ad alanı `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
 - **`AutomationSandbox.Discovery`** (ad alanı `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (ad alanı `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`.
+- **`AutomationSandbox.IntentAutomation`** (ad alanı `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
 - **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
