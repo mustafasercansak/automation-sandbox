@@ -999,6 +999,35 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void HealingReportFileSink_SavesHtmlReportAtomically_AndCleansUpTempFiles()
+        {
+            var htmlPath = _tempReportPath + ".html";
+            try
+            {
+                var sink = new HealingReportFileSink(_tempReportPath, htmlPath);
+                sink.Record(new HealingReportEntry { LocatorKey = "btnSave", Outcome = "accepted" });
+
+                Assert.True(File.Exists(htmlPath));
+                var htmlContent = File.ReadAllText(htmlPath);
+                Assert.Contains("<!doctype html>", htmlContent);
+
+                // No leftover temp files for this sink. Scope the scan to this sink's own
+                // path prefix - the report lives under the shared system temp dir, so a bare
+                // "*.tmp" scan would trip over every other process's temp files.
+                var prefix = Path.GetFileName(_tempReportPath);
+                var leftoverTempFiles = Directory.GetFiles(Path.GetDirectoryName(htmlPath)!, prefix + "*.tmp");
+                Assert.Empty(leftoverTempFiles);
+            }
+            finally
+            {
+                if (File.Exists(htmlPath))
+                {
+                    File.Delete(htmlPath);
+                }
+            }
+        }
+
+        [Fact]
         public void HealingReportDocument_AcceptedEvents_IncludesLegacyAndAcceptedOutcomesOnly()
         {
             var report = new HealingReportDocument();
