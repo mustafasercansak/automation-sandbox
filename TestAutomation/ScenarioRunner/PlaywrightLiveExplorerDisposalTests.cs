@@ -81,7 +81,9 @@ namespace ScenarioRunner
             public Task<ICDPSession> NewBrowserCDPSessionAsync() => throw new NotImplementedException();
             public Task<BrowserBindResult> BindAsync(string name, BrowserBindOptions? options = null) => throw new NotImplementedException();
             public Task UnbindAsync() => throw new NotImplementedException();
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+            // default(ValueTask) is already completed; ValueTask.CompletedTask does not
+            // exist on net48, which ScenarioRunner targets on Windows.
+            public ValueTask DisposeAsync() => default(ValueTask);
         }
     }
 }
