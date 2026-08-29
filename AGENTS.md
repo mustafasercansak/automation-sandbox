@@ -31,7 +31,7 @@ Dependency direction: `UiModel` ← `LlmHealing` ← `SelfHealing` ← `Scenario
   - Core libraries (`UiModel`, `SelfHealing`, `LlmHealing`): `netstandard2.0;net8.0`, plus `net10.0` automatically via an MSBuild condition on `$(NETCoreSdkVersion)` ≥ 10. They have zero FlaUI/Windows dependency, so the heuristic engine and its pure-logic tests run cross-platform (Linux CI included).
   - `Discovery`, `ScenarioRunner`, `WinFormsApp`: `net48` (Windows-only; FlaUI UIA3 needs Windows UIA COM APIs).
   - `WpfApp`: `net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting`.
-- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 8.0.5, xunit 2.9.3, Microsoft.NET.Test.Sdk 18.9.0, coverlet.collector 10.0.1, Microsoft.CodeAnalysis.CSharp 4.13.0, xunit.runner.visualstudio 4.0.0.
+- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 10.0.11, xunit 2.9.3, Microsoft.NET.Test.Sdk 18.9.0, coverlet.collector 10.0.1, Microsoft.CodeAnalysis.CSharp 5.9.0, xunit.runner.visualstudio 4.0.0.
 - **Modern Package & Security Standard:** AI agents and contributors MUST NEVER introduce ancient, end-of-life, or vulnerable package versions. Always target the latest stable, LTS-compatible releases for the project's supported target frameworks (`netstandard2.0;net8.0`), audit dependencies on every build, and keep transitive dependencies CVE-free.
 - `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, authoritative `<Version>`, `Deterministic` builds). Packable by default; demo apps, the sample, and the test project opt out with `IsPackable=false`. Bumping `<Version>` here updates all packaging workflows automatically (enforced by `PackageVersionDriftTests`).
 
