@@ -59,9 +59,12 @@ repository's **Releases** page without publishing to nuget.org:
    Publishing, or leave it disabled to keep the release as GitHub-only assets.
 8. Download `.nupkg` and `.snupkg` files from the created GitHub Release.
 
-The latest preview includes the Phase 3 measurement work and the opt-in
-`ResolveBatch` / `ResolveBatchAsync` ownership guard on top of the Phase 2 consensus and
-provider-resilience work. A single configured LLM provider still does not constitute
+The latest preview adds explicit healing modes (`Observe` / `Review` / `AutoHeal` /
+`FailClosed`, default `Review`), `Conservative` / `Balanced` / `Aggressive` threshold
+profiles with a per-application `calibrate` command, secret and PII redaction on by
+default before any text reaches an LLM, and prompt-injection hardening - on top of the
+opt-in `ResolveBatch` / `ResolveBatchAsync` ownership guard and the independent-agreement
+quorum from earlier previews. A single configured LLM provider still does not constitute
 consensus, and batch reconciliation remains a collision guard rather than an absence
 detector; see the release notes and benchmark guide for the measured limits.
 
