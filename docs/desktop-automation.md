@@ -65,7 +65,7 @@ class DesktopTest
 
         if (healResult.IsConfident)
         {
-            Console.WriteLine($"✅ Found matched control: {healResult.Matched.AutomationId} (Score: {healResult.Score:F2})");
+            Console.WriteLine($"✅ Found matched control: {healResult.Matched?.AutomationId} (Score: {healResult.Score:F2})");
         }
     }
 }
@@ -125,7 +125,7 @@ class DesktopTest
 
         if (healResult.IsConfident)
         {
-            Console.WriteLine($"✅ Found matched control: {healResult.Matched.AutomationId} (Score: {healResult.Score:F2})");
+            Console.WriteLine($"✅ Found matched control: {healResult.Matched?.AutomationId} (Score: {healResult.Score:F2})");
         }
     }
 }

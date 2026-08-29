@@ -46,6 +46,7 @@ namespace IntentAutomation
             code.AppendLine("using System;");
             code.AppendLine("using Discovery;");
             code.AppendLine("using FlaUI.Core.AutomationElements;");
+            code.AppendLine("using FlaUI.Core.Definitions;");
             code.AppendLine("using FlaUI.Core.Input;");
             code.AppendLine("using FlaUI.Core.Tools;");
             code.AppendLine("using FlaUI.Core.WindowsAPI;");
