@@ -140,9 +140,12 @@ namespace SelfHealing
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(HtmlFilePath))
+            // Pattern-match to a non-null local: on netstandard2.0 the compiler does not get
+            // the nullable-flow attribute for string.IsNullOrWhiteSpace, so a bare
+            // `HtmlFilePath` use below still warns (CS8604).
+            if (HtmlFilePath is { } htmlFilePath && !string.IsNullOrWhiteSpace(htmlFilePath))
             {
-                var htmlDirectory = Path.GetDirectoryName(HtmlFilePath);
+                var htmlDirectory = Path.GetDirectoryName(htmlFilePath);
                 if (!string.IsNullOrEmpty(htmlDirectory))
                 {
                     Directory.CreateDirectory(htmlDirectory);
@@ -150,18 +153,18 @@ namespace SelfHealing
 
                 var htmlTempPath = Path.Combine(
                     string.IsNullOrEmpty(htmlDirectory) ? "." : htmlDirectory,
-                    $"{Path.GetFileName(HtmlFilePath)}.{Guid.NewGuid():N}.tmp");
+                    $"{Path.GetFileName(htmlFilePath)}.{Guid.NewGuid():N}.tmp");
 
                 try
                 {
                     File.WriteAllText(htmlTempPath, HealingReportHtmlRenderer.Render(document));
-                    if (File.Exists(HtmlFilePath))
+                    if (File.Exists(htmlFilePath))
                     {
-                        _replaceExistingFile(htmlTempPath, HtmlFilePath);
+                        _replaceExistingFile(htmlTempPath, htmlFilePath);
                     }
                     else
                     {
-                        File.Move(htmlTempPath, HtmlFilePath);
+                        File.Move(htmlTempPath, htmlFilePath);
                     }
                 }
                 finally
