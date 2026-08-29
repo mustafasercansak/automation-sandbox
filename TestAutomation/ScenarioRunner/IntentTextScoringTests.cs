@@ -91,6 +91,19 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void ContainsNormalized_DoesNotMatchAccidentalSubstringInUnrelatedWords()
+        {
+            // "OK" shouldn't match "lookup value order" just because "lookup" contains "ok"
+            Assert.False(IntentTextScoring.ContainsNormalized("OK", "lookup value order"));
+
+            // "On" shouldn't match "Submit button" just because "button" contains "on"
+            Assert.False(IntentTextScoring.ContainsNormalized("On", "Submit button"));
+
+            // "Id" shouldn't match "Primary grid" just because "grid" contains "id"
+            Assert.False(IntentTextScoring.ContainsNormalized("Id", "Primary grid"));
+        }
+
+        [Fact]
         public void Join_SkipsNullAndWhitespaceValues()
         {
             var joined = IntentTextScoring.Join("Submit", "", null!, "  ", "Order");

@@ -77,16 +77,23 @@ namespace IntentAutomation
                 return false;
             }
 
-            if (normalizedHaystack.Contains(normalizedNeedle) || normalizedNeedle.Contains(normalizedHaystack))
+            if (normalizedHaystack.Contains(normalizedNeedle))
             {
                 return true;
             }
 
+            var haystackTokens = new HashSet<string>(Tokens(haystack), StringComparer.OrdinalIgnoreCase);
             var needleTokens = SignificantTokens(needle).ToList();
-            if (needleTokens.Count > 0)
+            if (needleTokens.Count > 0 && needleTokens.All(haystackTokens.Contains))
             {
-                var haystackTokens = new HashSet<string>(Tokens(haystack), StringComparer.OrdinalIgnoreCase);
-                if (needleTokens.All(haystackTokens.Contains))
+                return true;
+            }
+
+            var significantHaystackTokens = SignificantTokens(haystack).ToList();
+            if (significantHaystackTokens.Count > 0)
+            {
+                var needleTokenSet = new HashSet<string>(Tokens(needle), StringComparer.OrdinalIgnoreCase);
+                if (significantHaystackTokens.All(needleTokenSet.Contains))
                 {
                     return true;
                 }
