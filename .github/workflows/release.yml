@@ -169,9 +169,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view $env:TAG_NAME *> $null
-          $exists = if ($LASTEXITCODE -eq 0) { "true" } else { "false" }
+          # `gh release view` exits non-zero when the release does not exist - the normal
+          # case for a first release. The GitHub pwsh shell wrapper ends every step with
+          # `exit $LASTEXITCODE`, so that expected non-zero code would otherwise fail the
+          # step. Capture the code, then reset and exit clean.
+          $PSNativeCommandUseErrorActionPreference = $false
+          $ErrorActionPreference = 'Continue'
+          & gh release view $env:TAG_NAME *> $null
+          $exists = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
           "exists=$exists" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $global:LASTEXITCODE = 0
+          exit 0
 
       # Re-running a version that was already released (for example to push to nuget.org
       # after verifying the GitHub Release) must not fail here - `gh release create` has
