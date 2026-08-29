@@ -24,7 +24,7 @@ built on zero data points is not "Elite".
 
 ## Self-Healing Reliability Gates
 
-These are **configuration, not measured outcomes**. `calculate_dora.py` reads them
+These are **configuration, not measured outcomes**. `calculate_dora.ps1` reads them
 straight out of `TestAutomation/SelfHealing/SimilarityWeights.cs` so the report cannot
 drift from the code.
 
@@ -42,7 +42,7 @@ report.
 
 ## Automated Measurement
 
-`scripts/calculate_dora.py` runs weekly (and on demand) via the
+`scripts/calculate_dora.ps1` runs weekly (and on demand) via the
 [DORA Metrics workflow](https://github.com/mustafasercansak/automation-sandbox/actions/workflows/dora-metrics.yml).
 It writes the report to the job summary and uploads it as the `dora-report` artifact.
 If the GitHub API fetch fails the workflow fails - it never publishes a report drawn
@@ -51,5 +51,5 @@ from empty data.
 Run it locally:
 
 ```bash
-python3 scripts/calculate_dora.py --days 30 --format markdown
+pwsh scripts/calculate_dora.ps1 -Days 30 -Format markdown
 ```
