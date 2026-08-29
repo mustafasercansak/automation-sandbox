@@ -31,7 +31,9 @@ namespace PlaywrightLiveExploration
         private readonly IBrowser _browser;
         private readonly PlaywrightLiveExplorerOptions _options;
 
-        private PlaywrightLiveExplorer(IPlaywright playwright, IBrowser browser, PlaywrightLiveExplorerOptions options)
+        // internal (not private) so ScenarioRunner can drive disposal with fake IPlaywright/
+        // IBrowser instances - a faulting CloseAsync must still dispose the driver (#306).
+        internal PlaywrightLiveExplorer(IPlaywright playwright, IBrowser browser, PlaywrightLiveExplorerOptions options)
         {
             _playwright = playwright;
             _browser = browser;
@@ -90,8 +92,18 @@ namespace PlaywrightLiveExploration
 
         public async ValueTask DisposeAsync()
         {
-            await _browser.CloseAsync().ConfigureAwait(false);
-            _playwright.Dispose();
+            try
+            {
+                await _browser.CloseAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // Suppress browser close errors so Playwright driver disposal always completes.
+            }
+            finally
+            {
+                _playwright.Dispose();
+            }
         }
     }
 }
