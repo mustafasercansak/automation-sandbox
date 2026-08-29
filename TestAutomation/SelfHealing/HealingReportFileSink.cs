@@ -148,7 +148,29 @@ namespace SelfHealing
                     Directory.CreateDirectory(htmlDirectory);
                 }
 
-                File.WriteAllText(HtmlFilePath, HealingReportHtmlRenderer.Render(document));
+                var htmlTempPath = Path.Combine(
+                    string.IsNullOrEmpty(htmlDirectory) ? "." : htmlDirectory,
+                    $"{Path.GetFileName(HtmlFilePath)}.{Guid.NewGuid():N}.tmp");
+
+                try
+                {
+                    File.WriteAllText(htmlTempPath, HealingReportHtmlRenderer.Render(document));
+                    if (File.Exists(HtmlFilePath))
+                    {
+                        _replaceExistingFile(htmlTempPath, HtmlFilePath);
+                    }
+                    else
+                    {
+                        File.Move(htmlTempPath, HtmlFilePath);
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(htmlTempPath))
+                    {
+                        File.Delete(htmlTempPath);
+                    }
+                }
             }
         }
 
