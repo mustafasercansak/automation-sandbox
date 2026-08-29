@@ -22,6 +22,47 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void CiWorkflow_CollectsWindowsCoverageWithDotnetCoverageAndLinuxWithCoverlet()
+        {
+            // #289: coverlet.collector 8.0+ ships no .NET Framework-loadable collector, so the
+            // net48 leg must collect via dotnet-coverage (static instrumentation, settings-
+            // filtered to repo assemblies) while the Linux net8.0 leg keeps XPlat/coverlet.
+            var workflow = File.ReadAllText(Path.Combine(RepositoryRoot(), ".github", "workflows", "ci.yml"));
+
+            Assert.Contains("Run tests with Code Coverage (Windows, dotnet-coverage)", workflow, StringComparison.Ordinal);
+            Assert.Contains("Run tests with Code Coverage (Linux, coverlet)", workflow, StringComparison.Ordinal);
+            Assert.Contains("dotnet tool install --global dotnet-coverage --version ", workflow, StringComparison.Ordinal);
+            Assert.Contains("--settings ./.github/config/windows-coverage.runsettings", workflow, StringComparison.Ordinal);
+            Assert.Contains("--output-format cobertura", workflow, StringComparison.Ordinal);
+            Assert.Contains("DOTNET_COVERAGE_TELEMETRY_OPTOUT: '1'", workflow, StringComparison.Ordinal);
+            Assert.Contains("--collect:\"XPlat Code Coverage\"", workflow, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void WindowsCoverageSettings_IncludeOnlyRepositoryAssemblies()
+        {
+            var settings = File.ReadAllText(
+                Path.Combine(RepositoryRoot(), ".github", "config", "windows-coverage.runsettings"));
+
+            string[] assemblies =
+            {
+                "UiModel",
+                "SelfHealing",
+                "LlmHealing",
+                "Discovery",
+                "WebDiscovery",
+                "IntentAutomation",
+                "PlaywrightLiveExploration",
+            };
+            foreach (var assembly in assemblies)
+            {
+                Assert.Contains(assembly, settings, StringComparison.Ordinal);
+            }
+
+            Assert.Contains("<ModulePaths>", settings, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void CoverageSummaryScript_RendersOverallAndPerAssemblyRowsWithoutCombiningLegs()
         {
             var testDirectory = Path.Combine(Path.GetTempPath(), "automation-sandbox-coverage-" + Guid.NewGuid().ToString("N"));

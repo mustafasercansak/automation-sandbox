@@ -80,7 +80,45 @@ jobs:
         shell: pwsh
         run: pwsh ./TestAutomation/ScenarioRunner/bin/Debug/${{ matrix.framework }}/playwright.ps1 install chromium
 
-      - name: Run tests with Code Coverage
+      # Windows net48: coverlet.collector 8.0+ no longer ships a .NET Framework-loadable
+      # collector (only net8.0/net9.0/net10.0 builds), so the net48 leg logged "Unable to
+      # find a datacollector with friendly name 'XPlat Code Coverage'" and produced no
+      # cobertura file at all (#289). Coverage on this leg is collected by Microsoft's
+      # dotnet-coverage tool (static instrumentation, net48-capable) around the same test
+      # run; Linux keeps coverlet. The output path must stay under
+      # TestAutomation/ScenarioRunner/TestResults so the summary script and the upload
+      # step below keep working unchanged.
+      - name: Run tests with Code Coverage (Windows, dotnet-coverage)
+        if: matrix.os == 'windows-latest'
+        env:
+          # Optional: if these repo secrets are unset, GitHub substitutes an empty
+          # string and LlmHealingEvaluationTests skips itself - no error either way.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+          # Optional cost control: set these as repo Variables (not Secrets - not
+          # sensitive) to override the hardcoded model defaults, e.g. to a cheaper
+          # tier than ClaudeHealingProvider's default (claude-opus-5). Unset falls
+          # back to each provider's own default.
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          SELF_HEALING_REPORT_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.json
+          SELF_HEALING_REPORT_HTML_PATH: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults/healing-report.html
+          ABLATION_METRICS_OUTPUT_DIR: ${{ github.workspace }}/TestAutomation/ScenarioRunner/TestResults
+          # dotnet-coverage 18.10+ collects tool telemetry; nothing here is worth
+          # reporting to Microsoft, so opt out explicitly.
+          DOTNET_COVERAGE_TELEMETRY_OPTOUT: '1'
+        shell: pwsh
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.10.0
+          dotnet-coverage collect `
+            --settings ./.github/config/windows-coverage.runsettings `
+            --output-format cobertura `
+            --output ./TestAutomation/ScenarioRunner/TestResults/coverage.cobertura.xml `
+            -- dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
+
+      - name: Run tests with Code Coverage (Linux, coverlet)
+        if: matrix.os == 'ubuntu-latest'
         env:
           # Optional: if these repo secrets are unset, GitHub substitutes an empty
           # string and LlmHealingEvaluationTests skips itself - no error either way.
