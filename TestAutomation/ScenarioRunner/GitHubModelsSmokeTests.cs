@@ -9,7 +9,7 @@ using Xunit;
 namespace ScenarioRunner
 {
     // Live smoke test against GitHub Models (https://models.github.ai/inference).
-    // Executed nightly and on-demand via .github/workflows/llm-smoke.yml with GITHUB_TOKEN (models: read).
+    // Executed on-demand via .github/workflows/llm-smoke.yml with GITHUB_TOKEN (models: read).
     //
     // Design rules:
     // 1. If GITHUB_TOKEN / OPENAI_API_KEY is not set (e.g. standard local test runs), skips cleanly.
