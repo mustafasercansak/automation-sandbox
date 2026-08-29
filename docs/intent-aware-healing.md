@@ -72,8 +72,11 @@ Automation Sandbox LLM providers are **natively multilingual**. You can write BD
 - It is preserved when a locator is healed.
 - It appears in reports and audit history.
 
-Full intent-driven automation is planned as M6, starting with a structured
-intent scenario model and deterministic planner.
+Full intent-driven automation is implemented as M6: `TestAutomation/IntentAutomation/`
+ships the structured intent scenario model, the deterministic and LLM-backed planners
+(`DeterministicIntentPlanner`, `LlmIntentPlanner`), the web and desktop pipelines
+(`IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`), and the Playwright/FlaUI
+test generators. See [Intent-Driven Automation](intent-driven-automation.md).
 
 ---
 
@@ -125,4 +128,8 @@ $$\text{TestIntent} = \text{[Eylem Fiili]} + \text{[İş Bağlamı]} + \text{[He
 - Locator iyileştirildiğinde korunur.
 - Raporlarda ve audit history içinde görünür.
 
-Tam intent tabanlı otomasyon M6 kapsamındadır.
+Tam intent tabanlı otomasyon M6 kapsamında uygulanmıştır: `TestAutomation/IntentAutomation/`
+projesi; yapılandırılmış intent senaryo modelini, deterministik ve LLM destekli planlayıcıları
+(`DeterministicIntentPlanner`, `LlmIntentPlanner`), web ve masaüstü hatlarını
+(`IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`) ve Playwright/FlaUI test
+üreticilerini içerir. Bkz. [Intent-Driven Automation](intent-driven-automation.md).
