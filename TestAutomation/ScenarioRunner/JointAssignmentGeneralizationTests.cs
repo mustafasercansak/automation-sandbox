@@ -257,7 +257,7 @@ namespace ScenarioRunner
                 r.Baseline.OriginalAutomationId == removedAutomationId);
             var winner = Assert.Single(scenario.LocatorResults, r =>
                 r.Baseline.OriginalAutomationId == winningAutomationId);
-            Assert.Equal(removed.Baseline.MatchedAutomationId, winner.Baseline.MatchedAutomationId);
+            Assert.Equal(removed.Baseline.MatchedElement, winner.Baseline.MatchedElement);
             Assert.Equal(JointAssignmentDisposition.DeclinedByStrongerClaim, removed.Disposition);
             Assert.Equal(JointAssignmentDisposition.WonContention, winner.Disposition);
         }
@@ -269,13 +269,13 @@ namespace ScenarioRunner
                 .SelectMany(s => s.LocatorResults
                     .Where(r =>
                         r.Baseline.Outcome == AblationOutcome.FalseHealOnRemoved &&
-                        !string.IsNullOrEmpty(r.Baseline.MatchedAutomationId) &&
+                        !string.IsNullOrEmpty(r.Baseline.MatchedElement) &&
                         s.LocatorResults.Any(other =>
                             !ReferenceEquals(other, r) &&
                             other.Baseline.EngineAccepted &&
                             string.Equals(
-                                other.Baseline.MatchedAutomationId,
-                                r.Baseline.MatchedAutomationId,
+                                other.Baseline.MatchedElement,
+                                r.Baseline.MatchedElement,
                                 StringComparison.Ordinal)))
                     .Select(r => new { Scenario = s, Removed = r }))
                 .ToList();
@@ -290,8 +290,8 @@ namespace ScenarioRunner
                     other.Joint.Outcome == AblationOutcome.CorrectHeal &&
                     other.Disposition == JointAssignmentDisposition.WonContention &&
                     string.Equals(
-                        other.Baseline.MatchedAutomationId,
-                        item.Removed.Baseline.MatchedAutomationId,
+                        other.Baseline.MatchedElement,
+                        item.Removed.Baseline.MatchedElement,
                         StringComparison.Ordinal));
             });
         }
@@ -314,9 +314,9 @@ namespace ScenarioRunner
                     .Where(r => r.Outcome == AblationOutcome.FalseHealOnRemoved)
                     .Count(removed => s.LocatorResults.Any(other =>
                         !ReferenceEquals(other, removed) &&
-                        !string.IsNullOrEmpty(removed.MatchedAutomationId) &&
+                        !string.IsNullOrEmpty(removed.MatchedElement) &&
                         other.EngineAccepted &&
-                        string.Equals(other.MatchedAutomationId, removed.MatchedAutomationId, StringComparison.Ordinal))));
+                        string.Equals(other.MatchedElement, removed.MatchedElement, StringComparison.Ordinal))));
 
             return new GeneralizationMeasurement
             {
