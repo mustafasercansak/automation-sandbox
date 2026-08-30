@@ -19,6 +19,8 @@
 
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
+    <PackageIcon>icon.png</PackageIcon>
+
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -49,8 +51,18 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <!-- Per-package README (#338): when docs/nuget/README.<ProjectName>.md exists it is packed
+         as the package's README.md; otherwise the root README.md is the fallback. Packing to
+         PackagePath="\README.md" renames the file on pack so eng/Validate-NuGetPackages.ps1
+         still finds exactly one README.md entry per package. -->
+    <None Include="$(MSBuildThisFileDirectory)docs/nuget/README.$(MSBuildProjectName).md"
+          Condition="Exists('$(MSBuildThisFileDirectory)docs/nuget/README.$(MSBuildProjectName).md')"
+          Pack="true" PackagePath="\README.md" />
+    <None Include="$(MSBuildThisFileDirectory)README.md"
+          Condition="!Exists('$(MSBuildThisFileDirectory)docs/nuget/README.$(MSBuildProjectName).md')"
+          Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

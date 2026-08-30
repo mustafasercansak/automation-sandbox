@@ -36,7 +36,7 @@ foreach ($packageId in $packageIds) {
     $archive = [System.IO.Compression.ZipFile]::OpenRead($packagePath)
     try {
         $entryNames = @($archive.Entries | ForEach-Object { $_.FullName })
-        foreach ($requiredEntry in @("README.md", "LICENSE", "$packageId.nuspec")) {
+        foreach ($requiredEntry in @("README.md", "LICENSE", "icon.png", "$packageId.nuspec")) {
             if ($entryNames -notcontains $requiredEntry) {
                 throw "$packagePath does not contain $requiredEntry"
             }
@@ -44,6 +44,28 @@ foreach ($packageId in $packageIds) {
 
         if (-not ($entryNames | Where-Object { $_ -like "lib/*.dll" })) {
             throw "$packagePath does not contain a library assembly"
+        }
+
+        # The embedded README must be the per-package landing page (docs/nuget/README.<Name>.md),
+        # not the monorepo root README that would fall back in via Directory.Build.props (#338).
+        # The per-package files open with "# <PackageId>"; the root README opens with
+        # "# Automation Sandbox" and carries LaTeX/mermaid that nuget.org cannot render.
+        $readmeEntry = $archive.Entries | Where-Object { $_.FullName -eq "README.md" } | Select-Object -First 1
+        $reader = New-Object System.IO.StreamReader($readmeEntry.Open())
+        try {
+            $readmeText = $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+
+        $firstHeading = ($readmeText -split "`n" | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -First 1).Trim()
+        if ($firstHeading -ne "# $packageId") {
+            throw "$packagePath embeds the wrong README (first heading '$firstHeading', expected '# $packageId'). Add docs/nuget/README.$($packageId -replace '^AutomationSandbox\.', '').md."
+        }
+
+        if ($readmeText -match '(?m)^\s*```mermaid' -or $readmeText -match '\$\$' -or $readmeText -match '\$\\') {
+            throw "$packagePath README contains LaTeX or mermaid syntax that nuget.org does not render."
         }
     }
     finally {
