@@ -22,6 +22,20 @@ namespace SelfHealing
 
         public double MinimumEvidenceWeight { get; set; } = 0.4;
 
+        // Per-component name gate (#370): when the stale locator HAD a name, the winning
+        // candidate's NameScore must be at least this before the heuristic match can be
+        // IsConfident - independently of the weighted total. The 0.20-weighted name signal
+        // is blended away by the weighted average, so a deleted tab healing onto an adjacent
+        // one (Name 'Summary' -> 'Dimensions', NameScore ~0.10) still clears MinimumConfidence
+        // on structure alone. Measured through TreeCalibrator on HandBrake: a 0.30 floor
+        // drops the Balanced false-heal rate 9.3% -> 7.6% (precision 90.7% -> 92.4%) with
+        // zero auto-heal recall cost; ShareX moves the same direction. Default 0.0 (disabled)
+        // keeps the shipped permissive behaviour; the Balanced and Conservative profiles set
+        // 0.30. Not applied when the stale locator had no name, or when the candidate's
+        // NameScore is null (missing on one side - neither penalised nor rewarded, matching
+        // the evidence gate).
+        public double MinimumNameScoreWhenNamed { get; set; } = 0.0;
+
         // Minimum gap between the best and runner-up candidate scores before a heuristic
         // match can be IsConfident (issue #4). 0.880 vs 0.879 means "I don't know" - the
         // resolver falls back to LLM/manual review instead of guessing. Default 0.05: the
@@ -59,7 +73,8 @@ namespace SelfHealing
                     {
                         MinimumConfidence = 0.90,
                         MinimumCandidateMargin = 0.08,
-                        MinimumEvidenceWeight = 0.50
+                        MinimumEvidenceWeight = 0.50,
+                        MinimumNameScoreWhenNamed = 0.30
                     };
                 case ThresholdProfile.Aggressive:
                     return new SimilarityWeights
@@ -74,7 +89,8 @@ namespace SelfHealing
                     {
                         MinimumConfidence = 0.75,
                         MinimumCandidateMargin = 0.05,
-                        MinimumEvidenceWeight = 0.40
+                        MinimumEvidenceWeight = 0.40,
+                        MinimumNameScoreWhenNamed = 0.30
                     };
             }
         }
@@ -104,6 +120,7 @@ namespace SelfHealing
             ValidateNonNegative(PositionToleranceRadius, nameof(PositionToleranceRadius));
             ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
             ValidateRange(MinimumEvidenceWeight, nameof(MinimumEvidenceWeight), 0.0, 1.0);
+            ValidateRange(MinimumNameScoreWhenNamed, nameof(MinimumNameScoreWhenNamed), 0.0, 1.0);
             ValidateRange(MinimumCandidateMargin, nameof(MinimumCandidateMargin), 0.0, 1.0);
             ValidateRange(MinCandidateScore, nameof(MinCandidateScore), 0.0, 1.0);
 

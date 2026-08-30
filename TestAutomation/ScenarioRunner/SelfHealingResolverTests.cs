@@ -1336,5 +1336,73 @@ namespace ScenarioRunner
 
             return root;
         }
+
+        // --- #370: per-component name gate ---
+
+        private static (UiElementInfo expected, UiElementInfo tree) NameGateFixture(string expectedName, string candidateName)
+        {
+            // Everything matches perfectly except the name: total score is high, NameScore is low.
+            var expected = new UiElementInfo
+            {
+                ControlType = "TabItem", Name = expectedName, AutomationId = "summaryTab",
+                ParentControlType = "Tab", SiblingIndex = 0, SiblingCount = 3,
+                BoundingRectangle = new BoundingRectangle(10, 10, 80, 24),
+            };
+            var tree = new UiElementInfo { ControlType = "Tab", AutomationId = "tabs" };
+            tree.Children.Add(new UiElementInfo
+            {
+                ControlType = "TabItem", Name = candidateName, AutomationId = "pictureTab",
+                ParentControlType = "Tab", SiblingIndex = 0, SiblingCount = 3,
+                BoundingRectangle = new BoundingRectangle(10, 10, 80, 24),
+            });
+            return (expected, tree);
+        }
+
+        [Fact]
+        public void Resolve_NameGate_RejectsStructurallyPerfectMatch_WhenNamedLocatorGetsLowNameScore()
+        {
+            var (expected, tree) = NameGateFixture("Summary", "Dimensions");
+
+            var withGate = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.NotNull(withGate.Matched);
+            Assert.True(withGate.Score >= 0.75, "Structure alone should still clear the confidence threshold.");
+            Assert.False(withGate.IsConfident, "The name gate should veto a high-score match whose NameScore contradicts it.");
+            Assert.True(withGate.MatchedNameScore < withGate.NameGateFloor);
+            Assert.Equal(0.30, withGate.NameGateFloor, 3);
+        }
+
+        [Fact]
+        public void Resolve_NameGate_DoesNotApply_WhenTheStaleLocatorHadNoName()
+        {
+            var (expected, tree) = NameGateFixture(string.Empty, "Dimensions");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.True(result.IsConfident, "With no name on the stale locator there is nothing for the gate to check.");
+            Assert.Null(result.MatchedNameScore);
+        }
+
+        [Fact]
+        public void Resolve_NameGate_DefaultWeights_LeaveExistingBehaviourUnchanged()
+        {
+            var (expected, tree) = NameGateFixture("Summary", "Dimensions");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.Default, _ => { });
+
+            Assert.Equal(0.0, result.NameGateFloor);
+            Assert.True(result.IsConfident, "Default weights ship with the gate disabled (MinimumNameScoreWhenNamed = 0).");
+        }
+
+        [Fact]
+        public void Resolve_NameGate_AllowsMatch_WhenTheNameDriftedButStaysAboveFloor()
+        {
+            var (expected, tree) = NameGateFixture("Submit order", "Submit the order");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.True(result.MatchedNameScore >= 0.30, "A reworded label still scores above the floor.");
+            Assert.True(result.IsConfident);
+        }
     }
 }

@@ -1157,6 +1157,97 @@ namespace ScenarioRunner
             Assert.Equal(JointAssignmentDisposition.PreservedUncontested, close.Disposition);
         }
 
+        [Fact]
+        public async Task HandBrakeFixture_RepositoryOwnershipReconciliation_CutsDeletedElementFalseHeals_AtNoRecallCost()
+        {
+            // The committed measurement behind benchmark-calibration.md §14 and PR #374's second
+            // commit. Every authored locator is deleted in turn; the rest of the suite is present
+            // in the repository as the contention set. SelfHealingEngine.ReconcileAgainstRepository
+            // re-resolves those other locators against the mutated tree and declines a heal whose
+            // winning candidate is already another locator's confident identity - the #141/#144
+            // ownership guard, run against the whole repository instead of a hand-built batch.
+            var (repoPath, withoutGuard, withGuard, renameFlips) =
+                await RunRepositoryReconciliationAblationAsync("HandBrake", "1.8.2");
+
+            try
+            {
+                Assert.True(withGuard < withoutGuard,
+                    $"Expected repository reconciliation to reduce deleted-element false heals (was {withoutGuard}, still {withGuard}).");
+                // Measured: 8 -> 1 with the Balanced name gate already applied. Locked with a
+                // little headroom so an unrelated scorer tweak does not turn a real regression green.
+                Assert.True(withoutGuard >= 6, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
+                Assert.True(withGuard <= 2, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 2.");
+                // Genuine renames must be untouched: not one rename scenario may flip its
+                // IsConfident verdict when the guard is switched on.
+                Assert.Equal(0, renameFlips);
+            }
+            finally
+            {
+                if (File.Exists(repoPath))
+                {
+                    File.Delete(repoPath);
+                }
+            }
+        }
+
+        private static async Task<(string RepoPath, int WithoutGuard, int WithGuard, int RenameFlips)>
+            RunRepositoryReconciliationAblationAsync(string appName, string version)
+        {
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, appName, version, FixtureFileName);
+            var authoredIds = dataset.Scenarios
+                .Where(s => s.MutationKind == LocatorMutationKind.RemovedElement)
+                .Select(s => s.OriginalAutomationId)
+                .ToList();
+
+            var repoPath = Path.Combine(
+                Path.GetTempPath(),
+                $"AblationReconcile_{appName}_{Guid.NewGuid():N}.locator.json");
+            var repository = new LocatorRepository(repoPath);
+            foreach (var id in authoredIds)
+            {
+                var pristine = LocatorAblationGenerator.FindExpectedElement(root, id);
+                Assert.NotNull(pristine);
+                repository.Upsert(id, pristine!, platform: "windows-uia");
+            }
+
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+            var off = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: false);
+            var on = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: true);
+
+            var withoutGuard = 0;
+            var withGuard = 0;
+            foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement))
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                if ((await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident)
+                {
+                    withoutGuard++;
+                }
+
+                if ((await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident)
+                {
+                    withGuard++;
+                }
+            }
+
+            var renameFlips = 0;
+            foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RenamedAutomationId))
+            {
+                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                var offConfident = (await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                var onConfident = (await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                if (offConfident != onConfident)
+                {
+                    renameFlips++;
+                }
+            }
+
+            return (repoPath, withoutGuard, withGuard, renameFlips);
+        }
+
         private List<(string ScenarioId, string? RealMatchedId, bool IsAnotherAuthoredLocator)> RunWholeTreeReconciliationProbe()
         {
             // Cannot match by AutomationId: ApplyMutation opaques every element's AutomationId in the
