@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.IntentAutomation</PackageId>
     <Description>Intent contracts, deterministic planning, DOM matching, locator recording, Playwright C#/TypeScript generation, intent flow reports, and pipeline orchestration for intent-driven test automation.</Description>
+    <PackageTags>test-automation;intent-driven;test-generation;playwright;codegen;e2e-testing;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

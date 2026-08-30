@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.LlmHealing</PackageId>
     <Description>LLM provider implementations behind a shared ILlmHealingProvider interface for locator resolution: Claude, Gemini, offline Ollama, and an OpenAI provider that accepts any OpenAI-compatible endpoint (Groq, Cerebras, OpenRouter, Cloudflare Workers AI, Azure OpenAI, a local gateway). Includes retry with exponential backoff, dual timeout budgets, and a Retry-After quota guard.</Description>
+    <PackageTags>llm;self-healing;test-automation;claude;gemini;openai;ollama;consensus;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

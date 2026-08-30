@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.UiModel</PackageId>
     <Description>Framework-agnostic UI tree snapshot model (UiElementInfo) and JSON (de)serializer, with no FlaUI dependency.</Description>
+    <PackageTags>ui-automation;test-automation;ui-tree;snapshot;serialization;self-healing;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

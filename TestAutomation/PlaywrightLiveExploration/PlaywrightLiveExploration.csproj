@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.PlaywrightLiveExploration</PackageId>
     <Description>Live browser page exploration via the Microsoft.Playwright .NET SDK: launches a browser, navigates to a URL, and captures a WebElementInfo DOM snapshot without a hand-written Playwright test.</Description>
+    <PackageTags>playwright;web-automation;dom;test-automation;browser;page-exploration;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
