@@ -50,6 +50,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🧭 [**Intent-Driven Automation**](intent-driven-automation.md) | M6: intent planning (deterministic + LLM-backed), DOM/desktop matching, locator recording, Playwright/FlaUI test generation, intent flow reports, pipeline orchestration, and live page exploration. |
 | 🔬 [**Benchmark & Calibration**](benchmark-calibration.md) | Multi-signal locator ablation benchmark on real organic apps, score overlap findings, and threshold trade-off analysis. |
 | 📝 [**Can You Trust an LLM to Fix a Broken Locator?**](blog/llm-false-heal-study.md) | Standalone write-up of the multi-provider consensus study: 34/34 unanimous verdicts on deleted elements were false heals, why, and how the design responds. |
+| 🧪 [**Case Study: Healing HandBrake's Real UI Tree**](blog/case-study-handbrake.md) | Two real refactors on a captured HandBrake window: a rename that heals at score 1.000, and a deleted tab that false-heals at the default threshold but is declined after calibration. |
 | 🔗 [**Joint Locator Reconciliation**](joint-locator-reconciliation.md) | Opt-in batch ownership guard for independently accepted locator heals, including deterministic assignment and limitations. |
 | 🤖 [**LLM Providers**](llm-providers.md) | Setting up AI providers (Gemini, Claude, OpenAI, Ollama) and implementing custom `ILlmHealingProvider`s. |
 | 🔐 [**LLM Security Model**](llm-security-model.md) | Trust boundaries, disclosed fields, prompt-injection and PII limitations, provider retention, and local report handling. |
@@ -89,6 +90,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🧭 [**Intent Tabanlı Otomasyon**](intent-driven-automation.md) | M6: intent planlama (deterministic + LLM destekli), DOM/masaüstü eşleştirme, locator kaydı, Playwright/FlaUI test üretimi, intent raporu, pipeline orkestrasyonu ve canlı sayfa keşfi. |
 | 🔬 [**Benchmark ve Kalibrasyon**](benchmark-calibration.md) | Gerçek uygulamalarda çoklu sinyal ablasyon testi, skor çakışması bulguları ve eşik denge analizi. |
 | 📝 [**Bir LLM'e Kırık Locator'ı Düzelttirebilir misiniz?**](blog/llm-false-heal-study.md) | Çok-sağlayıcılı konsensüs çalışmasının bağımsız yazısı: silinmiş elemanlarda 34/34 oybirliği yanlış iyileştirmeydi — nedeni ve tasarıma yansıması. |
+| 🧪 [**Vaka Çalışması: HandBrake'in Gerçek UI Ağacını İyileştirme**](blog/case-study-handbrake.md) | Yakalanmış bir HandBrake penceresinde iki gerçek refactor: 1.000 skorla iyileşen bir yeniden adlandırma ve varsayılan eşikte yanlış iyileşen ama kalibrasyon sonrası reddedilen silinmiş bir sekme. |
 | 🔗 [**Birleşik Locator Uzlaştırması**](joint-locator-reconciliation.md) | Bağımsız kabul edilen locator iyileştirmeleri için deterministik, isteğe bağlı batch sahiplik koruması ve sınırları. |
 | 🤖 [**Yapay Zeka Kurulumu**](llm-providers.md) | Gemini, Claude, OpenAI, yerel Ollama ve özel `ILlmHealingProvider` geliştirme. |
 | 🔐 [**LLM Güvenlik Modeli**](llm-security-model.md) | Güven sınırları, açıklanan alanlar, prompt injection ve PII sınırları, sağlayıcı retention ve yerel rapor güvenliği. |
