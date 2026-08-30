@@ -84,6 +84,25 @@ For how this scope and approach compare with Healenium and the commercial healer
 
 ---
 
+## 📦 Which Package Do I Need?
+
+The seven packages follow real dependency boundaries (cross-platform core vs. `net48`/FlaUI, a Playwright dependency vs. pure DTOs). Install only the ones your scenario needs — dependencies below are pulled transitively.
+
+| I want to… | Install | Notes |
+| :--- | :--- | :--- |
+| Heal broken locators against a UI tree I capture myself | `AutomationSandbox.SelfHealing` | The heuristic scorer, `SelfHealingEngine`, locator repository, and JSON/HTML reports. Pulls `UiModel` + `LlmHealing` transitively. |
+| …and let an **LLM fallback** run when the heuristic isn't confident | *(nothing extra)* — register a provider from `AutomationSandbox.LlmHealing` | Ships transitively with `SelfHealing`; no network calls until you configure a provider ([opt-in, quorum-gated](docs/blog/llm-false-heal-study.md)). |
+| …and capture a live **Windows desktop** tree (FlaUI / UI Automation) | `+ AutomationSandbox.Discovery` | Windows-only, targets `net48`. |
+| Capture a **web DOM** snapshot / get Playwright locator suggestions | `AutomationSandbox.WebDiscovery` | Framework-agnostic DOM model and `PlaywrightLocatorEmitter`. |
+| …and **launch a browser** to capture a page with no hand-written Playwright test | `+ AutomationSandbox.PlaywrightLiveExploration` | Brings `Microsoft.Playwright`. |
+| Generate **Playwright / FlaUI test skeletons from an intent** | `AutomationSandbox.IntentAutomation` | Intent planning, DOM/desktop matching, locator recording, C#/TypeScript codegen. Pulls `WebDiscovery`. |
+
+`AutomationSandbox.UiModel` is the shared DTO layer (`UiElementInfo` and its JSON serializer). Every package above depends on it transitively — **you never install `UiModel` directly.**
+
+New to the library? The [Published Package Quickstart](docs/consumer-quickstart.md) walks the `SelfHealing` path end to end; [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers wiring it into a suite you already have.
+
+---
+
 ## 📌 Implementation Status
 
 | Feature / Module | Status | Description |
