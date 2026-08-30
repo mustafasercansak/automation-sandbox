@@ -59,17 +59,27 @@ namespace ScenarioRunner
         public void DocumentationFiles_InternalMarkdownLinks_TargetExistingFiles()
         {
             var repoRoot = FindRepoRoot();
-            var docsDir = Path.Combine(repoRoot, "docs");
-            var docFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.TopDirectoryOnly);
+
+            // #363: cover every surface a reader actually lands on, not just docs/*.md.
+            // The root index.md (Pages homepage) and README are user-facing; docs/blog/**
+            // is real published content. The old TopDirectoryOnly scan is why #361 (every
+            // Pages homepage link 404) shipped undetected.
+            var files = new List<string>
+            {
+                Path.Combine(repoRoot, "index.md"),
+                Path.Combine(repoRoot, "README.md"),
+            };
+            files.AddRange(Directory.GetFiles(Path.Combine(repoRoot, "docs"), "*.md", SearchOption.AllDirectories));
 
             var linkRegex = new Regex(@"\[(?<text>[^\]]+)\]\((?<target>[^)]+)\)");
+            var broken = new List<string>();
 
-            foreach (var file in docFiles)
+            foreach (var file in files.Where(File.Exists))
             {
+                var relFile = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                 var content = File.ReadAllText(file);
-                var matches = linkRegex.Matches(content);
 
-                foreach (Match match in matches)
+                foreach (Match match in linkRegex.Matches(content))
                 {
                     var target = match.Groups["target"].Value.Trim();
 
@@ -82,18 +92,31 @@ namespace ScenarioRunner
                     }
 
                     var hashIdx = target.IndexOf('#');
-                    var cleanTarget = hashIdx >= 0 ? target.Substring(0, hashIdx) : target;
+                    var cleanTarget = (hashIdx >= 0 ? target.Substring(0, hashIdx) : target).Trim();
 
                     if (string.IsNullOrWhiteSpace(cleanTarget))
                     {
                         continue;
                     }
 
+                    // Format-example placeholders (e.g. `[LIBRARY](LINK)` in the awesome-list
+                    // entries inside distribution-kit.md): a real relative link always has a
+                    // path separator or an extension.
+                    if (!cleanTarget.Contains('/') && !cleanTarget.Contains('.'))
+                    {
+                        continue;
+                    }
+
                     var targetPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file)!, cleanTarget));
-                    Assert.True(File.Exists(targetPath) || Directory.Exists(targetPath),
-                        $"Broken link found in '{Path.GetFileName(file)}': target '{target}' does not exist on disk (resolved to '{targetPath}').");
+                    if (!File.Exists(targetPath) && !Directory.Exists(targetPath))
+                    {
+                        broken.Add($"{relFile}: '{target}' -> not found at '{targetPath}'");
+                    }
                 }
             }
+
+            Assert.True(broken.Count == 0,
+                "Broken internal markdown links:" + Environment.NewLine + string.Join(Environment.NewLine, broken));
         }
 
         [Fact]
