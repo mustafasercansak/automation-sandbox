@@ -360,6 +360,65 @@ namespace ScenarioRunner
             return clone;
         }
 
+        [Fact]
+        public async System.Threading.Tasks.Task ShareXFixture_RepositoryOwnershipReconciliation_CutsDeletedElementFalseHeals_AtNoRecallCost()
+        {
+            // Second-application check on benchmark-calibration.md §14. Same procedure as the
+            // HandBrake regression guard: delete every authored locator in turn with the rest of
+            // the suite present in the repository, and confirm SelfHealingEngine.ReconcileAgainstRepository
+            // declines the heals whose winning candidate another locator already owns, without
+            // flipping any genuine rename.
+            var root = LoadFixture();
+            var dataset = LocatorAblationGenerator.Generate(root, "ShareX", "v21.0.0", FixtureFileName);
+            var authoredIds = dataset.Scenarios
+                .Where(s => s.MutationKind == LocatorMutationKind.RemovedElement)
+                .Select(s => s.OriginalAutomationId)
+                .ToList();
+
+            var repoPath = Path.Combine(Path.GetTempPath(), $"AblationReconcile_ShareX_{Guid.NewGuid():N}.locator.json");
+            var repository = new LocatorRepository(repoPath);
+            foreach (var id in authoredIds)
+            {
+                repository.Upsert(id, LocatorAblationGenerator.FindExpectedElement(root, id)!, platform: "windows-uia");
+            }
+
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+            var off = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: false);
+            var on = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: true);
+
+            int withoutGuard = 0, withGuard = 0, renameFlips = 0;
+            try
+            {
+                foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement))
+                {
+                    var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                    var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                    if ((await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) withoutGuard++;
+                    if ((await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) withGuard++;
+                }
+
+                foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RenamedAutomationId))
+                {
+                    var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                    var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
+                    var offC = (await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                    var onC = (await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                    if (offC != onC) renameFlips++;
+                }
+            }
+            finally
+            {
+                if (File.Exists(repoPath)) File.Delete(repoPath);
+            }
+
+            Assert.True(withGuard < withoutGuard,
+                $"Expected repository reconciliation to reduce deleted-element false heals (was {withoutGuard}, still {withGuard}).");
+            // Measured: 7 -> 2 with the Balanced name gate already applied.
+            Assert.True(withoutGuard >= 5, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
+            Assert.True(withGuard <= 3, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 3.");
+            Assert.Equal(0, renameFlips);
+        }
+
         private static UiElementInfo LoadFixture()
         {
             var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", FixtureFileName);
