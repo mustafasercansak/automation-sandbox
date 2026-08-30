@@ -206,12 +206,18 @@ another locator, the heal is declined (`HealResolutionStatus.OwnershipConflict`)
 review. It is heuristic-only — no extra LLM calls — and costs one resolution per other repository
 entry, only on a heal attempt.
 
+The `Balanced` and `Conservative` profiles also apply two per-component gates the weighted score
+cannot override: a **name gate** (a named locator's candidate must clear a `NameScore` floor) and a
+**descendant gate** (a container locator's candidate must still hold the same direct child control
+types — this is what catches an unnamed panel healing onto a structurally identical sibling that
+holds something else).
+
 Measured on the project's two real fixtures (Balanced profile, every locator deleted in turn):
-deleted-element false heals drop from **17 % → 0 %** (HandBrake) and **21 % → 3 %** (ShareX, one
-residual), with **no change** to genuine-rename recall. That residual is the case no structural
-signal reaches — a delete that lands on a node nothing else in the suite uses
-([the measurement](benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)).
-Recommended on for the `Balanced` and `Conservative` profiles.
+deleted-element false heals drop from **40 % → 0 %** (HandBrake) and **28 % → 0 %** (ShareX), with
+**no change** to genuine-rename recall
+([the measurement](benchmark-calibration.md#15-a-non-structural-signal-for-the-uncontested-residual-375)).
+All three guards are on by default in `Balanced` and `Conservative`; `reconcileAgainstRepository`
+is the one that also needs the engine flag above.
 
 ---
 

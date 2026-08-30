@@ -382,28 +382,36 @@ namespace ScenarioRunner
                 repository.Upsert(id, LocatorAblationGenerator.FindExpectedElement(root, id)!, platform: "windows-uia");
             }
 
+            // Balanced enables the #370 name gate + #375 descendant gate. `noDescendantGate`
+            // isolates what the descendant gate alone buys on top of repository reconciliation.
             var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
-            var off = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: false);
-            var on = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: true);
+            var noDescendantGate = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+            noDescendantGate.MinimumChildSignatureSimilarity = 0.0;
 
-            int withoutGuard = 0, withGuard = 0, renameFlips = 0;
+            var baseline = new SelfHealingEngine(repository, SimilarityWeights.Default, mode: HealingMode.Observe, reconcileAgainstRepository: false);
+            var reconcileOnly = new SelfHealingEngine(repository, noDescendantGate, mode: HealingMode.Observe, reconcileAgainstRepository: true);
+            var reconcilePlusDescendant = new SelfHealingEngine(repository, weights, mode: HealingMode.Observe, reconcileAgainstRepository: true);
+
+            int withoutGuard = 0, reconcileGuard = 0, bothGuards = 0, renameFlips = 0;
             try
             {
                 foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement))
                 {
-                    var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                    // Capture() so the snapshot carries the child-ControlType signature the #375 gate reads.
+                    var expected = UiElementSnapshot.Capture(LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!);
                     var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
-                    if ((await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) withoutGuard++;
-                    if ((await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) withGuard++;
+                    if ((await baseline.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) withoutGuard++;
+                    if ((await reconcileOnly.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) reconcileGuard++;
+                    if ((await reconcilePlusDescendant.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident) bothGuards++;
                 }
 
                 foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RenamedAutomationId))
                 {
-                    var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                    var expected = UiElementSnapshot.Capture(LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!);
                     var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
-                    var offC = (await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
-                    var onC = (await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
-                    if (offC != onC) renameFlips++;
+                    var a = (await reconcileOnly.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                    var b = (await reconcilePlusDescendant.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
+                    if (a != b) renameFlips++;
                 }
             }
             finally
@@ -411,13 +419,15 @@ namespace ScenarioRunner
                 if (File.Exists(repoPath)) File.Delete(repoPath);
             }
 
-            Assert.True(withGuard < withoutGuard,
-                $"Expected repository reconciliation to reduce deleted-element false heals (was {withoutGuard}, still {withGuard}).");
-            // Measured: 6 (name gate only) -> 1. The single residual is `pHotkeys`, an unnamed
-            // container Pane that heals onto a structurally identical sibling Pane - the
-            // uncontested case ownership reconciliation cannot reach (benchmark-calibration.md §15, #375).
-            Assert.True(withoutGuard >= 5, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
-            Assert.True(withGuard <= 1, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 1 (the pHotkeys residual).");
+            // Measured: 8 (shipped default) -> 1 (name gate + reconciliation) -> 0 (+ descendant
+            // gate). The lone residual reconciliation cannot reach is `pHotkeys`, an unnamed
+            // container Pane that heals onto a structurally identical sibling Pane; the #375
+            // descendant gate declines it because the two panes' direct children differ
+            // ({DataGrid:1} vs {Pane:1}). See benchmark-calibration.md §15.
+            Assert.True(withoutGuard >= 6, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
+            Assert.Equal(1, reconcileGuard);
+            Assert.Equal(0, bothGuards);
+            // No genuine rename changes verdict when the descendant gate is added.
             Assert.Equal(0, renameFlips);
         }
 

@@ -1404,5 +1404,104 @@ namespace ScenarioRunner
             Assert.True(result.MatchedNameScore >= 0.30, "A reworded label still scores above the floor.");
             Assert.True(result.IsConfident);
         }
+
+        // --- #375: per-component descendant (child-signature) gate ---
+
+        // An unnamed container that heals with a perfect structural score onto a structurally
+        // identical sibling holding something else - the ShareX 'pHotkeys' shape.
+        private static (UiElementInfo expected, UiElementInfo tree) ChildSignatureFixture(string staleChildType, string candidateChildType)
+        {
+            var stale = new UiElementInfo
+            {
+                ControlType = "Pane", Name = string.Empty, AutomationId = "pHotkeys",
+                ParentControlType = "Pane", SiblingIndex = 0, SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(275, 106, 676, 551),
+            };
+            if (!string.IsNullOrEmpty(staleChildType))
+            {
+                stale.Children.Add(new UiElementInfo { ControlType = staleChildType });
+            }
+
+            var tree = new UiElementInfo { ControlType = "Pane", AutomationId = "pMain" };
+            var candidate = new UiElementInfo
+            {
+                ControlType = "Pane", Name = string.Empty, AutomationId = "ucTaskThumbnailView",
+                ParentControlType = "Pane", SiblingIndex = 0, SiblingCount = 1,
+                BoundingRectangle = new BoundingRectangle(275, 106, 676, 551),
+            };
+            if (!string.IsNullOrEmpty(candidateChildType))
+            {
+                candidate.Children.Add(new UiElementInfo { ControlType = candidateChildType });
+            }
+
+            tree.Children.Add(candidate);
+            return (UiElementSnapshot.Capture(stale), tree);
+        }
+
+        [Fact]
+        public void Resolve_ChildSignatureGate_RejectsStructurallyPerfectMatch_WhenTheContainerHeldSomethingElse()
+        {
+            var (expected, tree) = ChildSignatureFixture("DataGrid", "Pane");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.NotNull(result.Matched);
+            Assert.True(result.Score >= 0.75, "Structure alone should still clear the confidence threshold.");
+            Assert.False(result.IsConfident, "The descendant gate should veto a match whose contents contradict it.");
+            Assert.Equal(0.0, result.MatchedChildSignatureSimilarity);
+            Assert.Equal(0.50, result.ChildSignatureFloor, 3);
+        }
+
+        [Fact]
+        public void Resolve_ChildSignatureGate_AllowsMatch_WhenTheContainerStillHoldsTheSameChildTypes()
+        {
+            var (expected, tree) = ChildSignatureFixture("DataGrid", "DataGrid");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.Equal(1.0, result.MatchedChildSignatureSimilarity);
+            Assert.True(result.IsConfident);
+        }
+
+        [Fact]
+        public void Resolve_ChildSignatureGate_DoesNotApply_WhenTheStaleSnapshotWasALeaf()
+        {
+            var (expected, tree) = ChildSignatureFixture(string.Empty, "Pane");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.True(result.IsConfident, "A leaf stale locator has no recorded child signature for the gate to check.");
+            Assert.Null(result.MatchedChildSignatureSimilarity);
+        }
+
+        [Fact]
+        public void Resolve_ChildSignatureGate_DoesNotApply_ToLegacySnapshotsWithNoRecordedSignature()
+        {
+            var (_, tree) = ChildSignatureFixture("DataGrid", "Pane");
+            // A pre-#375 snapshot: it was a container, but the signature field was never populated.
+            var legacyExpected = new UiElementInfo
+            {
+                ControlType = "Pane", Name = string.Empty, AutomationId = "pHotkeys",
+                ParentControlType = "Pane", SiblingIndex = 0, SiblingCount = 2,
+                BoundingRectangle = new BoundingRectangle(275, 106, 676, 551),
+                ChildControlTypeSignature = null,
+            };
+
+            var result = SelfHealingResolver.Resolve(legacyExpected, tree, SimilarityWeights.FromProfile(ThresholdProfile.Balanced), _ => { });
+
+            Assert.Null(result.MatchedChildSignatureSimilarity);
+            Assert.True(result.IsConfident, "With no recorded signature the gate is a no-op, matching pre-upgrade behaviour.");
+        }
+
+        [Fact]
+        public void Resolve_ChildSignatureGate_DefaultWeights_LeaveExistingBehaviourUnchanged()
+        {
+            var (expected, tree) = ChildSignatureFixture("DataGrid", "Pane");
+
+            var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.Default, _ => { });
+
+            Assert.Equal(0.0, result.ChildSignatureFloor);
+            Assert.True(result.IsConfident, "Default weights ship with the gate disabled (MinimumChildSignatureSimilarity = 0).");
+        }
     }
 }

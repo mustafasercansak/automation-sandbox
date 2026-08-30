@@ -34,6 +34,40 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Capture_RecordsTheDirectChildControlTypeSignature_OrderedAndCounted()
+        {
+            var node = new UiElementInfo { ControlType = "Pane", AutomationId = "pHotkeys" };
+            node.Children.Add(new UiElementInfo { ControlType = "Edit" });
+            node.Children.Add(new UiElementInfo { ControlType = "Button" });
+            node.Children.Add(new UiElementInfo { ControlType = "Button" });
+            // A grandchild must not appear in the direct-child signature.
+            node.Children[0].Children.Add(new UiElementInfo { ControlType = "Popup" });
+
+            var snapshot = UiElementSnapshot.Capture(node);
+
+            Assert.Equal("Button:2|Edit:1", snapshot.ChildControlTypeSignature);
+        }
+
+        [Fact]
+        public void Capture_RecordsAnEmptyChildSignature_ForALeaf()
+        {
+            var snapshot = UiElementSnapshot.Capture(new UiElementInfo { ControlType = "Button", AutomationId = "btnSave" });
+
+            Assert.Equal("", snapshot.ChildControlTypeSignature);
+        }
+
+        [Fact]
+        public void ChildControlTypeSignature_RoundTripsThroughJson()
+        {
+            var node = new UiElementInfo { ControlType = "Pane", AutomationId = "pHotkeys" };
+            node.Children.Add(new UiElementInfo { ControlType = "DataGrid" });
+
+            var roundTripped = UiElementSnapshot.FromJson(UiElementSnapshot.ToJson(node));
+
+            Assert.Equal("DataGrid:1", roundTripped.ChildControlTypeSignature);
+        }
+
+        [Fact]
 
         public void CaptureByAutomationId_FindsNestedElement_AndClearsItsChildren()
         {

@@ -36,6 +36,21 @@ namespace SelfHealing
         // the evidence gate).
         public double MinimumNameScoreWhenNamed { get; set; } = 0.0;
 
+        // Per-component descendant gate (#375): when the stale snapshot recorded a non-empty
+        // child-ControlType signature (it was a container), the winning candidate's live
+        // children must match it with at least this multiset-Jaccard similarity before the
+        // heuristic match can be IsConfident - independently of the weighted total. The five
+        // scoring components never look at an element's own contents, so a deleted container
+        // heals with a perfect structural score onto a structurally identical sibling holding
+        // something else entirely (ShareX 'pHotkeys', child {DataGrid:1}, healing onto a
+        // sibling Pane with child {Pane:1}). Measured across 131 genuine-drift heals on
+        // HandBrake and ShareX: every one scores 1.0, so a 0.5 floor costs zero auto-heal
+        // recall and removes the sole uncontested residual left after the name gate and
+        // repository reconciliation. Default 0.0 (disabled); Balanced and Conservative set
+        // 0.50. Not applied when the snapshot's signature is null (legacy data) or empty
+        // (the stale locator was a leaf).
+        public double MinimumChildSignatureSimilarity { get; set; } = 0.0;
+
         // Minimum gap between the best and runner-up candidate scores before a heuristic
         // match can be IsConfident (issue #4). 0.880 vs 0.879 means "I don't know" - the
         // resolver falls back to LLM/manual review instead of guessing. Default 0.05: the
@@ -74,7 +89,8 @@ namespace SelfHealing
                         MinimumConfidence = 0.90,
                         MinimumCandidateMargin = 0.08,
                         MinimumEvidenceWeight = 0.50,
-                        MinimumNameScoreWhenNamed = 0.30
+                        MinimumNameScoreWhenNamed = 0.30,
+                        MinimumChildSignatureSimilarity = 0.50
                     };
                 case ThresholdProfile.Aggressive:
                     return new SimilarityWeights
@@ -90,7 +106,8 @@ namespace SelfHealing
                         MinimumConfidence = 0.75,
                         MinimumCandidateMargin = 0.05,
                         MinimumEvidenceWeight = 0.40,
-                        MinimumNameScoreWhenNamed = 0.30
+                        MinimumNameScoreWhenNamed = 0.30,
+                        MinimumChildSignatureSimilarity = 0.50
                     };
             }
         }
@@ -121,6 +138,7 @@ namespace SelfHealing
             ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
             ValidateRange(MinimumEvidenceWeight, nameof(MinimumEvidenceWeight), 0.0, 1.0);
             ValidateRange(MinimumNameScoreWhenNamed, nameof(MinimumNameScoreWhenNamed), 0.0, 1.0);
+            ValidateRange(MinimumChildSignatureSimilarity, nameof(MinimumChildSignatureSimilarity), 0.0, 1.0);
             ValidateRange(MinimumCandidateMargin, nameof(MinimumCandidateMargin), 0.0, 1.0);
             ValidateRange(MinCandidateScore, nameof(MinCandidateScore), 0.0, 1.0);
 

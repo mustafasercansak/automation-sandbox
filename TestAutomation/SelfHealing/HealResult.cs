@@ -96,10 +96,21 @@ namespace SelfHealing
         public double? MatchedNameScore { get; set; }
         public double NameGateFloor { get; set; }
 
+        // Per-component descendant gate (#375). MatchedChildSignatureSimilarity is the
+        // multiset-Jaccard between the stale snapshot's recorded child-ControlType signature
+        // and the winning candidate's live children, populated only when the snapshot
+        // recorded a non-empty signature (the stale locator was a container);
+        // ChildSignatureFloor is the SimilarityWeights.MinimumChildSignatureSimilarity in
+        // effect. When both are set and the similarity is below the floor the match is not
+        // IsConfident regardless of the weighted total - the element's contents contradict it.
+        public double? MatchedChildSignatureSimilarity { get; set; }
+        public double ChildSignatureFloor { get; set; }
+
         public bool IsConfident =>
             !RejectedByReconciliation &&
             Matched is not null &&
             (NameGateFloor <= 0.0 || MatchedNameScore is null || MatchedNameScore >= NameGateFloor) &&
+            (ChildSignatureFloor <= 0.0 || MatchedChildSignatureSimilarity is null || MatchedChildSignatureSimilarity >= ChildSignatureFloor) &&
             // The evidence gate applies to LLM picks too: otherwise a candidate the
             // heuristic rejected as thin-evidence (e.g. ControlType-only, coverage 0.20)
             // would re-enter through the LLM fallback and be reported as a confident
