@@ -60,23 +60,29 @@ namespace ScenarioRunner
         {
             var repoRoot = FindRepoRoot();
 
-            // #363: cover every surface a reader actually lands on, not just docs/*.md.
-            // The root index.md (Pages homepage) and README are user-facing; docs/blog/**
-            // is real published content. The old TopDirectoryOnly scan is why #361 (every
-            // Pages homepage link 404) shipped undetected.
-            var files = new List<string>
+            // #363: cover every reader-facing markdown surface, not just docs/*.md. The old
+            // TopDirectoryOnly scan is why #361 (every Pages homepage link 404) shipped
+            // undetected. Same file set as MarkdownMathSyntaxTests / MermaidDiagramSyntaxTests:
+            // every root *.md (README, index.md, PROJECT_SHOWCASE, CONTRIBUTING, ...) plus
+            // docs/** recursively.
+            var files = new List<string>(Directory.GetFiles(repoRoot, "*.md", SearchOption.TopDirectoryOnly));
+            var docsDir = Path.Combine(repoRoot, "docs");
+            if (Directory.Exists(docsDir))
             {
-                Path.Combine(repoRoot, "index.md"),
-                Path.Combine(repoRoot, "README.md"),
-            };
-            files.AddRange(Directory.GetFiles(Path.Combine(repoRoot, "docs"), "*.md", SearchOption.AllDirectories));
+                files.AddRange(Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories));
+            }
+
+            // distribution-kit.md is an internal promotion playbook (excluded from the Jekyll
+            // site) whose awesome-list section carries literal format examples like
+            // `[LIBRARY](LINK)`; skip it rather than teach the check to guess placeholders.
+            files.RemoveAll(f => Path.GetFileName(f).Equals("distribution-kit.md", StringComparison.OrdinalIgnoreCase));
 
             var linkRegex = new Regex(@"\[(?<text>[^\]]+)\]\((?<target>[^)]+)\)");
             var broken = new List<string>();
 
             foreach (var file in files.Where(File.Exists))
             {
-                var relFile = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                var relFile = file.Substring(repoRoot.Length).TrimStart(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
                 var content = File.ReadAllText(file);
 
                 foreach (Match match in linkRegex.Matches(content))
@@ -86,6 +92,7 @@ namespace ScenarioRunner
                     if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                         target.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
                         target.StartsWith("#") ||
+                        target.StartsWith("/") ||   // site-absolute (Jekyll/Pages), not a disk path
                         target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
@@ -95,14 +102,6 @@ namespace ScenarioRunner
                     var cleanTarget = (hashIdx >= 0 ? target.Substring(0, hashIdx) : target).Trim();
 
                     if (string.IsNullOrWhiteSpace(cleanTarget))
-                    {
-                        continue;
-                    }
-
-                    // Format-example placeholders (e.g. `[LIBRARY](LINK)` in the awesome-list
-                    // entries inside distribution-kit.md): a real relative link always has a
-                    // path separator or an extension.
-                    if (!cleanTarget.Contains('/') && !cleanTarget.Contains('.'))
                     {
                         continue;
                     }
