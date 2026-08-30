@@ -36,7 +36,7 @@ Dependency direction: `UiModel` ← `LlmHealing` ← `SelfHealing` ← `Scenario
   - `WpfApp`: `net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting`.
 - Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 10.0.11, xunit 2.9.3, Microsoft.NET.Test.Sdk 18.9.0, coverlet.collector 10.0.1, Microsoft.CodeAnalysis.CSharp 5.9.0, xunit.runner.visualstudio 4.0.0.
 - **Modern Package & Security Standard:** AI agents and contributors MUST NEVER introduce ancient, end-of-life, or vulnerable package versions. Always target the latest stable, LTS-compatible releases for the project's supported target frameworks (`netstandard2.0;net8.0`), audit dependencies on every build, and keep transitive dependencies CVE-free.
-- `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, authoritative `<Version>`, `Deterministic` builds). Packable by default; demo apps, the sample, and the test project opt out with `IsPackable=false`. Bumping `<Version>` here updates all packaging workflows automatically (enforced by `PackageVersionDriftTests`).
+- `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, authoritative `<Version>`, `Deterministic` builds). Packable by default; demo apps, the sample, and the test project opt out with `IsPackable=false`. Bumping `<Version>` here updates all packaging workflows automatically (enforced by `PackageVersionDriftTests`). Every package embeds a shared `icon.png` and a per-package README: `docs/nuget/README.<ProjectName>.md` is packed as the package's `README.md` when present, with the root `README.md` as fallback (#338).
 
 ### Healing pipeline (how the pieces interact)
 

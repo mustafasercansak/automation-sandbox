@@ -114,6 +114,16 @@ uploaded as the `release-sboms` workflow artifact and attached to the GitHub Rel
 to the `.nupkg` / `.snupkg` files, so consumers can audit what a package pulls in without
 trusting nuget.org metadata alone.
 
+## Per-Package README and Icon
+
+Each package embeds its own short landing page instead of the monorepo README (#338):
+`Directory.Build.props` packs `docs/nuget/README.<ProjectName>.md` as the package's
+`README.md` when that file exists, and falls back to the root `README.md` otherwise.
+The per-package files deliberately avoid LaTeX and mermaid (nuget.org renders neither)
+and stay version-free. A shared `icon.png` (repo root) is packed into every package via
+`<PackageIcon>`. When adding a new packable project, drop a `docs/nuget/README.<ProjectName>.md`
+next  to the others — the validator requires a `README.md` entry in every nupkg either way.
+
 ## Publish Checklist
 
 - CI is green on `main`.
@@ -159,3 +169,8 @@ repository kökünden çalıştırın:
 ```powershell
 pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
 ```
+
+Her paket, monorepo README'si yerine kendi kısa tanıtım sayfasını gömer (#338):
+`docs/nuget/README.<ProjeAdi>.md` varsa pakete `README.md` olarak paketlenir, yoksa kök
+README'si kullanılır. Paket başına README'ler LaTeX ve mermaid içermez (nuget.org ikisini
+de render etmez). Ortak `icon.png` tüm paketlere `<PackageIcon>` ile eklenir.
