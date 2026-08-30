@@ -16,7 +16,7 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 - **Nothing is applied silently.** The shipped `HealingMode.Review` default changes no locators; a heal commits only in opt-in `AutoHeal`, and only after the retried action actually succeeds.
 - **PII/secret redaction is on by default** before any candidate data reaches an LLM, with prompt-injection hardening on that data. Every decision — which signal contributed what weight, which providers voted, the outcome — is written to a per-decision audit trail (JSON + HTML). See the [LLM Security Model](docs/llm-security-model.md).
 
-<!-- TODO(#345): embed the 30-second demo GIF (broken locator -> heal -> audit report) here, under docs/assets/ -->
+![Automation Sandbox healing a broken locator and writing the decision to an audit report](docs/assets/demo.gif)
 
 ## A Broken Locator, in 30 Seconds
 
