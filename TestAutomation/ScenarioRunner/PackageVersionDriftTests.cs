@@ -41,34 +41,76 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void SampleProject_PinsVersionMatchingDirectoryBuildProps()
+        public void SampleProject_PinsAPublishedPrereleaseOnTheSameMinorLine()
         {
+            // Relaxed for #336: the sample pin no longer has to equal the (possibly
+            // unreleased) Directory.Build.props <Version> exactly. It must still be a
+            // valid semver prerelease on the same major.minor line, so a stale pin or a
+            // wrong package is still caught. release.yml bumps it to the exact version
+            // after that version is confirmed live on nuget.org.
             var repoRoot = FindRepoRoot();
             var propsPath = Path.Combine(repoRoot, "Directory.Build.props");
             var sampleProjPath = Path.Combine(repoRoot, "samples", "HeuristicHealingQuickstart", "HeuristicHealingQuickstart.csproj");
 
             var propsContent = File.ReadAllText(propsPath);
-            var expectedVersion = Regex.Match(propsContent, @"<Version>(?<v>[^<]+)</Version>").Groups["v"].Value.Trim();
+            var propsVersion = Regex.Match(propsContent, @"<Version>(?<v>[^<]+)</Version>").Groups["v"].Value.Trim();
+            var minorLine = Regex.Match(propsVersion, @"^(?<mm>\d+\.\d+)\.").Groups["mm"].Value;
+            Assert.False(string.IsNullOrEmpty(minorLine), "Directory.Build.props <Version> must be major.minor.patch.");
 
             var sampleContent = File.ReadAllText(sampleProjPath);
             var sampleMatch = Regex.Match(sampleContent, @"<PackageReference\s+Include=""AutomationSandbox\.SelfHealing""\s+Version=""(?<v>[^""]+)""");
-            Assert.True(sampleMatch.Success, "HeuristicHealingQuickstart.csproj must reference AutomationSandbox.SelfHealing.");
+            Assert.True(sampleMatch.Success, "HeuristicHealingQuickstart.csproj must reference AutomationSandbox.SelfHealing as a PackageReference.");
 
             var sampleVersion = sampleMatch.Groups["v"].Value.Trim();
-            Assert.Equal(expectedVersion, sampleVersion);
+            Assert.Matches(@"^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$", sampleVersion);
+            Assert.StartsWith(minorLine + ".", sampleVersion);
         }
 
         [Fact]
-        public void SampleVerifyScript_DynamicallyReadsDirectoryBuildProps()
+        public void PerPrSampleCheck_BuildsAgainstRepoSource_NotNuGet()
         {
+            // #336: the per-PR check must not depend on a version that only exists on
+            // nuget.org after release.yml runs. It swaps the PackageReference for a
+            // ProjectReference and builds against current source.
             var repoRoot = FindRepoRoot();
             var verifyScriptPath = Path.Combine(repoRoot, "samples", "HeuristicHealingQuickstart", "verify.ps1");
             Assert.True(File.Exists(verifyScriptPath));
 
-            var scriptContent = File.ReadAllText(verifyScriptPath);
-            Assert.Contains("Directory.Build.props", scriptContent);
-            Assert.Contains("<Version>", scriptContent);
-            Assert.DoesNotContain("0.2.0-beta.3", scriptContent);
+            var script = File.ReadAllText(verifyScriptPath);
+            Assert.Contains("ProjectReference", script);
+            Assert.Contains("SelfHealing.csproj", script);
+            Assert.DoesNotContain("api.nuget.org", script);
+            Assert.DoesNotContain("0.2.0-beta.3", script);
+
+            var ciPath = Path.Combine(repoRoot, ".github", "workflows", "ci.yml");
+            var ci = File.ReadAllText(ciPath);
+            Assert.Contains("verify.ps1", ci);
+            Assert.DoesNotContain("verify-published.ps1", ci);
+        }
+
+        [Fact]
+        public void PublishedConsumerCheck_RestoresExactVersionFromNuGet_AndRunsInReleaseYml()
+        {
+            // #336: the "the published package works for a consumer" check lives in
+            // release.yml as a post-publish step, taking the just-published version.
+            var repoRoot = FindRepoRoot();
+            var scriptPath = Path.Combine(repoRoot, "samples", "HeuristicHealingQuickstart", "verify-published.ps1");
+            Assert.True(File.Exists(scriptPath), "verify-published.ps1 must exist for the release-time consumer check.");
+
+            var script = File.ReadAllText(scriptPath);
+            Assert.Contains("param(", script);
+            Assert.Contains("$Version", script);
+            Assert.Contains("api.nuget.org", script);
+            Assert.Contains("--no-cache", script);
+
+            var releasePath = Path.Combine(repoRoot, ".github", "workflows", "release.yml");
+            var release = File.ReadAllText(releasePath);
+            Assert.Contains("verify-published.ps1 -Version", release);
+            Assert.Contains("bump SSoT", release, StringComparison.OrdinalIgnoreCase);
+
+            var ciPath = Path.Combine(repoRoot, ".github", "workflows", "ci.yml");
+            var ci = File.ReadAllText(ciPath);
+            Assert.DoesNotContain("nuget-consumer", ci);
         }
 
         [Fact]
