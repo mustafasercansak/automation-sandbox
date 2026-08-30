@@ -145,11 +145,11 @@ xychart-beta
 
 To simplify choosing an operating point without manually tuning individual weights, the engine provides named **`ThresholdProfile`** presets and an automated tree calibrator:
 
-| Profile | Target Use Case | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` |
-| :--- | :--- | :---: | :---: | :---: |
-| **`Balanced`** (Recommended) | Default production baseline balancing high auto-heal recall ($>75\%$) with strong false-positive suppression. | `0.75` | `0.05` | `0.40` |
-| **`Conservative`** | High-consequence or regulated suites where false-green test executions must be strictly minimized. | `0.90` | `0.08` | `0.50` |
-| **`Aggressive`** | Rapid exploratory automation or suites with sparse sibling ambiguity prioritizing automated recovery. | `0.50` | `0.03` | `0.30` |
+| Profile | Target Use Case | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **`Balanced`** (Recommended) | Default production baseline balancing high auto-heal recall ($>75\%$) with strong false-positive suppression. | `0.75` | `0.05` | `0.40` | `0.30` |
+| **`Conservative`** | High-consequence or regulated suites where false-green test executions must be strictly minimized. | `0.90` | `0.08` | `0.50` | `0.30` |
+| **`Aggressive`** | Rapid exploratory automation or suites with sparse sibling ambiguity prioritizing automated recovery. | `0.50` | `0.03` | `0.30` | `0.00` |
 
 ```csharp
 // Using preset profiles with SelfHealingEngine
@@ -158,6 +158,15 @@ var engine = SelfHealingEngine.Create(ThresholdProfile.Balanced);
 // Or via SimilarityWeights directly
 var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
 ```
+
+`MinimumNameScoreWhenNamed` (#370) is a **per-component gate** the weighted total cannot override: when the stale
+locator had a name, the winning candidate's `NameScore` must clear it on its own. The $0.20$-weighted name signal
+is otherwise blended away, so a deleted tab healing onto an adjacent one (`Name` `Summary` $\rightarrow$
+`Dimensions`, `NameScore` $\approx 0.10$) still clears `MinimumConfidence` on structure alone. Measured through
+`TreeCalibrator` on HandBrake, a $0.30$ floor moves the `Balanced` false-heal rate $9.3\% \rightarrow 7.6\%$
+(precision $90.7\% \rightarrow 92.4\%$) with **zero** auto-heal recall cost; ShareX moves the same direction. It
+does not apply when the stale locator had no name, or when the candidate's `NameScore` is `null` (missing on one
+side). `SimilarityWeights.Default` ships with it disabled ($0.0$).
 
 ##### Per-Application Calibration Command
 
@@ -677,11 +686,11 @@ xychart-beta
 
 Bireysel ağırlıkları elle ayarlamak zorunda kalmadan çalışma noktası seçmeyi kolaylaştırmak için motor hazır **`ThresholdProfile`** preset'leri ve otomatik ağaç kalibratörü sunar:
 
-| Profil | Hedef Kullanım Senaryosu | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` |
-| :--- | :--- | :---: | :---: | :---: |
-| **`Balanced`** (Önerilen) | Yüksek otomatik iyileştirme kapsamı ($>\%75$) ile güçlü yanlış pozitif baskılamasını dengeleyen varsayılan üretim temeli. | `0.75` | `0.05` | `0.40` |
-| **`Conservative`** | Yanlış yeşil (false-green) test çalıştırmalarının kesinlikle en aza indirilmesi gereken kritik veya regüle edilmiş test paketleri. | `0.90` | `0.08` | `0.50` |
-| **`Aggressive`** | Otomatik kurtarmayı önceliklendiren hızlı keşif otomasyonu veya seyrek kardeş belirsizliği olan arayüzler. | `0.50` | `0.03` | `0.30` |
+| Profil | Hedef Kullanım Senaryosu | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **`Balanced`** (Önerilen) | Yüksek otomatik iyileştirme kapsamı ($>\%75$) ile güçlü yanlış pozitif baskılamasını dengeleyen varsayılan üretim temeli. | `0.75` | `0.05` | `0.40` | `0.30` |
+| **`Conservative`** | Yanlış yeşil (false-green) test çalıştırmalarının kesinlikle en aza indirilmesi gereken kritik veya regüle edilmiş test paketleri. | `0.90` | `0.08` | `0.50` | `0.30` |
+| **`Aggressive`** | Otomatik kurtarmayı önceliklendiren hızlı keşif otomasyonu veya seyrek kardeş belirsizliği olan arayüzler. | `0.50` | `0.03` | `0.30` | `0.00` |
 
 ```csharp
 // Hazır profilleri SelfHealingEngine ile kullanma
@@ -690,6 +699,15 @@ var engine = SelfHealingEngine.Create(ThresholdProfile.Balanced);
 // Veya doğrudan SimilarityWeights üzerinden
 var weights = SimilarityWeights.FromProfile(ThresholdProfile.Conservative);
 ```
+
+`MinimumNameScoreWhenNamed` (#370), ağırlıklı toplamın geçersiz kılamadığı **bileşen bazlı bir kapı**dır: eski
+locator'ın bir adı varsa, kazanan adayın `NameScore`'u bu değeri tek başına aşmalıdır. $0.20$ ağırlıklı isim
+sinyali aksi halde ortalama içinde erir; bu yüzden silinen bir sekmenin komşusuna iyileşmesi (`Name` `Summary`
+$\rightarrow$ `Dimensions`, `NameScore` $\approx 0.10$) yalnızca yapıyla `MinimumConfidence`'ı geçer.
+`TreeCalibrator` ile HandBrake üzerinde ölçüldü: $0.30$ tabanı `Balanced` yanlış iyileştirme oranını
+$\%9.3 \rightarrow \%7.6$ (precision $\%90.7 \rightarrow \%92.4$) taşır, **sıfır** otomatik iyileştirme kapsamı
+maliyetiyle; ShareX aynı yönde hareket eder. Eski locator'ın adı yoksa veya adayın `NameScore`'u `null` ise (tek
+tarafta eksik) uygulanmaz. `SimilarityWeights.Default` bunu kapalı ($0.0$) gönderir.
 
 ##### Uygulama Bazlı Kalibrasyon Komutu
 

@@ -93,9 +93,14 @@ $ dotnet run --project samples/CalibrationCli -- \
 | Profile      | Min Confidence | Precision | Auto-Heal Recall | False Heal Rate | Manual Review |
 | :---         | :---:          | :---:     | :---:            | :---:           | :---:        |
 | Aggressive   | 0.50           | 81.0 %    | 91.1 %           | 19.0 %          | 18.2 %       |
-| Balanced     | 0.75           | 90.7 %    | 86.6 %           |  9.3 %          | 30.5 %       |
+| Balanced     | 0.75           | 92.4 %    | 86.6 %           |  7.6 %          | 31.8 %       |
 | Conservative | 0.90           | 98.8 %    | 72.3 %           |  1.2 %          | 46.8 %       |
 ```
+
+`Balanced` and `Conservative` also apply a **per-component name gate** (#370): when the stale locator had a name,
+the winning candidate's `NameScore` must clear `0.30` on its own, independently of the weighted total. That is
+what takes Balanced from `9.3 %` to `7.6 %` false heals here at no recall cost — a deleted tab healing onto an
+adjacent one is exactly the case where structure agrees but the label does not.
 
 Re-running both scenarios with `SelfHealingEngine.Create(ThresholdProfile.Balanced)` (`MinimumConfidence = 0.75`):
 
@@ -113,8 +118,8 @@ breakdown.
 ### What this does *not* claim
 
 - **Calibration is per-app, not a global fix.** The same `0.75` threshold buys a *different* result on ShareX
-  ([§8](../benchmark-calibration.md#8-a-second-application-sharex-v2100-99-134)): 20–23 % false heals versus
-  HandBrake's 9.3 %. Run the calibrator on *your* tree.
+  ([§8](../benchmark-calibration.md#8-a-second-application-sharex-v2100-99-134)): ~17 % false heals versus
+  HandBrake's 7.6 %. Run the calibrator on *your* tree.
 - **Some deleted elements score higher than any surviving element.** On the full HandBrake ablation, deleted-element
   false heals reach `0.955` — above the ceiling of every genuinely-drifted control — so no threshold catches all of
   them ([§3](../benchmark-calibration.md#3-empirical-findings-score-distribution-overlap)). This `summaryTab` case

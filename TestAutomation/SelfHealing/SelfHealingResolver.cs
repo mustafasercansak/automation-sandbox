@@ -30,16 +30,27 @@ namespace SelfHealing
             var best = scoredCandidates[0];
             var runnerUpScore = scoredCandidates.Count > 1 ? scoredCandidates[1].TotalScore : (double?)null;
             var marginSufficient = CandidateMargin.HasSufficientMargin(best.TotalScore, runnerUpScore, w.MinimumCandidateMargin);
+
+            // Per-component name gate (#370): only meaningful when the stale locator had a
+            // name and the winner's NameScore is a real number (both sides named).
+            var matchedNameScore = !string.IsNullOrEmpty(expected.Name) ? best.Components.NameScore : null;
+            var nameGateOk = w.MinimumNameScoreWhenNamed <= 0.0
+                || matchedNameScore is null
+                || matchedNameScore >= w.MinimumNameScoreWhenNamed;
+
             var isConfident = best.TotalScore >= w.MinimumConfidence
                 && best.EvidenceCoverage >= w.MinimumEvidenceWeight
-                && marginSufficient;
+                && marginSufficient
+                && nameGateOk;
             var confidenceLabel = isConfident
                 ? "CONFIDENT"
                 : best.EvidenceCoverage < w.MinimumEvidenceWeight
                     ? $"LOW EVIDENCE (coverage {best.EvidenceCoverage:F2} < {w.MinimumEvidenceWeight:F2})"
                     : !marginSufficient
                         ? $"AMBIGUOUS (runner-up margin {best.TotalScore - (runnerUpScore ?? 0.0):F3} < {w.MinimumCandidateMargin:F2})"
-                        : "LOW CONFIDENCE";
+                        : !nameGateOk
+                            ? $"NAME MISMATCH (NameScore {matchedNameScore:F2} < {w.MinimumNameScoreWhenNamed:F2} for named locator '{expected.Name}')"
+                            : "LOW CONFIDENCE";
             log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) not found. " +
                 $"Best candidate: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
                 $"Score={best.TotalScore:F2} ({confidenceLabel}), chosen among {scoredCandidates.Count} candidate(s).");
@@ -62,6 +73,8 @@ namespace SelfHealing
                 ConsensusThreshold = w.MinimumConsensusVotes,
                 RunnerUpScore = runnerUpScore,
                 MarginThreshold = w.MinimumCandidateMargin,
+                MatchedNameScore = matchedNameScore,
+                NameGateFloor = w.MinimumNameScoreWhenNamed,
                 Candidates = allScored,
                 ScoreBreakdown = best.Components,
             };

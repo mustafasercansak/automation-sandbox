@@ -87,9 +87,19 @@ namespace SelfHealing
         public string? CandidateIdentity { get; set; }
         public BatchReconciliationDisposition? ReconciliationDisposition { get; set; }
         public bool RejectedByReconciliation { get; set; }
+
+        // Per-component name gate (#370). MatchedNameScore is the winning candidate's
+        // NameScore, populated only when the stale locator HAD a name and the component is
+        // non-null; NameGateFloor is the SimilarityWeights.MinimumNameScoreWhenNamed in
+        // effect. When both are set and MatchedNameScore < NameGateFloor the match is not
+        // IsConfident regardless of the weighted total - the name signal contradicts it.
+        public double? MatchedNameScore { get; set; }
+        public double NameGateFloor { get; set; }
+
         public bool IsConfident =>
             !RejectedByReconciliation &&
             Matched is not null &&
+            (NameGateFloor <= 0.0 || MatchedNameScore is null || MatchedNameScore >= NameGateFloor) &&
             // The evidence gate applies to LLM picks too: otherwise a candidate the
             // heuristic rejected as thin-evidence (e.g. ControlType-only, coverage 0.20)
             // would re-enter through the LLM fallback and be reported as a confident
