@@ -37,6 +37,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | :--- | :--- |
 | 🚀 [**Getting Started**](getting-started.md) | Step-by-step installation, core concepts, and copy-paste code examples. |
 | 📦 [**Published Package Quickstart**](consumer-quickstart.md) | First run from `dotnet add package` to a verified heuristic heal using the maintained NuGet consumer sample. |
+| 🔌 [**Add Self-Healing to an Existing Suite**](integration-existing-suite.md) | Wiring the engine into a suite you already have (Playwright, NUnit, xUnit, Reqnroll) and a first-week `Observe` → `AutoHeal` rollout. |
 | ⚖️ [**How It Compares**](comparison.md) | Honest comparison with Healenium and commercial healers (Testim, Mabl, Ranorex, Functionize), including when another tool is the better fit. |
 | 📋 [**Release Notes**](https://github.com/mustafasercansak/automation-sandbox/releases) | Latest release notes, breaking changes, and artifact downloads on GitHub. |
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
@@ -73,6 +74,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | :--- | :--- |
 | 🚀 [**Başlangıç Rehberi**](getting-started.md) | Adım adım kurulum, temel mantık ve kopyala-yapıştır kod örnekleri. |
 | 📦 [**Yayınlanmış Paket Hızlı Başlangıcı**](consumer-quickstart.md) | `dotnet add package` komutundan bakımı yapılan NuGet consumer örneğiyle doğrulanmış sezgisel healing'e ilk çalıştırma. |
+| 🔌 [**Mevcut Test Paketine Self-Healing Ekleme**](integration-existing-suite.md) | Hâlihazırda çalışan bir pakete (Playwright, NUnit, xUnit, Reqnroll) motoru bağlama ve ilk hafta `Observe` → `AutoHeal` geçişi. |
 | ⚖️ [**Karşılaştırma**](comparison.md) | Healenium ve ticari healer'larla (Testim, Mabl, Ranorex, Functionize) dürüst karşılaştırma; başka bir aracın daha uygun olduğu durumlar dahil. |
 | 📋 [**Sürüm Notları**](https://github.com/mustafasercansak/automation-sandbox/releases) | GitHub üzerindeki en güncel sürüm notları, değişiklikler ve artifact indirmeleri. |
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |

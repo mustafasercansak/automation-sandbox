@@ -54,6 +54,8 @@ that outcome for review and does not persist the proposed locator.
 
 > 🚀 **Published Package Quickstart:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
+> 🔌 **Already have a test suite?** [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers the `Observe` → `AutoHeal` rollout and minimal wiring for Playwright, NUnit, xUnit, Reqnroll, and FlaUI.
+
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
 > 📦 **Preview Packages:** The latest prerelease packages are published on [GitHub Releases](https://github.com/mustafasercansak/automation-sandbox/releases) and [nuget.org](https://www.nuget.org/profiles/mustafasercansak). All seven `AutomationSandbox.*` packages are available from nuget.org and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
