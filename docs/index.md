@@ -43,6 +43,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | ⚖️ [**How It Compares**](comparison.md) | Honest comparison with Healenium and commercial healers (Testim, Mabl, Ranorex, Functionize), including when another tool is the better fit. |
 | 📋 [**Release Notes**](https://github.com/mustafasercansak/automation-sandbox/releases) | Latest release notes, breaking changes, and artifact downloads on GitHub. |
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
+| 🐧 [**Linux Desktop via AT-SPI (Research)**](linux-desktop-atspi-research.md) | Findings on an AT-SPI2 desktop discovery backend: what maps cleanly, the `AutomationId` gap, and a backend sketch. No production code. |
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
 | 📊 [**Healing Reports & Dashboard**](healing-reports.md) | JSON and HTML telemetry for accepted, declined, and failed locator-resolution attempts. |
@@ -82,6 +83,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | ⚖️ [**Karşılaştırma**](comparison.md) | Healenium ve ticari healer'larla (Testim, Mabl, Ranorex, Functionize) dürüst karşılaştırma; başka bir aracın daha uygun olduğu durumlar dahil. |
 | 📋 [**Sürüm Notları**](https://github.com/mustafasercansak/automation-sandbox/releases) | GitHub üzerindeki en güncel sürüm notları, değişiklikler ve artifact indirmeleri. |
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |
+| 🐧 [**AT-SPI ile Linux Masaüstü (Araştırma)**](linux-desktop-atspi-research.md) | AT-SPI2 tabanlı bir masaüstü keşif backend'i üzerine bulgular: nesi temiz eşleşiyor, `AutomationId` boşluğu ve backend taslağı. Üretim kodu yok. |
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
 | 📊 [**İyileştirme Raporları & Panel**](healing-reports.md) | Kabul edilen, reddedilen ve başarısız locator çözüm denemeleri için JSON ve HTML telemetrisi. |
