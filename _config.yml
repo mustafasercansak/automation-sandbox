@@ -28,3 +28,4 @@ exclude:
   # Jekyll would otherwise copy them out as raw .md.
   - docs/nuget
   - docs/blog/demo-storyboard.md
+  - docs/blog/distribution-kit.md
