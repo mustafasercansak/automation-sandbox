@@ -190,20 +190,82 @@ Submit the canonical URL (or the dev.to copy). One line of context, no pitch.
 
 ## awesome-list PRs
 
-One-line entry text, ready to paste. Match each list's existing formatting on submission.
+Ready to submit — targets, sections, entry text, and PR bodies verified against each list's current
+`README.md` / `CONTRIBUTING.md` (checked 2026-08). Flow for each: fork → new branch → edit the one file →
+add the entry in the right section, matching the surrounding formatting exactly → one PR, one link.
 
-- **awesome-dotnet** (`quozd/awesome-dotnet`) → *Testing* section:
-  `* [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) - Explainable locator self-healing and intent-driven test generation for desktop (FlaUI) and web (Playwright); heuristic-first with an opt-in, quorum-gated LLM fallback.`
+**Order and timing.** Submit the two automation-focused lists (2, 3) first — their bars are lighter and their
+audience is exactly right. Hold `quozd/awesome-dotnet` (1) until the repo has a few dozen stars / the HN or
+Reddit post has visible traction: its quality bar is "stable, documented, tested", and a `0.2.0-beta` package
+with single-digit stars is an easy decline. `awesome-dotnet-core` (4) is optional and lower value.
 
-- **awesome-dotnet-core** (`thangchung/awesome-dotnet-core`) → *Testing*:
-  same entry text.
+The healing engine is the thing to pitch — not the intent pipeline — so every entry leads with locator healing.
 
-- **awesome-playwright** (`mxschmitt/awesome-playwright`) → *Tooling* / *Utilities*:
-  `* [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) - Structural locator self-healing for Playwright .NET, with a per-decision audit report and an opt-in multi-provider LLM fallback.`
+---
 
-- **awesome-test-automation** (`atinfo/awesome-test-automation`) → *.NET* or *Frameworks*:
-  `* [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) - Open, explainable locator healing engine for .NET UI tests; deterministic heuristic scorer first, LLM consensus only as a guarded fallback.`
+### 1. `quozd/awesome-dotnet` — hold until there is traction
 
-- **awesome-selfhosted / awesome-ai-tools** — not a fit; skip.
+- **File / section:** `README.md` → `## Testing` (find the UI/automation cluster near FlaUI / Selenium wrappers).
+- **Format:** `* [LIBRARY](LINK) - DESCRIPTION` — one link per PR, meaningful description, no `**[Research]**`/`**[$]**`
+  tag needed (it is OSS and not a research project).
+- **Entry:**
+  ```
+  * [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) - Explainable locator self-healing for UI tests: a deterministic structural scorer decides first, with an opt-in, quorum-gated multi-provider LLM fallback. Desktop (FlaUI/UIA3) and web (Playwright); every heal is written to an auditable report.
+  ```
+- **PR title:** `Add Automation Sandbox (locator self-healing) to Testing`
+- **PR body:**
+  > Adds [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) — an MIT, pure-C#/.NET
+  > locator self-healing engine. When an `AutomationId` or DOM locator breaks, it re-resolves the element from
+  > structural evidence (control type, parent, sibling position, name, geometry) and explains the decision
+  > component by component. The LLM fallback is opt-in and requires independent multi-provider agreement — the
+  > design is backed by a measured study of where that agreement fails
+  > (https://mustafasercansak.github.io/automation-sandbox/docs/blog/llm-false-heal-study.html).
+  > Seven packages on nuget.org, benchmarked against real applications (HandBrake, ShareX), actively maintained.
 
-PR description for each: one sentence on what it is, a link to the write-up as evidence it is a real and measured project, and a note that it is MIT and actively maintained (link the recent release).
+---
+
+### 2. `atinfo/awesome-test-automation` — submit first
+
+- **File / section:** `c#-test-automation.md` → `**Windows UI test automation:**` (the list that already contains
+  `[FlaUI]`, `[Windows Application Driver]`).
+- **Format:** `* [Tool Name](URL) ― Description` (note the `―` em dash; some entries have no description — include one).
+- **Entry:**
+  ```
+  * [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) ― Explainable locator self-healing layer over FlaUI/UIA3 and Playwright: a deterministic structural scorer, an opt-in quorum-gated LLM fallback, and a per-decision audit report.
+  ```
+- **PR title:** `Add Automation Sandbox to C# Windows UI test automation`
+- **PR body:**
+  > [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) (MIT) sits on top of the drivers
+  > already in this list — FlaUI for desktop, Playwright for web — and re-resolves broken locators from structural
+  > evidence instead of failing. Heuristic-first (zero-token, deterministic); the LLM fallback is opt-in and
+  > gated on independent multi-provider agreement. Benchmarked against real apps; every heal is auditable.
+
+---
+
+### 3. `mxschmitt/awesome-playwright` — submit first
+
+- **File / section:** `README.md` → `## Utils` (entries are roughly alphabetical — place after `Axe` / before
+  the `C`s, i.e. near the top).
+- **Format:** `- [Name](URL) - description.` (trailing period; backticks for technical terms).
+- **Entry:**
+  ```
+  - [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) - Structural locator self-healing for Playwright .NET: when a selector stops resolving, it re-scores candidates from the live DOM and retries, with a per-decision audit report and an opt-in multi-provider LLM fallback.
+  ```
+- **PR title:** `Add Automation Sandbox to Utils`
+- **PR body:**
+  > [Automation Sandbox](https://github.com/mustafasercansak/automation-sandbox) (MIT, .NET) adds locator
+  > self-healing to a Playwright .NET suite: it captures the live DOM, scores candidates against the stored
+  > snapshot, and retries — heuristic-first, with the LLM fallback opt-in and quorum-gated. The `WebDiscovery`
+  > and `PlaywrightLiveExploration` packages build directly on the Microsoft.Playwright .NET SDK.
+
+---
+
+### 4. `thangchung/awesome-dotnet-core` — optional, low priority
+
+Same targeting and entry text as (1); `## Testing` section. Lower traffic and overlap with `quozd/awesome-dotnet`.
+
+### Also considered
+
+- `ilya-chumakov/awesome-dotnet-testing` — FlaUI sits under *Uncategorized* there; weak placement, but a
+  maintainer could be asked to open a "self-healing / resilience" bullet. Worth a try after (2) and (3) land.
+- `awesome-selfhosted`, `awesome-ai-tools` — not a fit; skip.
