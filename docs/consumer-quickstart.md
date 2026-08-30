@@ -152,19 +152,26 @@ public class CheckoutTests : SelfHealingTestBase
 }
 ```
 
-### 5. Repeat the clean package-install verification
+### 5. Verify the sample yourself
 
-From the repository root, run:
+Two scripts cover the two questions, split so a version bump never blocks CI (#336):
 
 ```powershell
+# Per-PR: does the sample's code still build and run against the current engine?
+# Swaps the PackageReference for a ProjectReference — no nuget.org involved.
 pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
+
+# Release-time: does the actually-published package work for an external consumer?
+# Clean package directory, nuget.org as the only source, no cache.
+# -Version defaults to Directory.Build.props <Version>; pass one to check a specific release.
+pwsh ./samples/HeuristicHealingQuickstart/verify-published.ps1
 ```
 
-The script rejects a sample containing `ProjectReference`, copies it outside the repository
-into an isolated temporary consumer directory, restores into a fresh temporary package
-directory with nuget.org as the only source, builds, and runs the scenario. The same
-command is a required Linux CI job, so the public package boundary is continuously checked
-instead of relying on a one-off release-PR experiment.
+`verify.ps1` is a required per-PR Linux CI job (`Sample Compiles Against Source`).
+`verify-published.ps1` runs inside [`release.yml`](https://github.com/mustafasercansak/automation-sandbox/blob/main/.github/workflows/release.yml)
+right after the packages are pushed, against the version just published — so the public
+package boundary is verified on the real artifact without PR CI waiting on nuget.org
+indexing.
 
 ---
 
@@ -314,16 +321,23 @@ public class CheckoutTests : SelfHealingTestBase
 }
 ```
 
-### 5. Temiz paket-kurulum doğrulamasını tekrarlama
+### 5. Örneği kendiniz doğrulayın
 
-Repository kökünden şu komutu çalıştırın:
+İki soru, iki betik — bir sürüm bump'ının CI'ı bloklamaması için ayrıldı (#336):
 
 ```powershell
+# Her PR'da: örneğin kodu mevcut engine kaynağına karşı hâlâ build olup çalışıyor mu?
+# PackageReference yerine ProjectReference koyar — nuget.org devrede değil.
 pwsh ./samples/HeuristicHealingQuickstart/verify.ps1
+
+# Release anında: gerçekten yayınlanmış paket bir dış consumer için çalışıyor mu?
+# Temiz paket dizini, tek kaynak nuget.org, cache yok.
+# -Version varsayılan olarak Directory.Build.props <Version>'dur; belirli bir sürüm için parametre verin.
+pwsh ./samples/HeuristicHealingQuickstart/verify-published.ps1
 ```
 
-Betik `ProjectReference` içeren bir örneği reddeder, örneği repository dışındaki yalıtılmış
-bir geçici consumer dizinine kopyalar, yalnızca nuget.org kaynağını kullanıp temiz bir geçici
-paket dizinine restore eder, ardından senaryoyu build edip çalıştırır. Aynı komut zorunlu
-bir Linux CI job'ıdır; böylece public paket sınırı tek seferlik release PR deneyimine bağlı
-kalmadan sürekli doğrulanır.
+`verify.ps1` zorunlu bir per-PR Linux CI job'ıdır (`Sample Compiles Against Source`).
+`verify-published.ps1`, [`release.yml`](https://github.com/mustafasercansak/automation-sandbox/blob/main/.github/workflows/release.yml)
+içinde paketler push edildikten hemen sonra, yeni yayınlanan sürüme karşı çalışır — böylece public
+paket sınırı, PR CI'ının nuget.org indexlemesini beklemesine gerek kalmadan gerçek artifact üzerinde
+doğrulanır.

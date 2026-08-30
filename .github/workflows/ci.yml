@@ -209,8 +209,8 @@ jobs:
             TestAutomation/ScenarioRunner/TestResults/healing-report.html
           if-no-files-found: ignore
 
-  nuget-consumer:
-    name: NuGet Consumer Sample
+  sample-source-compat:
+    name: Sample Compiles Against Source
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -221,7 +221,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore, build, and run published-package sample
+      # Per-PR check: the sample's Program.cs still builds and runs against the
+      # CURRENT engine source (PackageReference swapped for ProjectReference).
+      # The "published package works for a consumer" check moved to release.yml
+      # as a post-publish step (#336) so PR CI never waits on nuget.org indexing.
+      - name: Build and run the sample against repo source
         shell: pwsh
         run: ./samples/HeuristicHealingQuickstart/verify.ps1
 
@@ -307,7 +311,7 @@ jobs:
 
   build-and-test:
     name: build-and-test
-    needs: [test, nuget-consumer, nunit-fixture-tests, calibration-cli, docs-build-preview]
+    needs: [test, sample-source-compat, nunit-fixture-tests, calibration-cli, docs-build-preview]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -317,8 +321,8 @@ jobs:
             echo "Matrix test execution failed: ${{ needs.test.result }}"
             exit 1
           fi
-          if [ "${{ needs.nuget-consumer.result }}" != "success" ]; then
-            echo "NuGet consumer verification failed: ${{ needs.nuget-consumer.result }}"
+          if [ "${{ needs.sample-source-compat.result }}" != "success" ]; then
+            echo "Sample source-compatibility check failed: ${{ needs.sample-source-compat.result }}"
             exit 1
           fi
           if [ "${{ needs.nunit-fixture-tests.result }}" != "success" ]; then
@@ -333,5 +337,5 @@ jobs:
             echo "Docs build preview verification failed: ${{ needs.docs-build-preview.result }}"
             exit 1
           fi
-          echo "All matrix test jobs, NuGet consumer, NUnit fixture tests, Calibration CLI, and docs build verification passed."
+          echo "All matrix test jobs, sample source-compatibility, NUnit fixture tests, Calibration CLI, and docs build verification passed."
 
