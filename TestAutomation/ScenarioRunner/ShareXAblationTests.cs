@@ -413,9 +413,11 @@ namespace ScenarioRunner
 
             Assert.True(withGuard < withoutGuard,
                 $"Expected repository reconciliation to reduce deleted-element false heals (was {withoutGuard}, still {withGuard}).");
-            // Measured: 7 -> 2 with the Balanced name gate already applied.
+            // Measured: 6 (name gate only) -> 1. The single residual is `pHotkeys`, an unnamed
+            // container Pane that heals onto a structurally identical sibling Pane - the
+            // uncontested case ownership reconciliation cannot reach (benchmark-calibration.md §15, #375).
             Assert.True(withoutGuard >= 5, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
-            Assert.True(withGuard <= 3, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 3.");
+            Assert.True(withGuard <= 1, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 1 (the pHotkeys residual).");
             Assert.Equal(0, renameFlips);
         }
 

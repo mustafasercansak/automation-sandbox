@@ -104,10 +104,11 @@ adjacent one is exactly the case where structure agrees but the label does not.
 
 A second #370 guard, `SelfHealingEngine.ReconcileAgainstRepository`, catches this exact `summaryTab` case from
 the other side: `pictureTab` is *itself* an authored locator, so once the engine re-resolves the rest of the
-suite against the live tree it sees the node is already owned and declines the heal. Across the full ablation it
-takes deleted-element false heals from `19 %` to `2 %` on HandBrake with no recall cost
-([the measurement](../benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)); the
-handful it cannot catch are deletes that land on a control no other test uses.
+suite against the live tree it sees the node is already owned and declines the heal. Across the full HandBrake
+ablation it takes deleted-element false heals from `17 %` (7 of 42) to **zero**, with no recall cost
+([the measurement](../benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)). On
+ShareX one residual survives — an unnamed container that lands on a structurally identical sibling no other test
+uses; that case is out of structural reach ([§15](../benchmark-calibration.md#15-a-non-structural-signal-for-the-uncontested-residual-375)).
 
 Re-running both scenarios with `SelfHealingEngine.Create(ThresholdProfile.Balanced)` (`MinimumConfidence = 0.75`):
 

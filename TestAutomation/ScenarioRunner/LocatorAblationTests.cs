@@ -1173,10 +1173,11 @@ namespace ScenarioRunner
             {
                 Assert.True(withGuard < withoutGuard,
                     $"Expected repository reconciliation to reduce deleted-element false heals (was {withoutGuard}, still {withGuard}).");
-                // Measured: 8 -> 1 with the Balanced name gate already applied. Locked with a
-                // little headroom so an unrelated scorer tweak does not turn a real regression green.
+                // Measured: 7 (name gate only) -> 0. On HandBrake every deleted-element false
+                // heal is contested, so the guard removes all of them. `withoutGuard >= 6` keeps
+                // a little headroom so an unrelated scorer tweak cannot turn a real regression green.
                 Assert.True(withoutGuard >= 6, $"Baseline false-heal count unexpectedly low ({withoutGuard}); the harness may have changed.");
-                Assert.True(withGuard <= 2, $"Repository reconciliation left {withGuard} deleted-element false heals; expected <= 2.");
+                Assert.Equal(0, withGuard);
                 // Genuine renames must be untouched: not one rename scenario may flip its
                 // IsConfident verdict when the guard is switched on.
                 Assert.Equal(0, renameFlips);
