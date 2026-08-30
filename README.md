@@ -61,6 +61,8 @@ that outcome for review and does not persist the proposed locator.
 
 > 🚀 **Published Package Quickstart:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
+> 🔌 **Already have a test suite?** [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers the `Observe` → `AutoHeal` rollout and minimal wiring for Playwright, NUnit, xUnit, Reqnroll, and FlaUI.
+
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
 > 📦 **Preview Packages:** The latest prerelease packages are published on [GitHub Releases](https://github.com/mustafasercansak/automation-sandbox/releases) and [nuget.org](https://www.nuget.org/profiles/mustafasercansak). All seven `AutomationSandbox.*` packages are available from nuget.org and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
@@ -769,7 +771,7 @@ A single application cannot tell "this is how the engine behaves" from "this is 
 ### Does Independent Model Agreement Fix This? Measured, Not Assumed
 Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, n = 133 usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): agreement separates surviving elements from deleted ones better than any heuristic signal tested (94.5% vs. 43.6% unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The useful signal in those rejection cases is provider *disagreement*, not any model recognising that the element is gone. The shipped agreement quorum therefore limits single-model decisions but does not establish correctness or protect against this false-heal mode; widening the provider pool from 3 to 7 did not reduce the failure rate.
 
-For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
+For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md). The consensus finding is also written up as a standalone story — [**Can You Trust an LLM to Fix a Broken Locator?**](docs/blog/llm-false-heal-study.md).
 
 ---
 

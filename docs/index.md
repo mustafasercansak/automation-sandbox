@@ -37,6 +37,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | :--- | :--- |
 | 🚀 [**Getting Started**](getting-started.md) | Step-by-step installation, core concepts, and copy-paste code examples. |
 | 📦 [**Published Package Quickstart**](consumer-quickstart.md) | First run from `dotnet add package` to a verified heuristic heal using the maintained NuGet consumer sample. |
+| 🔌 [**Add Self-Healing to an Existing Suite**](integration-existing-suite.md) | Wiring the engine into a suite you already have (Playwright, NUnit, xUnit, Reqnroll) and a first-week `Observe` → `AutoHeal` rollout. |
 | ⚖️ [**How It Compares**](comparison.md) | Honest comparison with Healenium and commercial healers (Testim, Mabl, Ranorex, Functionize), including when another tool is the better fit. |
 | 📋 [**Release Notes**](https://github.com/mustafasercansak/automation-sandbox/releases) | Latest release notes, breaking changes, and artifact downloads on GitHub. |
 | 💻 [**Desktop Automation**](desktop-automation.md) | How to test Windows desktop applications (WinForms, WPF, WinUI). |
@@ -45,6 +46,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 📊 [**Healing Reports & Dashboard**](healing-reports.md) | JSON and HTML telemetry for accepted, declined, and failed locator-resolution attempts. |
 | 🧭 [**Intent-Driven Automation**](intent-driven-automation.md) | M6: intent planning (deterministic + LLM-backed), DOM/desktop matching, locator recording, Playwright/FlaUI test generation, intent flow reports, pipeline orchestration, and live page exploration. |
 | 🔬 [**Benchmark & Calibration**](benchmark-calibration.md) | Multi-signal locator ablation benchmark on real organic apps, score overlap findings, and threshold trade-off analysis. |
+| 📝 [**Can You Trust an LLM to Fix a Broken Locator?**](blog/llm-false-heal-study.md) | Standalone write-up of the multi-provider consensus study: 34/34 unanimous verdicts on deleted elements were false heals, why, and how the design responds. |
 | 🔗 [**Joint Locator Reconciliation**](joint-locator-reconciliation.md) | Opt-in batch ownership guard for independently accepted locator heals, including deterministic assignment and limitations. |
 | 🤖 [**LLM Providers**](llm-providers.md) | Setting up AI providers (Gemini, Claude, OpenAI, Ollama) and implementing custom `ILlmHealingProvider`s. |
 | 🔐 [**LLM Security Model**](llm-security-model.md) | Trust boundaries, disclosed fields, prompt-injection and PII limitations, provider retention, and local report handling. |
@@ -73,6 +75,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | :--- | :--- |
 | 🚀 [**Başlangıç Rehberi**](getting-started.md) | Adım adım kurulum, temel mantık ve kopyala-yapıştır kod örnekleri. |
 | 📦 [**Yayınlanmış Paket Hızlı Başlangıcı**](consumer-quickstart.md) | `dotnet add package` komutundan bakımı yapılan NuGet consumer örneğiyle doğrulanmış sezgisel healing'e ilk çalıştırma. |
+| 🔌 [**Mevcut Test Paketine Self-Healing Ekleme**](integration-existing-suite.md) | Hâlihazırda çalışan bir pakete (Playwright, NUnit, xUnit, Reqnroll) motoru bağlama ve ilk hafta `Observe` → `AutoHeal` geçişi. |
 | ⚖️ [**Karşılaştırma**](comparison.md) | Healenium ve ticari healer'larla (Testim, Mabl, Ranorex, Functionize) dürüst karşılaştırma; başka bir aracın daha uygun olduğu durumlar dahil. |
 | 📋 [**Sürüm Notları**](https://github.com/mustafasercansak/automation-sandbox/releases) | GitHub üzerindeki en güncel sürüm notları, değişiklikler ve artifact indirmeleri. |
 | 💻 [**Masaüstü Testleri**](desktop-automation.md) | Windows masaüstü (WinForms, WPF) uygulamalarını test etme. |
@@ -81,6 +84,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 📊 [**İyileştirme Raporları & Panel**](healing-reports.md) | Kabul edilen, reddedilen ve başarısız locator çözüm denemeleri için JSON ve HTML telemetrisi. |
 | 🧭 [**Intent Tabanlı Otomasyon**](intent-driven-automation.md) | M6: intent planlama (deterministic + LLM destekli), DOM/masaüstü eşleştirme, locator kaydı, Playwright/FlaUI test üretimi, intent raporu, pipeline orkestrasyonu ve canlı sayfa keşfi. |
 | 🔬 [**Benchmark ve Kalibrasyon**](benchmark-calibration.md) | Gerçek uygulamalarda çoklu sinyal ablasyon testi, skor çakışması bulguları ve eşik denge analizi. |
+| 📝 [**Bir LLM'e Kırık Locator'ı Düzelttirebilir misiniz?**](blog/llm-false-heal-study.md) | Çok-sağlayıcılı konsensüs çalışmasının bağımsız yazısı: silinmiş elemanlarda 34/34 oybirliği yanlış iyileştirmeydi — nedeni ve tasarıma yansıması. |
 | 🔗 [**Birleşik Locator Uzlaştırması**](joint-locator-reconciliation.md) | Bağımsız kabul edilen locator iyileştirmeleri için deterministik, isteğe bağlı batch sahiplik koruması ve sınırları. |
 | 🤖 [**Yapay Zeka Kurulumu**](llm-providers.md) | Gemini, Claude, OpenAI, yerel Ollama ve özel `ILlmHealingProvider` geliştirme. |
 | 🔐 [**LLM Güvenlik Modeli**](llm-security-model.md) | Güven sınırları, açıklanan alanlar, prompt injection ve PII sınırları, sağlayıcı retention ve yerel rapor güvenliği. |
