@@ -762,7 +762,7 @@ A single application cannot tell "this is how the engine behaves" from "this is 
 ### Does Independent Model Agreement Fix This? Measured, Not Assumed
 Four live runs across up to seven independent LLM providers (2026-08-16 to 2026-08-18, n = 133 usable scenarios — [full results](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97)): agreement separates surviving elements from deleted ones better than any heuristic signal tested (94.5% vs. 43.6% unanimous agreement) — but **every unanimous verdict on a deleted element across all four runs (34 of 34) was a false heal**, including cases where three independently-sourced model families agreed on the same wrong answer. The useful signal in those rejection cases is provider *disagreement*, not any model recognising that the element is gone. The shipped agreement quorum therefore limits single-model decisions but does not establish correctness or protect against this false-heal mode; widening the provider pool from 3 to 7 did not reduce the failure rate.
 
-For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md).
+For complete methodologies, component breakdowns, and configuration guidance, see the [**Benchmark & Calibration Guide**](docs/benchmark-calibration.md). The consensus finding is also written up as a standalone story — [**Can You Trust an LLM to Fix a Broken Locator?**](docs/blog/llm-false-heal-study.md).
 
 ---
 
