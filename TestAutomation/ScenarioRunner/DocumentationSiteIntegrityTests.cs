@@ -59,30 +59,47 @@ namespace ScenarioRunner
         public void DocumentationFiles_InternalMarkdownLinks_TargetExistingFiles()
         {
             var repoRoot = FindRepoRoot();
+
+            // #363: cover every reader-facing markdown surface, not just docs/*.md. The old
+            // TopDirectoryOnly scan is why #361 (every Pages homepage link 404) shipped
+            // undetected. Same file set as MarkdownMathSyntaxTests / MermaidDiagramSyntaxTests:
+            // every root *.md (README, index.md, PROJECT_SHOWCASE, CONTRIBUTING, ...) plus
+            // docs/** recursively.
+            var files = new List<string>(Directory.GetFiles(repoRoot, "*.md", SearchOption.TopDirectoryOnly));
             var docsDir = Path.Combine(repoRoot, "docs");
-            var docFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.TopDirectoryOnly);
+            if (Directory.Exists(docsDir))
+            {
+                files.AddRange(Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories));
+            }
+
+            // distribution-kit.md is an internal promotion playbook (excluded from the Jekyll
+            // site) whose awesome-list section carries literal format examples like
+            // `[LIBRARY](LINK)`; skip it rather than teach the check to guess placeholders.
+            files.RemoveAll(f => Path.GetFileName(f).Equals("distribution-kit.md", StringComparison.OrdinalIgnoreCase));
 
             var linkRegex = new Regex(@"\[(?<text>[^\]]+)\]\((?<target>[^)]+)\)");
+            var broken = new List<string>();
 
-            foreach (var file in docFiles)
+            foreach (var file in files.Where(File.Exists))
             {
+                var relFile = file.Substring(repoRoot.Length).TrimStart(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
                 var content = File.ReadAllText(file);
-                var matches = linkRegex.Matches(content);
 
-                foreach (Match match in matches)
+                foreach (Match match in linkRegex.Matches(content))
                 {
                     var target = match.Groups["target"].Value.Trim();
 
                     if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                         target.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
                         target.StartsWith("#") ||
+                        target.StartsWith("/") ||   // site-absolute (Jekyll/Pages), not a disk path
                         target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
 
                     var hashIdx = target.IndexOf('#');
-                    var cleanTarget = hashIdx >= 0 ? target.Substring(0, hashIdx) : target;
+                    var cleanTarget = (hashIdx >= 0 ? target.Substring(0, hashIdx) : target).Trim();
 
                     if (string.IsNullOrWhiteSpace(cleanTarget))
                     {
@@ -90,10 +107,15 @@ namespace ScenarioRunner
                     }
 
                     var targetPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file)!, cleanTarget));
-                    Assert.True(File.Exists(targetPath) || Directory.Exists(targetPath),
-                        $"Broken link found in '{Path.GetFileName(file)}': target '{target}' does not exist on disk (resolved to '{targetPath}').");
+                    if (!File.Exists(targetPath) && !Directory.Exists(targetPath))
+                    {
+                        broken.Add($"{relFile}: '{target}' -> not found at '{targetPath}'");
+                    }
                 }
             }
+
+            Assert.True(broken.Count == 0,
+                "Broken internal markdown links:" + Environment.NewLine + string.Join(Environment.NewLine, broken));
         }
 
         [Fact]
