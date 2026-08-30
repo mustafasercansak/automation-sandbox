@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <PackageId>AutomationSandbox.SelfHealing</PackageId>
     <Description>Structural-similarity locator healing with optional LLM consensus fallback, opt-in joint locator reconciliation, and complete resolution-outcome telemetry.</Description>
+    <PackageTags>self-healing;locator-healing;test-automation;ui-automation;playwright;flaui;flaky-tests;llm;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

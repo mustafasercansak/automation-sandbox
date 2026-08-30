@@ -11,6 +11,13 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 
 **Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~23ms for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
+- **Deterministic-first.** A pure C# structural scorer decides on its own — zero tokens, zero API cost, sub-50ms on a 3,000-control tree. Most healing never touches a model.
+- **The LLM is never the decision maker.** It is an opt-in fallback, only when the heuristic is not confident, and a pick needs an **independent-agreement quorum** (≥ 2 providers naming the same candidate). Agreement is permission to consider a pick — [not evidence it is correct](docs/benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97).
+- **Nothing is applied silently.** The shipped `HealingMode.Review` default changes no locators; a heal commits only in opt-in `AutoHeal`, and only after the retried action actually succeeds.
+- **PII/secret redaction is on by default** before any candidate data reaches an LLM, with prompt-injection hardening on that data. Every decision — which signal contributed what weight, which providers voted, the outcome — is written to a per-decision audit trail (JSON + HTML). See the [LLM Security Model](docs/llm-security-model.md).
+
+<!-- TODO(#345): embed the 30-second demo GIF (broken locator -> heal -> audit report) here, under docs/assets/ -->
+
 ## A Broken Locator, in 30 Seconds
 
 Yesterday the checkout test stored this locator; today a UI refactor changed both its ID and label:
