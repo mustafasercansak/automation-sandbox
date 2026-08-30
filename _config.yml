@@ -27,3 +27,4 @@ exclude:
   # site. They deliberately carry no Jekyll front matter (nuget.org would render it), so
   # Jekyll would otherwise copy them out as raw .md.
   - docs/nuget
+  - docs/blog/demo-storyboard.md
