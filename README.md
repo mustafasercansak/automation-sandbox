@@ -71,6 +71,8 @@ that outcome for review and does not persist the proposed locator.
 | A **modular .NET library set** that plugs into the runners you already use (xUnit, NUnit, Playwright, FlaUI). | **Not a test framework replacement.** It does not run your tests, assert for you, or own your test lifecycle. |
 | A **deterministic-first** design: a zero-token heuristic scorer decides on its own, with an opt-in LLM fallback that is guarded against hallucinated picks. | **Not a blind AI wrapper.** No screenshots or full DOM dumps are shipped to a model on every step; the LLM sees a bounded top-N shortlist, only when the heuristic is not confident. |
 
+For how this scope and approach compare with Healenium and the commercial healers (Testim, Mabl, Ranorex, Functionize) — including where one of those is the better fit — see [**How It Compares**](docs/comparison.md).
+
 ---
 
 ## 📌 Implementation Status
