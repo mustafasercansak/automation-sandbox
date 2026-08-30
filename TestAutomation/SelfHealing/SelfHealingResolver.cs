@@ -38,10 +38,24 @@ namespace SelfHealing
                 || matchedNameScore is null
                 || matchedNameScore >= w.MinimumNameScoreWhenNamed;
 
+            // Per-component descendant gate (#375): only meaningful when the stale snapshot
+            // recorded a non-empty child signature (it was a container). Compares what that
+            // container held against what the winning candidate holds now.
+            var expectedWasContainer = !string.IsNullOrEmpty(expected.ChildControlTypeSignature);
+            var matchedChildSignatureSimilarity = expectedWasContainer
+                ? ChildSignature.Similarity(
+                    expected.ChildControlTypeSignature,
+                    UiElementSnapshot.ComputeChildControlTypeSignature(best.Candidate))
+                : (double?)null;
+            var childSignatureOk = w.MinimumChildSignatureSimilarity <= 0.0
+                || matchedChildSignatureSimilarity is null
+                || matchedChildSignatureSimilarity >= w.MinimumChildSignatureSimilarity;
+
             var isConfident = best.TotalScore >= w.MinimumConfidence
                 && best.EvidenceCoverage >= w.MinimumEvidenceWeight
                 && marginSufficient
-                && nameGateOk;
+                && nameGateOk
+                && childSignatureOk;
             var confidenceLabel = isConfident
                 ? "CONFIDENT"
                 : best.EvidenceCoverage < w.MinimumEvidenceWeight
@@ -50,7 +64,9 @@ namespace SelfHealing
                         ? $"AMBIGUOUS (runner-up margin {best.TotalScore - (runnerUpScore ?? 0.0):F3} < {w.MinimumCandidateMargin:F2})"
                         : !nameGateOk
                             ? $"NAME MISMATCH (NameScore {matchedNameScore:F2} < {w.MinimumNameScoreWhenNamed:F2} for named locator '{expected.Name}')"
-                            : "LOW CONFIDENCE";
+                            : !childSignatureOk
+                                ? $"CONTENTS MISMATCH (child-signature similarity {matchedChildSignatureSimilarity:F2} < {w.MinimumChildSignatureSimilarity:F2}; stale container held '{expected.ChildControlTypeSignature}')"
+                                : "LOW CONFIDENCE";
             log($"[SelfHealing] '{expected.AutomationId}' ({expected.ControlType}) not found. " +
                 $"Best candidate: Name='{best.Candidate.Name}', AutomationId='{best.Candidate.AutomationId}', " +
                 $"Score={best.TotalScore:F2} ({confidenceLabel}), chosen among {scoredCandidates.Count} candidate(s).");
@@ -75,6 +91,8 @@ namespace SelfHealing
                 MarginThreshold = w.MinimumCandidateMargin,
                 MatchedNameScore = matchedNameScore,
                 NameGateFloor = w.MinimumNameScoreWhenNamed,
+                MatchedChildSignatureSimilarity = matchedChildSignatureSimilarity,
+                ChildSignatureFloor = w.MinimumChildSignatureSimilarity,
                 Candidates = allScored,
                 ScoreBreakdown = best.Components,
             };

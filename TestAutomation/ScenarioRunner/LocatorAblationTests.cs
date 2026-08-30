@@ -1220,7 +1220,9 @@ namespace ScenarioRunner
             var withGuard = 0;
             foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RemovedElement))
             {
-                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                // Capture() so the stored snapshot carries the child-ControlType signature the
+                // #375 descendant gate reads - this is what a repository actually persists.
+                var expected = UiElementSnapshot.Capture(LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!);
                 var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
                 if ((await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident)
                 {
@@ -1236,7 +1238,7 @@ namespace ScenarioRunner
             var renameFlips = 0;
             foreach (var scenario in dataset.Scenarios.Where(s => s.MutationKind == LocatorMutationKind.RenamedAutomationId))
             {
-                var expected = LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!;
+                var expected = UiElementSnapshot.Capture(LocatorAblationGenerator.FindExpectedElement(root, scenario.OriginalAutomationId)!);
                 var mutated = LocatorAblationGenerator.ApplyMutation(root, scenario);
                 var offConfident = (await off.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;
                 var onConfident = (await on.ResolveAndRecordAsync(scenario.OriginalAutomationId, expected, mutated)).IsConfident;

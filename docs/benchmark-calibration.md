@@ -145,11 +145,11 @@ xychart-beta
 
 To simplify choosing an operating point without manually tuning individual weights, the engine provides named **`ThresholdProfile`** presets and an automated tree calibrator:
 
-| Profile | Target Use Case | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **`Balanced`** (Recommended) | Default production baseline balancing high auto-heal recall ($>75\%$) with strong false-positive suppression. | `0.75` | `0.05` | `0.40` | `0.30` |
-| **`Conservative`** | High-consequence or regulated suites where false-green test executions must be strictly minimized. | `0.90` | `0.08` | `0.50` | `0.30` |
-| **`Aggressive`** | Rapid exploratory automation or suites with sparse sibling ambiguity prioritizing automated recovery. | `0.50` | `0.03` | `0.30` | `0.00` |
+| Profile | Target Use Case | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` | `MinimumChildSignatureSimilarity` |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **`Balanced`** (Recommended) | Default production baseline balancing high auto-heal recall ($>75\%$) with strong false-positive suppression. | `0.75` | `0.05` | `0.40` | `0.30` | `0.50` |
+| **`Conservative`** | High-consequence or regulated suites where false-green test executions must be strictly minimized. | `0.90` | `0.08` | `0.50` | `0.30` | `0.50` |
+| **`Aggressive`** | Rapid exploratory automation or suites with sparse sibling ambiguity prioritizing automated recovery. | `0.50` | `0.03` | `0.30` | `0.00` | `0.00` |
 
 ```csharp
 // Using preset profiles with SelfHealingEngine
@@ -167,6 +167,15 @@ is otherwise blended away, so a deleted tab healing onto an adjacent one (`Name`
 (precision $90.7\% \rightarrow 92.4\%$) with **zero** auto-heal recall cost; ShareX moves the same direction. It
 does not apply when the stale locator had no name, or when the candidate's `NameScore` is `null` (missing on one
 side). `SimilarityWeights.Default` ships with it disabled ($0.0$).
+
+`MinimumChildSignatureSimilarity` (#375) is the same kind of gate for the one thing the five scoring components
+never inspect — an element's **own contents**. When the stale snapshot recorded a non-empty child-`ControlType`
+signature (the locator was a container), the winning candidate's live direct children must match it with at least
+this multiset-Jaccard similarity. It catches an unnamed container healing onto a structurally identical sibling
+that holds something else (ShareX `pHotkeys`, child `{DataGrid:1}`, vs a sibling `Pane` with child `{Pane:1}`) —
+the sole residual left after the name gate and repository reconciliation ([§15](#15-a-non-structural-signal-for-the-uncontested-residual-375)).
+It does not apply to a leaf stale locator or to a pre-#375 snapshot with no recorded signature.
+`SimilarityWeights.Default` ships with it disabled ($0.0$).
 
 ##### Per-Application Calibration Command
 
@@ -578,7 +587,7 @@ Measured on the committed ablation datasets (`LocatorAblationGenerator`, which e
 | HandBrake 1.8.2 (42 removed scenarios) | 40 % (17) | 17 % (7) | **0 % (0)** |
 | ShareX v21.0.0 (29 removed scenarios) | 28 % (8) | 21 % (6) | **3 % (1)** |
 
-Genuine renames and drifts are untouched — not one `RenamedAutomationId` scenario flips its verdict when the flag is switched on, on either fixture — because a true successor is never also claimed by another locator. HandBrake reaches **zero** false heals; ShareX's single residual is `pHotkeys`, an unnamed container `Pane` that heals onto a structurally identical sibling `Pane` at the identical bounding rectangle — the uncontested case Section 13 proved is out of structural reach. It is carried into Section 15 and #375.
+Genuine renames and drifts are untouched — not one `RenamedAutomationId` scenario flips its verdict when the flag is switched on, on either fixture — because a true successor is never also claimed by another locator. HandBrake reaches **zero** false heals; ShareX's single residual is `pHotkeys`, an unnamed container `Pane` that heals onto a structurally identical sibling `Pane` at the identical bounding rectangle — the uncontested case Section 13 proved no *element-level* structural signal can reach. Section 15 closes it with a descendant-contents gate (#375).
 
 > [!IMPORTANT]
 > **Formal finding (#370).** Running the #141/#144 ownership guard against the whole repository, not just a hand-assembled batch, removes every contested deleted-element false heal on both fixtures at zero auto-heal recall cost, because in a real suite the neighbour a deleted element heals onto is usually another test's element. It is still the contested-candidate guard, not an absence detector — the one uncontested residual (`pHotkeys` on ShareX) is unchanged. Off by default (`SelfHealingEngine.ReconcileAgainstRepository`); the `Balanced` and `Conservative` integration guidance recommends enabling it. Regression guards: `SelfHealingEngineTests.ReconcileAgainstRepository_*` and `LocatorAblationTests.HandBrakeFixture_RepositoryOwnershipReconciliation_...` with its ShareX mirror (full delete-every-authored-locator ablation, false-heal count bounded, zero rename flips).
@@ -595,10 +604,17 @@ Three candidate signals were evaluated against this residual plus every genuine-
 | :--- | :--- |
 | **Perceptual hash of the element's screenshot** | Inapplicable to this dataset. The committed fixtures are pure `UiElementInfo` trees with no pixel data, and the snapshot stores no image. Measuring it needs HandBrake and ShareX re-captured with screenshots — its own epic, not this spike. |
 | **LLM pairwise "same / different / unsure"** | Inapplicable to this dataset. The ablation harness opaques every `AutomationId` (the #97 leakage fix), so the stale and candidate snapshots are byte-identical apart from an opaque hash — there is nothing for a model to reason about. Feeding it real identifiers reintroduces exactly the leakage that made the #97 measurement meaningless. |
-| **Descendant child-control-type signature** | Works. Store the multiset of the element's direct child control types in the snapshot; at heal time compare it to the candidate's (multiset Jaccard). `pHotkeys` (`{DataGrid:1}`) vs its heal target (`{Pane:1}`) scores `0.00` → decline. Across **131** confident genuine-drift heals on both fixtures, every single one scores `1.00` — none would be affected. The only other sub-`1.00` value in the whole sweep is `pHotkeys`'s own `PositionShift` scenario, which is itself a mis-heal onto the same sibling. |
+| **Descendant child-control-type signature** | **Shipped.** `UiElementSnapshot.Capture` now records the multiset of the element's direct child `ControlType`s (`"DataGrid:1"`, `"Button:2\|Edit:1"`, `""` for a leaf); the resolver compares it to the winning candidate's live children (multiset Jaccard) and vetoes the match below `SimilarityWeights.MinimumChildSignatureSimilarity`. `pHotkeys` (`{DataGrid:1}`) vs its heal target (`{Pane:1}`) scores `0.00` → declined. Across **131** confident genuine-drift heals on both fixtures every one scores `1.00`; the only other sub-`1.00` value in the whole sweep is `pHotkeys`'s own `PositionShift`, which is itself a mis-heal onto the same sibling. |
+
+With the descendant gate enabled (`Balanced` / `Conservative`), the deleted-element false-heal count is **0 on both fixtures**:
+
+| Fixture | shipped default | + name gate + repository reconciliation | + descendant gate |
+| :--- | :---: | :---: | :---: |
+| HandBrake (42 removed) | 40 % (17) | 0 % (0) | 0 % (0) |
+| ShareX (29 removed) | 28 % (8) | 3 % (1) | **0 % (0)** |
 
 > [!IMPORTANT]
-> **Formal finding (#375).** For the sole uncontested residual, perceptual hashing and LLM pairwise verification are both unmeasurable on the committed datasets — one needs pixels the fixtures do not carry, the other needs identifiers the harness deliberately destroys. A descendant child-control-type signature — the element's own contents, the one thing the five-signal scorer ignores — declines the residual at zero measured recall cost across 131 drift heals. It is not shipped in this spike: it requires a field on the persisted snapshot (schema addition to a Tier-1 type) and the measured benefit is one scenario. The decision of whether that trade is worth making is left open on #375. Regression guard for the measurement: `LocatorAblationTests` / `ShareXAblationTests` reconciliation guards continue to assert the residual count.
+> **Formal finding (#375).** For the sole uncontested residual, perceptual hashing and LLM pairwise verification are both unmeasurable on the committed datasets — one needs pixels the fixtures do not carry, the other needs identifiers the harness deliberately destroys. A descendant child-`ControlType` signature — the element's own contents, the one thing the five-signal scorer never inspects — declines the residual at zero measured recall cost across 131 genuine-drift heals, and is shipped as an opt-in per-component gate (`MinimumChildSignatureSimilarity`, `0.50` on `Balanced` and `Conservative`, disabled on `Default`). It costs one optional field on the persisted snapshot; a snapshot written before #375 (or of a leaf) has no signature and the gate is a no-op. With all three #370/#375 guards enabled the deleted-element false-heal count is zero on both committed fixtures — the residual now needs a *third* application to resurface. Regression guards: `SelfHealingResolverTests` child-signature tests, `UiElementSnapshotTests` signature tests, and the `LocatorAblationTests` / `ShareXAblationTests` reconciliation guards (which now assert `0`).
 
 ---
 
@@ -731,11 +747,11 @@ xychart-beta
 
 Bireysel ağırlıkları elle ayarlamak zorunda kalmadan çalışma noktası seçmeyi kolaylaştırmak için motor hazır **`ThresholdProfile`** preset'leri ve otomatik ağaç kalibratörü sunar:
 
-| Profil | Hedef Kullanım Senaryosu | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **`Balanced`** (Önerilen) | Yüksek otomatik iyileştirme kapsamı ($>\%75$) ile güçlü yanlış pozitif baskılamasını dengeleyen varsayılan üretim temeli. | `0.75` | `0.05` | `0.40` | `0.30` |
-| **`Conservative`** | Yanlış yeşil (false-green) test çalıştırmalarının kesinlikle en aza indirilmesi gereken kritik veya regüle edilmiş test paketleri. | `0.90` | `0.08` | `0.50` | `0.30` |
-| **`Aggressive`** | Otomatik kurtarmayı önceliklendiren hızlı keşif otomasyonu veya seyrek kardeş belirsizliği olan arayüzler. | `0.50` | `0.03` | `0.30` | `0.00` |
+| Profil | Hedef Kullanım Senaryosu | `MinimumConfidence` | `MinimumCandidateMargin` | `MinimumEvidenceWeight` | `MinimumNameScoreWhenNamed` | `MinimumChildSignatureSimilarity` |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **`Balanced`** (Önerilen) | Yüksek otomatik iyileştirme kapsamı ($>\%75$) ile güçlü yanlış pozitif baskılamasını dengeleyen varsayılan üretim temeli. | `0.75` | `0.05` | `0.40` | `0.30` | `0.50` |
+| **`Conservative`** | Yanlış yeşil (false-green) test çalıştırmalarının kesinlikle en aza indirilmesi gereken kritik veya regüle edilmiş test paketleri. | `0.90` | `0.08` | `0.50` | `0.30` | `0.50` |
+| **`Aggressive`** | Otomatik kurtarmayı önceliklendiren hızlı keşif otomasyonu veya seyrek kardeş belirsizliği olan arayüzler. | `0.50` | `0.03` | `0.30` | `0.00` | `0.00` |
 
 ```csharp
 // Hazır profilleri SelfHealingEngine ile kullanma
@@ -753,6 +769,15 @@ $\rightarrow$ `Dimensions`, `NameScore` $\approx 0.10$) yalnızca yapıyla `Mini
 $\%9.3 \rightarrow \%7.6$ (precision $\%90.7 \rightarrow \%92.4$) taşır, **sıfır** otomatik iyileştirme kapsamı
 maliyetiyle; ShareX aynı yönde hareket eder. Eski locator'ın adı yoksa veya adayın `NameScore`'u `null` ise (tek
 tarafta eksik) uygulanmaz. `SimilarityWeights.Default` bunu kapalı ($0.0$) gönderir.
+
+`MinimumChildSignatureSimilarity` (#375), beş skorlama bileşeninin hiç bakmadığı tek şey için — elemanın **kendi
+içeriği** — aynı türde bir kapıdır. Eski snapshot boş olmayan bir alt öğe `ControlType` imzası kaydettiyse
+(locator bir konteynerdi), kazanan adayın canlı doğrudan alt öğeleri bu değeri en az çoklu küme Jaccard
+benzerliğiyle karşılamalıdır. İsimsiz bir konteynerin, başka bir şey tutan yapısal olarak özdeş bir kardeşe
+iyileşmesini yakalar (ShareX `pHotkeys`, alt öğe `{DataGrid:1}`, alt öğesi `{Pane:1}` olan bir kardeş `Pane`'e
+karşı) — isim geçidi ve depo uzlaştırmasından sonra kalan tek kalıntı (§15).
+Yaprak bir eski locator'a veya kayıtlı imzası olmayan #375 öncesi bir snapshot'a uygulanmaz.
+`SimilarityWeights.Default` bunu kapalı ($0.0$) gönderir.
 
 ##### Uygulama Bazlı Kalibrasyon Komutu
 
@@ -1154,7 +1179,7 @@ Kayıtlı ablasyon veri setlerinde ölçüldü (`LocatorAblationGenerator`, kök
 | HandBrake 1.8.2 (42 silme senaryosu) | %40 (17) | %17 (7) | **%0 (0)** |
 | ShareX v21.0.0 (29 silme senaryosu) | %28 (8) | %21 (6) | **%3 (1)** |
 
-Gerçek yeniden adlandırmalar ve kaymalar etkilenmez — bayrak açıldığında iki fikstürde de tek bir `RenamedAutomationId` senaryosu bile verdict değiştirmiyor — çünkü gerçek bir halef asla başka bir locator tarafından da talep edilmez. HandBrake **sıfır** yanlış iyileştirmeye iniyor; ShareX'in tek kalıntısı `pHotkeys`, isimsiz bir konteyner `Pane`'i; aynı bounding dikdörtgende yapısal olarak özdeş bir kardeş `Pane`'e iyileşiyor — 13. bölümün yapısal olarak erişilemez olduğunu kanıtladığı itiraz edilmeyen durum. Bu, 15. bölüme ve #375'e taşınıyor.
+Gerçek yeniden adlandırmalar ve kaymalar etkilenmez — bayrak açıldığında iki fikstürde de tek bir `RenamedAutomationId` senaryosu bile verdict değiştirmiyor — çünkü gerçek bir halef asla başka bir locator tarafından da talep edilmez. HandBrake **sıfır** yanlış iyileştirmeye iniyor; ShareX'in tek kalıntısı `pHotkeys`, isimsiz bir konteyner `Pane`'i; aynı bounding dikdörtgende yapısal olarak özdeş bir kardeş `Pane`'e iyileşiyor — 13. bölümün hiçbir *eleman düzeyi* yapısal sinyalin erişemeyeceğini kanıtladığı itiraz edilmeyen durum. 15. bölüm bunu bir alt öğe-içerik geçidiyle kapatıyor (#375).
 
 > [!IMPORTANT]
 > **Resmi çıkarım (#370).** #141/#144 sahiplik korumasını elle kurulmuş bir yığına değil tüm depoya karşı çalıştırmak, iki fikstürde de her itiraz edilen silinen-eleman yanlış iyileştirmesini sıfır otomatik iyileştirme geri çağırması maliyetiyle ortadan kaldırıyor; çünkü gerçek bir suite'te silinen bir elemanın iyileştiği komşu genellikle başka bir testin elemanıdır. Bu hâlâ itiraz edilen aday korumasıdır, bir yokluk dedektörü değil — tek itiraz edilmeyen kalan (`pHotkeys`, ShareX) değişmez. Varsayılan olarak kapalıdır (`SelfHealingEngine.ReconcileAgainstRepository`); `Balanced` ve `Conservative` entegrasyon rehberi bunu açmayı önerir. Regresyon korumaları: `SelfHealingEngineTests.ReconcileAgainstRepository_*` ve `LocatorAblationTests.HandBrakeFixture_RepositoryOwnershipReconciliation_...` ile ShareX aynası (tüm sil-her-locator ablasyonu, yanlış iyileştirme sayısı sınırlı, sıfır rename çevrimi).
@@ -1171,7 +1196,14 @@ Bu kalıntıya ve iki fikstürdeki her gerçek-drift iyileştirmesine karşı ü
 | :--- | :--- |
 | **Elemanın ekran görüntüsünün algısal hash'i** | Bu veri setine uygulanamaz. Kayıtlı fikstürler piksel verisi olmayan saf `UiElementInfo` ağaçlarıdır ve snapshot görüntü saklamaz. Ölçmek için HandBrake ve ShareX'in ekran görüntüleriyle yeniden yakalanması gerekir — bu ayrı bir epic, bu spike değil. |
 | **LLM ikili "aynı / farklı / emin değil"** | Bu veri setine uygulanamaz. Ablasyon harness'ı her `AutomationId`'yi opak yapar (#97 sızıntı düzeltmesi), dolayısıyla eski ve aday snapshot'lar opak bir hash dışında bayt bayt özdeştir — modelin üzerinde akıl yürüteceği hiçbir şey yoktur. Gerçek tanımlayıcıları vermek, #97 ölçümünü anlamsız kılan sızıntıyı yeniden getirir. |
-| **Alt öğe kontrol-türü imzası** | İşe yarar. Elemanın doğrudan alt öğe kontrol türlerinin çoklu kümesini snapshot'ta sakla; iyileştirme anında adayınkiyle karşılaştır (çoklu küme Jaccard). `pHotkeys` (`{DataGrid:1}`) vs iyileştirme hedefi (`{Pane:1}`) `0.00` skorlar → reddet. İki fikstürdeki **131** güvenli gerçek-drift iyileştirmesinde her biri `1.00` skorlar — hiçbiri etkilenmez. Tüm taramada `1.00` altındaki tek diğer değer `pHotkeys`'in kendi `PositionShift` senaryosudur; o da aynı kardeşe yapılan bir yanlış iyileştirmedir. |
+| **Alt öğe kontrol-türü imzası** | **Yayınlandı.** `UiElementSnapshot.Capture` artık elemanın doğrudan alt öğe `ControlType`'larının çoklu kümesini kaydediyor (`"DataGrid:1"`, `"Button:2\|Edit:1"`, yaprak için `""`); resolver bunu kazanan adayın canlı alt öğeleriyle karşılaştırıyor (çoklu küme Jaccard) ve `SimilarityWeights.MinimumChildSignatureSimilarity` altında eşleşmeyi reddediyor. `pHotkeys` (`{DataGrid:1}`) vs iyileştirme hedefi (`{Pane:1}`) `0.00` skorlar → reddedildi. İki fikstürdeki **131** güvenli gerçek-drift iyileştirmesinde her biri `1.00` skorlar; tüm taramada `1.00` altındaki tek diğer değer `pHotkeys`'in kendi `PositionShift` senaryosudur, o da aynı kardeşe yapılan bir yanlış iyileştirmedir. |
+
+Alt öğe geçidi etkinken (`Balanced` / `Conservative`), silinen-eleman yanlış iyileştirme sayısı **iki fikstürde de 0**:
+
+| Fikstür | kutudan çıkan varsayılan | + isim geçidi + depo uzlaştırması | + alt öğe geçidi |
+| :--- | :---: | :---: | :---: |
+| HandBrake (42 silme) | %40 (17) | %0 (0) | %0 (0) |
+| ShareX (29 silme) | %28 (8) | %3 (1) | **%0 (0)** |
 
 > [!IMPORTANT]
-> **Resmi çıkarım (#375).** Tek itiraz edilmeyen kalıntı için, algısal hash ve LLM ikili doğrulaması kayıtlı veri setlerinde ölçülemez — biri fikstürlerin taşımadığı pikselleri, diğeri harness'ın kasıtlı olarak yok ettiği tanımlayıcıları gerektirir. Alt öğe kontrol-türü imzası — elemanın kendi içeriği, beş sinyalli skorlayıcının göz ardı ettiği tek şey — 131 drift iyileştirmesinde sıfır ölçülen geri çağırma maliyetiyle kalıntıyı reddeder. Bu spike'ta yayınlanmıyor: kalıcı snapshot'a bir alan gerektirir (Tier-1 tipe şema eklemesi) ve ölçülen fayda tek bir senaryodur. Bu takasın yapılmaya değer olup olmadığı kararı #375'te açık bırakıldı. Ölçüm için regresyon koruması: `LocatorAblationTests` / `ShareXAblationTests` uzlaştırma korumaları kalıntı sayısını doğrulamaya devam eder.
+> **Resmi çıkarım (#375).** Tek itiraz edilmeyen kalıntı için, algısal hash ve LLM ikili doğrulaması kayıtlı veri setlerinde ölçülemez — biri fikstürlerin taşımadığı pikselleri, diğeri harness'ın kasıtlı olarak yok ettiği tanımlayıcıları gerektirir. Alt öğe `ControlType` imzası — elemanın kendi içeriği, beş sinyalli skorlayıcının hiç bakmadığı tek şey — 131 gerçek-drift iyileştirmesinde sıfır ölçülen geri çağırma maliyetiyle kalıntıyı reddeder ve isteğe bağlı bir bileşen bazlı kapı olarak yayınlanır (`MinimumChildSignatureSimilarity`, `Balanced` ve `Conservative`'de `0.50`, `Default`'ta kapalı). Kalıcı snapshot'ta bir isteğe bağlı alan maliyeti vardır; #375 öncesi yazılmış (veya yaprak olan) bir snapshot'ın imzası yoktur ve kapı etkisizdir. Üç #370/#375 korumasının hepsi etkinken silinen-eleman yanlış iyileştirme sayısı iki kayıtlı fikstürde de sıfırdır — kalıntı artık yeniden ortaya çıkmak için *üçüncü* bir uygulamaya ihtiyaç duyar. Regresyon korumaları: `SelfHealingResolverTests` alt öğe imza testleri, `UiElementSnapshotTests` imza testleri ve `LocatorAblationTests` / `ShareXAblationTests` uzlaştırma korumaları (artık `0` doğruluyor).

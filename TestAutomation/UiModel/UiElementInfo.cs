@@ -17,6 +17,14 @@ namespace UiModel
         public int SiblingCount { get; set; }
         public string TestIntent { get; set; } = "";
         public List<UiElementInfo> Children { get; set; } = new();
+
+        // Direct-child ControlType multiset recorded at snapshot time, e.g. "DataGrid:1" or
+        // "Button:2|Edit:1" (see UiElementSnapshot.ComputeChildControlTypeSignature). Lets the
+        // SelfHealing layer tell a container apart from a structurally identical sibling
+        // without persisting the whole descendant subtree. Null on snapshots taken before
+        // this field existed and on live tree nodes (which carry real Children); empty string
+        // on a captured leaf.
+        public string? ChildControlTypeSignature { get; set; }
     }
 
     public readonly struct BoundingRectangle : IEquatable<BoundingRectangle>
