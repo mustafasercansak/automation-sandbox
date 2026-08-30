@@ -23,3 +23,7 @@ exclude:
   - WinFormsApp
   - WpfApp
   - samples
+  # Per-package NuGet READMEs (#338): embedded in the .nupkg files, not pages on the docs
+  # site. They deliberately carry no Jekyll front matter (nuget.org would render it), so
+  # Jekyll would otherwise copy them out as raw .md.
+  - docs/nuget

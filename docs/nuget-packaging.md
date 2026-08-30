@@ -122,7 +122,9 @@ Each package embeds its own short landing page instead of the monorepo README (#
 The per-package files deliberately avoid LaTeX and mermaid (nuget.org renders neither)
 and stay version-free. A shared `icon.png` (repo root) is packed into every package via
 `<PackageIcon>`. When adding a new packable project, drop a `docs/nuget/README.<ProjectName>.md`
-next  to the others — the validator requires a `README.md` entry in every nupkg either way.
+next to the others: `eng/Validate-NuGetPackages.ps1` fails a package whose embedded
+`README.md` is not the per-package file (it checks the first heading is `# <PackageId>`),
+whose README still carries LaTeX/mermaid, or that is missing `icon.png`.
 
 ## Publish Checklist
 
@@ -174,3 +176,5 @@ Her paket, monorepo README'si yerine kendi kısa tanıtım sayfasını gömer (#
 `docs/nuget/README.<ProjeAdi>.md` varsa pakete `README.md` olarak paketlenir, yoksa kök
 README'si kullanılır. Paket başına README'ler LaTeX ve mermaid içermez (nuget.org ikisini
 de render etmez). Ortak `icon.png` tüm paketlere `<PackageIcon>` ile eklenir.
+`eng/Validate-NuGetPackages.ps1`, gömülü `README.md`'nin ilk başlığının `# <PaketKimliği>`
+olduğunu, LaTeX/mermaid içermediğini ve `icon.png`'nin bulunduğunu doğrular.
