@@ -207,9 +207,9 @@ review. It is heuristic-only — no extra LLM calls — and costs one resolution
 entry, only on a heal attempt.
 
 Measured on the project's two real fixtures (Balanced profile, every locator deleted in turn):
-deleted-element false heals drop from **19 % → 2 %** (HandBrake) and **23 % → 7 %** (ShareX), with
-**no change** to genuine-rename recall. The remainder is the case no structural signal reaches — a
-delete that lands on a node nothing else in the suite uses
+deleted-element false heals drop from **17 % → 0 %** (HandBrake) and **21 % → 3 %** (ShareX, one
+residual), with **no change** to genuine-rename recall. That residual is the case no structural
+signal reaches — a delete that lands on a node nothing else in the suite uses
 ([the measurement](benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)).
 Recommended on for the `Balanced` and `Conservative` profiles.
 

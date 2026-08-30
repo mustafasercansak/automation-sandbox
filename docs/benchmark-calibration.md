@@ -571,17 +571,34 @@ var engine = SelfHealingEngine.Create(
 
 On a heal attempt, before a confident heuristic match is accepted, every *other* authored locator is re-resolved against the same captured tree. If the winning candidate is already the confident identity of another locator — and this locator does not beat that owner by `MinimumCandidateMargin` — the claim is declined as `HealResolutionStatus.OwnershipConflict` and routed to review instead of silently re-pointing onto another test's element. The check is heuristic-only (no extra LLM traffic) and a no-op when the repository holds fewer than two locators.
 
-Measured on the committed fixtures — Balanced profile, per-component name gate on, every authored locator deleted in turn with the rest of the suite present as context:
+Measured on the committed ablation datasets (`LocatorAblationGenerator`, which excludes the root window) — Balanced profile, per-component name gate on, every authored locator deleted in turn with the rest of the suite present as context:
 
-| Fixture | Deleted-element false heal, name gate only | + repository reconciliation |
-| :--- | :---: | :---: |
-| HandBrake 1.8.2 | 19 % (8 / 43) | 2 % (1 / 43) |
-| ShareX v21.0.0 | 23 % (7 / 30) | 7 % (2 / 30) |
+| Fixture | Shipped default (0.50) | Balanced + name gate | + repository reconciliation |
+| :--- | :---: | :---: | :---: |
+| HandBrake 1.8.2 (42 removed scenarios) | 40 % (17) | 17 % (7) | **0 % (0)** |
+| ShareX v21.0.0 (29 removed scenarios) | 28 % (8) | 21 % (6) | **3 % (1)** |
 
-Genuine renames and drifts are untouched — auto-heal recall is identical with the flag on and off (HandBrake 95 %, ShareX 47 %), because a true successor is never also claimed by another locator. The residual (1 on HandBrake, 2 on ShareX) is the uncontested case Section 13 proved is out of structural reach: the deleted element healed onto a node no other locator in the suite owns.
+Genuine renames and drifts are untouched — not one `RenamedAutomationId` scenario flips its verdict when the flag is switched on, on either fixture — because a true successor is never also claimed by another locator. HandBrake reaches **zero** false heals; ShareX's single residual is `pHotkeys`, an unnamed container `Pane` that heals onto a structurally identical sibling `Pane` at the identical bounding rectangle — the uncontested case Section 13 proved is out of structural reach. It is carried into Section 15 and #375.
 
 > [!IMPORTANT]
-> **Formal finding (#370).** Running the #141/#144 ownership guard against the whole repository, not just a hand-assembled batch, cuts deleted-element false heals to low single digits on both fixtures at zero auto-heal recall cost, because in a real suite the neighbour a deleted element heals onto is usually another test's element. It is still the contested-candidate guard, not an absence detector — the uncontested residual is unchanged. Off by default (`SelfHealingEngine.ReconcileAgainstRepository`); the `Balanced` and `Conservative` integration guidance recommends enabling it. Regression guards: `SelfHealingEngineTests.ReconcileAgainstRepository_On_DeclinesHealOntoAnotherLocatorsElement`, `SelfHealingEngineTests.ReconcileAgainstRepository_On_StillHealsGenuineDrift_NoOwnershipCost`, and `SelfHealingEngineTests.ReconcileAgainstRepository_Off_HealsDeletedElementOntoAnotherLocatorsElement`.
+> **Formal finding (#370).** Running the #141/#144 ownership guard against the whole repository, not just a hand-assembled batch, removes every contested deleted-element false heal on both fixtures at zero auto-heal recall cost, because in a real suite the neighbour a deleted element heals onto is usually another test's element. It is still the contested-candidate guard, not an absence detector — the one uncontested residual (`pHotkeys` on ShareX) is unchanged. Off by default (`SelfHealingEngine.ReconcileAgainstRepository`); the `Balanced` and `Conservative` integration guidance recommends enabling it. Regression guards: `SelfHealingEngineTests.ReconcileAgainstRepository_*` and `LocatorAblationTests.HandBrakeFixture_RepositoryOwnershipReconciliation_...` with its ShareX mirror (full delete-every-authored-locator ablation, false-heal count bounded, zero rename flips).
+
+### 15. A Non-Structural Signal for the Uncontested Residual (#375)
+
+After the name gate and repository reconciliation, the deleted-element residual on the committed datasets is **one scenario**: ShareX's `pHotkeys`. HandBrake has none. `pHotkeys` is an unnamed `Pane` that, once deleted, heals with score `1.000` onto its sibling `ucTaskThumbnailView` — a `Pane` with the same control type, the same parent, the same sibling role, an empty name, and the *identical* bounding rectangle. Every one of the five scoring components is a legitimate perfect match. Neither guard fires: the name gate needs a name, and `ucTaskThumbnailView`'s own locator does not resolve confidently enough after the deletion to contest the node.
+
+The one thing that separates the two panes is what they **contain**: `pHotkeys` holds a `DataGrid` of hotkey rows; `ucTaskThumbnailView` holds a nested `Pane`. The similarity scorer never looks at an element's own descendants, and `UiElementSnapshot.Capture` does not persist them, so that signal is currently invisible to the engine.
+
+Three candidate signals were evaluated against this residual plus every genuine-drift heal on both fixtures:
+
+| Candidate | Verdict |
+| :--- | :--- |
+| **Perceptual hash of the element's screenshot** | Inapplicable to this dataset. The committed fixtures are pure `UiElementInfo` trees with no pixel data, and the snapshot stores no image. Measuring it needs HandBrake and ShareX re-captured with screenshots — its own epic, not this spike. |
+| **LLM pairwise "same / different / unsure"** | Inapplicable to this dataset. The ablation harness opaques every `AutomationId` (the #97 leakage fix), so the stale and candidate snapshots are byte-identical apart from an opaque hash — there is nothing for a model to reason about. Feeding it real identifiers reintroduces exactly the leakage that made the #97 measurement meaningless. |
+| **Descendant child-control-type signature** | Works. Store the multiset of the element's direct child control types in the snapshot; at heal time compare it to the candidate's (multiset Jaccard). `pHotkeys` (`{DataGrid:1}`) vs its heal target (`{Pane:1}`) scores `0.00` → decline. Across **131** confident genuine-drift heals on both fixtures, every single one scores `1.00` — none would be affected. The only other sub-`1.00` value in the whole sweep is `pHotkeys`'s own `PositionShift` scenario, which is itself a mis-heal onto the same sibling. |
+
+> [!IMPORTANT]
+> **Formal finding (#375).** For the sole uncontested residual, perceptual hashing and LLM pairwise verification are both unmeasurable on the committed datasets — one needs pixels the fixtures do not carry, the other needs identifiers the harness deliberately destroys. A descendant child-control-type signature — the element's own contents, the one thing the five-signal scorer ignores — declines the residual at zero measured recall cost across 131 drift heals. It is not shipped in this spike: it requires a field on the persisted snapshot (schema addition to a Tier-1 type) and the measured benefit is one scenario. The decision of whether that trade is worth making is left open on #375. Regression guard for the measurement: `LocatorAblationTests` / `ShareXAblationTests` reconciliation guards continue to assert the residual count.
 
 ---
 
@@ -1130,14 +1147,31 @@ var engine = SelfHealingEngine.Create(
 
 Bir iyileştirme denemesinde, güvenli bir heuristik eşleşme kabul edilmeden önce, diğer *tüm* özgün locator'lar aynı yakalanmış ağaca karşı yeniden çözülür. Kazanan aday zaten başka bir locator'ın güvenli kimliğiyse — ve bu locator o sahibi `MinimumCandidateMargin` kadar geçemiyorsa — talep `HealResolutionStatus.OwnershipConflict` olarak reddedilir ve başka bir testin elemanına sessizce yönlendirilmek yerine incelemeye gönderilir. Kontrol yalnızca heuristiktir (ek LLM trafiği yok) ve depo ikiden az locator tutuyorsa etkisizdir.
 
-Kayıtlı fikstürlerde ölçüldü — Balanced profil, bileşen bazlı isim geçidi açık, her özgün locator sırayla siliniyor ve suite'in geri kalanı bağlam olarak mevcut:
+Kayıtlı ablasyon veri setlerinde ölçüldü (`LocatorAblationGenerator`, kök pencereyi hariç tutar) — Balanced profil, bileşen bazlı isim geçidi açık, her özgün locator sırayla siliniyor ve suite'in geri kalanı bağlam olarak mevcut:
 
-| Fikstür | Silinen eleman yanlış iyileştirmesi, yalnızca isim geçidi | + depo uzlaştırması |
-| :--- | :---: | :---: |
-| HandBrake 1.8.2 | %19 (8 / 43) | %2 (1 / 43) |
-| ShareX v21.0.0 | %23 (7 / 30) | %7 (2 / 30) |
+| Fikstür | Kutudan çıkan varsayılan (0.50) | Balanced + isim geçidi | + depo uzlaştırması |
+| :--- | :---: | :---: | :---: |
+| HandBrake 1.8.2 (42 silme senaryosu) | %40 (17) | %17 (7) | **%0 (0)** |
+| ShareX v21.0.0 (29 silme senaryosu) | %28 (8) | %21 (6) | **%3 (1)** |
 
-Gerçek yeniden adlandırmalar ve kaymalar etkilenmez — otomatik iyileştirme geri çağırması bayrak açık ve kapalıyken aynıdır (HandBrake %95, ShareX %47), çünkü gerçek bir halef asla başka bir locator tarafından da talep edilmez. Kalan (HandBrake'te 1, ShareX'te 2) 13. bölümün yapısal olarak erişilemez olduğunu kanıtladığı itiraz edilmeyen durumdur: silinen eleman, suite'teki başka hiçbir locator'ın sahip olmadığı bir düğüme iyileşti.
+Gerçek yeniden adlandırmalar ve kaymalar etkilenmez — bayrak açıldığında iki fikstürde de tek bir `RenamedAutomationId` senaryosu bile verdict değiştirmiyor — çünkü gerçek bir halef asla başka bir locator tarafından da talep edilmez. HandBrake **sıfır** yanlış iyileştirmeye iniyor; ShareX'in tek kalıntısı `pHotkeys`, isimsiz bir konteyner `Pane`'i; aynı bounding dikdörtgende yapısal olarak özdeş bir kardeş `Pane`'e iyileşiyor — 13. bölümün yapısal olarak erişilemez olduğunu kanıtladığı itiraz edilmeyen durum. Bu, 15. bölüme ve #375'e taşınıyor.
 
 > [!IMPORTANT]
-> **Resmi çıkarım (#370).** #141/#144 sahiplik korumasını elle kurulmuş bir yığına değil tüm depoya karşı çalıştırmak, silinen eleman yanlış iyileştirmelerini her iki fikstürde de sıfır otomatik iyileştirme geri çağırması maliyetiyle düşük tek haneli sayılara indiriyor; çünkü gerçek bir suite'te silinen bir elemanın iyileştiği komşu genellikle başka bir testin elemanıdır. Bu hâlâ itiraz edilen aday korumasıdır, bir yokluk dedektörü değil — itiraz edilmeyen kalan değişmez. Varsayılan olarak kapalıdır (`SelfHealingEngine.ReconcileAgainstRepository`); `Balanced` ve `Conservative` entegrasyon rehberi bunu açmayı önerir. Regresyon korumaları: `SelfHealingEngineTests.ReconcileAgainstRepository_On_DeclinesHealOntoAnotherLocatorsElement`, `SelfHealingEngineTests.ReconcileAgainstRepository_On_StillHealsGenuineDrift_NoOwnershipCost` ve `SelfHealingEngineTests.ReconcileAgainstRepository_Off_HealsDeletedElementOntoAnotherLocatorsElement`.
+> **Resmi çıkarım (#370).** #141/#144 sahiplik korumasını elle kurulmuş bir yığına değil tüm depoya karşı çalıştırmak, iki fikstürde de her itiraz edilen silinen-eleman yanlış iyileştirmesini sıfır otomatik iyileştirme geri çağırması maliyetiyle ortadan kaldırıyor; çünkü gerçek bir suite'te silinen bir elemanın iyileştiği komşu genellikle başka bir testin elemanıdır. Bu hâlâ itiraz edilen aday korumasıdır, bir yokluk dedektörü değil — tek itiraz edilmeyen kalan (`pHotkeys`, ShareX) değişmez. Varsayılan olarak kapalıdır (`SelfHealingEngine.ReconcileAgainstRepository`); `Balanced` ve `Conservative` entegrasyon rehberi bunu açmayı önerir. Regresyon korumaları: `SelfHealingEngineTests.ReconcileAgainstRepository_*` ve `LocatorAblationTests.HandBrakeFixture_RepositoryOwnershipReconciliation_...` ile ShareX aynası (tüm sil-her-locator ablasyonu, yanlış iyileştirme sayısı sınırlı, sıfır rename çevrimi).
+
+### 15. İtiraz Edilmeyen Kalıntı İçin Yapısal Olmayan Bir Sinyal (#375)
+
+İsim geçidi ve depo uzlaştırmasından sonra, kayıtlı veri setlerinde silinen-eleman kalıntısı **tek bir senaryo**: ShareX'in `pHotkeys`'i. HandBrake'te hiç yok. `pHotkeys` isimsiz bir `Pane`'dir; silindiğinde `1.000` skorla kardeşi `ucTaskThumbnailView`'e iyileşir — aynı kontrol türü, aynı ebeveyn, aynı kardeş rolü, boş isim ve *özdeş* bounding dikdörtgene sahip bir `Pane`. Beş skorlama bileşeninin her biri meşru bir tam eşleşmedir. İki koruma da devreye girmez: isim geçidi bir isme ihtiyaç duyar ve `ucTaskThumbnailView`'in kendi locator'ı silmeden sonra düğüme itiraz edecek kadar güvenli çözülmez.
+
+İki `Pane`'i ayıran tek şey **içerdikleridir**: `pHotkeys` bir kısayol satırları `DataGrid`'i tutar; `ucTaskThumbnailView` iç içe bir `Pane` tutar. Benzerlik skorlayıcı bir elemanın kendi alt öğelerine hiç bakmaz ve `UiElementSnapshot.Capture` bunları saklamaz, dolayısıyla bu sinyal şu an motora görünmezdir.
+
+Bu kalıntıya ve iki fikstürdeki her gerçek-drift iyileştirmesine karşı üç aday sinyal değerlendirildi:
+
+| Aday | Karar |
+| :--- | :--- |
+| **Elemanın ekran görüntüsünün algısal hash'i** | Bu veri setine uygulanamaz. Kayıtlı fikstürler piksel verisi olmayan saf `UiElementInfo` ağaçlarıdır ve snapshot görüntü saklamaz. Ölçmek için HandBrake ve ShareX'in ekran görüntüleriyle yeniden yakalanması gerekir — bu ayrı bir epic, bu spike değil. |
+| **LLM ikili "aynı / farklı / emin değil"** | Bu veri setine uygulanamaz. Ablasyon harness'ı her `AutomationId`'yi opak yapar (#97 sızıntı düzeltmesi), dolayısıyla eski ve aday snapshot'lar opak bir hash dışında bayt bayt özdeştir — modelin üzerinde akıl yürüteceği hiçbir şey yoktur. Gerçek tanımlayıcıları vermek, #97 ölçümünü anlamsız kılan sızıntıyı yeniden getirir. |
+| **Alt öğe kontrol-türü imzası** | İşe yarar. Elemanın doğrudan alt öğe kontrol türlerinin çoklu kümesini snapshot'ta sakla; iyileştirme anında adayınkiyle karşılaştır (çoklu küme Jaccard). `pHotkeys` (`{DataGrid:1}`) vs iyileştirme hedefi (`{Pane:1}`) `0.00` skorlar → reddet. İki fikstürdeki **131** güvenli gerçek-drift iyileştirmesinde her biri `1.00` skorlar — hiçbiri etkilenmez. Tüm taramada `1.00` altındaki tek diğer değer `pHotkeys`'in kendi `PositionShift` senaryosudur; o da aynı kardeşe yapılan bir yanlış iyileştirmedir. |
+
+> [!IMPORTANT]
+> **Resmi çıkarım (#375).** Tek itiraz edilmeyen kalıntı için, algısal hash ve LLM ikili doğrulaması kayıtlı veri setlerinde ölçülemez — biri fikstürlerin taşımadığı pikselleri, diğeri harness'ın kasıtlı olarak yok ettiği tanımlayıcıları gerektirir. Alt öğe kontrol-türü imzası — elemanın kendi içeriği, beş sinyalli skorlayıcının göz ardı ettiği tek şey — 131 drift iyileştirmesinde sıfır ölçülen geri çağırma maliyetiyle kalıntıyı reddeder. Bu spike'ta yayınlanmıyor: kalıcı snapshot'a bir alan gerektirir (Tier-1 tipe şema eklemesi) ve ölçülen fayda tek bir senaryodur. Bu takasın yapılmaya değer olup olmadığı kararı #375'te açık bırakıldı. Ölçüm için regresyon koruması: `LocatorAblationTests` / `ShareXAblationTests` uzlaştırma korumaları kalıntı sayısını doğrulamaya devam eder.
