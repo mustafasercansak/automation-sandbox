@@ -102,6 +102,13 @@ the winning candidate's `NameScore` must clear `0.30` on its own, independently 
 what takes Balanced from `9.3 %` to `7.6 %` false heals here at no recall cost — a deleted tab healing onto an
 adjacent one is exactly the case where structure agrees but the label does not.
 
+A second #370 guard, `SelfHealingEngine.ReconcileAgainstRepository`, catches this exact `summaryTab` case from
+the other side: `pictureTab` is *itself* an authored locator, so once the engine re-resolves the rest of the
+suite against the live tree it sees the node is already owned and declines the heal. Across the full ablation it
+takes deleted-element false heals from `19 %` to `2 %` on HandBrake with no recall cost
+([the measurement](../benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)); the
+handful it cannot catch are deletes that land on a control no other test uses.
+
 Re-running both scenarios with `SelfHealingEngine.Create(ThresholdProfile.Balanced)` (`MinimumConfidence = 0.75`):
 
 | Scenario | Score | Default (0.50) | Balanced (0.75) |

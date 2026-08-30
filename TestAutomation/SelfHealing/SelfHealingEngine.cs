@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LlmHealing;
@@ -20,6 +21,7 @@ namespace SelfHealing
         private readonly IReadOnlyList<ILlmHealingProvider> _llmProviders;
         private readonly IHealingReportSink? _reportSink;
         private readonly HealingMode _mode;
+        private readonly bool _reconcileAgainstRepository;
 
         public LocatorRepository? Repository => _repository;
         public SimilarityWeights Weights => _weights;
@@ -27,12 +29,23 @@ namespace SelfHealing
         public IHealingReportSink? ReportSink => _reportSink;
         public HealingMode Mode => _mode;
 
+        /// <summary>
+        /// When true and a repository is configured, a confident heuristic match is cross-checked
+        /// against the rest of the repository (#370): if the winning candidate is already the
+        /// current, confidently-resolving identity of another authored locator, this locator's
+        /// claim is declined as an <see cref="HealResolutionStatus.OwnershipConflict"/> instead of
+        /// silently re-pointing onto an element that belongs to a different test. Off by default;
+        /// costs one extra heuristic resolution per other repository entry, only on a heal attempt.
+        /// </summary>
+        public bool ReconcileAgainstRepository => _reconcileAgainstRepository;
+
         public SelfHealingEngine(
             LocatorRepository? repository = null,
             SimilarityWeights? weights = null,
             IEnumerable<ILlmHealingProvider>? llmProviders = null,
             IHealingReportSink? reportSink = null,
-            HealingMode mode = HealingMode.Review)
+            HealingMode mode = HealingMode.Review,
+            bool reconcileAgainstRepository = false)
         {
             _repository = repository;
             _weights = weights ?? SimilarityWeights.Default;
@@ -40,6 +53,7 @@ namespace SelfHealing
             _llmProviders = llmProviders != null ? new List<ILlmHealingProvider>(llmProviders) : new List<ILlmHealingProvider>();
             _reportSink = reportSink ?? HealingReportFileSink.FromEnvironment();
             _mode = mode;
+            _reconcileAgainstRepository = reconcileAgainstRepository;
         }
 
         /// <summary>
@@ -50,14 +64,16 @@ namespace SelfHealing
             LocatorRepository? repository = null,
             IEnumerable<ILlmHealingProvider>? llmProviders = null,
             IHealingReportSink? reportSink = null,
-            HealingMode mode = HealingMode.Review)
+            HealingMode mode = HealingMode.Review,
+            bool reconcileAgainstRepository = false)
         {
             return new SelfHealingEngine(
                 repository: repository,
                 weights: SimilarityWeights.FromProfile(profile),
                 llmProviders: llmProviders,
                 reportSink: reportSink,
-                mode: mode);
+                mode: mode,
+                reconcileAgainstRepository: reconcileAgainstRepository);
         }
 
         /// <summary>
@@ -90,6 +106,7 @@ namespace SelfHealing
             }
 
             var healResult = await ResolveAsync(
+                locatorKey,
                 expected,
                 currentTreeRoot,
                 log,
@@ -134,21 +151,94 @@ namespace SelfHealing
             }
         }
 
-        private Task<HealResult> ResolveAsync(
+        private async Task<HealResult> ResolveAsync(
+            string locatorKey,
             UiElementInfo expected,
             UiElementInfo currentTreeRoot,
             Action<string>? log,
             string? platform,
             CancellationToken cancellationToken)
         {
-            return SelfHealingResolver.ResolveAsync(
+            var result = await SelfHealingResolver.ResolveAsync(
                 expected,
                 currentTreeRoot,
                 _llmProviders,
                 _weights,
                 log,
                 platform,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
+
+            return ApplyRepositoryOwnershipReconciliation(locatorKey, result, currentTreeRoot, log);
+        }
+
+        // #370: a confident match whose winning candidate is already the current, confidently
+        // resolving identity of a *different* authored locator is almost always a false heal -
+        // the classic "the element I was pointing at was deleted, so I healed onto the neighbour
+        // that belongs to another test" failure. Re-resolving every other repository entry against
+        // the same live tree and rejecting the claim when a stronger sibling already owns the node
+        // is the one structural signal that separates this case from a genuine drift, because it
+        // brings in evidence the single-locator scorer never sees: what the rest of the suite
+        // still resolves to. Opt-in (ReconcileAgainstRepository); heuristic-only, so no extra LLM
+        // traffic; a no-op when the repository holds fewer than two locators.
+        private HealResult ApplyRepositoryOwnershipReconciliation(
+            string locatorKey,
+            HealResult result,
+            UiElementInfo currentTreeRoot,
+            Action<string>? log)
+        {
+            if (!_reconcileAgainstRepository || _repository == null)
+            {
+                return result;
+            }
+
+            if (!result.IsConfident || result.Matched == null)
+            {
+                return result;
+            }
+
+            List<LocatorRecord> others;
+            try
+            {
+                others = _repository.Load().Locators
+                    .Where(r => r?.Snapshot != null
+                        && !string.IsNullOrEmpty(r.LocatorKey)
+                        && !string.Equals(r.LocatorKey, locatorKey, StringComparison.Ordinal))
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                log?.Invoke($"[SelfHealingEngine] Repository reconciliation skipped for locator '{locatorKey}': could not load the repository ({ex.GetType().Name}).");
+                return result;
+            }
+
+            foreach (var other in others)
+            {
+                var owner = SelfHealingResolver.Resolve(other.Snapshot, currentTreeRoot, _weights, log: null);
+                if (!owner.IsConfident || !ReferenceEquals(owner.Matched, result.Matched))
+                {
+                    continue;
+                }
+
+                // Another locator still resolves confidently onto this exact node. Keep the claim
+                // only if this locator beats that owner by the same margin the scorer already
+                // requires between competing candidates; otherwise the node is spoken for.
+                if (result.Source == HealSource.Heuristic
+                    && CandidateMargin.HasSufficientMargin(result.Score, owner.Score, _weights.MinimumCandidateMargin))
+                {
+                    continue;
+                }
+
+                result.RejectedByReconciliation = true;
+                result.ReconciliationDisposition = BatchReconciliationDisposition.DeclinedByStrongerClaim;
+                result.ResolutionStatus = HealResolutionStatus.OwnershipConflict;
+                log?.Invoke(
+                    $"[SelfHealingEngine] Repository reconciliation declined locator '{locatorKey}': its winning candidate " +
+                    $"(score {result.Score:F3}) is the current identity of authored locator '{other.LocatorKey}' " +
+                    $"(score {owner.Score:F3}). Routing to review instead of healing onto another test's element.");
+                return result;
+            }
+
+            return result;
         }
 
         private void PersistAcceptedHeal(
@@ -289,7 +379,7 @@ namespace SelfHealing
                 }
 
                 var currentTree = captureTreeRoot();
-                var healResult = await ResolveAsync(target, currentTree, log, platform, cancellationToken).ConfigureAwait(false);
+                var healResult = await ResolveAsync(locatorKey, target, currentTree, log, platform, cancellationToken).ConfigureAwait(false);
 
                 if (!healResult.IsConfident || healResult.Matched == null)
                 {

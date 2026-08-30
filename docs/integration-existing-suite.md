@@ -183,15 +183,47 @@ Identical shape; `captureTreeRoot` comes from `AutomationSandbox.Discovery` on a
 
 ---
 
-## 5. Common questions
+## 5. Deleted elements — repository ownership reconciliation
+
+The failure mode the engine cannot solve with a single locator's structure alone: an element is
+**deleted**, and the next-best structural match is a *different* control the suite already tests. The
+scorer sees a strong parent/type/position match and heals onto it — a false green.
+
+`SelfHealingEngine` has an opt-in guard for the common shape of this. Turn it on with
+`reconcileAgainstRepository: true`:
+
+```csharp
+var engine = SelfHealingEngine.Create(
+    ThresholdProfile.Balanced,
+    repository: repo,
+    mode: HealingMode.AutoHeal,
+    reconcileAgainstRepository: true);
+```
+
+Before accepting a confident match, the engine re-resolves every *other* locator in the repository
+against the same captured tree. If the candidate it wants is already the confident identity of
+another locator, the heal is declined (`HealResolutionStatus.OwnershipConflict`) and routed to
+review. It is heuristic-only — no extra LLM calls — and costs one resolution per other repository
+entry, only on a heal attempt.
+
+Measured on the project's two real fixtures (Balanced profile, every locator deleted in turn):
+deleted-element false heals drop from **19 % → 2 %** (HandBrake) and **23 % → 7 %** (ShareX), with
+**no change** to genuine-rename recall. The remainder is the case no structural signal reaches — a
+delete that lands on a node nothing else in the suite uses
+([the measurement](benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)).
+Recommended on for the `Balanced` and `Conservative` profiles.
+
+---
+
+## 6. Common questions
 
 - **Does this replace my Page Objects?** No. A Page Object still exposes `SubmitButton`; its *implementation*
   routes through `ExecuteWithHealingAsync` instead of a raw locator call.
-- **What about a deleted element?** The engine is designed to decline rather than heal onto a neighbour — but this
-  is [a hard, measured limit](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97),
-  not a solved problem. Keep `AutoHeal` paired with a
-  published healing report so a wrong heal is visible, and consider the `Conservative` profile for suites where a
-  false-green run is expensive.
+- **What about a deleted element?** Turn on [repository ownership reconciliation](#5-deleted-elements--repository-ownership-reconciliation)
+  — it declines the most common shape (healing onto another test's control) at no recall cost. Past that it is
+  [a hard, measured limit](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97),
+  not a solved problem: keep `AutoHeal` paired with a published healing report so a wrong heal is visible, and
+  consider the `Conservative` profile for suites where a false-green run is expensive.
 - **Does anything get sent to an LLM?** Only if you configure a provider *and* the heuristic is not confident, and
   then only a bounded top-N shortlist with [PII/secret redaction on by default](llm-security-model.md). No provider,
   no network calls.

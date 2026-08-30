@@ -555,6 +555,34 @@ Following the negative results of #179, #247 investigated the two remaining untr
 > [!IMPORTANT]
 > **Formal finding (#247).** Neither contested-residual contention nor environmental re-discovery perturbation provides an unassisted absence detector. Multi-locator candidate contention is an ownership collision guard that leaves $100\%$ of uncontested removals undetected ($0/15$ across HandBrake and ShareX), and environmental re-discovery jitter produces $100\%$ stability on decoy neighbours ($42/42$ and $14/14$) because UI decoys are permanent structural nodes. Unassisted absence detection remains mathematically bounded by the structural score overlap floor ($[0.665, 0.955]$ on removed decoys vs $[0.749, 0.874]$ on true drift). Regression guards: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`, `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern`, and `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`.
 
+### 14. Repository Ownership Reconciliation in the Engine (#370)
+
+Sections 10–13 established one-to-one ownership reconciliation as a **contested-candidate guard**: when two broken locators claim the same surviving node, a joint solver can award it to the stronger claim and decline the other. Its documented blind spot is the *uncontested* false heal — a deleted element that heals onto an incidental node no other test wants.
+
+`SelfHealingEngine` now applies that guard automatically, using the **rest of the locator repository** as the contention set instead of a hand-assembled batch. It is opt-in per engine:
+
+```csharp
+var engine = SelfHealingEngine.Create(
+    ThresholdProfile.Balanced,
+    repository: repo,
+    mode: HealingMode.AutoHeal,
+    reconcileAgainstRepository: true);   // #370
+```
+
+On a heal attempt, before a confident heuristic match is accepted, every *other* authored locator is re-resolved against the same captured tree. If the winning candidate is already the confident identity of another locator — and this locator does not beat that owner by `MinimumCandidateMargin` — the claim is declined as `HealResolutionStatus.OwnershipConflict` and routed to review instead of silently re-pointing onto another test's element. The check is heuristic-only (no extra LLM traffic) and a no-op when the repository holds fewer than two locators.
+
+Measured on the committed fixtures — Balanced profile, per-component name gate on, every authored locator deleted in turn with the rest of the suite present as context:
+
+| Fixture | Deleted-element false heal, name gate only | + repository reconciliation |
+| :--- | :---: | :---: |
+| HandBrake 1.8.2 | 19 % (8 / 43) | 2 % (1 / 43) |
+| ShareX v21.0.0 | 23 % (7 / 30) | 7 % (2 / 30) |
+
+Genuine renames and drifts are untouched — auto-heal recall is identical with the flag on and off (HandBrake 95 %, ShareX 47 %), because a true successor is never also claimed by another locator. The residual (1 on HandBrake, 2 on ShareX) is the uncontested case Section 13 proved is out of structural reach: the deleted element healed onto a node no other locator in the suite owns.
+
+> [!IMPORTANT]
+> **Formal finding (#370).** Running the #141/#144 ownership guard against the whole repository, not just a hand-assembled batch, cuts deleted-element false heals to low single digits on both fixtures at zero auto-heal recall cost, because in a real suite the neighbour a deleted element heals onto is usually another test's element. It is still the contested-candidate guard, not an absence detector — the uncontested residual is unchanged. Off by default (`SelfHealingEngine.ReconcileAgainstRepository`); the `Balanced` and `Conservative` integration guidance recommends enabling it. Regression guards: `SelfHealingEngineTests.ReconcileAgainstRepository_On_DeclinesHealOntoAnotherLocatorsElement`, `SelfHealingEngineTests.ReconcileAgainstRepository_On_StillHealsGenuineDrift_NoOwnershipCost`, and `SelfHealingEngineTests.ReconcileAgainstRepository_Off_HealsDeletedElementOntoAnotherLocatorsElement`.
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -1085,3 +1113,31 @@ Tek-hedefli sezgisel sinyaller (§5) ve çoklu-sağlayıcılı LLM mutabakatınd
 #### Resmi Çıkarım
 > [!IMPORTANT]
 > **Resmi çıkarım (#247).** Ne itiraz edilen kalıntı çakışması ne de çevresel yeniden keşif pertürbasyonu yardımsız bir yokluk dedektörü sağlayabilir. Çoklu-locator aday itirazı, itiraz edilmeyen silinmelerin $\%100$'ünü tespit edilemez bırakan ($0/15$) bir sahiplik çakışması korumasıdır; çevresel yeniden keşif jitter'ı ise UI yanıltıcıları kalıcı yapısal düğümler olduğu için yanıltıcılar üzerinde $\%100$ kararlılık üretir ($42/42$ ve $14/14$). Yardımsız yokluk tespiti, yapısal skor çakışması tabanıyla ($[0.665, 0.955]$ vs $[0.749, 0.874]$) matematiksel olarak sınırlı kalmaya devam eder. Regresyon korumaları: `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_ContestedCandidate_LeavesUncontestedRemovalsUndetected`, `LocatorAblationTests.HandBrakeFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`, `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_ContestedCandidate_MatchesHandBrakePattern` ve `ShareXAblationTests.ShareXFixture_AbsenceInvestigation_EnvironmentalPerturbation_DecoysPersistUnderCaptureJitter`.
+
+### 14. Motor İçinde Depo Sahiplik Uzlaştırması (#370)
+
+10–13. bölümler bire-bir sahiplik uzlaştırmasını bir **itiraz edilen aday koruması** olarak kanıtladı: iki kırık locator aynı hayatta kalan düğümü talep ettiğinde, ortak çözücü onu daha güçlü talebe verip diğerini reddedebilir. Belgelenmiş kör noktası *itiraz edilmeyen* yanlış iyileştirmedir — silinen bir elemanın, başka hiçbir testin istemediği tesadüfi bir düğüme iyileşmesi.
+
+`SelfHealingEngine` artık bu korumayı otomatik uyguluyor; itiraz kümesi olarak elle kurulmuş bir yığın yerine **locator deposunun geri kalanını** kullanıyor. Motor bazında isteğe bağlıdır:
+
+```csharp
+var engine = SelfHealingEngine.Create(
+    ThresholdProfile.Balanced,
+    repository: repo,
+    mode: HealingMode.AutoHeal,
+    reconcileAgainstRepository: true);   // #370
+```
+
+Bir iyileştirme denemesinde, güvenli bir heuristik eşleşme kabul edilmeden önce, diğer *tüm* özgün locator'lar aynı yakalanmış ağaca karşı yeniden çözülür. Kazanan aday zaten başka bir locator'ın güvenli kimliğiyse — ve bu locator o sahibi `MinimumCandidateMargin` kadar geçemiyorsa — talep `HealResolutionStatus.OwnershipConflict` olarak reddedilir ve başka bir testin elemanına sessizce yönlendirilmek yerine incelemeye gönderilir. Kontrol yalnızca heuristiktir (ek LLM trafiği yok) ve depo ikiden az locator tutuyorsa etkisizdir.
+
+Kayıtlı fikstürlerde ölçüldü — Balanced profil, bileşen bazlı isim geçidi açık, her özgün locator sırayla siliniyor ve suite'in geri kalanı bağlam olarak mevcut:
+
+| Fikstür | Silinen eleman yanlış iyileştirmesi, yalnızca isim geçidi | + depo uzlaştırması |
+| :--- | :---: | :---: |
+| HandBrake 1.8.2 | %19 (8 / 43) | %2 (1 / 43) |
+| ShareX v21.0.0 | %23 (7 / 30) | %7 (2 / 30) |
+
+Gerçek yeniden adlandırmalar ve kaymalar etkilenmez — otomatik iyileştirme geri çağırması bayrak açık ve kapalıyken aynıdır (HandBrake %95, ShareX %47), çünkü gerçek bir halef asla başka bir locator tarafından da talep edilmez. Kalan (HandBrake'te 1, ShareX'te 2) 13. bölümün yapısal olarak erişilemez olduğunu kanıtladığı itiraz edilmeyen durumdur: silinen eleman, suite'teki başka hiçbir locator'ın sahip olmadığı bir düğüme iyileşti.
+
+> [!IMPORTANT]
+> **Resmi çıkarım (#370).** #141/#144 sahiplik korumasını elle kurulmuş bir yığına değil tüm depoya karşı çalıştırmak, silinen eleman yanlış iyileştirmelerini her iki fikstürde de sıfır otomatik iyileştirme geri çağırması maliyetiyle düşük tek haneli sayılara indiriyor; çünkü gerçek bir suite'te silinen bir elemanın iyileştiği komşu genellikle başka bir testin elemanıdır. Bu hâlâ itiraz edilen aday korumasıdır, bir yokluk dedektörü değil — itiraz edilmeyen kalan değişmez. Varsayılan olarak kapalıdır (`SelfHealingEngine.ReconcileAgainstRepository`); `Balanced` ve `Conservative` entegrasyon rehberi bunu açmayı önerir. Regresyon korumaları: `SelfHealingEngineTests.ReconcileAgainstRepository_On_DeclinesHealOntoAnotherLocatorsElement`, `SelfHealingEngineTests.ReconcileAgainstRepository_On_StillHealsGenuineDrift_NoOwnershipCost` ve `SelfHealingEngineTests.ReconcileAgainstRepository_Off_HealsDeletedElementOntoAnotherLocatorsElement`.

@@ -1495,6 +1495,141 @@ namespace ScenarioRunner
                 });
         }
 
+        // --- #370: repository ownership reconciliation ------------------------------------------
+
+        [Fact]
+        public void SelfHealingEngine_ReconcileAgainstRepository_DefaultsOff()
+        {
+            Assert.False(new SelfHealingEngine().ReconcileAgainstRepository);
+            Assert.False(SelfHealingEngine.Create(ThresholdProfile.Balanced).ReconcileAgainstRepository);
+            Assert.True(new SelfHealingEngine(reconcileAgainstRepository: true).ReconcileAgainstRepository);
+        }
+
+        [Fact]
+        public async Task ReconcileAgainstRepository_Off_HealsDeletedElementOntoAnotherLocatorsElement()
+        {
+            // The classic deleted-element false heal: 'titles_combo' points at a control that no
+            // longer exists; the only structurally similar survivor is the element another
+            // authored locator ('angle_combo') already owns. Without reconciliation the engine
+            // accepts it.
+            var (repository, expected, tree) = BuildOwnershipConflictScenario();
+            var engine = new SelfHealingEngine(repository, SimilarityWeights.FromProfile(ThresholdProfile.Balanced),
+                reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Observe,
+                reconcileAgainstRepository: false);
+
+            var result = await engine.ResolveAndRecordAsync("titles_combo", expected, tree);
+
+            Assert.True(result.IsConfident);
+            Assert.Equal("angleCombo", result.Matched!.AutomationId);
+            Assert.False(result.RejectedByReconciliation);
+        }
+
+        [Fact]
+        public async Task ReconcileAgainstRepository_On_DeclinesHealOntoAnotherLocatorsElement()
+        {
+            var (repository, expected, tree) = BuildOwnershipConflictScenario();
+            var engine = new SelfHealingEngine(repository, SimilarityWeights.FromProfile(ThresholdProfile.Balanced),
+                reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Observe,
+                reconcileAgainstRepository: true);
+
+            var result = await engine.ResolveAndRecordAsync("titles_combo", expected, tree);
+
+            Assert.False(result.IsConfident);
+            Assert.True(result.RejectedByReconciliation);
+            Assert.Equal(HealResolutionStatus.OwnershipConflict, result.ResolutionStatus);
+            Assert.Equal(BatchReconciliationDisposition.DeclinedByStrongerClaim, result.ReconciliationDisposition);
+            // The proposed match is still available for diagnostics, just not acceptable.
+            Assert.Equal("angleCombo", result.Matched!.AutomationId);
+        }
+
+        [Fact]
+        public async Task ReconcileAgainstRepository_On_StillHealsGenuineDrift_NoOwnershipCost()
+        {
+            // Both combos still exist; 'titles_combo' only lost its AutomationId. No other
+            // locator resolves onto its element, so reconciliation must leave the heal alone.
+            var repository = new LocatorRepository(_tempRepoPath);
+            var titles = ComboSnapshot("titlesCombo", 0);
+            var angle = ComboSnapshot("angleCombo", 1);
+            repository.Upsert("titles_combo", titles, platform: "windows-uia");
+            repository.Upsert("angle_combo", angle, platform: "windows-uia");
+
+            var tree = new UiElementInfo { ControlType = "Window", Children =
+            {
+                new UiElementInfo { ControlType = "ToolBar", Children =
+                {
+                    ComboSnapshot("titlesCombo_v2", 0),
+                    ComboSnapshot("angleCombo", 1),
+                }},
+            }};
+
+            var engine = new SelfHealingEngine(repository, SimilarityWeights.FromProfile(ThresholdProfile.Balanced),
+                reportSink: new HealingReportFileSink(_tempReportPath), mode: HealingMode.Observe,
+                reconcileAgainstRepository: true);
+
+            var result = await engine.ResolveAndRecordAsync("titles_combo", titles, tree);
+
+            Assert.True(result.IsConfident);
+            Assert.False(result.RejectedByReconciliation);
+            Assert.Equal("titlesCombo_v2", result.Matched!.AutomationId);
+        }
+
+        private static UiElementInfo ComboSnapshot(string automationId, int siblingIndex, int siblingCount = 2) => new()
+        {
+            ControlType = "ComboBox",
+            AutomationId = automationId,
+            ParentControlType = "ToolBar",
+            SiblingIndex = siblingIndex,
+            SiblingCount = siblingCount,
+            BoundingRectangle = new BoundingRectangle(10, 10 + siblingIndex * 34, 120, 24),
+        };
+
+        private (LocatorRepository repository, UiElementInfo expected, UiElementInfo tree) BuildOwnershipConflictScenario()
+        {
+            var repository = new LocatorRepository(_tempRepoPath);
+            // Two adjacent, structurally indistinguishable toolbar combo boxes. 'titlesCombo' is
+            // then deleted and the survivor reflows into the single remaining slot, so it is now
+            // a perfect structural match for BOTH stale locators - and it is 'angle_combo' that
+            // still legitimately owns it.
+            var stale = new UiElementInfo
+            {
+                ControlType = "ComboBox",
+                AutomationId = "titlesCombo",
+                ParentControlType = "ToolBar",
+                SiblingIndex = 0,
+                SiblingCount = 1,
+                BoundingRectangle = new BoundingRectangle(10, 10, 120, 24),
+            };
+            var angle = new UiElementInfo
+            {
+                ControlType = "ComboBox",
+                AutomationId = "angleCombo",
+                ParentControlType = "ToolBar",
+                SiblingIndex = 0,
+                SiblingCount = 1,
+                BoundingRectangle = new BoundingRectangle(10, 10, 120, 24),
+            };
+            repository.Upsert("titles_combo", stale, platform: "windows-uia");
+            repository.Upsert("angle_combo", angle, platform: "windows-uia");
+
+            var tree = new UiElementInfo { ControlType = "Window", Children =
+            {
+                new UiElementInfo { ControlType = "ToolBar", Children =
+                {
+                    new UiElementInfo
+                    {
+                        ControlType = "ComboBox",
+                        AutomationId = "angleCombo",
+                        ParentControlType = "ToolBar",
+                        SiblingIndex = 0,
+                        SiblingCount = 1,
+                        BoundingRectangle = new BoundingRectangle(10, 10, 120, 24),
+                    },
+                }},
+            }};
+
+            return (repository, stale, tree);
+        }
+
         private static void BuildAmbiguousResolutionScenario(out UiElementInfo expected, out UiElementInfo currentTree)
         {
             expected = new UiElementInfo
