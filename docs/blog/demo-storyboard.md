@@ -49,11 +49,21 @@ shot 3, never 4 or 6.
 
 ---
 
-## After capture
+## What shipped (#352 / #353)
 
-- [ ] Commit `docs/assets/demo.gif`
-- [ ] Replace the `<!-- TODO(#345) -->` placeholder in `README.md` (directly under the one-line description) with:
-      `![Automation Sandbox healing a broken locator and writing the decision to an audit report](docs/assets/demo.gif)`
-- [ ] Add the same GIF near the top of `docs/index.md`
+The GIF in `docs/assets/demo.gif` is a **terminal render of a real `HeuristicHealingQuickstart`
+run**, not a screen capture. It follows the shot list above but drops shot 6's separate
+HTML-report cut, folding the report's real fields (`Outcome: accepted`, `Score 0.90`,
+`RunnerUpScore 0.60`, `Source: heuristic`, `EvidenceCoverage 1.0`) into the final frames as
+`healing-report.json` text. Every number is verbatim from that run's emitted report.
+
+Regenerate it with [`gen-demo-gif.py`](gen-demo-gif.py) — the header explains how to refresh
+the source numbers first. A future capture that adds the live red→green test run and the
+rendered HTML report (shots 1–2, 6) can supersede it.
+
+## After capture (checklist)
+
+- [x] Commit `docs/assets/demo.gif`
+- [x] Replace the `<!-- TODO -->` placeholder in `README.md` with the embed
+- [x] Add the same GIF near the top of `docs/index.md`
 - [ ] Check it on github.com at mobile width
-- [ ] Tick the acceptance criteria on #345

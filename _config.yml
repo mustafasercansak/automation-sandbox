@@ -29,3 +29,4 @@ exclude:
   - docs/nuget
   - docs/blog/demo-storyboard.md
   - docs/blog/distribution-kit.md
+  - docs/blog/gen-demo-gif.py

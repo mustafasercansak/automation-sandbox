@@ -12,6 +12,8 @@ title: Documentation Hub - Automation Sandbox
 
 Welcome to **Automation Sandbox**! / **Automation Sandbox** projesine hoş geldiniz!
 
+![Automation Sandbox healing a broken locator and writing the decision to an audit report](assets/demo.gif)
+
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Documentation](#-english-overview)
 > - [🇹🇷 Türkçe Dökümantasyon](#-türkçe-genel-bakış)
