@@ -253,12 +253,10 @@ jobs:
             exit 0
           }
 
-          $newProps  = ($propsText -replace '<Version>[^<]+</Version>', "<Version>$v</Version>")
-          $newSample = ((Get-Content $sample -Raw) -replace '(<PackageReference\s+Include="AutomationSandbox\.SelfHealing"\s+Version=")[^"]+(")', ('${1}' + $v + '${2}'))
-          # Match the file's own trailing-newline convention rather than always stripping it
-          # (-NoNewline did, producing a spurious "no newline at EOF" churn every release).
-          Set-Content $props  -Value $newProps  -NoNewline:(-not $propsText.EndsWith("`n"))
-          Set-Content $sample -Value $newSample -NoNewline:(-not ((Get-Content $sample -Raw).EndsWith("`n")))
+          # -replace works on the raw string, so $newProps/$newSample already carry whatever
+          # trailing newline the file had; -NoNewline stops Set-Content adding a second one.
+          ($propsText -replace '<Version>[^<]+</Version>', "<Version>$v</Version>") | Set-Content $props -NoNewline
+          ((Get-Content $sample -Raw) -replace '(<PackageReference\s+Include="AutomationSandbox\.SelfHealing"\s+Version=")[^"]+(")', ('${1}' + $v + '${2}')) | Set-Content $sample -NoNewline
 
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -270,17 +268,32 @@ jobs:
           # ref for the lease to check, and this branch is entirely workflow-owned, so a lease
           # buys nothing. --force also lets a re-run overwrite a branch a prior failed run left.
           git push origin $branch --force
+          "Pushed bump branch ``$branch`` (Directory.Build.props + sample pin -> $v)." >> $env:GITHUB_STEP_SUMMARY
 
           $body = "Automated follow-up from the release workflow: version $v is published to nuget.org, so Directory.Build.props <Version> and the HeuristicHealingQuickstart package pin are bumped to match. Safe to merge once CI is green - the exact-version consumer restore already ran in the release job (verify-published.ps1), so nothing here waits on nuget.org indexing."
           $existing = gh pr list --head $branch --state open --json url --jq '.[0].url // empty'
           if ($existing) {
             Write-Host "Bump PR already open: $existing"
             "SSoT-bump PR (already open): $existing" >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            $url = gh pr create --base main --head $branch --label packaging --title "chore(release): bump SSoT version to $v" --body $body
-            if ($LASTEXITCODE -ne 0 -or -not $url) {
-              throw "gh pr create failed for $branch (exit $LASTEXITCODE). The version is published; open the SSoT-bump PR by hand from branch '$branch'."
-            }
-            Write-Host "Opened bump PR: $url"
-            "SSoT-bump PR: $url" >> $env:GITHUB_STEP_SUMMARY
+            exit 0
           }
+
+          $createOutput = gh pr create --base main --head $branch --label packaging --title "chore(release): bump SSoT version to $v" --body $body 2>&1
+          if ($LASTEXITCODE -eq 0 -and $createOutput -match 'https://github\.com/\S+/pull/\d+') {
+            Write-Host "Opened bump PR: $($Matches[0])"
+            "SSoT-bump PR: $($Matches[0])" >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+
+          # The one non-fatal failure: the repo/org policy "Allow GitHub Actions to create and
+          # approve pull requests" is off, so GITHUB_TOKEN cannot open the PR. The branch is
+          # already pushed - the only thing left is a human clicking "Compare & pull request"
+          # (or a maintainer enabling that setting / wiring a PAT). Do not fail the release for it.
+          if ($createOutput -match 'not permitted to create or approve pull requests') {
+            Write-Warning "GitHub Actions is not allowed to open PRs in this repo; the bump branch is pushed - open the PR by hand."
+            "> [!WARNING]" >> $env:GITHUB_STEP_SUMMARY
+            "> Could not auto-open the SSoT-bump PR (`"GitHub Actions is not permitted to create ... pull requests`"). The branch ``$branch`` is pushed - open it via <https://github.com/$env:GITHUB_REPOSITORY/compare/main...$branch?expand=1>, or enable **Settings -> Actions -> General -> Allow GitHub Actions to create and approve pull requests**." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+
+          throw "gh pr create failed for $branch (exit $LASTEXITCODE): $createOutput"
