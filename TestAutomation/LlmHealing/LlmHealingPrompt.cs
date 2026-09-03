@@ -1,3 +1,5 @@
+using System;
+using System.Text;
 using System.Text.Json;
 using UiModel;
 namespace LlmHealing
@@ -111,7 +113,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
 
         public static (string? CandidateId, double Confidence, string Reasoning) ParseResponse(string rawText)
         {
-            var json = FindFirstResponseJsonObject(rawText);
+            var json = FindFirstResponseJsonObject(rawText) ?? TryRepairTruncatedResponseObject(rawText);
             if (json is null)
             {
                 // Provider diagnostics append the bounded HTTP response body. Repeating the
@@ -209,6 +211,124 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
         }
 
         private static double? RoundOrNull(double? value) => value.HasValue ? Math.Round(value.Value, 2) : (double?)null;
+
+        // Last-resort recovery for a response whose answer object was cut off mid-value.
+        // Observed with Groq's openai/gpt-oss-120b (harmony reasoning format, #378): `content`
+        // ends inside the "reasoning" string with no closing quote or brace, but "candidateId"
+        // and "confidence" are already complete earlier in the object. Finds the '{' that opens
+        // the object containing "candidateId", walks it tracking string/escape/depth, and if it
+        // runs off the end closes the open string and any open braces so the object parses.
+        // Bounded single pass; returns null when there is nothing recoverable.
+        private static string? TryRepairTruncatedResponseObject(string rawText)
+        {
+            var marker = rawText.IndexOf("\"candidateId\"", StringComparison.Ordinal);
+            if (marker < 0)
+            {
+                marker = rawText.IndexOf("\"confidence\"", StringComparison.Ordinal);
+            }
+
+            if (marker < 0)
+            {
+                return null;
+            }
+
+            var start = rawText.LastIndexOf('{', marker);
+            if (start < 0)
+            {
+                return null;
+            }
+
+            var depth = 0;
+            var inString = false;
+            var escaping = false;
+            var end = -1;
+            var truncateAt = -1;
+            for (var i = start; i < rawText.Length; i++)
+            {
+                var c = rawText[i];
+                if (inString)
+                {
+                    if (escaping)
+                    {
+                        escaping = false;
+                    }
+                    else if (c == '\\')
+                    {
+                        escaping = true;
+                    }
+                    else if (c == '"')
+                    {
+                        inString = false;
+                    }
+                    else if (c < ' ')
+                    {
+                        // A raw control character inside a string is invalid JSON - this is where
+                        // the real answer ended and folded-in chain-of-thought prose began. Cut
+                        // here, close the string, and close the open braces.
+                        truncateAt = i;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = true;
+                }
+                else if (c == '{')
+                {
+                    depth++;
+                }
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+            }
+
+            string candidate;
+            if (end >= 0)
+            {
+                candidate = rawText.Substring(start, end - start + 1);
+            }
+            else
+            {
+                var bodyEnd = truncateAt >= 0 ? truncateAt : rawText.Length;
+                var builder = new StringBuilder(rawText.Substring(start, bodyEnd - start));
+                if (inString)
+                {
+                    builder.Append('"');
+                }
+
+                for (var d = 0; d < depth; d++)
+                {
+                    builder.Append('}');
+                }
+
+                candidate = builder.ToString();
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(candidate);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object
+                    && (doc.RootElement.TryGetProperty("candidateId", out _)
+                        || doc.RootElement.TryGetProperty("confidence", out _)))
+                {
+                    return candidate;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            return null;
+        }
 
         private static string? FindFirstResponseJsonObject(string rawText)
         {

@@ -127,17 +127,30 @@ namespace LlmHealing
         {
             using var doc = JsonDocument.Parse(responseBody);
             var choices = doc.RootElement.GetProperty("choices");
-            if (choices.GetArrayLength() > 0)
+            if (choices.GetArrayLength() == 0 || !choices[0].TryGetProperty("message", out var messageProp))
             {
-                var firstChoice = choices[0];
-                if (firstChoice.TryGetProperty("message", out var messageProp) &&
-                    messageProp.TryGetProperty("content", out var contentProp))
-                {
-                    return contentProp.GetString() ?? "";
-                }
+                return "";
             }
 
-            return "";
+            var content = messageProp.TryGetProperty("content", out var contentProp)
+                ? contentProp.GetString() ?? ""
+                : "";
+
+            // Reasoning models (e.g. Groq's openai/gpt-oss-120b in the harmony format, #378) can
+            // emit a truncated JSON object in `content` and carry the usable answer - or its own
+            // JSON block - in a non-standard sibling `reasoning` field. Fold both in so the
+            // response scanner and the truncated-object repair see whatever is actually present.
+            var reasoning = messageProp.TryGetProperty("reasoning", out var reasoningProp)
+                            && reasoningProp.ValueKind == JsonValueKind.String
+                ? reasoningProp.GetString() ?? ""
+                : "";
+
+            if (string.IsNullOrEmpty(reasoning))
+            {
+                return content;
+            }
+
+            return string.IsNullOrEmpty(content) ? reasoning : content + "\n" + reasoning;
         }
     }
 }
