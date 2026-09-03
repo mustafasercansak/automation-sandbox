@@ -553,7 +553,7 @@ var result = pipeline.Run(request, window, repository);
 File.WriteAllText("GeneratedCustomerDesktopTest.cs", result.FlaUiCSharpTestCode);
 ```
 
-> **Note on Report Parity:** `IntentDesktopAutomationPipelineResult` produces `FlaUiCSharpTestCode`, but does not currently emit an `IntentFlowReportDocument` — intent flow report rendering is web-pipeline only for now (unlike the unified healing reports which cover both desktop and web).
+> **Note on Report Parity:** `IntentDesktopAutomationPipelineResult` produces both `FlaUiCSharpTestCode` and, in `.Report`, the same schema-v4 `IntentFlowReportDocument` (JSON + HTML) as the web pipeline — `Platform = "desktop"`, every per-step field populated (#372).
 
 Matching favors `AutomationId` when the recorded snapshot has one, falling back to `Name`
 and then bare `ControlType` - the same tiering `MainFormScenarioTests` uses by hand for
