@@ -136,6 +136,8 @@ An LLM pick is accepted only when **at least two providers independently name th
 
 The nightly workflow enforces this rule with a live gate using Groq and Mistral on the known `Desktop_AmbiguousSiblingTabs` scenario. Both raw votes must remain inside the shortlist, name the same ground-truth `CandidateId`, and appear in `HealResult.AgreedProviders`; otherwise the workflow fails. The broader multi-provider evaluation still runs afterward as non-gating telemetry. With no credentials the opt-in test skips cleanly, while a deliberate one-provider configuration fails before making an API call. Releases are not gated on third-party availability; this gate belongs to the nightly workflow only.
 
+> **Reasoning models.** Some OpenAI-compatible endpoints — notably Groq's `openai/gpt-oss-120b` in the "harmony" format — return their chain-of-thought in a non-standard `message.reasoning` field and can truncate the JSON answer object in `message.content` mid-string. `OpenAiHealingProvider` folds `message.reasoning` in alongside `message.content`, and the response parser recovers `candidateId` / `confidence` from an object that was cut off inside its `reasoning` value (#378). A model that returns clean JSON is still preferable — set `GROQ_MODEL` to e.g. `llama-3.3-70b-versatile` if the recovery path shows up in your telemetry.
+
 #### Naming providers
 
 `HealResult.AgreedProviders` identifies voters by `ILlmHealingProvider.Name`, so names must be unique within a run — `LlmProviderFactory` throws on a duplicate rather than producing an unreadable report. Because `OpenAiHealingProvider` speaks to any OpenAI-compatible endpoint, several instances of it can legitimately be configured at once. The factory handles the well-known ones for you; construct them by hand and each needs a `name`:
@@ -430,6 +432,8 @@ Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seç
 > **Asıl mesele bağımsızlık.** Aynı uç noktaya ve aynı modele bakan iki `OpenAiHealingProvider` örneği, bağımsız uzlaşma değil aynı modelin iki kez oy vermesidir. Gerçekten farklı modellere dayanan sağlayıcıları tercih edin. Gerçekten bağımsız uzlaşma bile bir quorum sinyalidir; doğruluk garantisi değildir.
 
 Nightly workflow bu kuralı bilinen `Desktop_AmbiguousSiblingTabs` senaryosunda Groq ve Mistral kullanan canlı bir gate ile uygular. İki ham oyun da shortlist içinde kalması, aynı ground-truth `CandidateId` değerini seçmesi ve `HealResult.AgreedProviders` içinde görünmesi gerekir; aksi halde workflow başarısız olur. Daha geniş çok-sağlayıcılı değerlendirme bunun ardından gate olmayan telemetri olarak çalışmaya devam eder. Hiç credential yoksa opt-in test temiz biçimde atlanır; bilinçli tek-sağlayıcı yapılandırması ise API çağrısı yapmadan başarısız olur. Üçüncü taraf erişilebilirliği release'i engellemesin diye gate yalnızca nightly workflow'dadır.
+
+> **Reasoning modelleri.** Bazı OpenAI-uyumlu uç noktalar — özellikle "harmony" formatındaki Groq `openai/gpt-oss-120b` — düşünce zincirini standart-dışı bir `message.reasoning` alanında döndürür ve `message.content` içindeki JSON yanıt nesnesini bir dize ortasında kesebilir. `OpenAiHealingProvider`, `message.reasoning`'i `message.content` ile birlikte katar ve yanıt ayrıştırıcı, `reasoning` değerinin içinde kesilmiş bir nesneden `candidateId` / `confidence` değerlerini kurtarır (#378). Yine de temiz JSON döndüren bir model tercih edilir — telemetrinizde kurtarma yolu görünüyorsa `GROQ_MODEL`'i örn. `llama-3.3-70b-versatile` olarak ayarlayın.
 
 #### Sağlayıcılara isim verme
 
