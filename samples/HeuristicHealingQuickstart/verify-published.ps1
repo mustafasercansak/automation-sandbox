@@ -60,15 +60,20 @@ try {
         ('${1}' + $Version + '${2}'))
     Set-Content -LiteralPath $projectPath -Value $pinned -NoNewline
 
-    # nuget.org indexing lags publish by up to a few minutes; retry the restore.
-    $maxAttempts = 8
-    $delaySeconds = 30
+    # nuget.org indexing lags publish, and not by "a few minutes": the restore
+    # (flat-container) feed for a low-traffic package family routinely takes 10-20+
+    # minutes, and the seven packages here index independently, so the slowest one
+    # sets the wait. The v0.2.0-beta.5 run failed the old 8x30s = 4-minute budget
+    # while the packages were already live in the registration API (#367). Poll up to
+    # ~25 minutes; override with VERIFY_PUBLISHED_MAX_ATTEMPTS / _DELAY_SECONDS.
+    $maxAttempts = if ($env:VERIFY_PUBLISHED_MAX_ATTEMPTS) { [int]$env:VERIFY_PUBLISHED_MAX_ATTEMPTS } else { 30 }
+    $delaySeconds = if ($env:VERIFY_PUBLISHED_DELAY_SECONDS) { [int]$env:VERIFY_PUBLISHED_DELAY_SECONDS } else { 50 }
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         Write-Host "Restore attempt $attempt/$maxAttempts (nuget.org only, no cache)..."
         & dotnet restore $projectPath --force --no-cache --packages $packagesPath --source https://api.nuget.org/v3/index.json
         if ($LASTEXITCODE -eq 0) { break }
         if ($attempt -eq $maxAttempts) {
-            throw "Package version $Version was not restorable from nuget.org after $maxAttempts attempts."
+            throw "Package version $Version was not restorable from nuget.org after $maxAttempts attempts (~$([math]::Round($maxAttempts * $delaySeconds / 60)) min). The packages may still be indexing - re-run this workflow, it is idempotent (release-create and nuget push both skip what already exists)."
         }
         Write-Host "Not indexed yet; waiting $delaySeconds s..."
         Start-Sleep -Seconds $delaySeconds
