@@ -101,6 +101,16 @@ The seven packages follow real dependency boundaries (cross-platform core vs. `n
 
 New to the library? The [Published Package Quickstart](docs/consumer-quickstart.md) walks the `SelfHealing` path end to end; [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers wiring it into a suite you already have.
 
+### What `0.2.0-beta` commits to
+
+| Tier | Surface | Compatibility |
+| :--- | :--- | :--- |
+| **1 — Stable public API** | The core types of the seven `AutomationSandbox.*` packages (`UiElementInfo`, `SelfHealingEngine`, `SimilarityWeights`, `HealResult`, `ILlmHealingProvider`, `WebElementInfo`, `IIntentPlanner`, …) | The committed contract. Breaking changes only on a minor bump, with migration notes in the release notes. |
+| **2 — Extensibility points** | `ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner` implementations | SemVer-gated; additive members ship with default implementations. |
+| **3 — Internal / experimental** | `ScenarioRunner` internals, ablation harness, offline research evaluators | Not a NuGet contract; iterates freely. |
+
+While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change to Tier 1 (always called out in the release notes); a **patch** bump (`0.2.0` → `0.2.1`) never does. Full policy and the 1.0 exit criteria: [API Stability & Versioning](docs/versioning-and-stability.md).
+
 ---
 
 ## 📌 Implementation Status

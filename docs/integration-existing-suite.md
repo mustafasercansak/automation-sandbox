@@ -3,21 +3,22 @@ layout: default
 title: Adding Self-Healing to an Existing Test Suite - Automation Sandbox
 ---
 
-# Adding Self-Healing to an Existing Test Suite
+# Adding Self-Healing to an Existing Test Suite / Mevcut Bir Test Paketine Self-Healing Ekleme
 
-> **TR:** Bu rehber, sıfırdan değil, **hâlihazırda çalışan** bir Playwright / NUnit / xUnit / Reqnroll test paketine
-> Automation Sandbox'ı nasıl ekleyeceğinizi anlatır. Önerilen yol: önce `Observe` modunda çalıştır, healing raporunu
-> oku, `CalibrationCli` ile eşiği kendi uygulamana göre ayarla, sonra `AutoHeal`'e geç. İlk günden `AutoHeal` ile
-> başlama.
+> 💡 **Select Language / Dil Seçin:**
+> - [🇬🇧 English Guide](#-english-guide)
+> - [🇹🇷 Türkçe Kılavuz](#-türkçe-kılavuz)
+
+---
+
+## 🇬🇧 English Guide
 
 The [Published Package Quickstart](consumer-quickstart.md) takes you from `dotnet add package` to a first
 persisted heal on a synthetic tree. This guide is the next step: you already have a suite — dozens or hundreds of
 tests, a runner you are committed to, locators that break on every refactor — and you want healing *added to it*
 with the smallest possible change and no surprise behaviour.
 
----
-
-## 1. Where the engine sits
+### 1. Where the engine sits
 
 Automation Sandbox does not run your tests, assert for you, or own your test lifecycle. It wraps **one thing**: the
 step where you locate an element and act on it. Everywhere your test currently does
@@ -44,9 +45,7 @@ fixtures (below) add a non-generic overload for void actions, so in a test you u
 Three things you own and bring: a **locator key naming scheme**, a **stored snapshot** per locator, and the two
 callbacks that bind to your backend (`action` and `captureTreeRoot`). Everything else is the engine.
 
----
-
-## 2. Choose a healing mode — and do not start at AutoHeal
+### 2. Choose a healing mode — and do not start at AutoHeal
 
 `HealingMode` controls what happens after a confident candidate is found:
 
@@ -60,9 +59,7 @@ callbacks that bind to your backend (`action` and `captureTreeRoot`). Everything
 > `Observe` and `Review` **do not make a broken test pass** — they add diagnostic telemetry to the failure. Only
 > `AutoHeal` retries. This is deliberate: you see the engine's judgement on real breakages before you let it act.
 
----
-
-## 3. The first-week rollout
+### 3. The first-week rollout
 
 1. **Wire one test in `Observe` mode.** Pick a test that breaks often. Wrap its locate-and-act step. Run the suite.
 2. **Read the healing report.** Every attempt writes a schema-v8 JSON record and an HTML view — the candidate, the
@@ -84,14 +81,12 @@ callbacks that bind to your backend (`action` and `captureTreeRoot`). Everything
 6. **Keep the locator repository in source control.** It is readable JSON you own. Review its diffs like code — an
    unexpected heal shows up as a repository change in a PR.
 
----
-
-## 4. Runner-specific wiring
+### 4. Runner-specific wiring
 
 The engine is runner-agnostic; only the fixture plumbing differs. `SelfHealing.Testing` ships helpers for the two
 xUnit/NUnit shapes so you are not managing temp repository files by hand.
 
-### Playwright (.NET)
+#### Playwright (.NET)
 
 Your `action` closure runs Playwright calls against the resolved element; `captureTreeRoot` produces a live DOM
 snapshot via `AutomationSandbox.WebDiscovery` (`PlaywrightApplicationConnector` from an already-open page) or
@@ -117,7 +112,7 @@ await engine.ExecuteWithHealingAsync<bool>(
     () => CaptureDomSnapshot(page));   // your WebDiscovery-backed snapshot call
 ```
 
-### NUnit
+#### NUnit
 
 ```csharp
 using NUnit.Framework;
@@ -136,7 +131,7 @@ public class CheckoutTests : SelfHealingTestBase   // brings a temp repo + engin
 }
 ```
 
-### xUnit
+#### xUnit
 
 ```csharp
 using SelfHealing.Testing;
@@ -154,7 +149,7 @@ public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 }
 ```
 
-### Reqnroll / SpecFlow
+#### Reqnroll / SpecFlow
 
 Resolve one `SelfHealingEngine` in your DI container (or a `[BeforeScenario]` hook) and call it from step
 definitions. The `locatorKey` is a natural fit for the step's target — `"LoginPage.Username"`,
@@ -176,14 +171,12 @@ public class CheckoutSteps
 }
 ```
 
-### Desktop (FlaUI / UI Automation)
+#### Desktop (FlaUI / UI Automation)
 
 Identical shape; `captureTreeRoot` comes from `AutomationSandbox.Discovery` on a Windows host, and the resolved
 `UiElementInfo` drives your FlaUI `AutomationElement` lookup. See [Desktop Automation](desktop-automation.md).
 
----
-
-## 5. Deleted elements — repository ownership reconciliation
+### 5. Deleted elements — repository ownership reconciliation
 
 The failure mode the engine cannot solve with a single locator's structure alone: an element is
 **deleted**, and the next-best structural match is a *different* control the suite already tests. The
@@ -219,13 +212,11 @@ deleted-element false heals drop from **40 % → 0 %** (HandBrake) and **28 % �
 All three guards are on by default in `Balanced` and `Conservative`; `reconcileAgainstRepository`
 is the one that also needs the engine flag above.
 
----
-
-## 6. Common questions
+### 6. Common questions
 
 - **Does this replace my Page Objects?** No. A Page Object still exposes `SubmitButton`; its *implementation*
   routes through `ExecuteWithHealingAsync` instead of a raw locator call.
-- **What about a deleted element?** Turn on [repository ownership reconciliation](#5-deleted-elements--repository-ownership-reconciliation)
+- **What about a deleted element?** Turn on repository ownership reconciliation (Section 5)
   — it declines the most common shape (healing onto another test's control) at no recall cost. Past that it is
   [a hard, measured limit](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97),
   not a solved problem: keep `AutoHeal` paired with a published healing report so a wrong heal is visible, and
@@ -236,7 +227,224 @@ is the one that also needs the engine flag above.
 
 ---
 
-## See also
+## 🇹🇷 Türkçe Kılavuz
+
+[Yayımlanmış Paket Hızlı Başlangıcı](consumer-quickstart.md) sizi `dotnet add package`'ten sentetik bir ağaç
+üzerindeki ilk kalıcı iyileştirmeye götürür. Bu rehber bir sonraki adımdır: zaten bir paketiniz var — onlarca ya
+da yüzlerce test, bağlı kaldığınız bir koşucu, her refactor'da kırılan locator'lar — ve iyileştirmeyi mümkün olan
+en küçük değişiklikle ve sürpriz davranış olmadan *ona eklemek* istiyorsunuz.
+
+### 1. Motor nerede durur
+
+Automation Sandbox testlerinizi çalıştırmaz, sizin adınıza doğrulama yapmaz ve test yaşam döngünüzü sahiplenmez.
+**Tek bir şeyi** sarar: bir elemanı bulup üzerinde işlem yaptığınız adımı. Testinizin şu an yaptığı her yerde
+
+```
+find(locator) → act(element)
+```
+
+bunun yerine `ExecuteWithHealingAsync` çağırırsınız; bu, `find → act` yapar ve *yalnızca bu bir
+locator-çözümleme hatası fırlatırsa* canlı ağacı yakalar, adayları skorlar ve (moda bağlı olarak) yeniden dener.
+
+```csharp
+await engine.ExecuteWithHealingAsync<bool>(
+    locatorKey:      "Checkout.SubmitButton",       // seçtiğiniz kararlı anahtar; bu locator'ı depoda + raporlarda tanımlar
+    expected:        storedSnapshot,                 // test yazıldığında yakaladığınız UiElementInfo
+    action:          async el => { await ClickAsync(el); return true; },  // mevcut click/type/read çağrınız
+    captureTreeRoot: () => CaptureLiveTree());        // backend'inizin "ekranı/DOM'u şimdi yakala" çağrısı
+```
+
+Motordaki `ExecuteWithHealingAsync<T>`, action'ın `Task<T>` döndürmesini bekler. Aşağıdaki `SelfHealing.Testing`
+fikstürleri, void action'lar için jenerik olmayan bir aşırı yükleme ekler; bu yüzden bir testte genellikle
+doğrudan `el => ClickAsync(el)` yazarsınız.
+
+Sahiplendiğiniz ve getirdiğiniz üç şey: bir **locator anahtarı adlandırma şeması**, locator başına bir **kayıtlı
+snapshot** ve backend'inize bağlanan iki geri çağrı (`action` ve `captureTreeRoot`). Geri kalan her şey motordur.
+
+### 2. Bir healing modu seçin — ve AutoHeal ile başlamayın
+
+`HealingMode`, güvenli bir aday bulunduktan sonra ne olacağını kontrol eder:
+
+| Mod | Kırık bir locator'da | Kalıcılaştırır mı? | Action'ı yeniden dener mi? | Ne için |
+| :--- | :--- | :---: | :---: | :--- |
+| `Observe` | Ne *seçecek olduğunu* kaydeder, sonra yeniden fırlatır | Hayır | Hayır | **1. Hafta.** Testiniz yine başarısız olur; adayı ve skorunu gösteren bir healing raporu alırsınız. |
+| `Review` (kutudan çıkan varsayılan) | Adayı rapor telemetrisine yönlendirir, sonra yeniden fırlatır | Hayır | Hayır | Her iyileştirmeyi bir insanın harici olarak onayladığı bir paket. |
+| `AutoHeal` | Action'ı adayla yeniden dener; yeni locator'ı **yalnızca yeniden deneme başarılıysa** kalıcılaştırır | Evet (yeniden deneme başarısında) | Evet | Kalibrasyondan sonra kararlı durum. |
+| `FailClosed` | Hiçbir şey yapmaz, hemen yeniden fırlatır | Hayır | Hayır | Bir iyileştirmenin asla denenmemesi gereken yüksek sonuçlu koşular. |
+
+> `Observe` ve `Review` **kırık bir testi geçirmez** — hataya tanısal telemetri ekler. Yalnızca `AutoHeal` yeniden
+> dener. Bu bilinçlidir: motorun harekete geçmesine izin vermeden önce, gerçek kırılmalardaki kararını görürsünüz.
+
+### 3. İlk hafta yaygınlaştırması
+
+1. **Bir testi `Observe` modunda bağlayın.** Sık kırılan bir test seçin. Bul-ve-uygula adımını sarın. Paketi
+   çalıştırın.
+2. **Healing raporunu okuyun.** Her deneme bir şema-v8 JSON kaydı ve bir HTML görünümü yazar — aday, bileşen
+   bazlı skor dökümü (kontrol türü, ebeveyn, kardeş konumu, isim, geometri), ikinci aday, kanıt kapsamı. Bkz.
+   [Healing Raporları](healing-reports.md).
+3. **Uygulamanıza göre kalibre edin.** Temsili bir ağaç yakalayın ve kalibratörü çalıştırın — *sizin* yapınıza
+   karşı sentetik yeniden adlandırmalar, kaymalar ve silmeler tarar ve bir eşik profili önerir:
+
+   ```bash
+   dotnet run --project samples/CalibrationCli -- your-app-tree.json --app YourApp
+   ```
+
+   UI yapısı önemlidir: yoğun tablo ağırlıklı bir uygulama ile seyrek bir form çok farklı davranır
+   ([neden](benchmark-calibration.md#8-a-second-application-sharex-v2100-99-134)).
+4. **Hâlâ `Observe` modunda daha fazla teste yayın.** Birkaç CI döngüsü çalışmasına izin verin. Gerçek
+   kırılmalarda önerdiği adayların, elle seçeceğiniz adaylar olduğunu doğrulayın.
+5. **Kalibre edilmiş profille `AutoHeal`'e yükseltin.** Artık iyileştirmeler uygulanır ve yeniden deneme
+   başarısında kalıcılaştırılır. Her uygulanan iyileştirmenin denetlenebilir kalması için healing raporu
+   artifact'ını CI'da yayımlanmış tutun.
+6. **Locator deposunu kaynak kontrolünde tutun.** Sahip olduğunuz okunabilir JSON'dur. Diff'lerini kod gibi
+   inceleyin — beklenmedik bir iyileştirme, bir PR'de depo değişikliği olarak görünür.
+
+### 4. Koşucuya özel bağlama
+
+Motor koşucudan bağımsızdır; yalnızca fikstür tesisatı değişir. `SelfHealing.Testing`, geçici depo dosyalarını
+elle yönetmemeniz için iki xUnit/NUnit şekli için yardımcılar sunar.
+
+#### Playwright (.NET)
+
+`action` closure'ınız, çözülen eleman üzerinde Playwright çağrıları çalıştırır; `captureTreeRoot`,
+`AutomationSandbox.WebDiscovery` (zaten açık bir sayfadan `PlaywrightApplicationConnector`) veya
+`AutomationSandbox.PlaywrightLiveExploration` (`PlaywrightLiveExplorer.CaptureAsync(url)`) aracılığıyla canlı bir
+DOM snapshot'ı üretir. `PlaywrightLocatorEmitter.Suggest(element)`, çözülen bir düğümü sıralı bir Playwright
+locator listesine geri çevirir. Sürdürülen
+[`samples/PlaywrightEndToEndQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/PlaywrightEndToEndQuickstart)
+tam uçtan uca bağlamadır.
+
+```csharp
+// önce: seçici değiştiğinde kırılan çıplak bir Playwright locator'ı
+await page.Locator("#btn-submit").ClickAsync();
+
+// sonra: aynı click, seçici artık çözülmüyorsa iyileştirilir
+await engine.ExecuteWithHealingAsync<bool>(
+    "Checkout.Submit",
+    storedSnapshot,
+    async el =>
+    {
+        var selector = PlaywrightLocatorEmitter.Suggest(el)[0].Expression;
+        await page.Locator(selector).ClickAsync();
+        return true;
+    },
+    () => CaptureDomSnapshot(page));   // WebDiscovery destekli snapshot çağrınız
+```
+
+#### NUnit
+
+```csharp
+using NUnit.Framework;
+using SelfHealing.Testing;
+
+[TestFixture]
+public class CheckoutTests : SelfHealingTestBase   // sizin için oluşturulup dispose edilen geçici bir repo + engine getirir
+{
+    [Test]
+    public async Task Submits_the_order()
+    {
+        await ExecuteWithHealingAsync(
+            "Checkout.Submit", storedSnapshot,
+            el => ClickAsync(el), () => CaptureTree());   // Func<UiElementInfo, Task>
+    }
+}
+```
+
+#### xUnit
+
+```csharp
+using SelfHealing.Testing;
+
+public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
+{
+    private readonly SelfHealingTestFixture _healing;
+    public CheckoutTests(SelfHealingTestFixture healing) => _healing = healing;
+
+    [Fact]
+    public async Task Submits_the_order() =>
+        await _healing.ExecuteWithHealingAsync(
+            "Checkout.Submit", storedSnapshot,
+            el => ClickAsync(el), () => CaptureTree());   // Func<UiElementInfo, Task>
+}
+```
+
+#### Reqnroll / SpecFlow
+
+DI konteynerinizde (veya bir `[BeforeScenario]` hook'unda) tek bir `SelfHealingEngine` çözün ve onu adım
+tanımlarından çağırın. `locatorKey`, adımın hedefine doğal olarak oturur — `"LoginPage.Username"`,
+`"Checkout.SubmitButton"` — böylece healing raporları `.feature` dosyalarınızla aynı sözcük dağarcığıyla okunur.
+
+```csharp
+[Binding]
+public class CheckoutSteps
+{
+    private readonly SelfHealingEngine _engine;
+    public CheckoutSteps(SelfHealingEngine engine) => _engine = engine;
+
+    [When("the customer submits the order")]
+    public async Task WhenTheCustomerSubmitsTheOrder() =>
+        await _engine.ExecuteWithHealingAsync<bool>(
+            "Checkout.SubmitButton", _snapshots.Checkout.Submit,
+            async el => { await _driver.ClickAsync(el); return true; },
+            () => _driver.CaptureTree());
+}
+```
+
+#### Masaüstü (FlaUI / UI Automation)
+
+Aynı şekil; `captureTreeRoot` bir Windows makinesinde `AutomationSandbox.Discovery`'den gelir ve çözülen
+`UiElementInfo`, FlaUI `AutomationElement` aramanızı sürer. Bkz. [Masaüstü Otomasyonu](desktop-automation.md).
+
+### 5. Silinen elemanlar — depo sahiplik uzlaştırması
+
+Motorun tek bir locator'ın yapısıyla çözemediği başarısızlık modu: bir eleman **siliniyor** ve bir sonraki en iyi
+yapısal eşleşme, paketin zaten test ettiği *farklı* bir kontrol. Skorlayıcı güçlü bir ebeveyn/tür/konum eşleşmesi
+görür ve ona iyileşir — yanlış bir yeşil.
+
+`SelfHealingEngine`'in bunun yaygın şekli için isteğe bağlı bir koruması vardır.
+`reconcileAgainstRepository: true` ile açın:
+
+```csharp
+var engine = SelfHealingEngine.Create(
+    ThresholdProfile.Balanced,
+    repository: repo,
+    mode: HealingMode.AutoHeal,
+    reconcileAgainstRepository: true);
+```
+
+Güvenli bir eşleşmeyi kabul etmeden önce, motor depodaki *diğer tüm* locator'ları aynı yakalanmış ağaca karşı
+yeniden çözer. İstediği aday zaten başka bir locator'ın güvenli kimliğiyse, iyileştirme reddedilir
+(`HealResolutionStatus.OwnershipConflict`) ve incelemeye yönlendirilir. Yalnızca heuristiktir — ek LLM çağrısı yok
+— ve yalnızca bir iyileştirme denemesinde, diğer her depo girdisi başına bir çözümlemeye mal olur.
+
+`Balanced` ve `Conservative` profilleri ayrıca ağırlıklı skorun geçersiz kılamadığı iki bileşen bazlı kapı
+uygular: bir **isim geçidi** (isimli bir locator'ın adayı bir `NameScore` tabanını aşmalıdır) ve bir **alt öğe
+geçidi** (bir konteyner locator'ının adayı aynı doğrudan alt öğe kontrol türlerini hâlâ tutmalıdır — isimsiz bir
+panelin, başka bir şey tutan yapısal olarak özdeş bir kardeşe iyileşmesini yakalayan budur).
+
+Projenin iki gerçek fikstüründe ölçüldü (Balanced profil, her locator sırayla siliniyor): silinen-eleman yanlış
+iyileştirmeleri **%40 → %0** (HandBrake) ve **%28 → %0** (ShareX) düşüyor, gerçek yeniden adlandırma geri
+çağırmasında **değişiklik olmadan**
+([ölçüm](benchmark-calibration.md#15-a-non-structural-signal-for-the-uncontested-residual-375)). Üç korumanın
+tümü `Balanced` ve `Conservative`'de varsayılan açıktır; yukarıdaki motor bayrağına da ihtiyaç duyan
+`reconcileAgainstRepository`'dir.
+
+### 6. Sık sorulan sorular
+
+- **Bu, Page Object'lerimin yerini alır mı?** Hayır. Bir Page Object hâlâ `SubmitButton`'ı sunar; *uygulaması*
+  çıplak bir locator çağrısı yerine `ExecuteWithHealingAsync` üzerinden geçer.
+- **Silinen bir eleman ne olacak?** Depo sahiplik uzlaştırmasını açın (5. Bölüm) — en yaygın şekli (başka bir
+  testin kontrolüne iyileşme) geri çağırma maliyeti olmadan reddeder. Bunun ötesinde
+  [sert, ölçülmüş bir sınırdır](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97),
+  çözülmüş bir problem değil: bir yanlış iyileştirmenin görünür olması için `AutoHeal`'i yayımlanmış bir healing
+  raporuyla eşleştirin ve yanlış-yeşil bir koşunun pahalı olduğu paketler için `Conservative` profilini düşünün.
+- **Bir LLM'e bir şey gönderilir mi?** Yalnızca bir sağlayıcı yapılandırırsanız *ve* heuristik güvenli değilse; o
+  zaman da yalnızca [PII/gizli bilgi maskelemesi varsayılan açık](llm-security-model.md) sınırlı bir top-N kısa
+  liste. Sağlayıcı yoksa ağ çağrısı yoktur.
+
+---
+
+## See also / Ayrıca bakınız
 
 - [Published Package Quickstart](consumer-quickstart.md) · [Getting Started](getting-started.md)
 - [Benchmark & Calibration](benchmark-calibration.md) — choosing a threshold profile for your app
