@@ -302,8 +302,15 @@ IntentDesktopAutomationPipelineResult result = pipeline.Run(request, window, rep
 File.WriteAllText("GeneratedCustomerDesktopTest.cs", result.FlaUiCSharpTestCode);
 ```
 
-Note: `IntentDesktopAutomationPipelineResult` does not currently produce an
-`IntentFlowReportDocument` - flow report rendering is web-pipeline-only for now.
+`IntentDesktopAutomationPipelineResult.Report` carries an `IntentFlowReportDocument` (schema v4,
+`Platform = "desktop"`) with the same per-step evidence as the web report — matched locator,
+candidate count, `BestCandidateScore` / `BestCandidateSemanticScore` / `RunnerUpScore`, review
+status, `AssertionKind` / `ExpectedValue` — plus the generated FlaUI C# instead of the Playwright
+code. Write it with `IntentFlowReportFileSink` exactly as for the web pipeline:
+
+```csharp
+new IntentFlowReportFileSink("desktop-intent-flow-report.json").Write(result.Report);
+```
 
 ## Generated FlaUI C# Example
 
@@ -349,8 +356,9 @@ output and self-healing are separate, already-implemented concerns.
 
 `IntentFlowReportFileSink` writes a JSON report plus an HTML sibling by default.
 The report explains each step's intent, candidate count, best locator expression,
-review status, recording result, and generated C#/TypeScript code. This currently covers
-the web pipeline only (see note above).
+review status, recording result, and generated code. Both pipelines produce it —
+the web pipeline sets `Platform = "web"` and carries the Playwright C#/TypeScript,
+the desktop pipeline sets `Platform = "desktop"` and carries the FlaUI C#.
 
 Schema v3 adds `AssertionKind` and `ExpectedValue` per step, so a reviewer can tell from
 the report alone whether a step generated a real assertion (e.g. `TextEquals` / `"$125"`)
@@ -385,12 +393,12 @@ yazar, sistem sayfayı keşfeder, aday elementleri bulur, locator deposuna kayde
 M6.1-M6.10 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
 planlayabilir, DOM adaylarıyla eşleştirebilir, review gerekmeyen locator'ları
 repository'ye kaydedebilir, Playwright C#/TypeScript test iskeleti üretebilir ve
-intent flow raporunu JSON/HTML olarak dışa verebilir (flow raporu üretimi şimdilik yalnızca web hattı içindir). `LlmIntentPlanner` ile hedef
+intent flow raporunu JSON/HTML olarak dışa verebilir (hem web hem masaüstü hattı raporu üretir). `LlmIntentPlanner` ile hedef
 metni sabit bir anahtar kelime kümesine bağlı kalmadan, doğal dilden doğrudan
 planlanabilir; API anahtarı yoksa veya model çıktısı bozuksa sistem otomatik olarak
 `DeterministicIntentPlanner`'a düşer. `IntentDesktopAutomationPipeline` ile aynı akış
 Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent adımları canlı bir
-`UiElementInfo` ağacıyla eşleştirilir ve xUnit + FlaUI test iskeleti üretilir (masaüstü hattı henüz `IntentFlowReportDocument` üretmez).
+`UiElementInfo` ağacıyla eşleştirilir, xUnit + FlaUI test iskeleti ve web hattıyla aynı yapıda bir `IntentFlowReportDocument` üretilir.
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
 MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
 olarak tutar.
