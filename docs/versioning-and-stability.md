@@ -83,17 +83,24 @@ Automation Sandbox adheres to [Semantic Versioning 2.0.0](https://semver.org/):
 
 ### 3. Concrete Beta-Exit Criteria (1.0 GA Checklist)
 
-To exit beta and release `1.0.0`, all of the following conditions must be satisfied:
+To exit beta and release `1.0.0`, all of the following conditions must be satisfied. **This list is the live burn-down** — the box is checked when the maintainer confirms the criterion at release-decision time; the *Status* line records where it stands now.
 
 - [ ] **Benchmark Safety Bound:** Heuristic false-heal rate $\le 10.0\%$ on the HandBrake 1.8.2 benchmark suite under `ThresholdProfile.Balanced` (`0.75` confidence threshold).
+  - *Status: met.* ~7.6% (per-component name gate, #370). Locked by `ThresholdProfileAndCalibrationTests.HandBrakeFixture_BalancedProfile_FalseHealRate_MeetsThe1_0SafetyBound`. Deleted-element false heals are 0% on both fixtures (#370/#375).
 - [ ] **Multi-Application Verification:** Proven calibration and telemetry across both HandBrake (WPF) and ShareX (WinForms) fixtures without unexplained variance.
+  - *Status: met.* §8 and §14/§15 of the benchmark guide; `ShareXAblationTests` and `LocatorAblationTests` carry committed baselines.
 - [ ] **Zero Open P0/P1 Safety Issues:** No open issues labeled `safety`, `security`, or `correctness` with P0 or P1 priority.
+  - *Status: met* at time of writing. Re-confirm at release-decision time.
 - [ ] **Cross-Platform CI Stability:** 100% passing tests across the Windows (`net48`) and Linux (`net8.0`) CI matrix legs with zero unhandled flaky retries.
+  - *Status: met* for the core `CI` matrix. The nightly consensus gate's reasoning-model regression (#378) is fixed (`OpenAiHealingProvider` folds in `message.reasoning`, the parser recovers a truncated answer object); confirm one green scheduled `Nightly Multi-Provider Consensus Evaluation` run.
 - [ ] **Supply Chain Security:** Zero High or Critical advisories under `dotnet list package --vulnerable` / `NuGetAudit` across all target frameworks.
+  - *Status: met.* `NuGetAudit` (`NU1903`/`NU1904`) is a CI build error; no advisories outstanding.
 - [ ] **Bilingual Documentation Parity (guides):** 100% structural and conceptual parity between the English and Turkish sections of every **numbered guide** at `docs/*.md` — same `###` heading sequence and fenced-code-block count, enforced by `DocumentationSiteIntegrityTests.BilingualDocumentation_HasMatchingEnglishAndTurkishStructure`. Blog posts under `docs/blog/**` and `*-research.md` notes are English-primary with a Turkish abstract (`> **TR:**` or `## Türkçe Özet`) by deliberate convention and are exempt.
+  - *Status: met.* Criterion scoped (#369); `comparison.md` and `integration-existing-suite.md` are fully bilingual and enforced by the test.
 - [ ] **Verified Consumer Quickstarts:** Automated CI execution of both standalone sample projects: `HeuristicHealingQuickstart` restoring purely from nuget.org / published artifacts, and `PlaywrightEndToEndQuickstart` built and run in CI against the current source tree.
+  - *Status: met.* Both run in CI (`Sample Compiles Against Source` and the release workflow's `verify-published.ps1`; `PlaywrightEndToEndQuickstart` in `ci.yml`).
 
-**Release trigger.** The prerelease → `1.0.0` transition is **condition-based, not date-based**: `1.0.0` is cut once every box above is checked, no open issue is labeled `release-blocker`, and the current release notes carry no `Known Limitation` that blocks a use case the README claims support for. Until then, minor bumps (`0.2` → `0.3`) continue under the pre-1.0 policy in §2. Live status of each criterion is tracked in [issue #368](https://github.com/mustafasercansak/automation-sandbox/issues/368).
+**Release trigger.** The prerelease → `1.0.0` transition is **condition-based, not date-based**: `1.0.0` is cut once every box above is checked, no open issue is labeled `release-blocker`, and the current release notes carry no `Known Limitation` that blocks a use case the README claims support for. Until then, minor bumps (`0.2` → `0.3`) continue under the pre-1.0 policy in §2. Every criterion's *Status* line above is the live tracker; the mechanical next step is the `v0.2.0-beta.5` release, which proves the publish flow.
 
 ---
 
@@ -167,14 +174,21 @@ Automation Sandbox [Semantic Versioning 2.0.0](https://semver.org/) standardın�
 
 ### 3. Somut Beta Çıkış Kriterleri (1.0 GA Kontrol Listesi)
 
-Beta sürecini tamamlayıp `1.0.0` genel sürümüne geçmek için aşağıdaki tüm koşulların sağlanması gerekir:
+Beta sürecini tamamlayıp `1.0.0` genel sürümüne geçmek için aşağıdaki tüm koşulların sağlanması gerekir. **Bu liste canlı burn-down'dur** — kutu, bakımcı sürüm-kararı anında kriteri doğruladığında işaretlenir; *Durum* satırı şu anki halini kaydeder.
 
 - [ ] **Benchmark Güvenlik Sınırı:** HandBrake 1.8.2 benchmark paketinde `ThresholdProfile.Balanced` (`0.75` güven eşiği) altında sezgisel yanlış iyileştirme oranı $\le \%10.0$ olmalıdır.
+  - *Durum: sağlandı.* ~%7.6 (bileşen bazlı isim geçidi, #370). `ThresholdProfileAndCalibrationTests.HandBrakeFixture_BalancedProfile_FalseHealRate_MeetsThe1_0SafetyBound` ile kilitli. Silinen-eleman yanlış iyileştirmeleri iki fikstürde de %0 (#370/#375).
 - [ ] **Çoklu Uygulama Doğrulaması:** HandBrake (WPF) ve ShareX (WinForms) veri setlerinde tutarlı ve doğrulanmış kalibrasyon.
+  - *Durum: sağlandı.* Benchmark kılavuzu §8 ve §14/§15; `ShareXAblationTests` ve `LocatorAblationTests` kayıtlı baseline'lar taşır.
 - [ ] **Sıfır Açık P0/P1 Güvenlik Hatası:** `safety`, `security` veya `correctness` etiketli hiçbir açık P0/P1 sorun kalmamalıdır.
+  - *Durum: yazım anında sağlandı.* Sürüm-kararı anında yeniden doğrulanmalı.
 - [ ] **Çapraz Platform CI Kararlılığı:** Windows (`net48`) ve Linux (`net8.0`) CI iş hatlarında, ele alınmamış kararsız (flaky) yeniden denemeler olmaksızın $\%100$ başarı.
+  - *Durum: çekirdek `CI` matrisi için sağlandı.* Nightly konsensüs gate'inin reasoning-model regresyonu (#378) düzeltildi (`OpenAiHealingProvider` `message.reasoning`'i katıyor, ayrıştırıcı kesilmiş yanıt nesnesini kurtarıyor); bir yeşil zamanlanmış `Nightly Multi-Provider Consensus Evaluation` koşusu doğrulanmalı.
 - [ ] **Tedarik Zinciri Güvenliği:** Tüm hedef framework'lerde `NuGetAudit` / `dotnet list package --vulnerable` taramasında sıfır Yüksek/Kritik güvenlik açığı.
+  - *Durum: sağlandı.* `NuGetAudit` (`NU1903`/`NU1904`) bir CI derleme hatasıdır; bekleyen güvenlik açığı yok.
 - [ ] **Çift Dilli Belge Uyumu (rehberler):** `docs/*.md` altındaki her **numaralı rehberin** İngilizce ve Türkçe bölümleri arasında $\%100$ yapısal ve kavramsal uyum — aynı `###` başlık sırası ve kod bloğu sayısı, `DocumentationSiteIntegrityTests.BilingualDocumentation_HasMatchingEnglishAndTurkishStructure` tarafından denetlenir. `docs/blog/**` altındaki blog yazıları ve `*-research.md` notları, bilinçli bir kural gereği İngilizce-öncelikli olup Türkçe bir özet (`> **TR:**` veya `## Türkçe Özet`) taşır ve bu kriterden muaftır.
+  - *Durum: sağlandı.* Kriter kapsamlandı (#369); `comparison.md` ve `integration-existing-suite.md` tam çift dilli ve test tarafından denetleniyor.
 - [ ] **Doğrulanmış Başlangıç Örnekleri:** Bağımsız örnek projelerin CI üzerinde otomatik çalıştırılması: `HeuristicHealingQuickstart` doğrudan nuget.org / yayımlanmış paketlerden restore edilerek, `PlaywrightEndToEndQuickstart` ise mevcut kaynak ağacına karşı derlenip çalıştırılarak.
+  - *Durum: sağlandı.* İkisi de CI'da çalışır (`Sample Compiles Against Source` ve sürüm workflow'unun `verify-published.ps1`'i; `PlaywrightEndToEndQuickstart` `ci.yml`'de).
 
-**Sürüm tetikleyicisi.** Ön sürümden `1.0.0`'a geçiş **tarihe değil koşula bağlıdır**: yukarıdaki her kutu işaretlendiğinde, `release-blocker` etiketli açık bir sorun kalmadığında ve mevcut sürüm notları README'nin desteklediğini iddia ettiği bir kullanım senaryosunu engelleyen bir `Known Limitation` taşımadığında `1.0.0` kesilir. O zamana kadar minör sürüm artışları (`0.2` → `0.3`) §2'deki 1.0 öncesi politika altında devam eder. Her kriterin canlı durumu [#368 numaralı issue](https://github.com/mustafasercansak/automation-sandbox/issues/368)'da izlenir.
+**Sürüm tetikleyicisi.** Ön sürümden `1.0.0`'a geçiş **tarihe değil koşula bağlıdır**: yukarıdaki her kutu işaretlendiğinde, `release-blocker` etiketli açık bir sorun kalmadığında ve mevcut sürüm notları README'nin desteklediğini iddia ettiği bir kullanım senaryosunu engelleyen bir `Known Limitation` taşımadığında `1.0.0` kesilir. O zamana kadar minör sürüm artışları (`0.2` → `0.3`) §2'deki 1.0 öncesi politika altında devam eder. Yukarıdaki her kriterin *Durum* satırı canlı takipçidir; mekanik sonraki adım, yayın akışını kanıtlayan `v0.2.0-beta.5` sürümüdür.
