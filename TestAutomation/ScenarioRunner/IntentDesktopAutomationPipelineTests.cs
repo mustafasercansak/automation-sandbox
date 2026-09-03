@@ -67,6 +67,53 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Run_EmitsAFlowReportStructurallyEquivalentToTheWebPipeline()
+        {
+            var request = new IntentPlanningRequest
+            {
+                Name = "Create desktop customer",
+                Goal = "Create a customer record with valid email",
+                TestData = new Dictionary<string, string> { ["email"] = "jane.doe@example.com" },
+            };
+            var repository = new LocatorRepository(_filePath);
+            var pipeline = new IntentDesktopAutomationPipeline(options: new IntentDesktopAutomationPipelineOptions
+            {
+                Recording = new IntentDesktopLocatorRecordingOptions { ApplicationName = "CustomerApp" },
+                Generation = new FlaUiCSharpTestGenerationOptions { Namespace = "CustomerApp.Generated" },
+            });
+
+            var result = pipeline.Run(request, BuildCustomerWindow(), repository);
+            var report = result.Report;
+
+            // Same schema as the web pipeline; platform-tagged; FlaUI code carried, Playwright empty.
+            Assert.Equal(IntentFlowReportDocument.CurrentSchemaVersion, report.SchemaVersion);
+            Assert.Equal("desktop", report.Platform);
+            Assert.Equal("Create desktop customer", report.ScenarioName);
+            Assert.Equal(result.FlaUiCSharpTestCode, report.FlaUiCSharpTestCode);
+            Assert.Equal("", report.PlaywrightCSharpTestCode);
+            Assert.Equal(result.Exploration.StepResults.Count, report.Steps.Count);
+
+            // Per-step evidence the web report renders must be populated for desktop.
+            var emailStep = report.Steps.Single(s => s.LocatorKey == "Field.Email");
+            Assert.True(emailStep.Recorded);
+            Assert.False(emailStep.RequiresReview);
+            Assert.True(emailStep.CandidateCount > 0);
+            Assert.NotNull(emailStep.BestCandidateScore);
+            Assert.NotNull(emailStep.BestCandidateSemanticScore);
+            Assert.Equal("AutomationId=txtEmail", emailStep.BestCandidateLocator);
+
+            // JSON + HTML sink works the same way as for the web pipeline.
+            var jsonPath = Path.Combine(_directory, "desktop-flow.json");
+            new IntentFlowReportFileSink(jsonPath).Write(report);
+            var html = File.ReadAllText(Path.ChangeExtension(jsonPath, ".html"));
+            Assert.Contains("Intent Flow Report", html);
+            Assert.Contains("desktop (FlaUI / UI Automation)", html);
+            Assert.Contains("FlaUI C#", html);
+            Assert.DoesNotContain("Playwright TypeScript", html);
+            Assert.Contains("\"Platform\": \"desktop\"", File.ReadAllText(jsonPath));
+        }
+
+        [Fact]
         public void Run_HappyPathProducesExecutableDesktopIntentArtifacts()
         {
             var request = new IntentPlanningRequest

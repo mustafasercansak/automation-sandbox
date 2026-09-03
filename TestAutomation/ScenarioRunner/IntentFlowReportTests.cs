@@ -79,8 +79,8 @@ namespace ScenarioRunner
                 },
             });
 
-            Assert.Equal(3, IntentFlowReportDocument.CurrentSchemaVersion);
-            Assert.Equal(3, document.SchemaVersion);
+            Assert.Equal(4, IntentFlowReportDocument.CurrentSchemaVersion);
+            Assert.Equal(4, document.SchemaVersion);
             Assert.Equal("TextEquals", document.Steps[0].AssertionKind);
             Assert.Equal("$125", document.Steps[0].ExpectedValue);
             // An unmapped outcome must surface as "None" rather than silently looking like a real check.

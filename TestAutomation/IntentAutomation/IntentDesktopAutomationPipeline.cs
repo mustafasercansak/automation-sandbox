@@ -77,13 +77,15 @@ namespace IntentAutomation
             var recordingResults = _recorder.Record(exploration, repository);
             var code = _generator.Generate(planning.Scenario, recordingResults);
 
-            return new IntentDesktopAutomationPipelineResult
+            var result = new IntentDesktopAutomationPipelineResult
             {
                 Planning = planning,
                 Exploration = exploration,
                 RecordingResults = recordingResults,
                 FlaUiCSharpTestCode = code,
             };
+            result.Report = IntentFlowReportDocument.FromDesktopPipelineResult(result);
+            return result;
         }
     }
 }
