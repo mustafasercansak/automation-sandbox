@@ -90,8 +90,10 @@ To exit beta and release `1.0.0`, all of the following conditions must be satisf
 - [ ] **Zero Open P0/P1 Safety Issues:** No open issues labeled `safety`, `security`, or `correctness` with P0 or P1 priority.
 - [ ] **Cross-Platform CI Stability:** 100% passing tests across the Windows (`net48`) and Linux (`net8.0`) CI matrix legs with zero unhandled flaky retries.
 - [ ] **Supply Chain Security:** Zero High or Critical advisories under `dotnet list package --vulnerable` / `NuGetAudit` across all target frameworks.
-- [ ] **Complete Bilingual Documentation Parity:** 100% structural and conceptual parity between English and Turkish documentation across all guides in `docs/`.
+- [ ] **Bilingual Documentation Parity (guides):** 100% structural and conceptual parity between the English and Turkish sections of every **numbered guide** at `docs/*.md` — same `###` heading sequence and fenced-code-block count, enforced by `DocumentationSiteIntegrityTests.BilingualDocumentation_HasMatchingEnglishAndTurkishStructure`. Blog posts under `docs/blog/**` and `*-research.md` notes are English-primary with a Turkish abstract (`> **TR:**` or `## Türkçe Özet`) by deliberate convention and are exempt.
 - [ ] **Verified Consumer Quickstarts:** Automated CI execution of both standalone sample projects: `HeuristicHealingQuickstart` restoring purely from nuget.org / published artifacts, and `PlaywrightEndToEndQuickstart` built and run in CI against the current source tree.
+
+**Release trigger.** The prerelease → `1.0.0` transition is **condition-based, not date-based**: `1.0.0` is cut once every box above is checked, no open issue is labeled `release-blocker`, and the current release notes carry no `Known Limitation` that blocks a use case the README claims support for. Until then, minor bumps (`0.2` → `0.3`) continue under the pre-1.0 policy in §2. Live status of each criterion is tracked in [issue #368](https://github.com/mustafasercansak/automation-sandbox/issues/368).
 
 ---
 
@@ -172,5 +174,7 @@ Beta sürecini tamamlayıp `1.0.0` genel sürümüne geçmek için aşağıdaki 
 - [ ] **Sıfır Açık P0/P1 Güvenlik Hatası:** `safety`, `security` veya `correctness` etiketli hiçbir açık P0/P1 sorun kalmamalıdır.
 - [ ] **Çapraz Platform CI Kararlılığı:** Windows (`net48`) ve Linux (`net8.0`) CI iş hatlarında, ele alınmamış kararsız (flaky) yeniden denemeler olmaksızın $\%100$ başarı.
 - [ ] **Tedarik Zinciri Güvenliği:** Tüm hedef framework'lerde `NuGetAudit` / `dotnet list package --vulnerable` taramasında sıfır Yüksek/Kritik güvenlik açığı.
-- [ ] **Tam Çift Dilli Belge Uyumu:** `docs/` altındaki tüm rehberlerde İngilizce ve Türkçe içerikler arasında $\%100$ yapısal ve kavramsal uyum.
+- [ ] **Çift Dilli Belge Uyumu (rehberler):** `docs/*.md` altındaki her **numaralı rehberin** İngilizce ve Türkçe bölümleri arasında $\%100$ yapısal ve kavramsal uyum — aynı `###` başlık sırası ve kod bloğu sayısı, `DocumentationSiteIntegrityTests.BilingualDocumentation_HasMatchingEnglishAndTurkishStructure` tarafından denetlenir. `docs/blog/**` altındaki blog yazıları ve `*-research.md` notları, bilinçli bir kural gereği İngilizce-öncelikli olup Türkçe bir özet (`> **TR:**` veya `## Türkçe Özet`) taşır ve bu kriterden muaftır.
 - [ ] **Doğrulanmış Başlangıç Örnekleri:** Bağımsız örnek projelerin CI üzerinde otomatik çalıştırılması: `HeuristicHealingQuickstart` doğrudan nuget.org / yayımlanmış paketlerden restore edilerek, `PlaywrightEndToEndQuickstart` ise mevcut kaynak ağacına karşı derlenip çalıştırılarak.
+
+**Sürüm tetikleyicisi.** Ön sürümden `1.0.0`'a geçiş **tarihe değil koşula bağlıdır**: yukarıdaki her kutu işaretlendiğinde, `release-blocker` etiketli açık bir sorun kalmadığında ve mevcut sürüm notları README'nin desteklediğini iddia ettiği bir kullanım senaryosunu engelleyen bir `Known Limitation` taşımadığında `1.0.0` kesilir. O zamana kadar minör sürüm artışları (`0.2` → `0.3`) §2'deki 1.0 öncesi politika altında devam eder. Her kriterin canlı durumu [#368 numaralı issue](https://github.com/mustafasercansak/automation-sandbox/issues/368)'da izlenir.
