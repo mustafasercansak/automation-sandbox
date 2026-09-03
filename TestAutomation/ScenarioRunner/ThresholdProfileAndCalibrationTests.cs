@@ -157,5 +157,25 @@ namespace ScenarioRunner
             // Precision is higher under Conservative
             Assert.True(conservativeReport.Metrics.Precision >= defaultReport.Metrics.Precision);
         }
+
+        [Fact]
+        public void HandBrakeFixture_BalancedProfile_FalseHealRate_MeetsThe1_0SafetyBound()
+        {
+            // versioning-and-stability.md §3, "Benchmark Safety Bound": the 1.0 GA checklist
+            // requires the heuristic false-heal rate on the HandBrake 1.8.2 tree to stay at or
+            // below 10% under ThresholdProfile.Balanced. This locks that criterion so a scorer
+            // or profile change cannot regress past it unnoticed.
+            var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "HandBrake_1.8.2.tree.json");
+            Assert.True(File.Exists(fixturePath), $"Fixture missing at '{fixturePath}'.");
+
+            var tree = UiTreeSerializer.FromJson(File.ReadAllText(fixturePath));
+            Assert.NotNull(tree);
+
+            var report = TreeCalibrator.Calibrate(tree!, "HandBrake");
+            var balanced = report.ProfileResults.Single(r => r.Profile == ThresholdProfile.Balanced);
+
+            Assert.True(balanced.FalseHealRate <= 0.10,
+                $"HandBrake Balanced false-heal rate {balanced.FalseHealRate:P1} exceeds the 1.0 GA safety bound of 10%.");
+        }
     }
 }

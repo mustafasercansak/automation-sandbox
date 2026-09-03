@@ -398,6 +398,41 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void ParseResponse_RecoversCandidateId_FromAnObjectTruncatedInsideTheReasoningString()
+        {
+            // The exact shape Groq's openai/gpt-oss-120b emitted in message.content (#378): the
+            // "reasoning" value is cut off with no closing quote or brace, but candidateId and
+            // confidence are already complete.
+            var truncated = "{\"candidateId\":\"c0\",\"confidence\":0.85,\"reasoning\":\"c0 matches the TabItem type, has the same class name and a name closely related to the target's 'Settings & Preferences'";
+
+            var (candidateId, confidence, _) = LlmHealingPrompt.ParseResponse(truncated);
+
+            Assert.Equal("c0", candidateId);
+            Assert.Equal(0.85, confidence, precision: 3);
+        }
+
+        [Fact]
+        public void ParseResponse_RecoversCandidateId_WhenTheTruncatedObjectTrailsAReasoningPreamble()
+        {
+            // ExtractText folds message.reasoning in after message.content; the repair must still
+            // find the answer object when it is followed by chain-of-thought prose.
+            var folded = "{\"candidateId\":\"c2\",\"confidence\":0.7,\"reasoning\":\"c2 is the closest match because\n"
+                       + "We need to pick a candidate. Candidate c2 shares the parent and role. Thus best is c2.";
+
+            var (candidateId, confidence, _) = LlmHealingPrompt.ParseResponse(folded);
+
+            Assert.Equal("c2", candidateId);
+            Assert.Equal(0.7, confidence, precision: 3);
+        }
+
+        [Fact]
+        public void ParseResponse_StillThrows_WhenNoCandidateIdOrConfidenceIsPresentAnywhere()
+        {
+            Assert.Throws<FormatException>(() => LlmHealingPrompt.ParseResponse(
+                "We need to pick a candidate: {some prose} and then more {prose without an answer}"));
+        }
+
+        [Fact]
         public async Task ClaudeHealingProvider_WithoutApiKey_SkipsTheHttpCallEntirely()
         {
             var callCount = 0;

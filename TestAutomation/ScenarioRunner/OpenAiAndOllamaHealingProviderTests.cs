@@ -92,6 +92,37 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task OpenAiHealingProvider_RecoversAnswer_FromAReasoningModelWithTruncatedContentAndASiblingReasoningField()
+        {
+            // Groq's openai/gpt-oss-120b (#378): message.content is a JSON object cut off inside
+            // the "reasoning" string, and message.reasoning carries the chain-of-thought. The
+            // provider must fold both in and salvage candidateId/confidence from the content.
+            var fakeResponse = JsonSerializer.Serialize(new
+            {
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new
+                        {
+                            role = "assistant",
+                            content = "{\"candidateId\":\"c0\",\"confidence\":0.85,\"reasoning\":\"c0 matches the TabItem type and a name close to the target's 'Settings & Preferences'",
+                            reasoning = "We need to pick the candidate matching the target. c0: TabItem, right class, close name. Thus best is c0. Confidence ~0.85. Provide JSON.",
+                        },
+                    },
+                },
+            });
+
+            var provider = new OpenAiHealingProvider(new HttpClient(new FakeHttpMessageHandler(fakeResponse, HttpStatusCode.OK)), apiKey: "test-openai-key");
+
+            var result = await provider.ResolveAsync(Expected, BuildShortlist());
+
+            Assert.True(result.Success);
+            Assert.Equal("c0", result.MatchedCandidateId);
+            Assert.Equal(0.85, result.Confidence, precision: 3);
+        }
+
+        [Fact]
         public async Task OpenAiHealingProvider_WhenApiKeyMissing_ReturnsUnavailable()
         {
             var provider = new OpenAiHealingProvider(apiKey: "");
