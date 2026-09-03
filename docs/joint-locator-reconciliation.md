@@ -10,6 +10,11 @@ stale locators against the same captured UI tree. It prevents two independently 
 locator heals from silently taking ownership of the same live element. Existing
 `SelfHealingResolver.Resolve` and `ResolveAsync` calls are unchanged.
 
+> If you use `SelfHealingEngine`, you do not have to assemble a batch yourself:
+> `SelfHealingEngine.ReconcileAgainstRepository` (opt-in, default off, #370) runs the same
+> reconciliation against every *other* stored locator on each individual heal attempt. The
+> `ResolveBatch` API below is for callers that resolve locators outside the engine.
+
 ## Public API and compatibility
 
 Callers create one `BatchHealingRequest` per stale locator and pass the requests with one
@@ -89,7 +94,11 @@ One-to-one ownership can detect only contested claims. If a deleted locator is t
 claimant for a structurally similar surviving element, batch reconciliation preserves that
 accepted result. The frozen HandBrake/ShareX evaluation left all 15 such uncontested false
 heals unchanged. The feature is therefore a targeted collision guard, not an absence
-detector or a general false-heal solution.
+detector or a general false-heal solution. The per-component **descendant gate** (#375,
+`SimilarityWeights.MinimumChildSignatureSimilarity`) closes the remaining container-swap
+case — a deleted panel healing onto a structurally identical sibling whose contents differ —
+so with all three `Balanced`/`Conservative` guards the deleted-element false-heal rate on
+both fixtures is 0% ([benchmark-calibration.md §14/§15](benchmark-calibration.md)).
 
 ---
 
@@ -99,6 +108,11 @@ Birleşik locator uzlaştırması, birkaç eski locator'ı aynı yakalanmış UI
 çağıranlar için isteğe bağlı bir batch korumasıdır. Bağımsız olarak kabul edilmiş iki
 locator iyileştirmesinin aynı canlı elementin sahipliğini sessizce almasını engeller.
 Mevcut `SelfHealingResolver.Resolve` ve `ResolveAsync` çağrıları değişmez.
+
+> `SelfHealingEngine` kullanıyorsanız batch'i kendiniz kurmanıza gerek yok:
+> `SelfHealingEngine.ReconcileAgainstRepository` (isteğe bağlı, varsayılan kapalı, #370) her
+> bireysel iyileştirme denemesinde aynı uzlaştırmayı depodaki diğer *tüm* locator'lara karşı
+> çalıştırır. Aşağıdaki `ResolveBatch` API'si, locator'ları motor dışında çözen çağıranlar içindir.
 
 ## Public API ve uyumluluk
 
@@ -157,4 +171,8 @@ Bire bir sahiplik yalnızca tartışmalı talepleri algılayabilir. Silinmiş bi
 yapısal olarak benzer kalan bir elementin tek talepçisiyse batch uzlaştırması kabul edilmiş
 sonucu korur. Sabit HandBrake/ShareX değerlendirmesinde bu tür 15 tartışmasız false-heal'in
 tamamı değişmeden kalmıştır. Dolayısıyla özellik hedefli bir çakışma korumasıdır; absence
-detector veya genel false-heal çözümü değildir.
+detector veya genel false-heal çözümü değildir. Bileşen bazlı **alt öğe geçidi** (#375,
+`SimilarityWeights.MinimumChildSignatureSimilarity`) kalan konteyner-değişimi durumunu kapatır
+— silinen bir panelin, içeriği farklı ama yapısal olarak özdeş bir kardeşe iyileşmesi — böylece
+`Balanced`/`Conservative` üç korumanın tümüyle iki fikstürde de silinen-eleman false-heal oranı
+%0'dır ([benchmark-calibration.md §14/§15](benchmark-calibration.md)).
