@@ -47,7 +47,14 @@ namespace IntentAutomation
             html.AppendLine("  </header>");
             html.AppendLine("  <main>");
             html.Append("    <p><strong>Goal:</strong> ").Append(E(document.Goal)).AppendLine("</p>");
-            html.Append("    <p><strong>Target:</strong> <code>").Append(E(document.TargetUrl)).AppendLine("</code></p>");
+            if (string.Equals(document.Platform, "desktop", StringComparison.OrdinalIgnoreCase))
+            {
+                html.AppendLine("    <p><strong>Platform:</strong> <code>desktop (FlaUI / UI Automation)</code></p>");
+            }
+            else
+            {
+                html.Append("    <p><strong>Target:</strong> <code>").Append(E(document.TargetUrl)).AppendLine("</code></p>");
+            }
             html.AppendLine("    <h2>Steps</h2>");
             html.AppendLine("    <table>");
             html.AppendLine("      <thead><tr><th>#</th><th>Action</th><th>Locator</th><th>Intent</th><th>Candidates</th><th>Best</th><th>Status</th><th>Diagnostic</th></tr></thead>");
@@ -70,14 +77,24 @@ namespace IntentAutomation
 
             html.AppendLine("      </tbody>");
             html.AppendLine("    </table>");
-            html.AppendLine("    <h2>Playwright C#</h2>");
-            html.Append("    <pre><code>").Append(E(document.PlaywrightCSharpTestCode)).AppendLine("</code></pre>");
-            html.AppendLine("    <h2>Playwright TypeScript</h2>");
-            html.Append("    <pre><code>").Append(E(document.PlaywrightTypeScriptTestCode)).AppendLine("</code></pre>");
+            AppendCodeSection(html, "FlaUI C#", document.FlaUiCSharpTestCode);
+            AppendCodeSection(html, "Playwright C#", document.PlaywrightCSharpTestCode);
+            AppendCodeSection(html, "Playwright TypeScript", document.PlaywrightTypeScriptTestCode);
             html.AppendLine("  </main>");
             html.AppendLine("</body>");
             html.AppendLine("</html>");
             return html.ToString();
+        }
+
+        private static void AppendCodeSection(StringBuilder html, string title, string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return;
+            }
+
+            html.Append("    <h2>").Append(E(title)).AppendLine("</h2>");
+            html.Append("    <pre><code>").Append(E(code)).AppendLine("</code></pre>");
         }
 
         private static string FormatBest(IntentFlowReportStep step)

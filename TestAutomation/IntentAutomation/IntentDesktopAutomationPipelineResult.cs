@@ -8,5 +8,6 @@ namespace IntentAutomation
         public IntentDesktopExplorationResult Exploration { get; set; } = new IntentDesktopExplorationResult();
         public IReadOnlyList<IntentDesktopLocatorRecordingResult> RecordingResults { get; set; } = new List<IntentDesktopLocatorRecordingResult>();
         public string FlaUiCSharpTestCode { get; set; } = "";
+        public IntentFlowReportDocument Report { get; set; } = new IntentFlowReportDocument();
     }
 }
