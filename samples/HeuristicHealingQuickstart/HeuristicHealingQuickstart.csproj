@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <!-- Deliberately consume the published package, never a repository ProjectReference. -->
-    <PackageReference Include="AutomationSandbox.SelfHealing" Version="0.2.0-beta.4" />
+    <PackageReference Include="AutomationSandbox.SelfHealing" Version="0.2.0-beta.5" />
   </ItemGroup>
 
 </Project>
