@@ -34,15 +34,45 @@ jobs:
       # how `grok-2-latest` reached the API long after a variable had been set to correct it (#58).
       # An unset variable arrives as an empty string rather than being absent, which the providers
       # already handle via NullIfEmpty before falling back.
-      - name: Gate live Groq and Mistral consensus
+      #
+      # The gate consumes the whole configured pool, not a named pair (#388): any 2 providers
+      # casting shortlist-valid votes for the ground-truth candidate pass it. A provider down
+      # with HTTP 429/timeout contributes no vote and does not fail the night on its own;
+      # fewer than 2 usable votes still fails, because quorum is then not demonstrable. The env
+      # list deliberately mirrors the evaluation step below so every provider the factory can
+      # construct participates in the gate too - NightlyConsensusWorkflowTests guards that.
+      - name: Gate live multi-provider consensus (2-of-N pool)
         env:
           LIVE_CONSENSUS_GATE: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_ENDPOINT: ${{ vars.OPENAI_ENDPOINT }}
+          GROK_MODEL: ${{ vars.GROK_MODEL }}
+          GROK_ENDPOINT: ${{ vars.GROK_ENDPOINT }}
+          KIMI_MODEL: ${{ vars.KIMI_MODEL }}
+          KIMI_ENDPOINT: ${{ vars.KIMI_ENDPOINT }}
           GROQ_MODEL: ${{ vars.GROQ_MODEL }}
           GROQ_ENDPOINT: ${{ vars.GROQ_ENDPOINT }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          OPENROUTER_ENDPOINT: ${{ vars.OPENROUTER_ENDPOINT }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
           MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LiveConsensusGateTests.LiveConsensusGate_GroqAndMistralAgreeOnCorrectCandidate" --logger "console;verbosity=normal"
+          NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_MODEL: ${{ vars.OLLAMA_CLOUD_MODEL }}
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LiveConsensusGateTests.LiveConsensusGate_TwoOfConfiguredPoolAgreeOnCorrectCandidate" --logger "console;verbosity=normal"
 
       - name: Run multi-provider consensus evaluation
         env:
