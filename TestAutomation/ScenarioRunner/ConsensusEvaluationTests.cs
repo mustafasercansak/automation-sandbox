@@ -498,7 +498,7 @@ namespace ScenarioRunner
             Assert.Contains("*(undecidable)*", markdown);
             Assert.Contains("✅ No Consensus (Expected)", markdown);
             Assert.Contains("**Accuracy (on Decidable Consensus):** 1/1 (100%)", markdown);
-            Assert.Contains("**Consensus on Undecidable:** 0/1", markdown);
+            Assert.Contains("**🚨 False Consensus on Undecidable (expected: no-consensus):** 0/1", markdown);
         }
 
         [SkippableFact]
@@ -624,7 +624,10 @@ namespace ScenarioRunner
             var markdown = doc.ToMarkdownStepSummary();
             Assert.Contains("Multi-Provider Consensus Evaluation Summary", markdown);
             Assert.Contains("**Consensus Rate:** 5/5 (100%)", markdown);
-            Assert.Contains("**Consensus on Undecidable:** 1/1", markdown);
+            Assert.Contains("**🚨 False Consensus on Undecidable (expected: no-consensus):** 1/1", markdown);
+            // The undecidable scenario's expected outcome is no-consensus, so a consensus on it
+            // is a false consensus and must be flagged as such - not rendered as neutral info.
+            Assert.Contains("🚨 False Consensus (Undecidable)", markdown);
 
             // Per-provider outcomes are recorded even on the happy path, so the mocked run
             // exercises the same classification the nightly depends on rather than a parallel
