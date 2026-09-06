@@ -30,7 +30,10 @@ namespace ScenarioRunner
 
             if (Summary.UndecidableScenariosCount > 0)
             {
-                sb.AppendLine($"- **Consensus on Undecidable:** {Summary.UndecidableConsensusCount}/{Summary.UndecidableScenariosCount}");
+                // Undecidable scenarios have ground truth "no-consensus" by construction, so any
+                // consensus on one is a false consensus - the correlated-hallucination failure
+                // mode this harness exists to measure (#392). Report it as a cost, not a stat.
+                sb.AppendLine($"- **🚨 False Consensus on Undecidable (expected: no-consensus):** {Summary.UndecidableConsensusCount}/{Summary.UndecidableScenariosCount}");
             }
 
             sb.AppendLine();
@@ -52,7 +55,7 @@ namespace ScenarioRunner
                     }
                     else
                     {
-                        status = "ℹ️ Consensus (Undecidable)";
+                        status = "🚨 False Consensus (Undecidable)";
                     }
                 }
                 else if (!isDecidable)
@@ -241,6 +244,10 @@ namespace ScenarioRunner
         public int DecidableScenariosCount { get; set; }
         public int DecidableConsensusCount { get; set; }
         public int UndecidableScenariosCount { get; set; }
+        // Equal to the number of undecidable scenarios where a consensus formed. Since those
+        // scenarios have "no-consensus" as their ground truth, every count here is a false
+        // consensus - the correlated-hallucination signal (#392). The name stays for JSON schema
+        // stability (SchemaVersion 1 artifacts remain readable).
         public int UndecidableConsensusCount { get; set; }
         public int SplitVoteCount { get; set; }
         public int InsufficientProvidersCount { get; set; }

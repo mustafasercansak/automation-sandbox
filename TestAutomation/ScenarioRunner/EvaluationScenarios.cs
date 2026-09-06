@@ -427,8 +427,11 @@ namespace ScenarioRunner
             // 2. Heuristic behavior: ControlType (1.0), Parent (1.0), Name similarity (9/15 = 0.6000), and Position
             //    similarity (1 - 65/300 = 0.7833) are identical on both candidates. Total scores are identical (0.8421),
             //    yielding an exact runner-up margin of 0.0000 (< 0.05 MinimumCandidateMargin), forcing LLM fallback.
-            // 3. Expected LLM outcome: No consensus (models should refuse to guess between equal-weight options; agreement
-            //    on either candidate is recorded in UndecidableConsensusCount to measure correlated hallucination).
+            // 3. Expected LLM outcome: No consensus (models should refuse to guess between equal-weight options).
+            //    Agreement on either candidate is a false consensus: it is counted in
+            //    UndecidableConsensusCount and flagged as 🚨 False Consensus in the report (#392),
+            //    since correlated hallucination on a no-answer scenario is the exact failure this
+            //    scenario exists to measure.
             return new EvaluationScenario(
                 Name: "Desktop_UndecidableSplitExportAction",
                 Platform: "windows-uia",
