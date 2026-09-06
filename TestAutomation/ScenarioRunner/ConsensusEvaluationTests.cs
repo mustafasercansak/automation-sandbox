@@ -613,7 +613,7 @@ namespace ScenarioRunner
 
             Assert.Equal(3, providers.Count);
 
-            var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: false);
+            var doc = await EvaluateScenariosAsync(providers, EvaluationScenarios.All, verbose: false, delayAsync: (_, _) => Task.CompletedTask);
 
             Assert.Equal(5, doc.Scenarios.Count);
             Assert.Equal(5, doc.Summary.ConsensusCount);
@@ -642,14 +642,88 @@ namespace ScenarioRunner
             Assert.All(doc.ConfiguredProviders, p => Assert.Equal(0, doc.Summary.TotalProviderFailed[p]));
         }
 
+        [Fact]
+        public async Task FreeTierPacing_DelaysTheSecondRapidCallByTheRemainingInterval()
+        {
+            var waits = new List<TimeSpan>();
+            var provider = new FreeTierPacingProvider(
+                new StubProvider("Gemini"),
+                TimeSpan.FromSeconds(61),
+                (wait, _) => { waits.Add(wait); return Task.CompletedTask; });
+
+            var scenario = EvaluationScenarios.All[0];
+            var candidates = SelfHealingResolver.ScoreCandidates(scenario.Expected, scenario.CurrentTreeRoot);
+
+            await provider.ResolveAsync(scenario.Expected, candidates);
+            await provider.ResolveAsync(scenario.Expected, candidates);
+
+            // First call goes through immediately; the second must wait out (almost) the full
+            // window. Tolerance covers only test-execution jitter between the two calls.
+            var wait = Assert.Single(waits);
+            Assert.True(wait > TimeSpan.FromSeconds(55) && wait <= TimeSpan.FromSeconds(61),
+                $"Second call should wait out the remaining pacing window, waited {wait}.");
+        }
+
+        [Fact]
+        public void ApplyFreeTierPacing_WrapsOnlyGemini()
+        {
+            var gemini = new StubProvider("Gemini");
+            var groq = new StubProvider("Groq");
+
+            var paced = ApplyFreeTierPacing(
+                new ILlmHealingProvider[] { gemini, groq },
+                (_, _) => Task.CompletedTask);
+
+            Assert.Equal(2, paced.Count);
+            Assert.IsType<FreeTierPacingProvider>(paced[0]);
+            Assert.Same(groq, paced[1]);
+            Assert.Equal(new[] { "Gemini", "Groq" }, paced.Select(p => p.Name).ToArray());
+        }
+
+        private sealed class StubProvider : ILlmHealingProvider
+        {
+            public StubProvider(string name) => Name = name;
+
+            public string Name { get; }
+            public bool IsAvailable => true;
+
+            public Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(new LlmHealingResult
+                {
+                    ProviderName = Name,
+                    Success = true,
+                    MatchedCandidateId = "c0",
+                });
+            }
+        }
+
+        // Gemini's free tier enforces a 20-requests-per-minute window and answers a burst with
+        // 429 + Retry-After 24-59s, which MaxRetryAfter (10s) correctly refuses to sleep through
+        // (#391). Sequential scenarios still land several Gemini attempts inside one window
+        // because a failing provider retries, so Gemini ended 1-2/5 answered in measured runs.
+        // Spacing Gemini's request starts a full window apart costs the nightly a few minutes
+        // and buys the rest of its answers. Only Gemini is paced: no other provider in the pool
+        // showed this pattern, and the production resolver path is untouched.
+        private static readonly TimeSpan GeminiFreeTierMinInterval = TimeSpan.FromSeconds(61);
+
         // Shared by the live nightly run and the mocked test on purpose: the mocked test is only
         // a meaningful check of the nightly if it exercises the same evaluation and classification
-        // code, not a second copy of it.
+        // code, not a second copy of it. delayAsync exists so the mocked test does not actually
+        // wait out the pacing window (same convention as the providers' retry tests).
         private static async Task<ConsensusEvaluationDocument> EvaluateScenariosAsync(
             IReadOnlyList<ILlmHealingProvider> providers,
             IReadOnlyList<EvaluationScenario> scenarios,
-            bool verbose)
+            bool verbose,
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
         {
+            delayAsync ??= (wait, ct) => Task.Delay(wait, ct);
+            providers = ApplyFreeTierPacing(providers, delayAsync);
+
             var doc = new ConsensusEvaluationDocument
             {
                 Timestamp = DateTimeOffset.UtcNow,
@@ -883,6 +957,67 @@ namespace ScenarioRunner
                 var result = await _inner.ResolveAsync(expected, candidates, platform, cancellationToken).ConfigureAwait(false);
                 LastResult = result;
                 return result;
+            }
+        }
+
+        private static IReadOnlyList<ILlmHealingProvider> ApplyFreeTierPacing(
+            IReadOnlyList<ILlmHealingProvider> providers,
+            Func<TimeSpan, CancellationToken, Task> delayAsync)
+        {
+            return providers
+                .Select(p => string.Equals(p.Name, "Gemini", StringComparison.Ordinal)
+                    ? new FreeTierPacingProvider(p, GeminiFreeTierMinInterval, delayAsync)
+                    : p)
+                .ToList();
+        }
+
+        // Enforces a minimum interval between the wrapped provider's request starts. The gate is
+        // held only while computing and waiting out the delay, so the provider call itself is not
+        // serialized against anything.
+        private sealed class FreeTierPacingProvider : ILlmHealingProvider
+        {
+            private readonly ILlmHealingProvider _inner;
+            private readonly TimeSpan _minInterval;
+            private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
+            private readonly SemaphoreSlim _gate = new(1, 1);
+            private DateTimeOffset _lastRequestStart = DateTimeOffset.MinValue;
+
+            public FreeTierPacingProvider(
+                ILlmHealingProvider inner,
+                TimeSpan minInterval,
+                Func<TimeSpan, CancellationToken, Task> delayAsync)
+            {
+                _inner = inner;
+                _minInterval = minInterval;
+                _delayAsync = delayAsync;
+            }
+
+            public string Name => _inner.Name;
+            public bool IsAvailable => _inner.IsAvailable;
+
+            public async Task<LlmHealingResult> ResolveAsync(
+                UiElementInfo expected,
+                IReadOnlyList<CandidateScore> candidates,
+                string? platform = null,
+                CancellationToken cancellationToken = default)
+            {
+                await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    var wait = _minInterval - (DateTimeOffset.UtcNow - _lastRequestStart);
+                    if (wait > TimeSpan.Zero)
+                    {
+                        await _delayAsync(wait, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    _lastRequestStart = DateTimeOffset.UtcNow;
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+
+                return await _inner.ResolveAsync(expected, candidates, platform, cancellationToken).ConfigureAwait(false);
             }
         }
 
