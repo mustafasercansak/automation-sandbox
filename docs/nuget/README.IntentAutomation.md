@@ -28,7 +28,7 @@ The pipeline consumes web snapshots (`WebElementInfo`, from `AutomationSandbox.P
 
 - `AutomationSandbox.WebDiscovery` — DOM model and capture script (transitive).
 - `AutomationSandbox.PlaywrightLiveExploration` — live web page capture for the web pipeline.
-- `AutomationSandbox.Discovery` — live desktop tree capture for the desktop pipeline (net48, Windows only).
+- `AutomationSandbox.Discovery` — live desktop tree capture for the desktop pipeline (net48, net8.0-windows; Windows only).
 
 ## Documentation
 

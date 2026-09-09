@@ -10,7 +10,7 @@ dotnet add package AutomationSandbox.Discovery --prerelease
 
 ## Target frameworks
 
-- `net48` only — FlaUI 5.0.0 ships .NET Framework binaries, and UIA3 requires Windows COM APIs. Windows is required at build and run time.
+- `net48` and `net8.0-windows` (plus `net10.0-windows` when built with a .NET 10 SDK) — FlaUI 5.0.0 ships both .NET Framework and modern .NET Windows binaries. UIA3 requires Windows COM APIs, so Windows is required at build and run time regardless of TFM.
 
 ## Typical use
 
