@@ -1,5 +1,5 @@
-using UiModel;
-namespace SelfHealing
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.SelfHealing
 {
     public enum HealSource
     {

@@ -5,9 +5,9 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using IntentAutomation;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

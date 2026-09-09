@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Captures a single locator's structural state for persistence, without the bloat of
     // serializing its entire live descendant subtree. A snapshot is just a UiElementInfo

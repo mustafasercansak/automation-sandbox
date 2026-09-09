@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Per-signal breakdown of a CandidateScore's TotalScore, so callers/logs can see WHY a
     // candidate won (or lost) instead of only a single opaque number. Lives in UiModel (not

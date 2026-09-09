@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Desktop counterpart to PlaywrightCSharpTestGenerator: emits an xUnit + FlaUI test skeleton
     // from a planned IntentScenario and the locators IntentDesktopLocatorRepositoryRecorder
-    // recorded for it, using this project's own Discovery.ApplicationConnector - the same
+    // recorded for it, using this project's own AutomationSandbox.Discovery.ApplicationConnector - the same
     // launch/dispose pattern MainFormScenarioTests/WpfMainWindowScenarioTests use - rather than
     // raw FlaUI boilerplate the generated code would otherwise have to reinvent.
 
@@ -44,7 +44,7 @@ namespace IntentAutomation
 
             var code = new StringBuilder();
             code.AppendLine("using System;");
-            code.AppendLine("using Discovery;");
+            code.AppendLine("using AutomationSandbox.Discovery;");
             code.AppendLine("using FlaUI.Core.AutomationElements;");
             code.AppendLine("using FlaUI.Core.Definitions;");
             code.AppendLine("using FlaUI.Core.Input;");

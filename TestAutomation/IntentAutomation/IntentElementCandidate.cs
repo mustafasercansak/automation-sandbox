@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using WebDiscovery;
+using AutomationSandbox.WebDiscovery;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentElementCandidate
     {

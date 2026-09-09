@@ -4,7 +4,7 @@ using System.Threading;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
-namespace Discovery
+namespace AutomationSandbox.Discovery
 {
     // Framework-agnostic connection point: whether the target is WinForms, WPF, or any
     // other Windows desktop app doesn't matter - UIA3 talks to it the same way from outside.

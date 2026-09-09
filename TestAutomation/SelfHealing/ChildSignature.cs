@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     // Multiset-Jaccard over two "Type:count|Type:count" child-ControlType signatures
-    // (see UiModel.UiElementSnapshot.ComputeChildControlTypeSignature). Both empty -> 1.0
+    // (see AutomationSandbox.UiModel.UiElementSnapshot.ComputeChildControlTypeSignature). Both empty -> 1.0
     // (two leaves match); exactly one empty -> 0.0 (a container versus a leaf is a
     // mismatch); otherwise the intersection over the union of the two ControlType multisets.
     internal static class ChildSignature

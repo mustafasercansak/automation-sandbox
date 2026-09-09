@@ -1,8 +1,8 @@
 using System;
 using System.Text.Json;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
     public static class PlaywrightApplicationConnector
     {

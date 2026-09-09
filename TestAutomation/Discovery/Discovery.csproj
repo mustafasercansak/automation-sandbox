@@ -14,6 +14,8 @@
 
     <Nullable>enable</Nullable>
 
+    <RootNamespace>AutomationSandbox.Discovery</RootNamespace>
+
     <PackageId>AutomationSandbox.Discovery</PackageId>
 
     <Description>Resilient live UI tree capture and application startup diagnostics via FlaUI/UI Automation for Windows desktop (net48 and net8.0-windows; Windows required at build and run time).</Description>

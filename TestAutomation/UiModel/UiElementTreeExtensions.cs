@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     public static class UiElementTreeExtensions
     {

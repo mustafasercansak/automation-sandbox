@@ -1,5 +1,5 @@
 using System.Text.Json;
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     public static class UiTreeSerializer
     {

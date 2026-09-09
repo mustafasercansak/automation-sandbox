@@ -149,7 +149,7 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 
 ### 1. Robust Discovery with Options & Telemetry
 ```csharp
-using Discovery;
+using AutomationSandbox.Discovery;
 using System.Threading;
 
 var options = new DiscoveryOptions
@@ -171,8 +171,8 @@ Console.WriteLine($"Visited: {result.VisitedCount}, Skipped: {result.SkippedCoun
 
 ### 2. Heuristic Resolution & Explainability
 ```csharp
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 var expected = UiElementSnapshot.FromJson(File.ReadAllText("Snapshots/txtEmail.json"));
 var liveTree = UiTreeWalker.BuildTree(window);
@@ -356,7 +356,7 @@ $$\text{ToplamSkor} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{burada }
 
 ### 1. Detaylı Ağaç Keşfi ve Telemetri
 ```csharp
-using Discovery;
+using AutomationSandbox.Discovery;
 using System.Threading;
 
 var options = new DiscoveryOptions
@@ -378,8 +378,8 @@ Console.WriteLine($"Ziyaret Edilen: {result.VisitedCount}, Atlanan: {result.Skip
 
 ### 2. Sezgisel İyileştirme ve Açıklanabilirlik
 ```csharp
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 var expected = UiElementSnapshot.FromJson(File.ReadAllText("Snapshots/txtEmail.json"));
 var liveTree = UiTreeWalker.BuildTree(window);

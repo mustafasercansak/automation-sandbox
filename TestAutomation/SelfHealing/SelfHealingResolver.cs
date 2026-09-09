@@ -1,6 +1,6 @@
-using LlmHealing;
-using UiModel;
-namespace SelfHealing
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.SelfHealing
 {
     public static partial class SelfHealingResolver
     {

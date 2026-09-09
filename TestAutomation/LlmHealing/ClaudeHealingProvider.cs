@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // Raw HTTP against the Messages API rather than the official Anthropic SDK:
     // this project targets netstandard2.0 (so it can also be referenced by

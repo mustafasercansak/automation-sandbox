@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public static class IntentLocatorKeySynthesizer
     {

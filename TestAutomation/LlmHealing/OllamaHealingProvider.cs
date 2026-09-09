@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     public sealed class OllamaHealingProvider : HttpLlmHealingProvider
     {

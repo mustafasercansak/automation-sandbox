@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // The Interactions API superseded the older per-model generateContent endpoint,
     // which the Google documentation labels legacy. Its request/response shapes and

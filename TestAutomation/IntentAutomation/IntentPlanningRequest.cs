@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Represents an input request to an <see cref="IIntentPlanner"/> specifying a goal, test data, and target.

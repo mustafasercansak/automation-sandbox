@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentLocatorRepositoryRecorder
     {

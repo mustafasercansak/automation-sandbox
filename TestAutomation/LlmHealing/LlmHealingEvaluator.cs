@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using UiModel;
-namespace LlmHealing
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.LlmHealing
 {
     // Runs every configured provider against the same broken-locator scenario in
     // parallel, so their answers can be compared side by side. Providers without a

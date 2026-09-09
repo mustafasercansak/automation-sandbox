@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
-using UiModel;
-namespace LlmHealing
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.LlmHealing
 {
     public interface ILlmHealingProvider
     {

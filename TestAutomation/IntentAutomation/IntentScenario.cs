@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Represents a structured, planned test scenario derived from a business goal.

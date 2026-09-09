@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

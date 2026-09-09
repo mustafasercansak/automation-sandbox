@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentFlowReportDocument
     {
@@ -161,7 +161,7 @@ namespace IntentAutomation
             return null;
         }
 
-        private static string DesktopLocatorExpression(UiModel.UiElementInfo element)
+        private static string DesktopLocatorExpression(AutomationSandbox.UiModel.UiElementInfo element)
         {
             if (element == null)
             {

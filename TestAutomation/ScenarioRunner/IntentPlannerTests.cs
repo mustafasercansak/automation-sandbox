@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using IntentAutomation;
+using AutomationSandbox.IntentAutomation;
 using Xunit;
 
 namespace ScenarioRunner

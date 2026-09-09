@@ -2,10 +2,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using PlaywrightLiveExploration;
-using SelfHealing;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 using Xunit;
 
 namespace ScenarioRunner

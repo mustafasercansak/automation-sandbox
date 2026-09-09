@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // Shared resilience transport for LLM HTTP calls:
     // 1. Automatic retry with exponential backoff and thread-safe jitter for transient HTTP errors (429, 500, 502, 503, 504) and HttpRequestException.
