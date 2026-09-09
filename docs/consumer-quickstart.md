@@ -89,7 +89,7 @@ public class CheckoutTests : IDisposable
     {
         _repoPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".locator.json");
         _repo = new LocatorRepository(_repoPath);
-        _engine = new SelfHealingEngine(_repo, mode: HealingMode.AutoHeal);
+        _engine = new SelfHealingEngine(_repo, weights: SimilarityWeights.Balanced, mode: HealingMode.AutoHeal);
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public class CheckoutTests : IDisposable
     {
         _repoPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".locator.json");
         _repo = new LocatorRepository(_repoPath);
-        _engine = new SelfHealingEngine(_repo, mode: HealingMode.AutoHeal);
+        _engine = new SelfHealingEngine(_repo, weights: SimilarityWeights.Balanced, mode: HealingMode.AutoHeal);
     }
 
     [Fact]
