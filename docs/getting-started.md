@@ -57,7 +57,12 @@ class Program
         // 1. Specify the path to store locators on disk
         var repository = new LocatorRepository("my_locators.locator.json");
 
-        // 2. Initialize optional AI providers (Local Ollama for 100% free AI healing)
+        // 2. Initialize optional AI providers (Local Ollama, $0 cost). NOTE: a single provider
+        //    is illustrative only - MinimumConsensusVotes requires 2 independent providers to
+        //    name the same candidate before an LLM pick is accepted, so any heal you see below
+        //    still comes from the heuristic scorer, not Ollama. Add a second provider (e.g. a
+        //    free-tier cloud endpoint) if you want LLM picks accepted rather than only recorded
+        //    - see docs/llm-providers.md.
         var llmProviders = new ILlmHealingProvider[]
         {
             new OllamaHealingProvider(host: "http://localhost:11434")
@@ -159,7 +164,12 @@ class Program
         // 1. Specify the path to store locators on disk
         var repository = new LocatorRepository("my_locators.locator.json");
 
-        // 2. Initialize optional AI providers (Local Ollama for 100% free AI healing)
+        // 2. Initialize optional AI providers (Local Ollama, $0 cost). NOTE: a single provider
+        //    is illustrative only - MinimumConsensusVotes requires 2 independent providers to
+        //    name the same candidate before an LLM pick is accepted, so any heal you see below
+        //    still comes from the heuristic scorer, not Ollama. Add a second provider (e.g. a
+        //    free-tier cloud endpoint) if you want LLM picks accepted rather than only recorded
+        //    - see docs/llm-providers.md.
         var llmProviders = new ILlmHealingProvider[]
         {
             new OllamaHealingProvider(host: "http://localhost:11434")
