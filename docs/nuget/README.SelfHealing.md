@@ -31,7 +31,7 @@ IReadOnlyList<HealResult> batch = SelfHealingResolver.ResolveBatch(expectedSnaps
 
 ## Related packages
 
-- `AutomationSandbox.Discovery` — live FlaUI/UIA tree capture (net48, Windows only).
+- `AutomationSandbox.Discovery` — live FlaUI/UIA tree capture (net48, net8.0-windows; Windows only).
 - `AutomationSandbox.WebDiscovery` + `AutomationSandbox.PlaywrightLiveExploration` — web DOM capture.
 - `AutomationSandbox.LlmHealing` — the LLM provider implementations used by `ResolveAsync`.
 

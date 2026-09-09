@@ -92,7 +92,7 @@ The seven packages follow real dependency boundaries (cross-platform core vs. `n
 | :--- | :--- | :--- |
 | Heal broken locators against a UI tree I capture myself | `AutomationSandbox.SelfHealing` | The heuristic scorer, `SelfHealingEngine`, locator repository, and JSON/HTML reports. Pulls `UiModel` + `LlmHealing` transitively. |
 | …and let an **LLM fallback** run when the heuristic isn't confident | *(nothing extra)* — register a provider from `AutomationSandbox.LlmHealing` | Ships transitively with `SelfHealing`; no network calls until you configure a provider ([opt-in, quorum-gated](docs/blog/llm-false-heal-study.md)). |
-| …and capture a live **Windows desktop** tree (FlaUI / UI Automation) | `+ AutomationSandbox.Discovery` | Windows-only, targets `net48`. |
+| …and capture a live **Windows desktop** tree (FlaUI / UI Automation) | `+ AutomationSandbox.Discovery` | Windows-only, targets `net48;net8.0-windows` (+ `net10.0-windows` on a .NET 10 SDK). |
 | Capture a **web DOM** snapshot / get Playwright locator suggestions | `AutomationSandbox.WebDiscovery` | Framework-agnostic DOM model and `PlaywrightLocatorEmitter`. |
 | …and **launch a browser** to capture a page with no hand-written Playwright test | `+ AutomationSandbox.PlaywrightLiveExploration` | Brings `Microsoft.Playwright`. |
 | Generate **Playwright / FlaUI test skeletons from an intent** | `AutomationSandbox.IntentAutomation` | Intent planning, DOM/desktop matching, locator recording, C#/TypeScript codegen. Pulls `WebDiscovery`. |
@@ -745,7 +745,7 @@ AutomationSandbox.sln
 ├── WpfApp/                 .NET 8 / .NET 10 WPF application under test
 ├── TestAutomation/
 │   ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
-│   ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48)
+│   ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48, net8.0-windows, net10.0-windows)
 │   ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
 │   ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net8.0, net10.0)
 │   ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)

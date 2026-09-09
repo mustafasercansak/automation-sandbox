@@ -1,8 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
     <LangVersion>latest</LangVersion>
 
@@ -12,7 +16,7 @@
 
     <PackageId>AutomationSandbox.Discovery</PackageId>
 
-    <Description>Resilient live UI tree capture and application startup diagnostics via FlaUI/UI Automation (net48-only).</Description>
+    <Description>Resilient live UI tree capture and application startup diagnostics via FlaUI/UI Automation for Windows desktop (net48 and net8.0-windows; Windows required at build and run time).</Description>
 
     <PackageTags>ui-automation;flaui;uia3;test-automation;windows;desktop;self-healing;dotnet</PackageTags>
 
