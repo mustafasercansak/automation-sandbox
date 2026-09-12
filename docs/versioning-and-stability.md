@@ -47,14 +47,14 @@ flowchart TD
 ```
 
 #### Tier 1: Stable Public API
-The following NuGet packages and their core types represent the committed public contract. The C# namespace for each package is its unprefixed short name (e.g. `using UiModel;`, not `using AutomationSandbox.UiModel;`):
-- **`AutomationSandbox.UiModel`** (namespace `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`** (namespace `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`** (namespace `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`** (namespace `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`** (namespace `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (namespace `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+The following NuGet packages and their core types represent the committed public contract. As of the namespace migration (#399), the C# namespace for each package matches its NuGet `PackageId` (e.g. `using AutomationSandbox.UiModel;`) — earlier previews used the unprefixed short name (`using UiModel;`); that was a collision-prone surface for a mature SDK and is now a breaking change, called out in the release notes for the version that ships it:
+- **`AutomationSandbox.UiModel`** (namespace `AutomationSandbox.UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (namespace `AutomationSandbox.SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (namespace `AutomationSandbox.LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (namespace `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (namespace `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (namespace `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### Tier 2: Extensibility Points
 Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
@@ -138,14 +138,14 @@ flowchart TD
 ```
 
 #### 1. Kademe: Kararlı Genel API
-Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmeyi temsil eder. Her paketin C# ad alanı, önek almamış kısa adıdır (örn. `using AutomationSandbox.UiModel;` değil, `using UiModel;`):
-- **`AutomationSandbox.UiModel`** (ad alanı `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`** (ad alanı `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`** (ad alanı `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`** (ad alanı `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`** (ad alanı `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (ad alanı `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmeyi temsil eder. Ad alanı geçişinden (#399) itibaren her paketin C# ad alanı, NuGet `PackageId`'siyle eşleşir (örn. `using AutomationSandbox.UiModel;`) — önceki önizlemeler önek almamış kısa adı kullanıyordu (`using UiModel;`); bu, olgun bir SDK için çakışmaya açık bir yüzeydi ve artık bunu taşıyan sürümün release notlarında belirtilen kırıcı bir değişikliktir:
+- **`AutomationSandbox.UiModel`** (ad alanı `AutomationSandbox.UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (ad alanı `AutomationSandbox.SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (ad alanı `AutomationSandbox.LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (ad alanı `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (ad alanı `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (ad alanı `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
 Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.

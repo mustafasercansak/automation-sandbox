@@ -1,5 +1,5 @@
 using System;
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     public sealed class LlmHealingResult
     {

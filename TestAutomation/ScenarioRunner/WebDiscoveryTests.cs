@@ -1,6 +1,6 @@
-using SelfHealing;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
 namespace ScenarioRunner
 {
@@ -115,7 +115,7 @@ namespace ScenarioRunner
                 BoundingRectangle = new BoundingRectangle(100, 3000, 120, 36),
             };
 
-            var healResult = SelfHealing.SelfHealingResolver.Resolve(expected, tree);
+            var healResult = AutomationSandbox.SelfHealing.SelfHealingResolver.Resolve(expected, tree);
 
             Assert.NotNull(healResult.ScoreBreakdown);
             Assert.NotNull(healResult.ScoreBreakdown!.PositionScore);

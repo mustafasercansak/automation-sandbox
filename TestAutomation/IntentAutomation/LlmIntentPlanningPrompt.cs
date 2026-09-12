@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Prompt/response contract for LlmIntentPlanner, kept in its own type (mirroring
-    // LlmHealing.LlmHealingPrompt) so it's independently unit-testable. Unlike the
+    // AutomationSandbox.LlmHealing.LlmHealingPrompt) so it's independently unit-testable. Unlike the
     // healing prompt, there is no closed candidate set to constrain the model against -
     // ParseScenario is the guard here: any step with an unparseable ActionType or an
     // empty TargetDescription fails the whole response, which LlmIntentPlanner treats

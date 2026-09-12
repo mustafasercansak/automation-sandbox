@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using IntentAutomation;
+using AutomationSandbox.IntentAutomation;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 using Xunit;
 
 namespace ScenarioRunner

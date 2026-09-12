@@ -1,5 +1,5 @@
-using UiModel;
-namespace SelfHealing
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.SelfHealing
 {
     // Bridges a HealResult (this project's output) into the LocatorHealingHistoryEntry shape a
     // LocatorRepository persists. Lives here rather than in UiModel so UiModel stays consumer-

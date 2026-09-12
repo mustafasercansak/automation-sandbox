@@ -24,11 +24,11 @@ This guide explains how to test Windows desktop applications (WinForms, WPF, Win
 
 ```csharp
 using System;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core;
 using FlaUI.UIA3;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 class DesktopTest
 {
@@ -84,11 +84,11 @@ class DesktopTest
 
 ```csharp
 using System;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core;
 using FlaUI.UIA3;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 class DesktopTest
 {

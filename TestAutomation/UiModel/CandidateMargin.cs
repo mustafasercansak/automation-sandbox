@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Shared runner-up margin rule (issue #4): a top candidate that barely beats the
     // runner-up is ambiguous, not confident. Lives in UiModel so both SelfHealing

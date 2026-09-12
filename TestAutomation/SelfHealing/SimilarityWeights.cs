@@ -1,4 +1,4 @@
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     // Injectable tunables for SimilarityScorer/SelfHealingResolver. The default values are
     // the same weights this project shipped with when they were hardcoded consts - validated

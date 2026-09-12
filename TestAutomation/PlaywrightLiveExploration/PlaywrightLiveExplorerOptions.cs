@@ -1,4 +1,4 @@
-namespace PlaywrightLiveExploration
+namespace AutomationSandbox.PlaywrightLiveExploration
 {
     public sealed class PlaywrightLiveExplorerOptions
     {

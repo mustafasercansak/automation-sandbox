@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     public interface IHealingReportSink
     {

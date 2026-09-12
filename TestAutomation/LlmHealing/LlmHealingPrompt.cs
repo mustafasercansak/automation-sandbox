@@ -1,8 +1,8 @@
 using System;
 using System.Text;
 using System.Text.Json;
-using UiModel;
-namespace LlmHealing
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.LlmHealing
 {
     // Shared prompt/response format so every provider is asked the same question the same
     // way - that's what makes the evaluator's comparison meaningful. Public so it's

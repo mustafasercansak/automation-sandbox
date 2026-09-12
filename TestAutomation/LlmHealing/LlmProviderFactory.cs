@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // Environment-driven factory for constructing configured LLM healing providers.
     // Discovers well-known providers from environment variables and supports arbitrary

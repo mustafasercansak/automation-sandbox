@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing.Testing
+namespace AutomationSandbox.SelfHealing.Testing
 {
     /// <summary>
     /// Configuration options for configuring <see cref="SelfHealingTestFixture"/>.

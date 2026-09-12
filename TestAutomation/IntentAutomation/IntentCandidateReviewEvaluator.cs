@@ -1,7 +1,7 @@
 using System;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Shared evaluation logic for IntentExplorationBridge and IntentDesktopExplorationBridge (issue #5).
     // Determines if a top candidate meets the review threshold, semantic score gate, and runner-up margin.

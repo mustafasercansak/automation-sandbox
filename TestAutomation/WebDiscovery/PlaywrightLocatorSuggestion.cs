@@ -1,4 +1,4 @@
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
     public sealed class PlaywrightLocatorSuggestion
     {

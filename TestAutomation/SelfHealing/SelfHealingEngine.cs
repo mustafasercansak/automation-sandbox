@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     public sealed class SelfHealingEngine
     {

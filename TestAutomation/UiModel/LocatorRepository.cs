@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Owns read-modify-write access to a single .locator.json file on disk. The load-modify-save
     // cycle in Upsert is guarded by an exclusive lock on a sidecar ".lock" file so concurrent

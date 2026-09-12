@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentFlowReportFileSink
     {

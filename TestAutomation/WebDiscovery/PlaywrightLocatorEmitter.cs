@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
     public static class PlaywrightLocatorEmitter
     {
@@ -114,7 +114,7 @@ namespace WebDiscovery
         }
 
         // These expressions are C# source consumed directly by PlaywrightCSharpTestGenerator.
-        // This deliberately mirrors IntentAutomation.CodeGenerationUtilities rather than
+        // This deliberately mirrors AutomationSandbox.IntentAutomation.CodeGenerationUtilities rather than
         // referencing it: WebDiscovery is the lower-level dependency of IntentAutomation, so
         // calling upward would create a package cycle.
         private static string EscapeCSharpString(string value)

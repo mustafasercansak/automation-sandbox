@@ -1,8 +1,8 @@
 using System;
 using System.Buffers;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     // Pure heuristic, no LLM involved: ControlType, parent context, sibling
     // position, name similarity, and screen position are combined with weights

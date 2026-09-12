@@ -1,4 +1,4 @@
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // DTO for configuring an LLM provider dynamically from JSON or configuration sources.
     public class LlmProviderConfiguration

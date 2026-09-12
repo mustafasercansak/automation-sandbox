@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Lives in UiModel (not SelfHealing) so both SelfHealing (which produces these) and
     // LlmHealing (which consumes a shortlist of these as an LLM prompt) can reference it

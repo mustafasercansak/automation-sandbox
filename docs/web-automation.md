@@ -47,7 +47,7 @@ navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly - no h
 Playwright test required, and no external Model Context Protocol server:
 
 ```csharp
-using PlaywrightLiveExploration;
+using AutomationSandbox.PlaywrightLiveExploration;
 
 await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
 WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
@@ -67,9 +67,9 @@ C#/.NET codebase).
 using System;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using WebDiscovery;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 class WebTest
 {
@@ -142,9 +142,9 @@ When an `<iframe>` is hosted on a different origin (e.g. `https://checkout.strip
 using System.Linq;
 using System.Text.Json;
 using Microsoft.Playwright;
-using WebDiscovery;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 // 1. Locate the cross-origin frame via Playwright
 IFrame? paymentFrame = page.Frames.FirstOrDefault(f => f.Url.Contains("checkout.stripe.com"))
@@ -203,7 +203,7 @@ yazılmış bir Playwright testine ya da harici bir Model Context Protocol sunuc
 kalmadan:
 
 ```csharp
-using PlaywrightLiveExploration;
+using AutomationSandbox.PlaywrightLiveExploration;
 
 await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
 WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
@@ -222,9 +222,9 @@ sayfasına bakın.
 using System;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using WebDiscovery;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 class WebTest
 {
@@ -294,9 +294,9 @@ Bir `<iframe>` farklı bir origin'den yüklendiğinde (örn. `https://checkout.s
 using System.Linq;
 using System.Text.Json;
 using Microsoft.Playwright;
-using WebDiscovery;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 // 1. Playwright üzerinden cross-origin frame'i bulun
 IFrame? paymentFrame = page.Frames.FirstOrDefault(f => f.Url.Contains("checkout.stripe.com"))

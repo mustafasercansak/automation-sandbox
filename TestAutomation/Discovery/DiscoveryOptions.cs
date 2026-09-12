@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-namespace Discovery
+namespace AutomationSandbox.Discovery
 {
     public sealed class DiscoveryOptions
     {
