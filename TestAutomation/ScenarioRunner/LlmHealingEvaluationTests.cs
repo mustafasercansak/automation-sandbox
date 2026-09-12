@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using Discovery;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.Discovery;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     // Comparison harness, not a production fallback path: runs every configured LLM

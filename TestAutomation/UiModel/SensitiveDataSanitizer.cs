@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     /// <summary>
     /// Built-in text sanitizer that masks common sensitive patterns (emails, credit card numbers,

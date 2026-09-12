@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public static class IntentFlowReportHtmlRenderer
     {

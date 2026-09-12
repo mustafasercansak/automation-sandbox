@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using FlaUI.Core.AutomationElements;
-using UiModel;
-namespace Discovery
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.Discovery
 {
     public static class UiTreeWalker
     {

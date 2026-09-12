@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Desktop counterpart to IntentExplorationBridge: matches intent steps against a live
-    // UiElementInfo tree (as captured by Discovery.UiTreeWalker) instead of a WebElementInfo
+    // UiElementInfo tree (as captured by AutomationSandbox.Discovery.UiTreeWalker) instead of a WebElementInfo
     // DOM snapshot. Scoring uses UIA ControlType names in place of HTML tag/role, and
     // Name/AutomationId/ClassName in place of accessible name/testId/CSS selector.
 

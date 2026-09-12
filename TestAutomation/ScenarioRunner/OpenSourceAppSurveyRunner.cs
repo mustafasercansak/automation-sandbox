@@ -6,11 +6,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Tools;
 using FlaUI.UIA3;
-using UiModel;
+using AutomationSandbox.UiModel;
 
 namespace ScenarioRunner
 {

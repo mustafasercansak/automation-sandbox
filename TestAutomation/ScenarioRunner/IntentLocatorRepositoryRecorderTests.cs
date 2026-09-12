@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using IntentAutomation;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 using Xunit;
 
 namespace ScenarioRunner

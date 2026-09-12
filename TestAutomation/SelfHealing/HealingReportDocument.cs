@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     public sealed class HealingReportDocument
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentDesktopExplorationResult
     {

@@ -2,9 +2,9 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using WebDiscovery;
+using AutomationSandbox.WebDiscovery;
 
-namespace PlaywrightLiveExploration
+namespace AutomationSandbox.PlaywrightLiveExploration
 {
     // Closes the gap the "MCP Exploration" docs previously described as Planned: instead of
     // requiring a hand-written Playwright test that calls
@@ -17,7 +17,7 @@ namespace PlaywrightLiveExploration
     public sealed class PlaywrightLiveExplorer : IAsyncDisposable
     {
         // Playwright's own EvaluateAsync<T> deserializer reflects over settable properties and
-        // cannot populate UiModel.BoundingRectangle (a readonly struct with a constructor, no
+        // cannot populate AutomationSandbox.UiModel.BoundingRectangle (a readonly struct with a constructor, no
         // setters) - observed to throw "Property set method not found." live against a real
         // Chromium page. Round-tripping through a JSON string and System.Text.Json (which
         // supports constructor-matched deserialization) sidesteps that, and matches how

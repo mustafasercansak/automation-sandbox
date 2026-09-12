@@ -1,8 +1,8 @@
 using System;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentAutomationPipeline
     {

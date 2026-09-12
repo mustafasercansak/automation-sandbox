@@ -3,9 +3,9 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     public static class HealingReportHtmlRenderer
     {

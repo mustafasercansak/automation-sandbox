@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using IntentAutomation;
+using AutomationSandbox.IntentAutomation;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using UiModel;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

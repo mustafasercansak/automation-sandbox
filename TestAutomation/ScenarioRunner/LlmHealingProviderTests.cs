@@ -3,9 +3,9 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     // Pure-logic tests for the LlmHealing prompt/parsing/provider plumbing, run

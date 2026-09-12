@@ -1,5 +1,5 @@
 using System.Text.Json;
-using UiModel;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

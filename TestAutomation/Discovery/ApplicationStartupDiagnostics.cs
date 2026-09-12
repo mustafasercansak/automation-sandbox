@@ -1,6 +1,6 @@
 using System;
 
-namespace Discovery
+namespace AutomationSandbox.Discovery
 {
     internal static class ApplicationStartupDiagnostics
     {

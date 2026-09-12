@@ -3,15 +3,15 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Tools;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
-    // Same Discovery/SelfHealing code as MainFormScenarioTests, pointed at the WPF app
+    // Same Discovery/AutomationSandbox.SelfHealing code as MainFormScenarioTests, pointed at the WPF app
     // instead of WinForms - this is the actual proof that the architecture is
     // framework-agnostic, not just a claim in a comment.
     public class WpfMainWindowScenarioTests : IDisposable

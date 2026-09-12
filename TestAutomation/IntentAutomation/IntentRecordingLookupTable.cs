@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Encapsulates multi-tier locator recording lookup across test generators.

@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     public enum BatchReconciliationDisposition
     {

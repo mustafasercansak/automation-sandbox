@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public static class AssertionCodeEmitter
     {

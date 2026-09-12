@@ -44,9 +44,9 @@ Create a new console or test project and copy this complete code:
 ```csharp
 using System;
 using System.Threading.Tasks;
-using UiModel;
-using SelfHealing;
-using LlmHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.LlmHealing;
 
 class Program
 {
@@ -148,9 +148,9 @@ Yeni bir konsol projesi oluşturun ve aşağıdaki tam kodu kopyalayıp çalış
 ```csharp
 using System;
 using System.Threading.Tasks;
-using UiModel;
-using SelfHealing;
-using LlmHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.LlmHealing;
 
 class Program
 {

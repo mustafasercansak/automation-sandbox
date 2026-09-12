@@ -1,7 +1,7 @@
 using System;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Desktop counterpart to IntentAutomationPipeline: plans intent steps (the same IIntentPlanner
     // works for both platforms), matches them against a live UiElementInfo tree, records accepted

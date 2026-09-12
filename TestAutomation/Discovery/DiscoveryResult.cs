@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UiModel;
-namespace Discovery
+using AutomationSandbox.UiModel;
+namespace AutomationSandbox.Discovery
 {
     public sealed class DiscoveryResult
     {

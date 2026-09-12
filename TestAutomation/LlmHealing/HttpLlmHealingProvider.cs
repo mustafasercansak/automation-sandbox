@@ -5,9 +5,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace LlmHealing
+namespace AutomationSandbox.LlmHealing
 {
     // Abstract base class for HTTP-based LLM healing providers.
     // Encapsulates shared fields, constructor validations, retry/timeout orchestration,

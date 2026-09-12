@@ -1,4 +1,4 @@
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     public sealed class IntentExplorationOptions
     {

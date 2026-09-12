@@ -74,7 +74,7 @@ so package installation and healing behavior are runnable on Windows, Linux, and
 
 ### 4. xUnit & NUnit Test Helpers (Before vs. After)
 
-Instead of manually instantiating `LocatorRepository`, managing temp files, and wiring `SelfHealingEngine` in every test class, use `SelfHealingTestFixture` or `SelfHealingTestBase` from `SelfHealing.Testing`:
+Instead of manually instantiating `LocatorRepository`, managing temp files, and wiring `SelfHealingEngine` in every test class, use `SelfHealingTestFixture` or `SelfHealingTestBase` from `AutomationSandbox.SelfHealing.Testing`:
 
 #### Before: Manual Boilerplate Wiring
 ```csharp
@@ -112,7 +112,7 @@ public class CheckoutTests : IDisposable
 
 #### After: Clean xUnit Class Fixture
 ```csharp
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 {
@@ -135,7 +135,7 @@ public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 #### After: Clean NUnit Test Fixture (or Base Class)
 ```csharp
 using NUnit.Framework;
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 [TestFixture]
 public class CheckoutTests : SelfHealingTestBase
@@ -243,7 +243,7 @@ davranışının Windows, Linux ve macOS'ta çalışabilmesi için sentetik capt
 
 ### 4. xUnit & NUnit Test Yardımcıları (Önce vs. Sonra)
 
-Her test sınıfında manuel olarak `LocatorRepository` başlatmak, geçici dosyaları yönetmek ve `SelfHealingEngine` bağlamak yerine `SelfHealing.Testing` altındaki `SelfHealingTestFixture` veya `SelfHealingTestBase` kullanın:
+Her test sınıfında manuel olarak `LocatorRepository` başlatmak, geçici dosyaları yönetmek ve `SelfHealingEngine` bağlamak yerine `AutomationSandbox.SelfHealing.Testing` altındaki `SelfHealingTestFixture` veya `SelfHealingTestBase` kullanın:
 
 #### Önce: Manuel Şablon Kod (Boilerplate)
 ```csharp
@@ -281,7 +281,7 @@ public class CheckoutTests : IDisposable
 
 #### Sonra: Temiz xUnit Class Fixture
 ```csharp
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 {
@@ -304,7 +304,7 @@ public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 #### Sonra: Temiz NUnit Test Fixture (veya Taban Sınıf)
 ```csharp
 using NUnit.Framework;
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 [TestFixture]
 public class CheckoutTests : SelfHealingTestBase

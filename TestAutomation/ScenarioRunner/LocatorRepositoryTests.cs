@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     public class LocatorRepositoryTests : IDisposable

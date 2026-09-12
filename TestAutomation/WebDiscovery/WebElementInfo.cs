@@ -1,6 +1,6 @@
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
     public sealed class WebElementInfo
     {

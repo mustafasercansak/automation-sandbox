@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Natural-language-to-full-scenario planning: DeterministicIntentPlanner only
     // recognizes a fixed vocabulary of verbs (save/submit/create/...), so a goal phrased

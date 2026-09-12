@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using SelfHealing;
-using SelfHealing.Testing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.SelfHealing.Testing;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

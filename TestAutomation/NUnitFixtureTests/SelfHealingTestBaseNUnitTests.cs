@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using SelfHealing;
-using SelfHealing.Testing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.SelfHealing.Testing;
+using AutomationSandbox.UiModel;
 
 namespace NUnitFixtureTests
 {

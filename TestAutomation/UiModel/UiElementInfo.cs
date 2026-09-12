@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     public sealed class UiElementInfo
     {

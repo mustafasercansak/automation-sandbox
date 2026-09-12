@@ -1,6 +1,6 @@
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Desktop counterpart to IntentElementCandidate: Element is a UiElementInfo captured via
     // Discovery/UiTreeWalker instead of a WebElementInfo DOM node, and there is no
