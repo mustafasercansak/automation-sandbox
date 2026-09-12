@@ -9,8 +9,10 @@ namespace AutomationSandbox.LlmHealing
     // Environment-driven factory for constructing configured LLM healing providers.
     // Discovers well-known providers from environment variables and supports arbitrary
     // OpenAI-compatible endpoints via the LLM_CUSTOM_PROVIDERS JSON array.
+    /// <summary>Environment-driven factory for constructing configured LLM healing providers. Discovers well-known providers from environment variables and supports arbitrary OpenAI-compatible endpoints via the LLM_CUSTOM_PROVIDERS JSON array.</summary>
     public static class LlmProviderFactory
     {
+        /// <summary>Builds the configured provider pool from environment settings and optional diagnostics; missing optional providers are omitted.</summary>
         public static IReadOnlyList<ILlmHealingProvider> CreateConfiguredProviders(
             HttpClient? httpClient = null,
             Func<string, string?>? getEnv = null)
@@ -18,6 +20,7 @@ namespace AutomationSandbox.LlmHealing
             return CreateConfiguredProviders(httpClient, getEnv, Console.Error.WriteLine);
         }
 
+        /// <summary>Builds the configured provider pool from environment settings and optional diagnostics; missing optional providers are omitted.</summary>
         public static IReadOnlyList<ILlmHealingProvider> CreateConfiguredProviders(
             HttpClient? httpClient,
             Func<string, string?>? getEnv,

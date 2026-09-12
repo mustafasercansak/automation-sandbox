@@ -12,15 +12,18 @@ namespace AutomationSandbox.IntentAutomation
     // launch/dispose pattern MainFormScenarioTests/WpfMainWindowScenarioTests use - rather than
     // raw FlaUI boilerplate the generated code would otherwise have to reinvent.
 
+    /// <summary>Desktop counterpart to PlaywrightCSharpTestGenerator: emits an xUnit + FlaUI test skeleton from a planned IntentScenario and the locators IntentDesktopLocatorRepositoryRecorder recorded for it, using this project&apos;s own AutomationSandbox.Discovery.ApplicationConnector - the same launch/dispose pattern MainFormScenarioTests/WpfMainWindowScenarioTests use - rather than raw FlaUI boilerplate the generated code would otherwise have to reinvent.</summary>
     public sealed class FlaUiCSharpTestGenerator
     {
         private readonly FlaUiCSharpTestGenerationOptions _options;
 
+        /// <summary>Configures the target executable, C# naming, locator comments, and assertion handling without launching the application.</summary>
         public FlaUiCSharpTestGenerator(FlaUiCSharpTestGenerationOptions? options = null)
         {
             _options = options ?? new FlaUiCSharpTestGenerationOptions();
         }
 
+        /// <summary>Generates FlaUI C# test source using the supplied scenario, recorded desktop locators, and assertion policy.</summary>
         public string Generate(IntentScenario scenario, IReadOnlyList<IntentDesktopLocatorRecordingResult> recordingResults)
         {
             if (scenario == null)

@@ -1,0 +1,11 @@
+<Project>
+  <!-- Evaluate after each project has declared IsPackable. In Directory.Build.props
+       the test and sample projects have not yet opted out. -->
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <!-- Libraries opt into GenerateDocumentationFile in their project files so the
+         SDK computes documentation output/copy items before this late import. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591;CS1570;CS1572;CS1573;CS1574;CS1587</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

@@ -8,6 +8,7 @@ using AutomationSandbox.UiModel;
 
 namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Coordinates stored locators, resolver decisions, execution retries, and optional attempt reports.</summary>
     public sealed class SelfHealingEngine
     {
         /// <summary>
@@ -23,10 +24,15 @@ namespace AutomationSandbox.SelfHealing
         private readonly HealingMode _mode;
         private readonly bool _reconcileAgainstRepository;
 
+        /// <summary>Optional persistent locator repository used for accepted snapshots and ownership checks.</summary>
         public LocatorRepository? Repository => _repository;
+        /// <summary>Configured scoring and acceptance parameters used by this engine.</summary>
         public SimilarityWeights Weights => _weights;
+        /// <summary>Optional fallback providers; each provider name must be unique within an evaluation.</summary>
         public IReadOnlyList<ILlmHealingProvider> LlmProviders => _llmProviders;
+        /// <summary>Optional destination for resolution and execution telemetry.</summary>
         public IHealingReportSink? ReportSink => _reportSink;
+        /// <summary>Policy governing whether proposals are observed, reviewed, or applied during execution.</summary>
         public HealingMode Mode => _mode;
 
         /// <summary>
@@ -39,6 +45,7 @@ namespace AutomationSandbox.SelfHealing
         /// </summary>
         public bool ReconcileAgainstRepository => _reconcileAgainstRepository;
 
+        /// <summary>Configures repository storage, scoring, optional providers, reporting, execution policy, and optional repository ownership checks.</summary>
         public SelfHealingEngine(
             LocatorRepository? repository = null,
             SimilarityWeights? weights = null,
@@ -296,6 +303,7 @@ namespace AutomationSandbox.SelfHealing
                 "NoSuchElementException",
             };
 
+        /// <summary>Classifies known locator-resolution failures eligible for healing; unrelated action failures must propagate.</summary>
         public static bool IsLocatorResolutionException(Exception exception)
         {
             return LocatorResolutionExceptionTypeNames.Contains(exception.GetType().Name);

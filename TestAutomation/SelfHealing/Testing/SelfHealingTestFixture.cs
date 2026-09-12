@@ -68,9 +68,13 @@ namespace AutomationSandbox.SelfHealing.Testing
         private readonly string? _temporaryReportPath;
         private bool _disposed;
 
+        /// <summary>Locator repository owned or supplied to this fixture.</summary>
         public LocatorRepository Repository { get; }
+        /// <summary>Healing engine configured for this fixture&apos;s repository and options.</summary>
         public SelfHealingEngine Engine { get; }
+        /// <summary>Filesystem path of the locator repository used by the test fixture.</summary>
         public string RepositoryPath { get; }
+        /// <summary>Optional callback receiving engine diagnostic messages.</summary>
         public Action<string>? LogAction { get; set; }
 
         /// <summary>
@@ -211,12 +215,14 @@ namespace AutomationSandbox.SelfHealing.Testing
                 cancellationToken: cancellationToken);
         }
 
+        /// <summary>Releases fixture resources and optional temporary repository files.</summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>Releases fixture resources and optional temporary repository files.</summary>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)
@@ -264,16 +270,21 @@ namespace AutomationSandbox.SelfHealing.Testing
     /// </summary>
     public abstract class SelfHealingTestBase : IDisposable
     {
+        /// <summary>Shared fixture that owns the engine and repository lifecycle.</summary>
         public SelfHealingTestFixture Fixture { get; }
 
+        /// <summary>Persistent locator repository exposed to derived test fixtures.</summary>
         public LocatorRepository Repository => Fixture.Repository;
+        /// <summary>Healing engine exposed to derived test fixtures.</summary>
         public SelfHealingEngine Engine => Fixture.Engine;
 
+        /// <summary>Creates the healing fixture used by a derived test class, with default options when none are supplied.</summary>
         protected SelfHealingTestBase(SelfHealingTestOptions? options = null)
         {
             Fixture = options != null ? SelfHealingTestFixture.Create(options) : new SelfHealingTestFixture();
         }
 
+        /// <summary>Executes an action through the fixture&apos;s healing engine, capturing a fresh tree when an eligible locator failure requires resolution.</summary>
         protected Task<T> ExecuteWithHealingAsync<T>(
             string locatorKey,
             UiElementInfo expected,
@@ -287,6 +298,7 @@ namespace AutomationSandbox.SelfHealing.Testing
             return Fixture.ExecuteWithHealingAsync(locatorKey, expected, action, captureTreeRoot, testIntent, platform, cancellationToken, shouldHeal);
         }
 
+        /// <summary>Executes an action through the fixture&apos;s healing engine, capturing a fresh tree when an eligible locator failure requires resolution.</summary>
         protected Task ExecuteWithHealingAsync(
             string locatorKey,
             UiElementInfo expected,
@@ -300,6 +312,7 @@ namespace AutomationSandbox.SelfHealing.Testing
             return Fixture.ExecuteWithHealingAsync(locatorKey, expected, action, captureTreeRoot, testIntent, platform, cancellationToken, shouldHeal);
         }
 
+        /// <summary>Releases the owned healing fixture.</summary>
         public virtual void Dispose()
         {
             Fixture.Dispose();

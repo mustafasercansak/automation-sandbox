@@ -1,0 +1,2103 @@
+[
+  {
+    "Package": "Discovery",
+    "Type": "AutomationSandbox.Discovery.ApplicationConnector",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ApplicationConnector : IDisposable"
+    ],
+    "Files": [
+      "TestAutomation/Discovery/ApplicationConnector.cs"
+    ],
+    "Members": [
+      "public Application App { get; }",
+      "public UIA3Automation Automation { get; }",
+      "public Window GetMainWindow(TimeSpan? timeout = null)",
+      "public static ApplicationConnector Attach(string processName)",
+      "public static ApplicationConnector Launch(string exePath)",
+      "public void Dispose()"
+    ]
+  },
+  {
+    "Package": "Discovery",
+    "Type": "AutomationSandbox.Discovery.DiscoveryOptions",
+    "PublicMutableProperties": 7,
+    "Declarations": [
+      "public sealed class DiscoveryOptions"
+    ],
+    "Files": [
+      "TestAutomation/Discovery/DiscoveryOptions.cs"
+    ],
+    "Members": [
+      "public ISet<string> IgnoredClassNames { get; set; }",
+      "public ISet<string> IgnoredControlTypes { get; set; }",
+      "public TimeSpan Timeout { get; set; }",
+      "public bool ContinueOnElementError { get; set; }",
+      "public bool IncludeOffscreen { get; set; }",
+      "public int MaxDepth { get; set; }",
+      "public int MaxElements { get; set; }",
+      "public static DiscoveryOptions Default { get; }"
+    ]
+  },
+  {
+    "Package": "Discovery",
+    "Type": "AutomationSandbox.Discovery.DiscoveryResult",
+    "PublicMutableProperties": 11,
+    "Declarations": [
+      "public sealed class DiscoveryResult"
+    ],
+    "Files": [
+      "TestAutomation/Discovery/DiscoveryResult.cs"
+    ],
+    "Members": [
+      "public List<string> Warnings { get; set; }",
+      "public TimeSpan Elapsed { get; set; }",
+      "public UiElementInfo Root { get; set; }",
+      "public bool HitMaxDepth { get; set; }",
+      "public bool HitMaxElements { get; set; }",
+      "public bool TimedOut { get; set; }",
+      "public bool WasCancelled { get; set; }",
+      "public int CapturedCount { get; set; }",
+      "public int ErrorCount { get; set; }",
+      "public int SkippedCount { get; set; }",
+      "public int VisitedCount { get; set; }"
+    ]
+  },
+  {
+    "Package": "Discovery",
+    "Type": "AutomationSandbox.Discovery.UiTreeWalker",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class UiTreeWalker"
+    ],
+    "Files": [
+      "TestAutomation/Discovery/UiTreeWalker.cs"
+    ],
+    "Members": [
+      "public static DiscoveryResult Discover( AutomationElement element, DiscoveryOptions? options = null, CancellationToken cancellationToken = default)",
+      "public static UiElementInfo BuildTree(AutomationElement element, int maxDepth = DefaultMaxDepth, int maxElements = DefaultMaxElements)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.AssertGenerationMode",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum AssertGenerationMode"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/AssertGenerationMode.cs"
+    ],
+    "Members": [
+      "Fallback",
+      "Lenient",
+      "Strict"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.AssertionKind",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum AssertionKind"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/AssertionKind.cs"
+    ],
+    "Members": [
+      "None",
+      "NotVisible",
+      "TextContains",
+      "TextEquals",
+      "UrlContains",
+      "UrlEquals",
+      "ValueEquals",
+      "Visible"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.AssertionKindExtensions",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AssertionKindExtensions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/AssertionKind.cs"
+    ],
+    "Members": [
+      "public static bool IsPlatformNeutral(this AssertionKind kind)",
+      "public static bool IsSupportedOnDesktop(this AssertionKind kind)",
+      "public static bool IsWebOnly(this AssertionKind kind)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.DeterministicIntentPlanner",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DeterministicIntentPlanner : IIntentPlanner"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/DeterministicIntentPlanner.cs"
+    ],
+    "Members": [
+      "public IntentPlanningResult Plan(IntentPlanningRequest request)",
+      "public static (AssertionKind Kind, string ExpectedValue) DeriveAssertion(string expectedOutcome, string goal)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.FlaUiCSharpTestGenerationOptions",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class FlaUiCSharpTestGenerationOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/FlaUiCSharpTestGenerationOptions.cs"
+    ],
+    "Members": [
+      "public AssertGenerationMode AssertGenerationMode { get; set; }",
+      "public bool IncludeLocatorComments { get; set; }",
+      "public string ApplicationExecutablePath { get; set; }",
+      "public string ClassName { get; set; }",
+      "public string MethodName { get; set; }",
+      "public string Namespace { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.FlaUiCSharpTestGenerator",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class FlaUiCSharpTestGenerator"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/FlaUiCSharpTestGenerator.cs"
+    ],
+    "Members": [
+      "public FlaUiCSharpTestGenerator(FlaUiCSharpTestGenerationOptions? options = null)",
+      "public string Generate(IntentScenario scenario, IReadOnlyList<IntentDesktopLocatorRecordingResult> recordingResults)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IIntentPlanner",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public interface IIntentPlanner"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IIntentPlanner.cs"
+    ],
+    "Members": [
+      "IntentPlanningResult Plan(IntentPlanningRequest request)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentActionType",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum IntentActionType"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentActionType.cs"
+    ],
+    "Members": [
+      "Assert = 5",
+      "Check = 10",
+      "Click = 3",
+      "Fill = 2",
+      "Hover = 6",
+      "Navigate = 1",
+      "PressKey = 8",
+      "Select = 4",
+      "Uncheck = 11",
+      "Unknown = 0",
+      "UploadFile = 7",
+      "Wait = 9"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentAutomationPipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentAutomationPipeline"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentAutomationPipeline.cs"
+    ],
+    "Members": [
+      "public IntentAutomationPipeline( IIntentPlanner? planner = null, IntentAutomationPipelineOptions? options = null)",
+      "public IntentAutomationPipelineResult Run( IntentPlanningRequest request, WebElementInfo domRoot, LocatorRepository repository)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentAutomationPipelineOptions",
+    "PublicMutableProperties": 5,
+    "Declarations": [
+      "public sealed class IntentAutomationPipelineOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentAutomationPipelineOptions.cs"
+    ],
+    "Members": [
+      "public AssertGenerationMode AssertGenerationMode { get; set; }",
+      "public IntentExplorationOptions Exploration { get; set; }",
+      "public IntentLocatorRecordingOptions Recording { get; set; }",
+      "public PlaywrightCSharpTestGenerationOptions Generation { get; set; }",
+      "public PlaywrightTypeScriptTestGenerationOptions TypeScriptGeneration { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentAutomationPipelineResult",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class IntentAutomationPipelineResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentAutomationPipelineResult.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<IntentLocatorRecordingResult> RecordingResults { get; set; }",
+      "public IntentExplorationResult Exploration { get; set; }",
+      "public IntentFlowReportDocument Report { get; set; }",
+      "public IntentPlanningResult Planning { get; set; }",
+      "public string PlaywrightCSharpTestCode { get; set; }",
+      "public string PlaywrightTypeScriptTestCode { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopAutomationPipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentDesktopAutomationPipeline"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopAutomationPipeline.cs"
+    ],
+    "Members": [
+      "public IntentDesktopAutomationPipeline( IIntentPlanner? planner = null, IntentDesktopAutomationPipelineOptions? options = null)",
+      "public IntentDesktopAutomationPipelineResult Run( IntentDesktopPlanningRequest request, UiElementInfo desktopRoot, LocatorRepository repository)",
+      "public IntentDesktopAutomationPipelineResult Run( IntentPlanningRequest request, UiElementInfo desktopRoot, LocatorRepository repository)",
+      "public IntentDesktopAutomationPipelineResult Run( string goal, UiElementInfo desktopRoot, LocatorRepository repository)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopAutomationPipelineOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentDesktopAutomationPipelineOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopAutomationPipelineOptions.cs"
+    ],
+    "Members": [
+      "public AssertGenerationMode AssertGenerationMode { get; set; }",
+      "public FlaUiCSharpTestGenerationOptions Generation { get; set; }",
+      "public IntentDesktopExplorationOptions Exploration { get; set; }",
+      "public IntentDesktopLocatorRecordingOptions Recording { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopAutomationPipelineResult",
+    "PublicMutableProperties": 5,
+    "Declarations": [
+      "public sealed class IntentDesktopAutomationPipelineResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopAutomationPipelineResult.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<IntentDesktopLocatorRecordingResult> RecordingResults { get; set; }",
+      "public IntentDesktopExplorationResult Exploration { get; set; }",
+      "public IntentFlowReportDocument Report { get; set; }",
+      "public IntentPlanningResult Planning { get; set; }",
+      "public string FlaUiCSharpTestCode { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopElementCandidate",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentDesktopElementCandidate"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopElementCandidate.cs"
+    ],
+    "Members": [
+      "public IntentDesktopElementCandidate( IntentStep? step = null, UiElementInfo? element = null, double score = 0.0, double semanticScore = 0.0, string reason = \"\")",
+      "public IntentStep Step { get; }",
+      "public UiElementInfo Element { get; }",
+      "public double Score { get; }",
+      "public double SemanticScore { get; }",
+      "public string Reason { get; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopExplorationBridge",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentDesktopExplorationBridge"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopExplorationBridge.cs"
+    ],
+    "Members": [
+      "public IntentDesktopExplorationBridge(IntentDesktopExplorationOptions? options = null)",
+      "public IntentDesktopExplorationResult Match(IntentScenario scenario, UiElementInfo root)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopExplorationOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentDesktopExplorationOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopExplorationOptions.cs"
+    ],
+    "Members": [
+      "public double MinimumCandidateMargin { get; set; }",
+      "public double MinimumSemanticScore { get; set; }",
+      "public double ReviewThreshold { get; set; }",
+      "public int MaxCandidatesPerStep { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopExplorationResult",
+    "PublicMutableProperties": 2,
+    "Declarations": [
+      "public sealed class IntentDesktopExplorationResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopExplorationResult.cs"
+    ],
+    "Members": [
+      "public IntentScenario Scenario { get; set; }",
+      "public List<IntentDesktopStepExplorationResult> StepResults { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopLocatorRecordingOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentDesktopLocatorRecordingOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopLocatorRecordingOptions.cs"
+    ],
+    "Members": [
+      "public bool RecordReviewCandidates { get; set; }",
+      "public double MinimumScore { get; set; }",
+      "public string ApplicationName { get; set; }",
+      "public string Platform { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopLocatorRecordingResult",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class IntentDesktopLocatorRecordingResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopLocatorRecordingResult.cs"
+    ],
+    "Members": [
+      "public IntentDesktopElementCandidate? Candidate { get; set; }",
+      "public IntentStep Step { get; set; }",
+      "public LocatorRecord? Record { get; set; }",
+      "public bool Recorded { get; set; }",
+      "public string Diagnostic { get; set; }",
+      "public string LocatorKey { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopLocatorRepositoryRecorder",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentDesktopLocatorRepositoryRecorder"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopLocatorRepositoryRecorder.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<IntentDesktopLocatorRecordingResult> Record( IntentDesktopExplorationResult explorationResult, LocatorRepository repository)",
+      "public IntentDesktopLocatorRepositoryRecorder(IntentDesktopLocatorRecordingOptions? options = null)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopPlanningRequest",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentDesktopPlanningRequest"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopPlanningRequest.cs"
+    ],
+    "Members": [
+      "public IDictionary<string, string> TestData { get; set; }",
+      "public IntentPlanningRequest ToPlanningRequest()",
+      "public static implicit operator IntentPlanningRequest(IntentDesktopPlanningRequest request)",
+      "public string ApplicationExecutablePath { get; set; }",
+      "public string Goal { get; set; }",
+      "public string Name { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentDesktopStepExplorationResult",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentDesktopStepExplorationResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentDesktopStepExplorationResult.cs"
+    ],
+    "Members": [
+      "public IntentStep Step { get; set; }",
+      "public List<IntentDesktopElementCandidate> Candidates { get; set; }",
+      "public bool RequiresReview { get; set; }",
+      "public string Diagnostic { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentElementCandidate",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentElementCandidate"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentElementCandidate.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<PlaywrightLocatorSuggestion> LocatorSuggestions { get; }",
+      "public IntentElementCandidate( IntentStep? step = null, WebElementInfo? element = null, double score = 0.0, double semanticScore = 0.0, string reason = \"\", IReadOnlyList<PlaywrightLocatorSuggestion>? locatorSuggestions = null)",
+      "public IntentStep Step { get; }",
+      "public WebElementInfo Element { get; }",
+      "public double Score { get; }",
+      "public double SemanticScore { get; }",
+      "public string Reason { get; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentExplorationBridge",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentExplorationBridge"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentExplorationBridge.cs"
+    ],
+    "Members": [
+      "public IntentExplorationBridge(IntentExplorationOptions? options = null)",
+      "public IntentExplorationResult Match(IntentScenario scenario, WebElementInfo root)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentExplorationOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentExplorationOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentExplorationOptions.cs"
+    ],
+    "Members": [
+      "public double MinimumCandidateMargin { get; set; }",
+      "public double MinimumSemanticScore { get; set; }",
+      "public double ReviewThreshold { get; set; }",
+      "public int MaxCandidatesPerStep { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentExplorationResult",
+    "PublicMutableProperties": 2,
+    "Declarations": [
+      "public sealed class IntentExplorationResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentExplorationResult.cs"
+    ],
+    "Members": [
+      "public IntentScenario Scenario { get; set; }",
+      "public List<IntentStepExplorationResult> StepResults { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentFlowReportDocument",
+    "PublicMutableProperties": 12,
+    "Declarations": [
+      "public sealed class IntentFlowReportDocument"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentFlowReportDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset GeneratedAt { get; set; }",
+      "public List<IntentFlowReportStep> Steps { get; set; }",
+      "public List<string> PlanningDiagnostics { get; set; }",
+      "public bool PlanningRequiresReview { get; set; }",
+      "public const int CurrentSchemaVersion;",
+      "public int SchemaVersion { get; set; }",
+      "public static IntentFlowReportDocument FromDesktopPipelineResult(IntentDesktopAutomationPipelineResult result)",
+      "public static IntentFlowReportDocument FromPipelineResult(IntentAutomationPipelineResult result)",
+      "public string FlaUiCSharpTestCode { get; set; }",
+      "public string Goal { get; set; }",
+      "public string Platform { get; set; }",
+      "public string PlaywrightCSharpTestCode { get; set; }",
+      "public string PlaywrightTypeScriptTestCode { get; set; }",
+      "public string ScenarioName { get; set; }",
+      "public string TargetUrl { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentFlowReportFileSink",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentFlowReportFileSink"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentFlowReportFileSink.cs"
+    ],
+    "Members": [
+      "public IntentFlowReportFileSink(string filePath)",
+      "public IntentFlowReportFileSink(string filePath, string? htmlFilePath)",
+      "public string FilePath { get; }",
+      "public string? HtmlFilePath { get; }",
+      "public void Write(IntentFlowReportDocument document)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentFlowReportHtmlRenderer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IntentFlowReportHtmlRenderer"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentFlowReportHtmlRenderer.cs"
+    ],
+    "Members": [
+      "public static string Render(IntentFlowReportDocument document)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentFlowReportStep",
+    "PublicMutableProperties": 18,
+    "Declarations": [
+      "public sealed class IntentFlowReportStep"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentFlowReportDocument.cs"
+    ],
+    "Members": [
+      "public bool Recorded { get; set; }",
+      "public bool RequiresReview { get; set; }",
+      "public double? BestCandidateScore { get; set; }",
+      "public double? BestCandidateSemanticScore { get; set; }",
+      "public double? RunnerUpScore { get; set; }",
+      "public int CandidateCount { get; set; }",
+      "public int Order { get; set; }",
+      "public string ActionType { get; set; }",
+      "public string AssertionKind { get; set; }",
+      "public string BestCandidateLocator { get; set; }",
+      "public string ExpectedOutcome { get; set; }",
+      "public string ExpectedValue { get; set; }",
+      "public string ExplorationDiagnostic { get; set; }",
+      "public string LocatorKey { get; set; }",
+      "public string RecordingDiagnostic { get; set; }",
+      "public string TargetDescription { get; set; }",
+      "public string TestIntent { get; set; }",
+      "public string Value { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentLocatorKeySynthesizer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IntentLocatorKeySynthesizer"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentLocatorKeySynthesizer.cs"
+    ],
+    "Members": [
+      "public static string Synthesize(IntentStep step, IntentDesktopElementCandidate? candidate)",
+      "public static string Synthesize(IntentStep step, IntentElementCandidate? candidate = null)",
+      "public static string SynthesizeCore(IntentActionType actionType, string target)",
+      "public static string ToPascalKey(string key)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentLocatorRecordingOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentLocatorRecordingOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentLocatorRecordingOptions.cs"
+    ],
+    "Members": [
+      "public bool RecordReviewCandidates { get; set; }",
+      "public double MinimumScore { get; set; }",
+      "public string ApplicationName { get; set; }",
+      "public string Platform { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentLocatorRecordingResult",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class IntentLocatorRecordingResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentLocatorRecordingResult.cs"
+    ],
+    "Members": [
+      "public IntentElementCandidate? Candidate { get; set; }",
+      "public IntentStep Step { get; set; }",
+      "public LocatorRecord? Record { get; set; }",
+      "public bool Recorded { get; set; }",
+      "public string Diagnostic { get; set; }",
+      "public string LocatorKey { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentLocatorRepositoryRecorder",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentLocatorRepositoryRecorder"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentLocatorRepositoryRecorder.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<IntentLocatorRecordingResult> Record( IntentExplorationResult explorationResult, LocatorRepository repository)",
+      "public IntentLocatorRepositoryRecorder(IntentLocatorRecordingOptions? options = null)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentPlanningRequest",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentPlanningRequest"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentPlanningRequest.cs"
+    ],
+    "Members": [
+      "public IDictionary<string, string> TestData { get; set; }",
+      "public string Goal { get; set; }",
+      "public string Name { get; set; }",
+      "public string TargetUrl { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentPlanningResult",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class IntentPlanningResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentPlanningResult.cs"
+    ],
+    "Members": [
+      "public IntentScenario Scenario { get; set; }",
+      "public List<string> Diagnostics { get; set; }",
+      "public bool RequiresReview { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentScenario",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentScenario"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentScenario.cs"
+    ],
+    "Members": [
+      "public List<IntentStep> Steps { get; set; }",
+      "public string Goal { get; set; }",
+      "public string Name { get; set; }",
+      "public string TargetUrl { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentStep",
+    "PublicMutableProperties": 8,
+    "Declarations": [
+      "public sealed class IntentStep"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentStep.cs"
+    ],
+    "Members": [
+      "public AssertionKind AssertionKind { get; set; }",
+      "public IntentActionType ActionType { get; set; }",
+      "public int Order { get; set; }",
+      "public string ExpectedOutcome { get; set; }",
+      "public string ExpectedValue { get; set; }",
+      "public string TargetDescription { get; set; }",
+      "public string TestIntent { get; set; }",
+      "public string Value { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.IntentStepExplorationResult",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class IntentStepExplorationResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/IntentStepExplorationResult.cs"
+    ],
+    "Members": [
+      "public IntentStep Step { get; set; }",
+      "public List<IntentElementCandidate> Candidates { get; set; }",
+      "public bool RequiresReview { get; set; }",
+      "public string Diagnostic { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.LlmIntentPlanner",
+    "PublicMutableProperties": 1,
+    "Declarations": [
+      "public sealed class LlmIntentPlanner : IIntentPlanner"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/LlmIntentPlanner.cs"
+    ],
+    "Members": [
+      "public Func<string, string>? TextSanitizer { get; set; }",
+      "public IntentPlanningResult Plan(IntentPlanningRequest request)",
+      "public LlmIntentPlanner( HttpClient? httpClient = null, string? apiKey = null, string? model = null, IIntentPlanner? fallback = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public TimeSpan Timeout { get; }",
+      "public TimeSpan TotalTimeout { get; }",
+      "public async Task<IntentPlanningResult> PlanAsync(IntentPlanningRequest request, CancellationToken cancellationToken = default)",
+      "public bool IsAvailable { get; }",
+      "public int MaxRetries { get; }",
+      "public static readonly TimeSpan DefaultInitialDelay;",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public static readonly TimeSpan MaxRetryAfter;",
+      "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.LlmIntentPlanningPrompt",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LlmIntentPlanningPrompt"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/LlmIntentPlanningPrompt.cs"
+    ],
+    "Members": [
+      "public static IntentScenario ParseScenario(string rawText, IntentPlanningRequest request, Func<string, string>? textSanitizer = null)",
+      "public static string Build(IntentPlanningRequest request, Func<string, string>? textSanitizer = null)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.PlaywrightCSharpTestGenerationOptions",
+    "PublicMutableProperties": 5,
+    "Declarations": [
+      "public sealed class PlaywrightCSharpTestGenerationOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/PlaywrightCSharpTestGenerationOptions.cs"
+    ],
+    "Members": [
+      "public AssertGenerationMode AssertGenerationMode { get; set; }",
+      "public bool IncludeLocatorComments { get; set; }",
+      "public string ClassName { get; set; }",
+      "public string MethodName { get; set; }",
+      "public string Namespace { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.PlaywrightCSharpTestGenerator",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightCSharpTestGenerator"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/PlaywrightCSharpTestGenerator.cs"
+    ],
+    "Members": [
+      "public PlaywrightCSharpTestGenerator(PlaywrightCSharpTestGenerationOptions? options = null)",
+      "public string Generate(IntentScenario scenario, IReadOnlyList<IntentLocatorRecordingResult> recordingResults)"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.PlaywrightTypeScriptTestGenerationOptions",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class PlaywrightTypeScriptTestGenerationOptions"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/PlaywrightTypeScriptTestGenerationOptions.cs"
+    ],
+    "Members": [
+      "public AssertGenerationMode AssertGenerationMode { get; set; }",
+      "public bool IncludeLocatorComments { get; set; }",
+      "public string TestTitle { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentAutomation",
+    "Type": "AutomationSandbox.IntentAutomation.PlaywrightTypeScriptTestGenerator",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightTypeScriptTestGenerator"
+    ],
+    "Files": [
+      "TestAutomation/IntentAutomation/PlaywrightTypeScriptTestGenerator.cs"
+    ],
+    "Members": [
+      "public PlaywrightTypeScriptTestGenerator(PlaywrightTypeScriptTestGenerationOptions? options = null)",
+      "public string Generate(IntentScenario scenario, IReadOnlyList<IntentLocatorRecordingResult> recordingResults)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ClaudeHealingProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ClaudeHealingProvider : HttpLlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/ClaudeHealingProvider.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string prompt)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public ClaudeHealingProvider( HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, string? name = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public override bool IsAvailable { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GeminiHealingProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class GeminiHealingProvider : HttpLlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/GeminiHealingProvider.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string prompt)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public GeminiHealingProvider( HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, string? name = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public override bool IsAvailable { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.HttpLlmHealingProvider",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public abstract class HttpLlmHealingProvider : ILlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/HttpLlmHealingProvider.cs"
+    ],
+    "Members": [
+      "protected HttpLlmHealingProvider( string defaultName, TimeSpan defaultTimeout, TimeSpan defaultTotalTimeout, int defaultMaxRetries = 2, HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, string? name = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "protected abstract HttpRequestMessage CreateRequest(string prompt)",
+      "protected abstract string ExtractText(string responseBody)",
+      "protected abstract string UnavailableErrorMessage { get; }",
+      "protected static string? NullIfEmpty(string? value)",
+      "public Func<string, string>? TextSanitizer { get; set; }",
+      "public TimeSpan Timeout { get; }",
+      "public TimeSpan TotalTimeout { get; }",
+      "public TimeSpan? MaxRetryAfterOverride { get; set; }",
+      "public TimeSpan? TotalTimeoutOverride { get; set; }",
+      "public abstract bool IsAvailable { get; }",
+      "public async Task<LlmHealingResult> ResolveAsync( UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, CancellationToken cancellationToken = default)",
+      "public int MaxRetries { get; }",
+      "public string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ILlmHealingProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public interface ILlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/ILlmHealingProvider.cs"
+    ],
+    "Members": [
+      "Task<LlmHealingResult> ResolveAsync( UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, CancellationToken cancellationToken = default)",
+      "bool IsAvailable { get; }",
+      "string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmHealingEvaluator",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LlmHealingEvaluator"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmHealingEvaluator.cs"
+    ],
+    "Members": [
+      "public static async Task<IReadOnlyList<LlmHealingResult>> EvaluateAsync( IEnumerable<ILlmHealingProvider> providers, UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmHealingPrompt",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LlmHealingPrompt"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmHealingPrompt.cs"
+    ],
+    "Members": [
+      "public static (string? CandidateId, double Confidence, string Reasoning) ParseResponse(string rawText)",
+      "public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, Func<string, string>? textSanitizer = null)",
+      "public static string InferPlatformFallback(UiElementInfo? expected)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmHealingResult",
+    "PublicMutableProperties": 9,
+    "Declarations": [
+      "public sealed class LlmHealingResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmHealingResult.cs"
+    ],
+    "Members": [
+      "public TimeSpan Elapsed { get; set; }",
+      "public bool Success { get; set; }",
+      "public double Confidence { get; set; }",
+      "public int AttemptCount { get; set; }",
+      "public string ProviderName { get; set; }",
+      "public string Reasoning { get; set; }",
+      "public string? ErrorMessage { get; set; }",
+      "public string? MatchedAutomationId { get; set; }",
+      "public string? MatchedCandidateId { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmHttpResponse",
+    "PublicMutableProperties": 7,
+    "Declarations": [
+      "public sealed class LlmHttpResponse"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmHttpTransport.cs"
+    ],
+    "Members": [
+      "public HttpStatusCode? StatusCode { get; set; }",
+      "public bool IsCanceled { get; set; }",
+      "public bool IsSuccess { get; set; }",
+      "public bool IsTimedOut { get; set; }",
+      "public int AttemptsMade { get; set; }",
+      "public string? Body { get; set; }",
+      "public string? ErrorMessage { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmHttpTransport",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LlmHttpTransport"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmHttpTransport.cs"
+    ],
+    "Members": [
+      "public const int MaxCapturedErrorBodyLength;",
+      "public static TimeSpan? ParseRetryAfter(HttpResponseMessage response)",
+      "public static async Task<LlmHttpResponse> SendWithRetryAsync( HttpClient httpClient, Func<HttpRequestMessage> requestFactory, TimeSpan perAttemptTimeout, TimeSpan totalTimeout, int maxRetries, Func<TimeSpan, CancellationToken, Task>? delayAsync = null, CancellationToken cancellationToken = default, TimeSpan? maxRetryAfter = null)",
+      "public static bool IsTransient(HttpStatusCode statusCode)",
+      "public static readonly TimeSpan DefaultInitialDelay;",
+      "public static readonly TimeSpan MaxRetryAfter;",
+      "public static string TruncateErrorBody(string? body, int maxLength = MaxCapturedErrorBodyLength)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmProviderConfiguration",
+    "PublicMutableProperties": 8,
+    "Declarations": [
+      "public class LlmProviderConfiguration"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmProviderConfiguration.cs"
+    ],
+    "Members": [
+      "public int? MaxRetries { get; set; }",
+      "public int? TimeoutSeconds { get; set; }",
+      "public int? TotalTimeoutSeconds { get; set; }",
+      "public string Name { get; set; }",
+      "public string? ApiKey { get; set; }",
+      "public string? ApiKeyEnvVar { get; set; }",
+      "public string? Endpoint { get; set; }",
+      "public string? Model { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LlmProviderFactory",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LlmProviderFactory"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/LlmProviderFactory.cs"
+    ],
+    "Members": [
+      "public static IReadOnlyList<ILlmHealingProvider> CreateConfiguredProviders( HttpClient? httpClient = null, Func<string, string?>? getEnv = null)",
+      "public static IReadOnlyList<ILlmHealingProvider> CreateConfiguredProviders( HttpClient? httpClient, Func<string, string?>? getEnv, Action<string> log)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.OllamaHealingProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class OllamaHealingProvider : HttpLlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/OllamaHealingProvider.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string prompt)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public OllamaHealingProvider( HttpClient? httpClient = null, string? host = null, string? model = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, string? name = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public override bool IsAvailable { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.OpenAiHealingProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class OpenAiHealingProvider : HttpLlmHealingProvider"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/OpenAiHealingProvider.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string prompt)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public OpenAiHealingProvider( HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, string? endpoint = null, string? name = null, bool requestJsonResponse = false, int? maxOutputTokens = null, int? maxRetries = null, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public override bool IsAvailable { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public static readonly int DefaultMaxRetries;",
+      "public string ApiUrl { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.PlaywrightLiveExplorer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightLiveExplorer : IAsyncDisposable"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExplorer.cs"
+    ],
+    "Members": [
+      "public async Task<WebElementInfo> CaptureAsync(string url)",
+      "public async ValueTask DisposeAsync()",
+      "public static async Task<PlaywrightLiveExplorer> LaunchAsync(PlaywrightLiveExplorerOptions? options = null)"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.PlaywrightLiveExplorerOptions",
+    "PublicMutableProperties": 2,
+    "Declarations": [
+      "public sealed class PlaywrightLiveExplorerOptions"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExplorerOptions.cs"
+    ],
+    "Members": [
+      "public bool Headless { get; set; }",
+      "public int NavigationTimeoutMilliseconds { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.BatchHealingItemResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class BatchHealingItemResult"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/BatchHealing.cs"
+    ],
+    "Members": [
+      "public BatchHealingRequest Request { get; }",
+      "public BatchReconciliationDisposition ReconciliationDisposition { get; }",
+      "public HealResult Result { get; }",
+      "public bool WasIndependentlyConfident { get; }",
+      "public string? CandidateIdentity { get; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.BatchHealingRequest",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class BatchHealingRequest"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/BatchHealing.cs"
+    ],
+    "Members": [
+      "public BatchHealingRequest(string locatorKey, UiElementInfo expected)",
+      "public UiElementInfo Expected { get; }",
+      "public string LocatorKey { get; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.BatchHealingResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class BatchHealingResult"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/BatchHealing.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<BatchHealingItemResult> Items { get; }",
+      "public int ContestedCandidateCount { get; }",
+      "public int ReconciliationDeclineCount { get; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.BatchReconciliationDisposition",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum BatchReconciliationDisposition"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/BatchHealing.cs"
+    ],
+    "Members": [
+      "BaselineDecline",
+      "DeclinedAmbiguousContention",
+      "DeclinedByStrongerClaim",
+      "PreservedUncontested",
+      "WonContention"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealResolutionStatus",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum HealResolutionStatus"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealResult.cs"
+    ],
+    "Members": [
+      "Ambiguous",
+      "Confident",
+      "LowConfidence",
+      "LowEvidence",
+      "NoCandidates",
+      "NoConsensus",
+      "OwnershipConflict",
+      "ProviderError",
+      "Unspecified"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealResult",
+    "PublicMutableProperties": 29,
+    "Declarations": [
+      "public sealed class HealResult"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealResult.cs"
+    ],
+    "Members": [
+      "public BatchReconciliationDisposition? ReconciliationDisposition { get; set; }",
+      "public HealResolutionStatus ResolutionStatus { get; set; }",
+      "public HealSource Source { get; set; }",
+      "public IReadOnlyDictionary<string, int>? ProviderAttempts { get; set; }",
+      "public IReadOnlyDictionary<string, string>? ProviderErrors { get; set; }",
+      "public IReadOnlyList<CandidateScore>? Candidates { get; set; }",
+      "public IReadOnlyList<string> AgreedProviders { get; set; }",
+      "public ScoreComponents? ScoreBreakdown { get; set; }",
+      "public UiElementInfo? HeuristicMatched { get; set; }",
+      "public UiElementInfo? Matched { get; set; }",
+      "public bool DivergedFromHeuristic { get; set; }",
+      "public bool IsConfident { get; }",
+      "public bool RejectedByReconciliation { get; set; }",
+      "public double ChildSignatureFloor { get; set; }",
+      "public double ConfidenceThreshold { get; set; }",
+      "public double EvidenceCoverage { get; set; }",
+      "public double EvidenceThreshold { get; set; }",
+      "public double MarginThreshold { get; set; }",
+      "public double NameGateFloor { get; set; }",
+      "public double Score { get; set; }",
+      "public double? HeuristicScore { get; set; }",
+      "public double? LlmConfidence { get; set; }",
+      "public double? MatchedChildSignatureSimilarity { get; set; }",
+      "public double? MatchedNameScore { get; set; }",
+      "public double? RunnerUpScore { get; set; }",
+      "public int CandidateCount { get; set; }",
+      "public int ConsensusThreshold { get; set; }",
+      "public string? CandidateIdentity { get; set; }",
+      "public string? LlmProviderName { get; set; }",
+      "public string? LlmReasoning { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealSource",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum HealSource"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealResult.cs"
+    ],
+    "Members": [
+      "Heuristic",
+      "Llm"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingMode",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum HealingMode"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingMode.cs"
+    ],
+    "Members": [
+      "AutoHeal",
+      "FailClosed",
+      "Observe",
+      "Review"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportCandidate",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class HealingReportCandidate"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportDocument.cs"
+    ],
+    "Members": [
+      "public ScoreComponents? Components { get; set; }",
+      "public double EvidenceCoverage { get; set; }",
+      "public double TotalScore { get; set; }",
+      "public string AutomationId { get; set; }",
+      "public string ControlType { get; set; }",
+      "public string Name { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportDocument",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class HealingReportDocument"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset GeneratedAt { get; set; }",
+      "public IReadOnlyList<HealingReportEntry> AcceptedEvents { get; }",
+      "public List<HealingReportEntry> Events { get; set; }",
+      "public const int CurrentSchemaVersion;",
+      "public int SchemaVersion { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportEntry",
+    "PublicMutableProperties": 27,
+    "Declarations": [
+      "public sealed class HealingReportEntry"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset HealedAt { get; set; }",
+      "public Dictionary<string, int>? ProviderAttempts { get; set; }",
+      "public Dictionary<string, string>? ProviderErrors { get; set; }",
+      "public List<HealingReportCandidate>? Candidates { get; set; }",
+      "public List<string>? AgreedProviders { get; set; }",
+      "public ScoreComponents? ScoreBreakdown { get; set; }",
+      "public UiElementInfo? AcceptedSnapshot { get; set; }",
+      "public UiElementInfo? HeuristicSnapshot { get; set; }",
+      "public UiElementInfo? PreviousSnapshot { get; set; }",
+      "public UiElementInfo? ProposedSnapshot { get; set; }",
+      "public bool DivergedFromHeuristic { get; set; }",
+      "public bool IsAccepted { get; }",
+      "public const string AcceptedOutcome;",
+      "public const string AcceptedStatus;",
+      "public const string AcceptedUnverifiedOutcome;",
+      "public const string AcceptedWithLlmStatus;",
+      "public const string AmbiguousOutcome;",
+      "public const string FailClosedOutcome;",
+      "public const string LowConfidenceOutcome;",
+      "public const string LowEvidenceOutcome;",
+      "public const string ManualReviewOutcome;",
+      "public const string ManualReviewStatus;",
+      "public const string NoCandidatesOutcome;",
+      "public const string NoConsensusOutcome;",
+      "public const string ObservedOutcome;",
+      "public const string OwnershipConflictOutcome;",
+      "public const string ProviderErrorOutcome;",
+      "public const string RetryFailedOutcome;",
+      "public const string UnspecifiedOutcome;",
+      "public double ConfidenceThreshold { get; set; }",
+      "public double Score { get; set; }",
+      "public double? EvidenceCoverage { get; set; }",
+      "public double? HeuristicScore { get; set; }",
+      "public double? LlmConfidence { get; set; }",
+      "public double? RunnerUpScore { get; set; }",
+      "public int CandidateCount { get; set; }",
+      "public static HealingReportEntry FromHealResult( string locatorKey, UiElementInfo previousSnapshot, UiElementInfo acceptedSnapshot, HealResult result)",
+      "public static HealingReportEntry FromResolutionAttempt( string locatorKey, UiElementInfo previousSnapshot, HealResult result, string outcome, string? platform = null)",
+      "public static string OutcomeFromResolutionStatus(HealResolutionStatus status)",
+      "public string LocatorKey { get; set; }",
+      "public string ReviewStatus { get; set; }",
+      "public string Source { get; set; }",
+      "public string? CandidateIdentity { get; set; }",
+      "public string? LlmProviderName { get; set; }",
+      "public string? LlmReasoning { get; set; }",
+      "public string? Outcome { get; set; }",
+      "public string? Platform { get; set; }",
+      "public string? ReconciliationDisposition { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportFileSink",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class HealingReportFileSink : IHealingReportSink"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportFileSink.cs"
+    ],
+    "Members": [
+      "public HealingReportFileSink(string filePath)",
+      "public HealingReportFileSink(string filePath, string? htmlFilePath)",
+      "public const string EnvironmentVariableName;",
+      "public static HealingReportFileSink? FromEnvironment()",
+      "public string FilePath { get; }",
+      "public string? HtmlFilePath { get; }",
+      "public void Record(HealingReportEntry entry)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportHtmlRenderer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class HealingReportHtmlRenderer"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportHtmlRenderer.cs"
+    ],
+    "Members": [
+      "public static string Render(HealingReportDocument document)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.IHealingReportSink",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public interface IHealingReportSink"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportFileSink.cs"
+    ],
+    "Members": [
+      "void Record(HealingReportEntry entry)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.LocatorHealingHistoryEntryFactory",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LocatorHealingHistoryEntryFactory"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/LocatorHealingHistoryEntryFactory.cs"
+    ],
+    "Members": [
+      "public static LocatorHealingHistoryEntry FromHealResult(HealResult result, UiElementInfo? previousSnapshot)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.ProfileCalibrationResult",
+    "PublicMutableProperties": 11,
+    "Declarations": [
+      "public sealed class ProfileCalibrationResult"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/TreeCalibrator.cs"
+    ],
+    "Members": [
+      "public ThresholdProfile Profile { get; set; }",
+      "public double ConfidenceThreshold { get; set; }",
+      "public double EvidenceWeightThreshold { get; set; }",
+      "public double FalseHealRate { get; }",
+      "public double ManualReviewRate { get; }",
+      "public double MarginThreshold { get; set; }",
+      "public double Precision { get; }",
+      "public double Recall { get; }",
+      "public int CorrectDeclines { get; set; }",
+      "public int CorrectHeals { get; set; }",
+      "public int FalseHeals { get; set; }",
+      "public int FalseHealsOnRemoved { get; set; }",
+      "public int MissedHeals { get; set; }",
+      "public int RemovalScenarios { get; set; }",
+      "public int SuccessorScenarios { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.SelfHealingEngine",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class SelfHealingEngine"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/SelfHealingEngine.cs"
+    ],
+    "Members": [
+      "public HealingMode Mode { get; }",
+      "public IHealingReportSink? ReportSink { get; }",
+      "public IReadOnlyList<ILlmHealingProvider> LlmProviders { get; }",
+      "public LocatorRepository? Repository { get; }",
+      "public SelfHealingEngine( LocatorRepository? repository = null, SimilarityWeights? weights = null, IEnumerable<ILlmHealingProvider>? llmProviders = null, IHealingReportSink? reportSink = null, HealingMode mode = HealingMode.Review, bool reconcileAgainstRepository = false)",
+      "public SimilarityWeights Weights { get; }",
+      "public async Task<HealResult> ResolveAndRecordAsync( string locatorKey, UiElementInfo expected, UiElementInfo currentTreeRoot, Action<string>? log = null, string? platform = null, CancellationToken cancellationToken = default)",
+      "public async Task<T> ExecuteWithHealingAsync<T>( string locatorKey, UiElementInfo expected, Func<UiElementInfo, Task<T>> action, Func<UiElementInfo> captureTreeRoot, string? testIntent = null, Action<string>? log = null, string? platform = null, CancellationToken cancellationToken = default, Func<Exception, bool>? shouldHeal = null)",
+      "public bool ReconcileAgainstRepository { get; }",
+      "public const string RetryExceptionDataKey;",
+      "public static SelfHealingEngine Create( ThresholdProfile profile, LocatorRepository? repository = null, IEnumerable<ILlmHealingProvider>? llmProviders = null, IHealingReportSink? reportSink = null, HealingMode mode = HealingMode.Review, bool reconcileAgainstRepository = false)",
+      "public static bool IsLocatorResolutionException(Exception exception)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.SelfHealingResolver",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static partial class SelfHealingResolver"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/BatchHealing.cs",
+      "TestAutomation/SelfHealing/SelfHealingResolver.cs"
+    ],
+    "Members": [
+      "public static BatchHealingResult ResolveBatch( IEnumerable<BatchHealingRequest> requests, UiElementInfo currentTreeRoot, SimilarityWeights? weights = null, Action<string>? log = null)",
+      "public static HealResult Resolve( UiElementInfo expected, UiElementInfo currentTreeRoot, SimilarityWeights? weights = null, Action<string>? log = null)",
+      "public static List<CandidateScore> ScoreCandidates(UiElementInfo expected, UiElementInfo currentTreeRoot, SimilarityWeights? weights = null)",
+      "public static async Task<BatchHealingResult> ResolveBatchAsync( IEnumerable<BatchHealingRequest> requests, UiElementInfo currentTreeRoot, IEnumerable<ILlmHealingProvider>? llmProviders = null, SimilarityWeights? weights = null, Action<string>? log = null, string? platform = null, CancellationToken cancellationToken = default)",
+      "public static async Task<HealResult> ResolveAsync( UiElementInfo expected, UiElementInfo currentTreeRoot, IEnumerable<ILlmHealingProvider>? llmProviders = null, SimilarityWeights? weights = null, Action<string>? log = null, string? platform = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.SimilarityWeights",
+    "PublicMutableProperties": 14,
+    "Declarations": [
+      "public sealed class SimilarityWeights"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/SimilarityWeights.cs"
+    ],
+    "Members": [
+      "public double ControlTypeWeight { get; set; }",
+      "public double MinCandidateScore { get; set; }",
+      "public double MinimumCandidateMargin { get; set; }",
+      "public double MinimumChildSignatureSimilarity { get; set; }",
+      "public double MinimumConfidence { get; set; }",
+      "public double MinimumEvidenceWeight { get; set; }",
+      "public double MinimumNameScoreWhenNamed { get; set; }",
+      "public double NameWeight { get; set; }",
+      "public double ParentControlTypeWeight { get; set; }",
+      "public double PositionToleranceRadius { get; set; }",
+      "public double PositionWeight { get; set; }",
+      "public double SiblingPositionWeight { get; set; }",
+      "public int MaxCandidatesForLlm { get; set; }",
+      "public int MinimumConsensusVotes { get; set; }",
+      "public static SimilarityWeights Aggressive { get; }",
+      "public static SimilarityWeights Balanced { get; }",
+      "public static SimilarityWeights Conservative { get; }",
+      "public static SimilarityWeights Default { get; }",
+      "public static SimilarityWeights FromProfile(ThresholdProfile profile)",
+      "public void Validate()"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.Testing.SelfHealingTestBase",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public abstract class SelfHealingTestBase : IDisposable"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/Testing/SelfHealingTestFixture.cs"
+    ],
+    "Members": [
+      "protected SelfHealingTestBase(SelfHealingTestOptions? options = null)",
+      "protected Task ExecuteWithHealingAsync( string locatorKey, UiElementInfo expected, Func<UiElementInfo, Task> action, Func<UiElementInfo> captureTreeRoot, string? testIntent = null, string? platform = null, CancellationToken cancellationToken = default, Func<Exception, bool>? shouldHeal = null)",
+      "protected Task<T> ExecuteWithHealingAsync<T>( string locatorKey, UiElementInfo expected, Func<UiElementInfo, Task<T>> action, Func<UiElementInfo> captureTreeRoot, string? testIntent = null, string? platform = null, CancellationToken cancellationToken = default, Func<Exception, bool>? shouldHeal = null)",
+      "public LocatorRepository Repository { get; }",
+      "public SelfHealingEngine Engine { get; }",
+      "public SelfHealingTestFixture Fixture { get; }",
+      "public virtual void Dispose()"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.Testing.SelfHealingTestFixture",
+    "PublicMutableProperties": 1,
+    "Declarations": [
+      "public class SelfHealingTestFixture : IDisposable"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/Testing/SelfHealingTestFixture.cs"
+    ],
+    "Members": [
+      "protected SelfHealingTestFixture(SelfHealingTestOptions? options)",
+      "protected virtual void Dispose(bool disposing)",
+      "public Action<string>? LogAction { get; set; }",
+      "public LocatorRepository Repository { get; }",
+      "public SelfHealingEngine Engine { get; }",
+      "public SelfHealingTestFixture()",
+      "public Task<HealResult> ResolveAsync( UiElementInfo expected, UiElementInfo currentTreeRoot, string? platform = null, CancellationToken cancellationToken = default)",
+      "public Task<T> ExecuteWithHealingAsync<T>( string locatorKey, UiElementInfo expected, Func<UiElementInfo, Task<T>> action, Func<UiElementInfo> captureTreeRoot, string? testIntent = null, string? platform = null, CancellationToken cancellationToken = default, Func<Exception, bool>? shouldHeal = null)",
+      "public async Task ExecuteWithHealingAsync( string locatorKey, UiElementInfo expected, Func<UiElementInfo, Task> action, Func<UiElementInfo> captureTreeRoot, string? testIntent = null, string? platform = null, CancellationToken cancellationToken = default, Func<Exception, bool>? shouldHeal = null)",
+      "public static SelfHealingTestFixture Create(SelfHealingTestOptions options)",
+      "public string RepositoryPath { get; }",
+      "public void Dispose()"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.Testing.SelfHealingTestOptions",
+    "PublicMutableProperties": 8,
+    "Declarations": [
+      "public sealed class SelfHealingTestOptions"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/Testing/SelfHealingTestFixture.cs"
+    ],
+    "Members": [
+      "public Action<string>? LogAction { get; set; }",
+      "public HealingMode Mode { get; set; }",
+      "public IEnumerable<ILlmHealingProvider>? LlmProviders { get; set; }",
+      "public IHealingReportSink? ReportSink { get; set; }",
+      "public SimilarityWeights? CustomWeights { get; set; }",
+      "public ThresholdProfile Profile { get; set; }",
+      "public bool AutoDeleteRepositoryOnDispose { get; set; }",
+      "public string? RepositoryPath { get; set; }"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.ThresholdProfile",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum ThresholdProfile"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/ThresholdProfile.cs"
+    ],
+    "Members": [
+      "Aggressive",
+      "Balanced",
+      "Conservative"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.TreeCalibrationReport",
+    "PublicMutableProperties": 7,
+    "Declarations": [
+      "public sealed class TreeCalibrationReport"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/TreeCalibrator.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<ProfileCalibrationResult> ProfileResults { get; set; }",
+      "public ThresholdProfile RecommendedProfile { get; set; }",
+      "public int ProbedElementsCount { get; set; }",
+      "public int TotalScenariosEvaluated { get; set; }",
+      "public int TotalTreeElements { get; set; }",
+      "public override string ToString()",
+      "public string ApplicationName { get; set; }",
+      "public string RecommendationReasoning { get; set; }",
+      "public string ToMarkdownReport()"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.TreeCalibrator",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class TreeCalibrator"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/TreeCalibrator.cs"
+    ],
+    "Members": [
+      "public static TreeCalibrationReport Calibrate( UiElementInfo root, string applicationName = \"Application\", int maxProbedElements = 50)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.BoundingRectangle",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public readonly struct BoundingRectangle : IEquatable<BoundingRectangle>"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiElementInfo.cs"
+    ],
+    "Members": [
+      "[System.Text.Json.Serialization.JsonConstructor] public BoundingRectangle(double x, double y, double width, double height)",
+      "public bool Equals(BoundingRectangle other)",
+      "public bool IsEmpty { get; }",
+      "public bool IsUsable { get; }",
+      "public double Height { get; }",
+      "public double Width { get; }",
+      "public double X { get; }",
+      "public double Y { get; }",
+      "public override bool Equals(object? obj)",
+      "public override int GetHashCode()",
+      "public override string ToString()",
+      "public static bool operator !=(BoundingRectangle left, BoundingRectangle right)",
+      "public static bool operator ==(BoundingRectangle left, BoundingRectangle right)",
+      "public static readonly BoundingRectangle Empty;"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.CandidateMargin",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CandidateMargin"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/CandidateMargin.cs"
+    ],
+    "Members": [
+      "public static bool HasSufficientMargin(double bestScore, double? runnerUpScore, double minimumMargin)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.CandidateScore",
+    "PublicMutableProperties": 5,
+    "Declarations": [
+      "public sealed class CandidateScore"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/CandidateScore.cs"
+    ],
+    "Members": [
+      "public ScoreComponents Components { get; set; }",
+      "public UiElementInfo Candidate { get; set; }",
+      "public double EvidenceCoverage { get; set; }",
+      "public double TotalScore { get; set; }",
+      "public string CandidateId { get; set; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.LocatorHealingHistoryEntry",
+    "PublicMutableProperties": 10,
+    "Declarations": [
+      "public sealed class LocatorHealingHistoryEntry"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/LocatorRepositoryDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset HealedAt { get; set; }",
+      "public ScoreComponents? ScoreBreakdown { get; set; }",
+      "public UiElementInfo? AcceptedSnapshot { get; set; }",
+      "public UiElementInfo? PreviousSnapshot { get; set; }",
+      "public bool? DivergedFromHeuristic { get; set; }",
+      "public double ConfidenceThreshold { get; set; }",
+      "public double Score { get; set; }",
+      "public double? LlmConfidence { get; set; }",
+      "public string Source { get; set; }",
+      "public string? LlmProviderName { get; set; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.LocatorRecord",
+    "PublicMutableProperties": 7,
+    "Declarations": [
+      "public sealed class LocatorRecord"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/LocatorRepositoryDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset CreatedAt { get; set; }",
+      "public DateTimeOffset UpdatedAt { get; set; }",
+      "public List<LocatorHealingHistoryEntry> HealingHistory { get; set; }",
+      "public UiElementInfo Snapshot { get; set; }",
+      "public string Description { get; set; }",
+      "public string LocatorKey { get; set; }",
+      "public string TestIntent { get; set; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.LocatorRepository",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LocatorRepository"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/LocatorRepository.cs"
+    ],
+    "Members": [
+      "public LocatorRecord Upsert( string locatorKey, UiElementInfo snapshot, LocatorHealingHistoryEntry? healingEntry = null, string? applicationName = null, string? platform = null)",
+      "public LocatorRecord? Find(string locatorKey)",
+      "public LocatorRepository(string filePath)",
+      "public LocatorRepositoryDocument Load()",
+      "public string FilePath { get; }",
+      "public void Save(LocatorRepositoryDocument document)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.LocatorRepositoryDocument",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class LocatorRepositoryDocument"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/LocatorRepositoryDocument.cs"
+    ],
+    "Members": [
+      "public List<LocatorRecord> Locators { get; set; }",
+      "public const int CurrentSchemaVersion;",
+      "public int SchemaVersion { get; set; }",
+      "public string ApplicationName { get; set; }",
+      "public string Platform { get; set; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.LocatorRepositorySerializer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LocatorRepositorySerializer"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/LocatorRepositorySerializer.cs"
+    ],
+    "Members": [
+      "public static LocatorRepositoryDocument FromJson(string json)",
+      "public static string ToJson(LocatorRepositoryDocument document)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.ScoreComponents",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ScoreComponents"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/ScoreComponents.cs"
+    ],
+    "Members": [
+      "public ScoreComponents( double? controlTypeScore = null, double? parentControlTypeScore = null, double? siblingPositionScore = null, double? nameScore = null, double? positionScore = null)",
+      "public double? ControlTypeScore { get; }",
+      "public double? NameScore { get; }",
+      "public double? ParentControlTypeScore { get; }",
+      "public double? PositionScore { get; }",
+      "public double? SiblingPositionScore { get; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.SensitiveDataSanitizer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class SensitiveDataSanitizer"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/SensitiveDataSanitizer.cs"
+    ],
+    "Members": [
+      "public static readonly Func<string, string> Default;",
+      "public static readonly Func<string, string> PassThrough;",
+      "public static string? Redact(string? input)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.UiElementInfo",
+    "PublicMutableProperties": 12,
+    "Declarations": [
+      "public sealed class UiElementInfo"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiElementInfo.cs"
+    ],
+    "Members": [
+      "public BoundingRectangle BoundingRectangle { get; set; }",
+      "public List<UiElementInfo> Children { get; set; }",
+      "public int SiblingCount { get; set; }",
+      "public int SiblingIndex { get; set; }",
+      "public string AutomationId { get; set; }",
+      "public string ClassName { get; set; }",
+      "public string ControlType { get; set; }",
+      "public string Name { get; set; }",
+      "public string ParentAutomationId { get; set; }",
+      "public string ParentControlType { get; set; }",
+      "public string TestIntent { get; set; }",
+      "public string? ChildControlTypeSignature { get; set; }"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.UiElementSnapshot",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class UiElementSnapshot"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiElementSnapshot.cs"
+    ],
+    "Members": [
+      "public static UiElementInfo Capture(UiElementInfo node)",
+      "public static UiElementInfo FromJson(string json)",
+      "public static UiElementInfo? CaptureByAutomationId(UiElementInfo treeRoot, string automationId)",
+      "public static UiElementInfo? CaptureFirst(UiElementInfo treeRoot, Predicate<UiElementInfo> predicate)",
+      "public static UiElementInfo? FindByAutomationId(UiElementInfo node, string automationId)",
+      "public static UiElementInfo? FindFirst(UiElementInfo node, Predicate<UiElementInfo> predicate)",
+      "public static string ComputeChildControlTypeSignature(UiElementInfo node)",
+      "public static string ToJson(UiElementInfo node)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.UiElementTreeExtensions",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class UiElementTreeExtensions"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiElementTreeExtensions.cs"
+    ],
+    "Members": [
+      "public static IEnumerable<UiElementInfo> Flatten(this UiElementInfo root)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.UiTreeSerializer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class UiTreeSerializer"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiTreeSerializer.cs"
+    ],
+    "Members": [
+      "public static UiElementInfo FromJson(string json)",
+      "public static string ToJson(UiElementInfo root)"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.PlaywrightApplicationConnector",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class PlaywrightApplicationConnector"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/PlaywrightApplicationConnector.cs"
+    ],
+    "Members": [
+      "public static UiElementInfo ParseJson(string rawJson)"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.PlaywrightDomCaptureScript",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class PlaywrightDomCaptureScript"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/PlaywrightDomCaptureScript.cs"
+    ],
+    "Members": [
+      "public const string JavaScript;"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.PlaywrightLocatorEmitter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class PlaywrightLocatorEmitter"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/PlaywrightLocatorEmitter.cs"
+    ],
+    "Members": [
+      "public static IReadOnlyList<PlaywrightLocatorSuggestion> Suggest(WebElementInfo element)"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.PlaywrightLocatorSuggestion",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightLocatorSuggestion"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/PlaywrightLocatorSuggestion.cs"
+    ],
+    "Members": [
+      "public PlaywrightLocatorSuggestion( string strategy = \"\", string expression = \"\", double confidence = 0.0, string reason = \"\")",
+      "public double Confidence { get; }",
+      "public string Expression { get; }",
+      "public string Reason { get; }",
+      "public string Strategy { get; }"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.WebElementInfo",
+    "PublicMutableProperties": 19,
+    "Declarations": [
+      "public sealed class WebElementInfo"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/WebElementInfo.cs"
+    ],
+    "Members": [
+      "public BoundingRectangle BoundingRectangle { get; set; }",
+      "public List<WebElementInfo> Children { get; set; }",
+      "public List<string> FrameAncestry { get; set; }",
+      "public bool IsCrossOriginFrame { get; set; }",
+      "public bool IsHidden { get; set; }",
+      "public bool IsOffscreen { get; set; }",
+      "public bool IsStructuralCssSelector { get; set; }",
+      "public string AccessibleName { get; set; }",
+      "public string ClassName { get; set; }",
+      "public string CssSelector { get; set; }",
+      "public string FrameUrl { get; set; }",
+      "public string Id { get; set; }",
+      "public string InputType { get; set; }",
+      "public string NameAttribute { get; set; }",
+      "public string Role { get; set; }",
+      "public string TagName { get; set; }",
+      "public string TestId { get; set; }",
+      "public string Text { get; set; }",
+      "public string TreeScope { get; set; }"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.WebElementMapper",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class WebElementMapper"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/WebElementMapper.cs"
+    ],
+    "Members": [
+      "public static UiElementInfo ToUiElementTree(WebElementInfo root)"
+    ]
+  }
+]

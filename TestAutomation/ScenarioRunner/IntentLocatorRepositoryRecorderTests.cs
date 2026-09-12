@@ -72,12 +72,10 @@ namespace ScenarioRunner
                         RequiresReview = true,
                         Candidates = new List<IntentElementCandidate>
                         {
-                            new IntentElementCandidate
-                            {
-                                Step = step,
-                                Element = new WebElementInfo { TagName = "input", Role = "textbox", TestId = "tax-id" },
-                                Score = 0.9,
-                            }
+                            new IntentElementCandidate(
+                                step: step,
+                                element: new WebElementInfo { TagName = "input", Role = "textbox", TestId = "tax-id" },
+                                score: 0.9)
                         }
                     }
                 }
@@ -126,10 +124,9 @@ namespace ScenarioRunner
                         Step = emailStep,
                         Candidates = new List<IntentElementCandidate>
                         {
-                            new IntentElementCandidate
-                            {
-                                Step = emailStep,
-                                Element = new WebElementInfo
+                            new IntentElementCandidate(
+                                step: emailStep,
+                                element: new WebElementInfo
                                 {
                                     TagName = "input",
                                     Role = "textbox",
@@ -140,8 +137,7 @@ namespace ScenarioRunner
                                         new WebElementInfo { TagName = "div", Text = "autocomplete" }
                                     },
                                 },
-                                Score = 0.95,
-                            },
+                                score: 0.95),
                         },
                     },
                     new IntentStepExplorationResult
@@ -149,18 +145,16 @@ namespace ScenarioRunner
                         Step = saveStep,
                         Candidates = new List<IntentElementCandidate>
                         {
-                            new IntentElementCandidate
-                            {
-                                Step = saveStep,
-                                Element = new WebElementInfo
+                            new IntentElementCandidate(
+                                step: saveStep,
+                                element: new WebElementInfo
                                 {
                                     TagName = "button",
                                     Role = "button",
                                     AccessibleName = "Save",
                                     TestId = "save-button",
                                 },
-                                Score = 0.88,
-                            },
+                                score: 0.88),
                         },
                     },
                 },

@@ -126,28 +126,24 @@ namespace ScenarioRunner
                 TargetUrl = "https://example.test/customers",
                 Steps = new List<IntentStep> { emailStep, clickStep },
             };
-            var emailCandidate = new IntentElementCandidate
-            {
-                Step = emailStep,
-                Element = new WebElementInfo { TagName = "input", Role = "textbox", TestId = "email-input" },
-                Score = 0.95,
-                SemanticScore = 0.50,
-                LocatorSuggestions = new List<PlaywrightLocatorSuggestion>
+            var emailCandidate = new IntentElementCandidate(
+                step: emailStep,
+                element: new WebElementInfo { TagName = "input", Role = "textbox", TestId = "email-input" },
+                score: 0.95,
+                semanticScore: 0.50,
+                locatorSuggestions: new List<PlaywrightLocatorSuggestion>
                 {
-                    new PlaywrightLocatorSuggestion { Expression = "page.GetByTestId(\"email-input\")", Confidence = 0.98 },
-                },
-            };
-            var runnerUpEmailCandidate = new IntentElementCandidate
-            {
-                Step = emailStep,
-                Element = new WebElementInfo { TagName = "input", Role = "textbox", TestId = "backup-email" },
-                Score = 0.70,
-                SemanticScore = 0.40,
-                LocatorSuggestions = new List<PlaywrightLocatorSuggestion>
+                    new PlaywrightLocatorSuggestion(expression: "page.GetByTestId(\"email-input\")", confidence: 0.98),
+                });
+            var runnerUpEmailCandidate = new IntentElementCandidate(
+                step: emailStep,
+                element: new WebElementInfo { TagName = "input", Role = "textbox", TestId = "backup-email" },
+                score: 0.70,
+                semanticScore: 0.40,
+                locatorSuggestions: new List<PlaywrightLocatorSuggestion>
                 {
-                    new PlaywrightLocatorSuggestion { Expression = "page.GetByTestId(\"backup-email\")", Confidence = 0.80 },
-                },
-            };
+                    new PlaywrightLocatorSuggestion(expression: "page.GetByTestId(\"backup-email\")", confidence: 0.80),
+                });
 
             return new IntentAutomationPipelineResult
             {
