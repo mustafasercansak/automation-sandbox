@@ -147,7 +147,7 @@ namespace AutomationSandbox.Discovery
                 lastUiaError: lastUiaError);
         }
 
-        /// <summary>Releases automation resources and the wrapped application connection.</summary>
+        /// <summary>Closes the wrapped application, killing it if graceful close fails, then releases automation and process resources. This also closes applications selected with Attach.</summary>
         public void Dispose()
         {
             try
