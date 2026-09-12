@@ -10,8 +10,10 @@ namespace AutomationSandbox.LlmHealing
     // parallel, so their answers can be compared side by side. Providers without a
     // configured API key are skipped rather than reported as failures.
 
+    /// <summary>Runs every configured provider against the same broken-locator scenario in parallel, so their answers can be compared side by side. Providers without a configured API key are skipped rather than reported as failures.</summary>
     public static class LlmHealingEvaluator
     {
+        /// <summary>Evaluates available providers concurrently and returns each result; independent-agreement acceptance belongs to the resolver.</summary>
         public static async Task<IReadOnlyList<LlmHealingResult>> EvaluateAsync(
             IEnumerable<ILlmHealingProvider> providers,
             UiElementInfo expected,

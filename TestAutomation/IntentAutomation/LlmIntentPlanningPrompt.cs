@@ -13,8 +13,10 @@ namespace AutomationSandbox.IntentAutomation
     // empty TargetDescription fails the whole response, which LlmIntentPlanner treats
     // the same as an HTTP failure and degrades to DeterministicIntentPlanner for.
 
+    /// <summary>Prompt/response contract for LlmIntentPlanner, kept in its own type (mirroring AutomationSandbox.LlmHealing.LlmHealingPrompt) so it&apos;s independently unit-testable. Unlike the healing prompt, there is no closed candidate set to constrain the model against - ParseScenario is the guard here: any step with an unparseable ActionType or an empty TargetDescription fails the whole response, which LlmIntentPlanner treats the same as an HTTP failure and degrades to DeterministicIntentPlanner for.</summary>
     public static class LlmIntentPlanningPrompt
     {
+        /// <summary>Builds a sanitized scenario-planning prompt from the requested goal and application context.</summary>
         public static string Build(IntentPlanningRequest request, Func<string, string>? textSanitizer = null)
         {
             var dataJson = JsonSerializer.Serialize(
@@ -56,6 +58,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
 ]}}";
         }
 
+        /// <summary>Parses and validates model-generated steps against the supported action vocabulary and request context.</summary>
         public static IntentScenario ParseScenario(string rawText, IntentPlanningRequest request, Func<string, string>? textSanitizer = null)
         {
             var json = FindFirstResponseJsonObject(rawText);

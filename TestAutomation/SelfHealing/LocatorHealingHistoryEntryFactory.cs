@@ -4,8 +4,10 @@ namespace AutomationSandbox.SelfHealing
     // Bridges a HealResult (this project's output) into the LocatorHealingHistoryEntry shape a
     // LocatorRepository persists. Lives here rather than in UiModel so UiModel stays consumer-
     // agnostic - the dependency direction is UiModel <- SelfHealing, never the reverse.
+    /// <summary>Converts accepted resolver evidence into the UiModel-owned persistent history format.</summary>
     public static class LocatorHealingHistoryEntryFactory
     {
+        /// <summary>Copies the accepted resolution&apos;s available evidence into a locator history entry.</summary>
         public static LocatorHealingHistoryEntry FromHealResult(HealResult result, UiElementInfo? previousSnapshot)
         {
             if (result == null)

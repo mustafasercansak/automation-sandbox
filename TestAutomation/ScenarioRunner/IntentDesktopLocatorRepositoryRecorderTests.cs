@@ -71,12 +71,10 @@ namespace ScenarioRunner
                         RequiresReview = true,
                         Candidates = new List<IntentDesktopElementCandidate>
                         {
-                            new IntentDesktopElementCandidate
-                            {
-                                Step = step,
-                                Element = new UiElementInfo { ControlType = "Edit", AutomationId = "txtTaxId" },
-                                Score = 0.9,
-                            }
+                            new IntentDesktopElementCandidate(
+                                step: step,
+                                element: new UiElementInfo { ControlType = "Edit", AutomationId = "txtTaxId" },
+                                score: 0.9)
                         }
                     }
                 }
@@ -125,10 +123,9 @@ namespace ScenarioRunner
                         Step = emailStep,
                         Candidates = new List<IntentDesktopElementCandidate>
                         {
-                            new IntentDesktopElementCandidate
-                            {
-                                Step = emailStep,
-                                Element = new UiElementInfo
+                            new IntentDesktopElementCandidate(
+                                step: emailStep,
+                                element: new UiElementInfo
                                 {
                                     ControlType = "Edit",
                                     Name = "Email",
@@ -138,8 +135,7 @@ namespace ScenarioRunner
                                         new UiElementInfo { ControlType = "Text", Name = "autocomplete" }
                                     },
                                 },
-                                Score = 0.95,
-                            },
+                                score: 0.95),
                         },
                     },
                     new IntentDesktopStepExplorationResult
@@ -147,17 +143,15 @@ namespace ScenarioRunner
                         Step = saveStep,
                         Candidates = new List<IntentDesktopElementCandidate>
                         {
-                            new IntentDesktopElementCandidate
-                            {
-                                Step = saveStep,
-                                Element = new UiElementInfo
+                            new IntentDesktopElementCandidate(
+                                step: saveStep,
+                                element: new UiElementInfo
                                 {
                                     ControlType = "Button",
                                     Name = "Save",
                                     AutomationId = "btnSave",
                                 },
-                                Score = 0.88,
-                            },
+                                score: 0.88),
                         },
                     },
                 },

@@ -12,6 +12,7 @@ namespace AutomationSandbox.LlmHealing
     // net48 test projects), and raw HTTP keeps this provider symmetric with
     // GeminiHealingProvider, which has no first-party .NET SDK to reach for.
 
+    /// <summary>Raw HTTP against the Messages API rather than the official Anthropic SDK: this project targets netstandard2.0 (so it can also be referenced by net48 test projects), and raw HTTP keeps this provider symmetric with GeminiHealingProvider, which has no first-party .NET SDK to reach for.</summary>
     public sealed class ClaudeHealingProvider : HttpLlmHealingProvider
     {
         private const string ApiUrl = "https://api.anthropic.com/v1/messages";
@@ -20,16 +21,22 @@ namespace AutomationSandbox.LlmHealing
         // not one that benefits from Opus-level reasoning. Override with the model
         // constructor parameter or ANTHROPIC_MODEL if a stronger model is ever warranted.
         private const string DefaultModel = "claude-haiku-4-5-20251001";
+        /// <summary>Default deadline for one HTTP attempt.</summary>
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        /// <summary>Default deadline for the entire provider operation, including retries and backoff.</summary>
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
+        /// <summary>Default number of retries after the initial provider request.</summary>
         public static readonly int DefaultMaxRetries = 2;
 
         private readonly string? _apiKey;
         private readonly string _model;
 
+        /// <inheritdoc/>
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        /// <inheritdoc/>
         protected override string UnavailableErrorMessage => "ANTHROPIC_API_KEY is not set.";
 
+        /// <summary>Configures Claude transport and model settings, using environment configuration for omitted provider settings.</summary>
         public ClaudeHealingProvider(
             HttpClient? httpClient = null,
             string? apiKey = null,
@@ -59,6 +66,7 @@ namespace AutomationSandbox.LlmHealing
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")) ?? DefaultModel;
         }
 
+        /// <inheritdoc/>
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
             var requestBody = new
@@ -88,6 +96,7 @@ namespace AutomationSandbox.LlmHealing
         // Finds the first text block in the response rather than assuming content[0]
         // is text - a thinking block (when thinking isn't disabled) or a
         // server-tool-use block would otherwise come first.
+        /// <inheritdoc/>
         protected override string ExtractText(string responseBody)
         {
             using var doc = JsonDocument.Parse(responseBody);

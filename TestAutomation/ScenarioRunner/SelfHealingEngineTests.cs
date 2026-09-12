@@ -952,7 +952,7 @@ namespace ScenarioRunner
                 LocatorKey = "new",
                 Source = "heuristic",
                 ReviewStatus = "accepted",
-                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 1.0 }, // other components stay null
+                ScoreBreakdown = new ScoreComponents(controlTypeScore: 1.0), // other components stay null
             });
 
             using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
@@ -1297,7 +1297,7 @@ namespace ScenarioRunner
                 HeuristicMatched = heuristic,
                 HeuristicScore = 0.45,
                 DivergedFromHeuristic = true,
-                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 0.0, NameScore = 0.8 },
+                ScoreBreakdown = new ScoreComponents(controlTypeScore: 0.0, nameScore: 0.8),
             };
 
             var entry = HealingReportEntry.FromHealResult("SubmitAction", previous, accepted, healResult);
@@ -1328,7 +1328,7 @@ namespace ScenarioRunner
                 Matched = accepted,
                 Source = HealSource.Heuristic,
                 Score = 0.90,
-                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 1.0 },
+                ScoreBreakdown = new ScoreComponents(controlTypeScore: 1.0),
             };
             var heuristicEntry = LocatorHealingHistoryEntryFactory.FromHealResult(heuristicResult, previousSnapshot: null);
             Assert.Null(heuristicEntry.DivergedFromHeuristic);
@@ -1340,7 +1340,7 @@ namespace ScenarioRunner
                 Source = HealSource.Llm,
                 Score = 0.35,
                 DivergedFromHeuristic = true,
-                ScoreBreakdown = new ScoreComponents { ControlTypeScore = 0.2 },
+                ScoreBreakdown = new ScoreComponents(controlTypeScore: 0.2),
             };
             var llmEntry = LocatorHealingHistoryEntryFactory.FromHealResult(llmResult, previousSnapshot: null);
             Assert.True(llmEntry.DivergedFromHeuristic);

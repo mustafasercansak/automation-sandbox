@@ -17,6 +17,7 @@ namespace AutomationSandbox.IntentAutomation
     // degrades to the deterministic planner's result rather than surfacing malformed
     // steps to the pipeline.
 
+    /// <summary>Natural-language-to-full-scenario planning: DeterministicIntentPlanner only recognizes a fixed vocabulary of verbs (save/submit/create/...), so a goal phrased differently (&quot;finish the order&quot;, &quot;kaydı tamamla&quot;) produces an incomplete plan and sets RequiresReview instead of guessing. LlmIntentPlanner asks a model to read the goal directly, but never trusts its output blindly: any structurally invalid response (bad ActionType, empty steps) - same as no API key or an HTTP failure - degrades to the deterministic planner&apos;s result rather than surfacing malformed steps to the pipeline.</summary>
     public sealed class LlmIntentPlanner : IIntentPlanner
     {
         private const string ApiUrl = "https://api.anthropic.com/v1/messages";
@@ -24,10 +25,15 @@ namespace AutomationSandbox.IntentAutomation
         // Same cheapest/fastest tier as ClaudeHealingProvider - this is a small
         // structured-planning task, not one that benefits from a flagship model.
         private const string DefaultModel = "claude-haiku-4-5-20251001";
+        /// <summary>Default deadline for one HTTP attempt.</summary>
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        /// <summary>Default deadline for the entire provider operation, including retries and backoff.</summary>
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
+        /// <summary>Default number of retries after the initial provider request.</summary>
         public static readonly int DefaultMaxRetries = 2;
+        /// <summary>Longest server-requested retry delay accepted before treating the response as quota exhaustion.</summary>
         public static readonly TimeSpan MaxRetryAfter = TimeSpan.FromSeconds(10);
+        /// <summary>Initial delay used by exponential retry backoff before jitter and server retry guidance.</summary>
         public static readonly TimeSpan DefaultInitialDelay = TimeSpan.FromMilliseconds(200);
 
         [ThreadStatic]
@@ -44,12 +50,18 @@ namespace AutomationSandbox.IntentAutomation
         private readonly int _maxRetries;
         private readonly Func<TimeSpan, CancellationToken, Task>? _delayAsync;
 
+        /// <summary>Whether required local provider configuration is present; this does not probe service reachability or quota.</summary>
         public bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        /// <summary>Deadline for one provider HTTP attempt.</summary>
         public TimeSpan Timeout => _timeout;
+        /// <summary>Deadline for the complete provider operation, including retry delays.</summary>
         public TimeSpan TotalTimeout => _totalTimeout;
+        /// <summary>Maximum number of retries after the initial attempt; zero disables retries.</summary>
         public int MaxRetries => _maxRetries;
+        /// <summary>Transforms text before it is disclosed in an LLM prompt; the default redacts common secrets and personal data.</summary>
         public Func<string, string>? TextSanitizer { get; set; }
 
+        /// <summary>Configures model-backed planning with a deterministic fallback, bounded deadlines, retries, and an optional delay hook.</summary>
         public LlmIntentPlanner(
             HttpClient? httpClient = null,
             string? apiKey = null,
@@ -94,8 +106,10 @@ namespace AutomationSandbox.IntentAutomation
 
         // Synchronous IIntentPlanner conformance for drop-in use with IntentAutomationPipeline.Run.
         // Safe to block on here: this project has no sync-context (ASP.NET classic style) callers.
+        /// <summary>Synchronous IIntentPlanner conformance for drop-in use with IntentAutomationPipeline.Run. Safe to block on here: this project has no sync-context (ASP.NET classic style) callers.</summary>
         public IntentPlanningResult Plan(IntentPlanningRequest request) => PlanAsync(request).GetAwaiter().GetResult();
 
+        /// <summary>Requests an intent scenario from the configured model and uses the deterministic fallback when the model response is unusable.</summary>
         public async Task<IntentPlanningResult> PlanAsync(IntentPlanningRequest request, CancellationToken cancellationToken = default)
         {
             if (request == null)

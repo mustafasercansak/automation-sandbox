@@ -2,11 +2,13 @@ using AutomationSandbox.LlmHealing;
 using AutomationSandbox.UiModel;
 namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Deterministic locator resolution with optional independent-provider fallback and explicit batch ownership reconciliation.</summary>
     public static partial class SelfHealingResolver
     {
         // expected: the last known snapshot state of the locator that just broke.
         // currentTreeRoot: a freshly captured UI tree from the application right now.
 
+        /// <summary>Scores the live tree and returns the leading proposal with its evidence and acceptance classification.</summary>
         public static HealResult Resolve(
             UiElementInfo expected,
             UiElementInfo currentTreeRoot,
@@ -103,6 +105,7 @@ namespace AutomationSandbox.SelfHealing
         // available, or all of them failing, this returns exactly the heuristic Resolve() result -
         // a consumer that never passes llmProviders is unaffected by this method existing.
 
+        /// <summary>Runs heuristic resolution and, only on decline, evaluates configured providers; accepts fallback only with a valid independent-agreement quorum and evidence gates.</summary>
         public static async Task<HealResult> ResolveAsync(
             UiElementInfo expected,
             UiElementInfo currentTreeRoot,
@@ -321,6 +324,7 @@ namespace AutomationSandbox.SelfHealing
         // the winner is always the highest-scoring one regardless of how many lower-scoring
         // candidates get dropped below MinCandidateScore.
 
+        /// <summary>Returns every live node&apos;s structural score and component evidence, including candidates below the acceptance shortlist threshold.</summary>
         public static List<CandidateScore> ScoreCandidates(UiElementInfo expected, UiElementInfo currentTreeRoot, SimilarityWeights? weights = null)
         {
             weights ??= SimilarityWeights.Default;

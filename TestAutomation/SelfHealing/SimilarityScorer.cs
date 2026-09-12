@@ -43,14 +43,12 @@ namespace AutomationSandbox.SelfHealing
                 Candidate = candidate,
                 TotalScore = totalScore,
                 EvidenceCoverage = totalWeight <= 0.0 ? 0.0 : activeWeight / totalWeight,
-                Components = new ScoreComponents
-                {
-                    ControlTypeScore = controlTypeScore,
-                    ParentControlTypeScore = parentScore,
-                    SiblingPositionScore = siblingScore,
-                    NameScore = nameScore,
-                    PositionScore = positionScore,
-                },
+                Components = new ScoreComponents(
+                    controlTypeScore: controlTypeScore,
+                    parentControlTypeScore: parentScore,
+                    siblingPositionScore: siblingScore,
+                    nameScore: nameScore,
+                    positionScore: positionScore),
             };
         }
 

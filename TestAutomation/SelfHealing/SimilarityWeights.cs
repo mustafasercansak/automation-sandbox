@@ -4,14 +4,22 @@ namespace AutomationSandbox.SelfHealing
     // the same weights this project shipped with when they were hardcoded consts - validated
     // against exactly two scenarios (WinForms panel1, WPF CompanyPanel), not a broad dataset.
 
+    /// <summary>Mutable structural weights and acceptance thresholds. Validate configuration before scoring; provider confidence is never an acceptance threshold.</summary>
     public sealed class SimilarityWeights
     {
+        /// <summary>Relative weight assigned to available control-type evidence.</summary>
         public double ControlTypeWeight { get; set; } = 0.20;
+        /// <summary>Relative weight assigned to available parent-type evidence.</summary>
         public double ParentControlTypeWeight { get; set; } = 0.20;
+        /// <summary>Relative weight assigned to available sibling-position evidence.</summary>
         public double SiblingPositionWeight { get; set; } = 0.15;
+        /// <summary>Relative weight assigned to available name evidence.</summary>
         public double NameWeight { get; set; } = 0.20;
+        /// <summary>Relative weight assigned to available geometry evidence.</summary>
         public double PositionWeight { get; set; } = 0.25;
+        /// <summary>Distance scale in capture coordinates used to reduce position similarity as elements move.</summary>
         public double PositionToleranceRadius { get; set; } = 300.0;
+        /// <summary>Minimum weighted structural score for heuristic acceptance.</summary>
         public double MinimumConfidence { get; set; } = 0.5;
 
         // Minimum fraction of the total signal weight that must be backed by non-null
@@ -20,6 +28,7 @@ namespace AutomationSandbox.SelfHealing
         // signal. Estimate - the mechanism is final, the value is recalibrated against the
         // real-world benchmark dataset (see issue #15).
 
+        /// <summary>Minimum fraction of the total signal weight that must be backed by non-null evidence before a heuristic match can be IsConfident. With the default weights a ControlType-only match has coverage 0.20, so 0.40 demands at least one more real signal. Estimate - the mechanism is final, the value is recalibrated against the real-world benchmark dataset (see issue #15).</summary>
         public double MinimumEvidenceWeight { get; set; } = 0.4;
 
         // Per-component name gate (#370): when the stale locator HAD a name, the winning
@@ -34,6 +43,7 @@ namespace AutomationSandbox.SelfHealing
         // 0.30. Not applied when the stale locator had no name, or when the candidate's
         // NameScore is null (missing on one side - neither penalised nor rewarded, matching
         // the evidence gate).
+        /// <summary>Per-component name gate (#370): when the stale locator HAD a name, the winning candidate&apos;s NameScore must be at least this before the heuristic match can be IsConfident - independently of the weighted total. The 0.20-weighted name signal is blended away by the weighted average, so a deleted tab healing onto an adjacent one (Name &apos;Summary&apos; -&gt; &apos;Dimensions&apos;, NameScore ~0.10) still clears MinimumConfidence on structure alone. Measured through TreeCalibrator on HandBrake: a 0.30 floor drops the Balanced false-heal rate 9.3% -&gt; 7.6% (precision 90.7% -&gt; 92.4%) with zero auto-heal recall cost; ShareX moves the same direction. Default 0.0 (disabled) keeps the shipped permissive behaviour; the Balanced and Conservative profiles set 0.30. Not applied when the stale locator had no name, or when the candidate&apos;s NameScore is null (missing on one side - neither penalised nor rewarded, matching the evidence gate).</summary>
         public double MinimumNameScoreWhenNamed { get; set; } = 0.0;
 
         // Per-component descendant gate (#375): when the stale snapshot recorded a non-empty
@@ -49,6 +59,7 @@ namespace AutomationSandbox.SelfHealing
         // repository reconciliation. Default 0.0 (disabled); Balanced and Conservative set
         // 0.50. Not applied when the snapshot's signature is null (legacy data) or empty
         // (the stale locator was a leaf).
+        /// <summary>Per-component descendant gate (#375): when the stale snapshot recorded a non-empty child-ControlType signature (it was a container), the winning candidate&apos;s live children must match it with at least this multiset-Jaccard similarity before the heuristic match can be IsConfident - independently of the weighted total. The five scoring components never look at an element&apos;s own contents, so a deleted container heals with a perfect structural score onto a structurally identical sibling holding something else entirely (ShareX &apos;pHotkeys&apos;, child {DataGrid:1}, healing onto a sibling Pane with child {Pane:1}). Measured across 131 genuine-drift heals on HandBrake and ShareX: every one scores 1.0, so a 0.5 floor costs zero auto-heal recall and removes the sole uncontested residual left after the name gate and repository reconciliation. Default 0.0 (disabled); Balanced and Conservative set 0.50. Not applied when the snapshot&apos;s signature is null (legacy data) or empty (the stale locator was a leaf).</summary>
         public double MinimumChildSignatureSimilarity { get; set; } = 0.0;
 
         // Minimum gap between the best and runner-up candidate scores before a heuristic
@@ -59,6 +70,7 @@ namespace AutomationSandbox.SelfHealing
         // like the other defaults - recalibrated against the #15 benchmark dataset, not
         // reopened here.
 
+        /// <summary>Minimum gap between the best and runner-up candidate scores before a heuristic match can be IsConfident (issue #4). 0.880 vs 0.879 means &quot;I don&apos;t know&quot; - the resolver falls back to LLM/manual review instead of guessing. Default 0.05: the issue&apos;s examples (0.88/0.79 confident, 0.88/0.879 not) imply a threshold below 0.09, and the calibrated WinForms demo scenario sits at a ~0.057 margin. Estimate, like the other defaults - recalibrated against the #15 benchmark dataset, not reopened here.</summary>
         public double MinimumCandidateMargin { get; set; } = 0.05;
 
         // Consensus acceptance (#10, decided in #19): an LLM pick is accepted only when at
@@ -66,14 +78,18 @@ namespace AutomationSandbox.SelfHealing
         // no consensus to speak of - a single provider's uncalibrated confidence would be
         // deciding again, which is exactly what #19 ruled out.
 
+        /// <summary>Required independent agreeing votes; fewer usable votes cannot accept an LLM proposal.</summary>
         public int MinimumConsensusVotes { get; set; } = 2;
 
         // Candidate pruning: candidates below MinCandidateScore are dropped before ranking,
         // and at most MaxCandidatesForLlm survive into the LLM fallback's shortlist prompt -
         // bounds both heuristic scoring cost and LLM prompt size/token cost on large trees.
 
+        /// <summary>Maximum number of ranked candidates disclosed to each fallback provider.</summary>
         public int MaxCandidatesForLlm { get; set; } = 20;
+        /// <summary>Minimum structural score for inclusion in the resolution shortlist.</summary>
         public double MinCandidateScore { get; set; } = 0.05;
+        /// <summary>Creates a fresh mutable configuration using the compatibility defaults calibrated against the demo scenarios.</summary>
         public static SimilarityWeights Default => new();
 
         /// <summary>
@@ -127,6 +143,7 @@ namespace AutomationSandbox.SelfHealing
         /// </summary>
         public static SimilarityWeights Aggressive => FromProfile(ThresholdProfile.Aggressive);
 
+        /// <summary>Rejects invalid weights, thresholds, and quorum settings before resolution work begins.</summary>
         public void Validate()
         {
             ValidateNonNegative(ControlTypeWeight, nameof(ControlTypeWeight));

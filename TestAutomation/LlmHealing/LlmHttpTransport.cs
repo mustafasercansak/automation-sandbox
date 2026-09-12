@@ -12,21 +12,26 @@ namespace AutomationSandbox.LlmHealing
     // 3. Retry-After header parsing with a 10s ceiling: Retry-After > 10s indicates quota exhaustion and fails fast.
     // 4. Dual timeout: per-attempt timeout (_timeout) and total ceiling (_totalTimeout).
     // 5. Injectable delayAsync hook for sub-millisecond unit testing.
+    /// <summary>Shared resilience transport for LLM HTTP calls: 1. Automatic retry with exponential backoff and thread-safe jitter for transient HTTP errors (429, 500, 502, 503, 504) and HttpRequestException. 2. Immediate fail-fast on non-transient errors (400, 401, 403, 404). 3. Retry-After header parsing with a 10s ceiling: Retry-After &gt; 10s indicates quota exhaustion and fails fast. 4. Dual timeout: per-attempt timeout (_timeout) and total ceiling (_totalTimeout). 5. Injectable delayAsync hook for sub-millisecond unit testing.</summary>
     public static class LlmHttpTransport
     {
+        /// <summary>Longest server-requested retry delay accepted before treating the response as quota exhaustion.</summary>
         public static readonly TimeSpan MaxRetryAfter = TimeSpan.FromSeconds(10);
+        /// <summary>Initial delay used by exponential retry backoff before jitter and server retry guidance.</summary>
         public static readonly TimeSpan DefaultInitialDelay = TimeSpan.FromMilliseconds(200);
 
         [ThreadStatic]
         private static Random? _threadRandom;
         private static Random GetRandom() => _threadRandom ??= new Random();
 
+        /// <summary>Identifies HTTP statuses eligible for retry under the transport policy.</summary>
         public static bool IsTransient(HttpStatusCode statusCode)
         {
             var code = (int)statusCode;
             return code == 429 || code == 500 || code == 502 || code == 503 || code == 504;
         }
 
+        /// <summary>Parses Retry-After as a relative delay from either seconds or an HTTP date, returning null when absent or invalid.</summary>
         public static TimeSpan? ParseRetryAfter(HttpResponseMessage response)
         {
             var retryAfter = response.Headers.RetryAfter;
@@ -49,6 +54,7 @@ namespace AutomationSandbox.LlmHealing
             return null;
         }
 
+        /// <summary>Sends newly created requests under per-attempt and total deadlines, retrying transient failures with bounded backoff and disposing each request and response.</summary>
         public static async Task<LlmHttpResponse> SendWithRetryAsync(
             HttpClient httpClient,
             Func<HttpRequestMessage> requestFactory,
@@ -279,8 +285,10 @@ namespace AutomationSandbox.LlmHealing
             };
         }
 
+        /// <summary>Maximum response-body characters retained in an HTTP failure diagnostic.</summary>
         public const int MaxCapturedErrorBodyLength = 1024;
 
+        /// <summary>Limits the response text retained in an error message.</summary>
         public static string TruncateErrorBody(string? body, int maxLength = MaxCapturedErrorBodyLength)
         {
             if (string.IsNullOrWhiteSpace(body))
@@ -306,14 +314,22 @@ namespace AutomationSandbox.LlmHealing
         }
     }
 
+    /// <summary>Transport outcome including response text, HTTP status, attempts, and cancellation or timeout classification.</summary>
     public sealed class LlmHttpResponse
     {
+        /// <summary>Whether the transport received a successful HTTP response.</summary>
         public bool IsSuccess { get; set; }
+        /// <summary>Whether an attempt or overall operation deadline expired.</summary>
         public bool IsTimedOut { get; set; }
+        /// <summary>Whether caller cancellation ended the operation.</summary>
         public bool IsCanceled { get; set; }
+        /// <summary>HTTP status of the final received response, or null when no HTTP response was obtained.</summary>
         public HttpStatusCode? StatusCode { get; set; }
+        /// <summary>Captured response body returned by the transport.</summary>
         public string? Body { get; set; }
+        /// <summary>Failure diagnostic, or null when no failure was recorded.</summary>
         public string? ErrorMessage { get; set; }
+        /// <summary>Number of HTTP sends performed, including retries.</summary>
         public int AttemptsMade { get; set; }
     }
 }

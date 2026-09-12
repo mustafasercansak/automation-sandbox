@@ -9,7 +9,7 @@ namespace AutomationSandbox.IntentAutomation
     // (desktop) (issue #175, #237). Single source of truth to avoid the two bridges' semantic scoring
     // silently diverging as one is edited without the other.
 
-    public static class IntentTextScoring
+    internal static class IntentTextScoring
     {
         private static readonly HashSet<string> StopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
