@@ -28,7 +28,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 **Automation Sandbox is like a smart GPS for your software tests:**
 1. It remembers what the button looked like (size, location, parent window, role).
 2. When the ID or name breaks, it calculates a **similarity score** (0% - 100%) across all elements on the screen.
-3. If it is confident (>= 50%), it identifies the right element **without any AI cost** (pure heuristic, sub-50ms for 3,000 controls on developer hardware). By default (`HealingMode.Review`) the candidate is routed to report telemetry for approval rather than applied automatically; opt into `HealingMode.AutoHeal` to have it retry the action and persist the healed locator automatically.
+3. If it is confident (>= 50%), it identifies the right element **without any AI cost** (pure heuristic, sub-50ms for 3,000 controls on developer hardware). By default (`HealingMode.Review`) the candidate is routed to report telemetry for approval rather than applied automatically; opt into `HealingMode.AutoHeal` (paired with `SimilarityWeights.Balanced` — the permissive shipped weights alone [false-heal 40%+ of deleted elements](blog/llm-false-heal-study.md)) to have it retry the action and persist the healed locator automatically.
 4. If it is unsure, it collects independent votes from providers such as Gemini, Claude, OpenAI, or local Ollama; an LLM pick is permitted when at least two votes name the same candidate. This agreement is not a correctness guarantee: all 34 unanimous deleted-element verdicts in the measured runs were false heals.
 
 ---
@@ -69,7 +69,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 **Automation Sandbox, testleriniz için akıllı bir navigasyon (GPS) gibidir:**
 1. Butonun eski halini (boyutunu, ekrandaki yerini, penceresini, türünü) hafızasına kaydeder.
 2. Adı veya ID'si değiştiğinde, ekrandaki tüm elemanları inceleyerek bir **benzerlik skoru** (%0 - %100) hesaplar.
-3. Eminse (>= %50), doğru elemanı **yapay zeka maliyeti olmadan** belirler (saf sezgisel; geliştirici donanımında 3.000 kontrol için 50 milisaniyenin altında). Varsayılan modda (`HealingMode.Review`) aday, otomatik uygulanmak yerine onay için rapor telemetrisine yönlendirilir; eylemi otomatik yeniden deneyip iyileştirilen locator'ı otomatik kaydetmek için `HealingMode.AutoHeal` moduna geçebilirsiniz.
+3. Eminse (>= %50), doğru elemanı **yapay zeka maliyeti olmadan** belirler (saf sezgisel; geliştirici donanımında 3.000 kontrol için 50 milisaniyenin altında). Varsayılan modda (`HealingMode.Review`) aday, otomatik uygulanmak yerine onay için rapor telemetrisine yönlendirilir; eylemi otomatik yeniden deneyip iyileştirilen locator'ı otomatik kaydetmek için `HealingMode.AutoHeal` moduna (`SimilarityWeights.Balanced` ile birlikte — gönderilen permissive ağırlıklar tek başına [silinen elemanların %40+'ını yanlış iyileştiriyor](blog/llm-false-heal-study.md)) geçebilirsiniz.
 4. Kararsız kalırsa Gemini, Claude, OpenAI veya yerel Ollama gibi sağlayıcılardan bağımsız oylar toplar; en az iki oy aynı adayı gösterirse LLM seçimine izin verir. Bu uzlaşma bir doğruluk garantisi değildir: silinmiş eleman ölçümlerindeki 34 oybirliği kararının tamamı yanlış iyileştirmeydi.
 
 ---

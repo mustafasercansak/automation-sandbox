@@ -18,7 +18,7 @@ internal static class Program
             // AutoHeal applies the healed locator and retries the action. The default
             // HealingMode.Review only records a review entry and fails closed - use it when
             // a human vets every heal.
-            var engine = new SelfHealingEngine(repository, mode: HealingMode.AutoHeal);
+            var engine = new SelfHealingEngine(repository, weights: SimilarityWeights.Balanced, mode: HealingMode.AutoHeal);
 
             var staleLocator = new UiElementInfo
             {
