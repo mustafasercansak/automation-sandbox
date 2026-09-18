@@ -124,7 +124,7 @@ Every remaining public type is listed below. Setter counts are after the change.
 | SelfHealing / `HealSource` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `HealingMode` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `HealingReportCandidate` | 6 | Keep editable: persisted report evidence is loaded and transformed for offline analysis. |
-| SelfHealing / `HealingReportDocument` | 3 | Keep editable: file sinks append events and upgrade loaded report versions. |
+| SelfHealing / `HealingReportDocument` | 3 | Keep editable: file sinks append entries and materialize this document from the JSON Lines report on read (#424). |
 | SelfHealing / `HealingReportEntry` | 27 | Keep editable: the engine records proposal evidence and adds execution outcome after the retry. |
 | SelfHealing / `HealingReportFileSink` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `HealingReportHtmlRenderer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |

@@ -18,17 +18,20 @@ This guide explains how **Automation Sandbox** generates JSON and HTML visual re
 ### 💡 Overview
 When running automated tests in CI/CD pipelines (e.g. GitHub Actions, Azure DevOps, Jenkins), knowing **which locators healed**, **what changed**, and **whether AI was used** is essential for test maintenance.
 
-`SelfHealingEngine` emits append-only **JSON** (`healing-report.json`) and **HTML Dashboard** (`healing-report.html`) report artifacts automatically. Schema v8 records accepted heals and declined or failed attempts, including opt-in batch ownership conflicts, so the report no longer implies a 100% success rate by construction.
+`SelfHealingEngine` emits an append-only **JSON Lines** report (`healing-report.json` by convention, though `.jsonl` describes it more honestly) and an **HTML Dashboard** (`healing-report.html`) automatically. Schema v8 records accepted heals and declined or failed attempts, including opt-in batch ownership conflicts, so the report no longer implies a 100% success rate by construction.
 
 For `ExecuteWithHealingAsync`, an accepted event is written only after the action retry with the proposed element succeeds. If that retry fails, the proposal is not reported as accepted and the locator repository remains unchanged.
 
-`HealingReportFileSink` writes the next JSON document to an adjacent temporary file and
-commits it with one atomic replace operation when a report already exists. It never
-deletes the previous JSON before the replacement. If serialization or the commit fails,
-the existing history remains readable and the temporary file is cleaned up during normal
-exception handling. A process or power loss before the atomic commit can leave a harmless
-temporary file, but not remove the previous report. The HTML dashboard is derived output
-written after the JSON commit and can be regenerated from that JSON.
+> [!IMPORTANT]
+> **Format change (#424):** the JSON report is now **JSON Lines** - one `HealingReportEntry` object per line - instead of a single JSON array document. `HealingReportFileSink.Record()` appends exactly one line per call without reading or re-serializing prior history, so recording N events costs O(N) total instead of the old O(N²). Use `HealingReportFileSink.LoadReport()` to read the file back as a `HealingReportDocument`; parsing the whole file with a single `JsonSerializer.Deserialize<HealingReportDocument>()` call no longer works, because the file is not one JSON value. A pre-existing `healing-report.json` written by a version of this library before #424 is in the old single-array format and is **not** auto-migrated - archive or delete it before upgrading, since the sink starts a fresh JSON Lines file at the same path.
+
+`HealingReportFileSink.Record()` appends the new entry with a real filesystem append -
+never touching bytes already written - guarded by the same cross-process lock as before. A
+crash or thrown exception mid-write can at most leave a truncated trailing line; every entry
+committed before it stays intact and readable. When an HTML path is configured, the
+dashboard is still re-rendered from the full history after each append and committed with
+the same adjacent-temp-file-plus-atomic-replace strategy as before - it is derived output and
+can always be rebuilt from the JSON Lines file via `LoadReport()`.
 
 ---
 
@@ -74,7 +77,7 @@ details (including a bounded raw response when parsing fails). Treat both JSON a
 sensitive test artifacts; see the [LLM Healing Security Model](llm-security-model.md#local-telemetry-is-sensitive-too).
 
 > [!WARNING]
-> **Report size:** the candidate list is intentionally **unpruned**. On very large UI trees a single event can add ~1 MB of JSON (≈1.3 MB measured on a 3,001-node tree), and each `Record()` call rewrites the whole file — cost grows quadratically with event count. Enable file reports (`SELF_HEALING_REPORT_PATH`) on CI/diagnostic runs, not on every local run.
+> **Report size:** the candidate list is intentionally **unpruned**. On very large UI trees a single event can add ~1 MB of JSON (≈1.3 MB measured on a 3,001-node tree). As of #424, `Record()` itself is O(1) per call and no longer rewrites the file; but when an HTML path is configured the dashboard is still re-rendered from the full history on every call, so its cost still grows with event count. Enable file reports (`SELF_HEALING_REPORT_PATH`) on CI/diagnostic runs, not on every local run, and consider `HealingReportFileSink(path, htmlFilePath: null)` for a pure audit trail without the per-call HTML cost.
 
 ---
 
@@ -83,16 +86,25 @@ sensitive test artifacts; see the [LLM Healing Security Model](llm-security-mode
 ### 💡 Genel Bakış
 CI/CD süreçlerinde (GitHub Actions, Azure DevOps vb.) testleriniz çalışırken **hangi elemanların iyileştirildiği**, **neye dönüştüğü** ve **yapay zekanın devreye girip girmediği** raporlanmalıdır.
 
-`SelfHealingEngine` motoru çözüm denemelerini anlık olarak **JSON** (`healing-report.json`) ve **HTML Görsel Gösterge Paneli** (`healing-report.html`) olarak otomatik kaydeder. Şema v8, isteğe bağlı batch sahiplik çakışmaları dahil kabul edilen iyileştirmeleri ve reddedilen veya başarısız denemeleri kaydeder; böylece rapor yapısı gereği %100 başarı izlenimi vermez.
+`SelfHealingEngine` motoru çözüm denemelerini otomatik olarak eklemeli (append-only) bir
+**JSON Lines** raporu (`healing-report.json`, dosya adı geleneksel olarak böyle kalsa da
+artık `.jsonl` daha doğru bir betimleme olurdu) ve bir **HTML Görsel Gösterge Paneli**
+(`healing-report.html`) olarak kaydeder. Şema v8, isteğe bağlı batch sahiplik çakışmaları
+dahil kabul edilen iyileştirmeleri ve reddedilen veya başarısız denemeleri kaydeder; böylece
+rapor yapısı gereği %100 başarı izlenimi vermez.
 
 `ExecuteWithHealingAsync` kullanıldığında kabul edilmiş bir olay, yalnızca önerilen elemanla yapılan eylem tekrarı başarılı olduktan sonra yazılır. Bu tekrar başarısız olursa öneri kabul edilmiş olarak raporlanmaz ve locator repository değişmeden kalır.
 
-`HealingReportFileSink`, sonraki JSON belgesini hedefle aynı dizindeki geçici dosyaya
-yazar ve mevcut raporu tek bir atomik değiştirme işlemiyle günceller. Önceki JSON dosyası
-değiştirmeden önce hiçbir zaman silinmez. Serileştirme veya commit başarısız olursa mevcut
-geçmiş okunabilir kalır ve normal exception işleyişinde geçici dosya temizlenir. Atomik
-commit'ten önce süreç ya da güç kesilirse zararsız bir geçici dosya kalabilir, ancak önceki
-rapor kaybolmaz. HTML paneli JSON commit'inden sonra yazılan türetilmiş çıktıdır ve JSON'dan
+> [!IMPORTANT]
+> **Format değişikliği (#424):** JSON raporu artık tek bir JSON dizisi yerine **JSON Lines** biçimindedir - her satırda bir `HealingReportEntry` nesnesi. `HealingReportFileSink.Record()`, önceki geçmişi okumadan veya yeniden serileştirmeden yalnızca tek bir satır ekler; böylece N olay kaydetmenin toplam maliyeti eski O(N²) yerine O(N) olur. Dosyayı bir `HealingReportDocument` olarak geri okumak için `HealingReportFileSink.LoadReport()` kullanın - tek bir `JsonSerializer.Deserialize<HealingReportDocument>()` çağrısıyla tüm dosyayı ayrıştırmak artık çalışmaz, çünkü dosya tek bir JSON değeri değildir. #424 öncesi bir sürümün yazdığı mevcut bir `healing-report.json` eski tek-dizi biçimindedir ve **otomatik olarak taşınmaz** - yükseltmeden önce arşivleyin veya silin; sink aynı yolda sıfırdan yeni bir JSON Lines dosyasına başlar.
+
+`HealingReportFileSink.Record()`, önceden yazılmış baytlara hiç dokunmadan gerçek bir dosya
+sistemi ekleme (append) işlemiyle yeni satırı ekler; bu işlem öncekiyle aynı süreçler-arası
+kilitle korunur. Yazma sırasında bir çökme veya fırlatılan exception, olsa olsa son satırın
+yarım kalmasına yol açar; ondan önce commit edilmiş her olay bozulmadan okunabilir kalır. Bir
+HTML yolu yapılandırıldığında, gösterge paneli her ekleme sonrası yine tüm geçmişten yeniden
+üretilir ve öncekiyle aynı bitişik-geçici-dosya-artı-atomik-değiştirme stratejisiyle commit
+edilir - bu türetilmiş bir çıktıdır ve `LoadReport()` ile JSON Lines dosyasından her zaman
 yeniden üretilebilir.
 
 ---
@@ -140,4 +152,4 @@ test artifact'ları olarak kabul edin; [LLM Healing Güvenlik Modeline](llm-secu
 bakın.
 
 > [!WARNING]
-> **Rapor boyutu:** aday listesi bilinçli olarak **budanmamıştır**. Çok büyük UI ağaçlarında tek bir olay ~1 MB JSON ekleyebilir (3.001 düğümlü ağaçta ≈1,3 MB ölçüldü) ve her `Record()` çağrısı dosyanın tamamını yeniden yazar — maliyet olay sayısıyla karesel büyür. Dosya raporlarını (`SELF_HEALING_REPORT_PATH`) her yerel çalıştırmada değil, CI/teşhis çalıştırmalarında açın.
+> **Rapor boyutu:** aday listesi bilinçli olarak **budanmamıştır**. Çok büyük UI ağaçlarında tek bir olay ~1 MB JSON ekleyebilir (3.001 düğümlü ağaçta ≈1,3 MB ölçüldü). #424 itibarıyla `Record()`'un kendisi çağrı başına O(1)'dir ve artık dosyanın tamamını yeniden yazmaz; ancak bir HTML yolu yapılandırıldığında gösterge paneli her çağrıda yine tüm geçmişten yeniden üretilir, dolayısıyla onun maliyeti olay sayısıyla büyümeye devam eder. Dosya raporlarını (`SELF_HEALING_REPORT_PATH`) her yerel çalıştırmada değil, CI/teşhis çalıştırmalarında açın; yalnızca eklemeli denetim izi isteyip HTML'in çağrı başına maliyetinden kaçınmak için `HealingReportFileSink(path, htmlFilePath: null)` kullanmayı düşünün.

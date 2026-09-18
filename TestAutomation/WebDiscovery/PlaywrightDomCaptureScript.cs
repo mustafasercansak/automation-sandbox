@@ -1,11 +1,15 @@
+using System.Globalization;
+
 namespace AutomationSandbox.WebDiscovery
 {
     /// <summary>Browser-side DOM capture source used with Playwright page evaluation.</summary>
     public static class PlaywrightDomCaptureScript
     {
-        /// <summary>JavaScript expression that captures the regular DOM, open shadow roots, and accessible same-origin frames.</summary>
-        public const string JavaScript =
-@"() => {
+        // Shared between the unbounded JavaScript constant below and BuildJavaScript's bounded
+        // template, so the ~10 pure DOM-reading helpers (role/name/selector/visibility/frame
+        // detection) have exactly one definition instead of two copies drifting apart.
+        private const string HelperFunctionsJavaScript =
+@"
   const roleMap = {
     A: 'link',
     BUTTON: 'button',
@@ -108,7 +112,12 @@ namespace AutomationSandbox.WebDiscovery
     if (element.tagName === 'IFRAME') return element.getAttribute('src') || '';
     return '';
   }
+";
 
+        /// <summary>JavaScript expression that captures the regular DOM, open shadow roots, and accessible same-origin frames.</summary>
+        public const string JavaScript =
+            "() => {" + HelperFunctionsJavaScript +
+@"
   function walk(element, parentScope, frameAncestry) {
     const currentScope = scopeOf(element, parentScope);
     const visibility = visibilityOf(element);
@@ -172,5 +181,137 @@ namespace AutomationSandbox.WebDiscovery
 
   return walk(document.body, 'light-dom', []);
 }";
+
+        // Placeholder-substituted rather than C#-interpolated: the JS below is full of its own
+        // `${...}` template-literal syntax (inherited from HelperFunctionsJavaScript), and making
+        // this an interpolated C# string would require escaping every brace in that unrelated
+        // syntax. Token replacement keeps the JS readable as JS.
+        private const string BoundedWalkTemplate =
+@"
+  const __budget = {
+    maxDepth: __MAX_DEPTH__,
+    maxElements: __MAX_ELEMENTS__,
+    deadline: Date.now() + __TIMEOUT_MS__,
+    capturedCount: 0,
+    hitMaxDepth: false,
+    hitMaxElements: false,
+    timedOut: false
+  };
+
+  function walk(element, parentScope, frameAncestry, depth) {
+    const currentScope = scopeOf(element, parentScope);
+    const visibility = visibilityOf(element);
+    const currentAncestry = frameAncestry || [];
+
+    __budget.capturedCount++;
+    if (__budget.capturedCount >= __budget.maxElements) { __budget.hitMaxElements = true; }
+    if (depth >= __budget.maxDepth) { __budget.hitMaxDepth = true; }
+    if (Date.now() > __budget.deadline) { __budget.timedOut = true; }
+
+    const withinBudget = !__budget.hitMaxElements && !__budget.hitMaxDepth && !__budget.timedOut;
+    let crossOriginFrame = false;
+    let children = [];
+
+    if (withinBudget) {
+      const childItems = [];
+      const directChildren = Array.from(element.children).filter(child => child && child.nodeType === 1);
+      childItems.push(...directChildren.map(child => ({ element: child, ancestry: currentAncestry })));
+
+      if (element.shadowRoot) {
+        const shadowChildren = Array.from(element.shadowRoot.children).filter(child => child && child.nodeType === 1);
+        childItems.push(...shadowChildren.map(child => ({ element: child, ancestry: currentAncestry })));
+      }
+
+      if (element.tagName === 'IFRAME') {
+        try {
+          const doc = element.contentDocument;
+          if (doc && doc.body) {
+            const iframeSelector = frameSelectorOf(element);
+            const nestedAncestry = [...currentAncestry, iframeSelector];
+            childItems.push({ element: doc.body, ancestry: nestedAncestry });
+          } else {
+            crossOriginFrame = true;
+          }
+        } catch {
+          crossOriginFrame = true;
+        }
+      }
+
+      for (const item of childItems) {
+        if (__budget.capturedCount >= __budget.maxElements) { __budget.hitMaxElements = true; break; }
+        if (Date.now() > __budget.deadline) { __budget.timedOut = true; break; }
+        children.push(walk(item.element, currentScope, item.ancestry, depth + 1));
+      }
+    }
+
+    return {
+      TagName: element.tagName.toLowerCase(),
+      Role: roleOf(element),
+      AccessibleName: accessibleNameOf(element),
+      Text: textOf(element),
+      Id: element.id || '',
+      NameAttribute: element.getAttribute('name') || '',
+      InputType: element.getAttribute('type') || '',
+      TestId: element.getAttribute('data-testid') || element.getAttribute('data-test') || '',
+      ClassName: typeof element.className === 'string' ? element.className : '',
+      CssSelector: cssSelectorOf(element),
+      IsStructuralCssSelector: !element.id
+        && !element.getAttribute('data-testid')
+        && !element.getAttribute('data-test')
+        && !element.getAttribute('name'),
+      IsHidden: visibility.IsHidden,
+      IsOffscreen: visibility.IsOffscreen,
+      IsCrossOriginFrame: crossOriginFrame,
+      TreeScope: currentScope,
+      FrameUrl: frameUrlOf(element),
+      FrameAncestry: currentAncestry,
+      BoundingRectangle: rectOf(element),
+      Children: children
+    };
+  }
+
+  const __root = walk(document.body, 'light-dom', [], 0);
+  __root.HitMaxDepth = __budget.hitMaxDepth;
+  __root.HitMaxElements = __budget.hitMaxElements;
+  __root.TimedOut = __budget.timedOut;
+  __root.CapturedCount = __budget.capturedCount;
+  return __root;
+}";
+
+        /// <summary>Builds a DOM capture script that enforces <see cref="WebDiscoveryOptions" /> traversal
+        /// bounds instead of the unbounded <see cref="JavaScript" /> walk, stamping <c>HitMaxDepth</c>,
+        /// <c>HitMaxElements</c>, <c>TimedOut</c>, and <c>CapturedCount</c> onto the returned root element
+        /// so a cut-short capture is observable rather than silently missing nodes. Defaults to
+        /// <see cref="WebDiscoveryOptions.Default" /> (MaxDepth 25, MaxElements 5000, Timeout 10s) when
+        /// <paramref name="options" /> is omitted, mirroring <c>Discovery.DiscoveryOptions</c>.</summary>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="options" /> has a negative <c>MaxDepth</c>, a <c>MaxElements</c> less than one,
+        /// or a non-positive <c>Timeout</c>.</exception>
+        public static string BuildJavaScript(WebDiscoveryOptions? options = null)
+        {
+            var effective = options ?? WebDiscoveryOptions.Default;
+            if (effective.MaxDepth < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(effective.MaxDepth), "MaxDepth must be zero or greater.");
+            }
+
+            if (effective.MaxElements < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(effective.MaxElements), "MaxElements must be at least one.");
+            }
+
+            if (effective.Timeout <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(effective.Timeout), "Timeout must be greater than zero.");
+            }
+
+            var timeoutMs = Math.Max(1, (long)effective.Timeout.TotalMilliseconds);
+            var boundedWalk = BoundedWalkTemplate
+                .Replace("__MAX_DEPTH__", effective.MaxDepth.ToString(CultureInfo.InvariantCulture))
+                .Replace("__MAX_ELEMENTS__", effective.MaxElements.ToString(CultureInfo.InvariantCulture))
+                .Replace("__TIMEOUT_MS__", timeoutMs.ToString(CultureInfo.InvariantCulture));
+
+            return "() => {" + HelperFunctionsJavaScript + boundedWalk;
+        }
     }
 }
