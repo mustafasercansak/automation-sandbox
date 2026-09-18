@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using AutomationSandbox.SelfHealing;
 using AutomationSandbox.UiModel;
 using Xunit;
@@ -134,6 +136,66 @@ namespace ScenarioRunner
             // "still present" under even the most permissive (Aggressive) profile.
             Assert.Equal(0, aggressive.FalseHealsOnRemoved);
             Assert.Equal(2, aggressive.CorrectDeclines);
+        }
+
+        [Fact]
+        public void GenerateProbes_PopulatesChildControlTypeSignature_ForContainerElement()
+        {
+            // Regression test for #418: TreeCalibrator.CloneElementShallow used to omit
+            // ChildControlTypeSignature, unlike UiElementSnapshot.Capture which always computes
+            // it. GenerateProbes builds every CalibrationProbe.ExpectedTarget via
+            // CloneElementShallow, so expected.ChildControlTypeSignature was always null during
+            // calibration - making expectedWasContainer false in SelfHealingResolver.Resolve and
+            // silently disabling the child-signature false-heal gate for every calibration run.
+            var root = new UiElementInfo
+            {
+                ControlType = "Window",
+                AutomationId = "MainWindow",
+                Name = "Main Window",
+                BoundingRectangle = new BoundingRectangle(0, 0, 800, 600)
+            };
+
+            var container = new UiElementInfo
+            {
+                ControlType = "Panel",
+                AutomationId = "containerPanel",
+                Name = "Container Panel",
+                ParentControlType = "Window",
+                ParentAutomationId = "MainWindow",
+                BoundingRectangle = new BoundingRectangle(10, 50, 200, 100),
+                SiblingIndex = 0,
+                SiblingCount = 1
+            };
+            container.Children.Add(new UiElementInfo { ControlType = "Button", Name = "OK" });
+            container.Children.Add(new UiElementInfo { ControlType = "Button", Name = "Cancel" });
+            container.Children.Add(new UiElementInfo { ControlType = "Edit", Name = "Input" });
+            root.Children.Add(container);
+
+            var expectedSignature = UiElementSnapshot.ComputeChildControlTypeSignature(container);
+            Assert.Equal("Button:2|Edit:1", expectedSignature);
+
+            // GenerateProbes/CalibrationProbe are private implementation details of
+            // TreeCalibrator; reflection is used here deliberately because the acceptance
+            // criterion for #418 is specifically that CalibrationProbe.ExpectedTarget carries the
+            // signature, not merely that some public aggregate metric shifts.
+            var generateProbes = typeof(TreeCalibrator).GetMethod(
+                "GenerateProbes", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(generateProbes);
+
+            var probes = (System.Collections.IEnumerable)generateProbes!.Invoke(
+                null, new object[] { root, new List<UiElementInfo> { container } })!;
+
+            var probeList = probes.Cast<object>().ToList();
+            Assert.NotEmpty(probeList);
+
+            var expectedTargetProperty = probeList[0].GetType().GetProperty("ExpectedTarget");
+            Assert.NotNull(expectedTargetProperty);
+
+            foreach (var probe in probeList)
+            {
+                var expectedTarget = (UiElementInfo)expectedTargetProperty!.GetValue(probe)!;
+                Assert.Equal(expectedSignature, expectedTarget.ChildControlTypeSignature);
+            }
         }
 
         [Fact]
