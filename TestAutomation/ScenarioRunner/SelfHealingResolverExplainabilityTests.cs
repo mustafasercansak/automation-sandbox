@@ -1,5 +1,5 @@
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 namespace ScenarioRunner
 {
     public class SelfHealingResolverExplainabilityTests

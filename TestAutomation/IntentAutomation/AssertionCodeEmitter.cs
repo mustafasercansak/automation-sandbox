@@ -2,9 +2,9 @@ using System;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
-    public static class AssertionCodeEmitter
+    internal static class AssertionCodeEmitter
     {
         public static bool IsLocatorRequired(AssertionKind kind, AssertGenerationMode mode)
         {

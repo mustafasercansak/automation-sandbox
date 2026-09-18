@@ -1,4 +1,4 @@
-using UiModel;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     public class UiElementSnapshotTests

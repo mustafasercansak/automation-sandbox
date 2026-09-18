@@ -1,9 +1,10 @@
 using System;
 using System.Text.Json;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
+    /// <summary>Converts a captured browser JSON payload into the web snapshot model.</summary>
     public static class PlaywrightApplicationConnector
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -11,6 +12,7 @@ namespace WebDiscovery
             PropertyNameCaseInsensitive = true,
         };
 
+        /// <summary>Deserializes the DOM capture payload into an editable web element tree.</summary>
         public static UiElementInfo ParseJson(string rawJson)
         {
             if (string.IsNullOrWhiteSpace(rawJson))

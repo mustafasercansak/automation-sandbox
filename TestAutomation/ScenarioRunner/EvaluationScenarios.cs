@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using UiModel;
+using AutomationSandbox.UiModel;
 
 namespace ScenarioRunner
 {

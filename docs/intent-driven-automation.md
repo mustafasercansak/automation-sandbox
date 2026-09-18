@@ -176,7 +176,7 @@ and same-origin iframe content, with hidden/offscreen elements marked, via the s
 `PlaywrightDomCaptureScript` the manual capture workflow uses:
 
 ```csharp
-using PlaywrightLiveExploration;
+using AutomationSandbox.PlaywrightLiveExploration;
 
 await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
 WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
@@ -289,7 +289,7 @@ test('Create customer', async ({ page }) => {
 
 `IntentDesktopAutomationPipeline` is the Windows desktop counterpart: the same
 `IIntentPlanner` plans steps, but they are matched against a live `UiElementInfo` tree
-(captured via `Discovery.UiTreeWalker`) instead of a `WebDiscovery` DOM snapshot, and the
+(captured via `AutomationSandbox.Discovery.UiTreeWalker`) instead of a `WebDiscovery` DOM snapshot, and the
 generator emits an xUnit + FlaUI test instead of Playwright C#/TypeScript.
 
 ```csharp
@@ -316,7 +316,7 @@ new IntentFlowReportFileSink("desktop-intent-flow-report.json").Write(result.Rep
 
 ```csharp
 using System;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core.AutomationElements;
 using Xunit;
 

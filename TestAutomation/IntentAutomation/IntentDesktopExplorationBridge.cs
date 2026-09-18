@@ -1,19 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Desktop counterpart to IntentExplorationBridge: matches intent steps against a live
-    // UiElementInfo tree (as captured by Discovery.UiTreeWalker) instead of a WebElementInfo
+    // UiElementInfo tree (as captured by AutomationSandbox.Discovery.UiTreeWalker) instead of a WebElementInfo
     // DOM snapshot. Scoring uses UIA ControlType names in place of HTML tag/role, and
     // Name/AutomationId/ClassName in place of accessible name/testId/CSS selector.
 
+    /// <summary>Desktop counterpart to IntentExplorationBridge: matches intent steps against a live UiElementInfo tree (as captured by AutomationSandbox.Discovery.UiTreeWalker) instead of a WebElementInfo DOM snapshot. Scoring uses UIA ControlType names in place of HTML tag/role, and Name/AutomationId/ClassName in place of accessible name/testId/CSS selector.</summary>
     public sealed class IntentDesktopExplorationBridge
     {
         private readonly IntentDesktopExplorationOptions _options;
 
+        /// <summary>Configures desktop shortlist and review thresholds; omitted options use the standard exploration policy.</summary>
         public IntentDesktopExplorationBridge(IntentDesktopExplorationOptions? options = null)
         {
             _options = options ?? new IntentDesktopExplorationOptions();
@@ -35,6 +37,7 @@ namespace IntentAutomation
             }
         }
 
+        /// <summary>Ranks desktop candidates for each scenario step and applies review, semantic, and runner-up gates.</summary>
         public IntentDesktopExplorationResult Match(IntentScenario scenario, UiElementInfo root)
         {
             if (scenario == null)
@@ -113,7 +116,7 @@ namespace IntentAutomation
             var actionScore = ActionCompatibility(step.ActionType, element.ControlType);
             if (actionScore <= 0.0)
             {
-                return new IntentDesktopElementCandidate { Step = step, Element = element };
+                return new IntentDesktopElementCandidate(step: step, element: element);
             }
 
             var targetText = IntentTextScoring.BuildMatchingText(step);
@@ -124,14 +127,12 @@ namespace IntentAutomation
                 : 0.0;
 
             var score = Math.Min(1.0, (actionScore * 0.55) + (semanticScore * 0.45) + exactBonus);
-            return new IntentDesktopElementCandidate
-            {
-                Step = step,
-                Element = element,
-                Score = score,
-                SemanticScore = semanticScore,
-                Reason = $"action={actionScore:F2}; semantic={semanticScore:F2}",
-            };
+            return new IntentDesktopElementCandidate(
+                step: step,
+                element: element,
+                score: score,
+                semanticScore: semanticScore,
+                reason: $"action={actionScore:F2}; semantic={semanticScore:F2}");
         }
 
         // UIA ControlType names (see https://learn.microsoft.com/dotnet/api/system.windows.automation.controltype),

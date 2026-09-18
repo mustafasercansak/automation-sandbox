@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Represents an intent planning request tailored specifically for desktop automation scenarios,

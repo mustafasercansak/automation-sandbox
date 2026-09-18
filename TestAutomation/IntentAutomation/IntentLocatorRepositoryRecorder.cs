@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Records eligible web intent matches as reusable locator snapshots.</summary>
     public sealed class IntentLocatorRepositoryRecorder
     {
         private readonly IntentLocatorRecordingOptions _options;
 
+        /// <summary>Configures web recording thresholds and repository metadata; omitted options use the standard recording policy.</summary>
         public IntentLocatorRepositoryRecorder(IntentLocatorRecordingOptions? options = null)
         {
             _options = options ?? new IntentLocatorRecordingOptions();
@@ -19,6 +21,7 @@ namespace IntentAutomation
             }
         }
 
+        /// <summary>Evaluates exploration results against recording policy and persists eligible locator snapshots.</summary>
         public IReadOnlyList<IntentLocatorRecordingResult> Record(
             IntentExplorationResult explorationResult,
             LocatorRepository repository)

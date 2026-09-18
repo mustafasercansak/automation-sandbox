@@ -195,7 +195,7 @@ You need to supply four members: `IsAvailable`, `UnavailableErrorMessage`, `Crea
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using LlmHealing;
+using AutomationSandbox.LlmHealing;
 
 public sealed class CustomApiHealingProvider : HttpLlmHealingProvider
 {
@@ -251,8 +251,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 
 public sealed class MyLocalModelProvider : ILlmHealingProvider
 {
@@ -492,7 +492,7 @@ Dört üyeyi tanımlamanız gerekir: `IsAvailable`, `UnavailableErrorMessage`, `
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using LlmHealing;
+using AutomationSandbox.LlmHealing;
 
 public sealed class CustomApiHealingProvider : HttpLlmHealingProvider
 {
@@ -548,8 +548,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LlmHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.UiModel;
 
 public sealed class MyLocalModelProvider : ILlmHealingProvider
 {

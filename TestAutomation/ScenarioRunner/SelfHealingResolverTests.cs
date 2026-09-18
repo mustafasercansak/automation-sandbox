@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http;
-using UiModel;
-using SelfHealing;
-using LlmHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.LlmHealing;
 namespace ScenarioRunner
 {
     public class SelfHealingResolverTests

@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 namespace ScenarioRunner
 {
     // Pure-logic benchmark: no FlaUI/Windows dependency, so unlike the live UIA scenario

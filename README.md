@@ -111,6 +111,14 @@ New to the library? The [Published Package Quickstart](docs/consumer-quickstart.
 
 While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change to Tier 1 (always called out in the release notes); a **patch** bump (`0.2.0` → `0.2.1`) never does. Full policy and the 1.0 exit criteria: [API Stability & Versioning](docs/versioning-and-stability.md).
 
+Source builds include XML IntelliSense documentation for every packable library. The
+[public API audit and migration guide](docs/public-api-audit.md) records the reviewed
+surface and deliberate mutability contracts. For the next breaking release, construct
+`ScoreComponents`, `PlaywrightLocatorSuggestion`, `IntentElementCandidate`, and
+`IntentDesktopElementCandidate` with named constructor arguments instead of object
+initializers. Their properties are get-only; candidate references still point to editable
+steps and captured elements. This source change does not alter packages already published.
+
 ---
 
 ## 📌 Implementation Status
@@ -136,7 +144,7 @@ While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change t
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
 | **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
 | **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
-| **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `Discovery.ApplicationConnector`, and emits the same schema-v4 `IntentFlowReportDocument` (JSON + HTML) as the web pipeline. |
+| **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `AutomationSandbox.Discovery.ApplicationConnector`, and emits the same schema-v4 `IntentFlowReportDocument` (JSON + HTML) as the web pipeline. |
 | **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
 | **Organic Benchmark & Calibration** | ✅ Implemented | Controlled multi-signal locator ablation on organic application trees (`HandBrake 1.8.2`), empirical score distribution overlap findings, and threshold trade-off analysis. See [Benchmark & Calibration Guide](docs/benchmark-calibration.md). |
 
@@ -268,8 +276,8 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 
 ### 1. Basic Heuristic Resolution (Deterministic, 0 Cost)
 ```csharp
-using UiModel;
-using SelfHealing;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.SelfHealing;
 
 // Load expected locator snapshot
 var expected = UiElementSnapshot.FromJson(File.ReadAllText("Snapshots/txtEmail.json"));
@@ -293,7 +301,7 @@ if (result.IsConfident)
 Configure traversal bounds, timeouts, cancellation tokens, and control filters:
 
 ```csharp
-using Discovery;
+using AutomationSandbox.Discovery;
 using System.Threading;
 
 using var connector = ApplicationConnector.Launch(@"C:\apps\MyApp.exe");
@@ -419,15 +427,15 @@ shape used by the desktop engine, so the existing self-healing scorer can work a
 web and desktop trees:
 
 ```csharp
-using PlaywrightLiveExploration;
-using WebDiscovery;
+using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.WebDiscovery;
 
 // PlaywrightLiveExplorer owns the browser + capture round-trip (see Quick Start #8 below).
 // If you're inside your own Playwright test instead, capture the DOM with:
 //   var json = await page.EvaluateAsync<string>($"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())");
 //   var dom = JsonSerializer.Deserialize<WebElementInfo>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 // (page.EvaluateAsync<WebElementInfo>(...) directly does NOT work - Playwright's own
-// deserializer can't populate UiModel.BoundingRectangle, a readonly struct with no setters.)
+// deserializer can't populate AutomationSandbox.UiModel.BoundingRectangle, a readonly struct with no setters.)
 var liveTree = WebElementMapper.ToUiElementTree(dom);
 var result = SelfHealingResolver.Resolve(expectedWebSnapshot, liveTree);
 
@@ -457,9 +465,9 @@ against a `WebDiscovery` DOM snapshot, record accepted locators, generate Playwr
 C# and TypeScript test skeletons, and expose a JSON/HTML-ready intent flow report.
 
 ```csharp
-using IntentAutomation;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
 var request = new IntentPlanningRequest
 {
@@ -518,13 +526,13 @@ Generated `Assert` steps are emitted from a structured contract, never from a ba
 ### 8. Desktop Intent Automation Pipeline
 `IntentDesktopAutomationPipeline` is the Windows desktop counterpart to
 `IntentAutomationPipeline`: it plans intent steps with the same `IIntentPlanner`, matches
-them against a live `UiElementInfo` tree (as captured by `Discovery.UiTreeWalker`) instead
+them against a live `UiElementInfo` tree (as captured by `AutomationSandbox.Discovery.UiTreeWalker`) instead
 of a `WebDiscovery` DOM snapshot, records accepted locators, and generates an xUnit +
-FlaUI test skeleton built on this project's own `Discovery.ApplicationConnector`.
+FlaUI test skeleton built on this project's own `AutomationSandbox.Discovery.ApplicationConnector`.
 
 ```csharp
-using IntentAutomation;
-using UiModel;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.UiModel;
 
 var request = new IntentPlanningRequest
 {
@@ -571,7 +579,7 @@ required to feed a snapshot into `IntentAutomationPipeline`, `IntentExplorationB
 any of the other Quick Start examples above:
 
 ```csharp
-using PlaywrightLiveExploration;
+using AutomationSandbox.PlaywrightLiveExploration;
 
 await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
 WebElementInfo dom = await explorer.CaptureAsync("https://example.test/customers");
@@ -590,7 +598,7 @@ full rationale.
 
 ### 10. LLM Fallback Resolution (Opt-In)
 ```csharp
-using LlmHealing;
+using AutomationSandbox.LlmHealing;
 using System.Net.Http;
 
 // Option A: Auto-discover all configured providers from environment variables (recommended)
@@ -805,6 +813,10 @@ For complete methodologies, component breakdowns, and configuration guidance, se
 ---
 
 ## 🗺️ Roadmap
+
+**Product direction ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** build toward a commercial product, starting with safety-first, explainable locator healing for modern .NET Windows UI tests built on FlaUI. Web remains a secondary adapter. Intent planning, test generation, and new LLM providers are feature-frozen; existing functionality receives bug and security fixes. The existing MIT license remains in place; pricing, paid capabilities, and support commitments require pilot evidence before a commercial offer is defined.
+
+The next 90 days prioritize independent desktop pilots, real version-to-version drift measurements, and fixes justified by that feedback. The [external validation plan](docs/external-validation.md) defines the evidence to collect. **1.0 is blocked by [#401](https://github.com/mustafasercansak/automation-sandbox/issues/401):** three independent FlaUI integrations with written feedback and two organic drift datasets with measured outcomes are required. No external integrations or organic drift datasets have been verified yet; synthetic benchmarks and our own samples do not satisfy this gate.
 
 ```mermaid
 graph LR

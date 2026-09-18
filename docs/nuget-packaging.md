@@ -126,12 +126,19 @@ next to the others: `eng/Validate-NuGetPackages.ps1` fails a package whose embed
 `README.md` is not the per-package file (it checks the first heading is `# <PackageId>`),
 whose README still carries LaTeX/mermaid, or that is missing `icon.png`.
 
+The seven library project files enable XML documentation before the SDK computes output items.
+`Directory.Build.targets` enables .NET analyzers and documentation warning gates after each
+project has declared whether it is packable. Missing public API comments fail the library build.
+The package validator requires a non-empty XML IntelliSense document beside every library
+DLL for every packaged target framework, with the matching assembly name.
+
 ## Publish Checklist
 
 - CI is green on `main`.
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
 - GitHub Release assets include all seven packages and their symbol packages, plus one CycloneDX SBOM (`.bom.json`) per package.
 - Package names, README, license, repository URL, and symbols are present.
+- Every library DLL has matching XML IntelliSense documentation; run `eng/Validate-NuGetPackages.ps1`.
 ## Version Bumps / Sürüm Güncelleme
 
 The package version is authoritatively defined in a single location:

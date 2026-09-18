@@ -1,4 +1,4 @@
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     /// <summary>
     /// Governs how <see cref="SelfHealingEngine"/> responds to locator-resolution failures,

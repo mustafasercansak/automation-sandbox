@@ -5,11 +5,11 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Discovery;
+using AutomationSandbox.Discovery;
 using FlaUI.Core.AutomationElements;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     // These tests actually launch the compiled WinFormsApp.exe and talk to it via FlaUI.UIA3.

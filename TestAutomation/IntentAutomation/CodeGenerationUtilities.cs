@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
-    public static class CodeGenerationUtilities
+    internal static class CodeGenerationUtilities
     {
         // Explicitly mirrors FlaUI.Core.Definitions.ControlType enum members to avoid a hard dependency
         // on FlaUI.Core in IntentAutomation, keeping the library fully cross-platform (netstandard2.0;net8.0).

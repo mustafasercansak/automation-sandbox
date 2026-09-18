@@ -1,7 +1,8 @@
 using System.Text.Json;
 
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
+    /// <summary>JSON serialization and schema validation for persistent locator documents.</summary>
     public static class LocatorRepositorySerializer
     {
         private static readonly JsonSerializerOptions Options = new()
@@ -9,6 +10,7 @@ namespace UiModel
             WriteIndented = true,
         };
 
+        /// <summary>Serializes the supplied document to the package&apos;s JSON representation.</summary>
         public static string ToJson(LocatorRepositoryDocument document)
         {
             if (document == null)
@@ -20,6 +22,7 @@ namespace UiModel
             return JsonSerializer.Serialize(document, Options);
         }
 
+        /// <summary>Deserializes JSON into the package&apos;s editable document model.</summary>
         public static LocatorRepositoryDocument FromJson(string json)
         {
             var document = JsonSerializer.Deserialize<LocatorRepositoryDocument>(json, Options)

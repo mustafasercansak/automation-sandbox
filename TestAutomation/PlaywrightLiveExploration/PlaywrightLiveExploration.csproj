@@ -4,8 +4,11 @@
     <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
     <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>AutomationSandbox.PlaywrightLiveExploration</RootNamespace>
+
     <PackageId>AutomationSandbox.PlaywrightLiveExploration</PackageId>
     <Description>Live browser page exploration via the Microsoft.Playwright .NET SDK: launches a browser, navigates to a URL, and captures a WebElementInfo DOM snapshot without a hand-written Playwright test.</Description>
     <PackageTags>playwright;web-automation;dom;test-automation;browser;page-exploration;dotnet</PackageTags>

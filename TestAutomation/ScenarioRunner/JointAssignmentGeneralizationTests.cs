@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

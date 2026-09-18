@@ -1,4 +1,4 @@
-namespace UiModel
+namespace AutomationSandbox.UiModel
 {
     // Shared runner-up margin rule (issue #4): a top candidate that barely beats the
     // runner-up is ambiguous, not confident. Lives in UiModel so both SelfHealing
@@ -8,8 +8,10 @@ namespace UiModel
     // Margin = bestScore - runnerUpScore. With a single candidate there is no competition,
     // so the margin is treated as sufficient by definition.
 
+    /// <summary>Shared runner-up margin rule used by healing and intent matching.</summary>
     public static class CandidateMargin
     {
+        /// <summary>Returns whether the leading score exceeds the runner-up by the required margin; a missing runner-up has no competing claim.</summary>
         public static bool HasSufficientMargin(double bestScore, double? runnerUpScore, double minimumMargin)
         {
             if (!runnerUpScore.HasValue)

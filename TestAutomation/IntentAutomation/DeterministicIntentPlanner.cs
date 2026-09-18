@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Keyword-based planner that maps supported goal phrases into scenario steps without a model call.</summary>
     public sealed class DeterministicIntentPlanner : IIntentPlanner
     {
+        /// <summary>Parses supported goal phrases into ordered actions and diagnostics requiring human review when intent is incomplete.</summary>
         public IntentPlanningResult Plan(IntentPlanningRequest request)
         {
             if (request == null)
@@ -146,6 +148,7 @@ namespace IntentAutomation
             return result;
         }
 
+        /// <summary>Infers the assertion kind and expected value from the supplied goal text and expected outcome.</summary>
         public static (AssertionKind Kind, string ExpectedValue) DeriveAssertion(string expectedOutcome, string goal)
         {
             var text = (expectedOutcome ?? "").Trim();

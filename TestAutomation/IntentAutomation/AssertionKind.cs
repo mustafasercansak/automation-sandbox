@@ -1,4 +1,4 @@
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Categorizes the expected outcome of an assertion step in an intent-driven test scenario.

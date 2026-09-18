@@ -1,13 +1,13 @@
 using System;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     // Shared evaluation logic for IntentExplorationBridge and IntentDesktopExplorationBridge (issue #5).
     // Determines if a top candidate meets the review threshold, semantic score gate, and runner-up margin.
     // Single source of truth to avoid behavioral drift between Web and Desktop exploration matching.
 
-    public static class IntentCandidateReviewEvaluator
+    internal static class IntentCandidateReviewEvaluator
     {
         public static (bool RequiresReview, string Diagnostic) Evaluate(
             double bestScore,

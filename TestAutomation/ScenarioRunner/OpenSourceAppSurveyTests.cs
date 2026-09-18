@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using UiModel;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

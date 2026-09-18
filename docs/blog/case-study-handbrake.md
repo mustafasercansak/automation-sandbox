@@ -145,8 +145,8 @@ The calibration table is one command (above). The two scenario resolutions need 
 `AutomationSandbox.SelfHealing` package (which pulls `UiModel`):
 
 ```csharp
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 
 var root = UiTreeSerializer.FromJson(
     File.ReadAllText("HandBrake_1.8.2.tree.json"))!;   // the committed fixture

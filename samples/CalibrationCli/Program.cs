@@ -1,5 +1,5 @@
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 
 internal static class Program
 {

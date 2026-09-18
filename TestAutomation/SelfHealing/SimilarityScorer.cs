@@ -1,8 +1,8 @@
 using System;
 using System.Buffers;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     // Pure heuristic, no LLM involved: ControlType, parent context, sibling
     // position, name similarity, and screen position are combined with weights
@@ -43,14 +43,12 @@ namespace SelfHealing
                 Candidate = candidate,
                 TotalScore = totalScore,
                 EvidenceCoverage = totalWeight <= 0.0 ? 0.0 : activeWeight / totalWeight,
-                Components = new ScoreComponents
-                {
-                    ControlTypeScore = controlTypeScore,
-                    ParentControlTypeScore = parentScore,
-                    SiblingPositionScore = siblingScore,
-                    NameScore = nameScore,
-                    PositionScore = positionScore,
-                },
+                Components = new ScoreComponents(
+                    controlTypeScore: controlTypeScore,
+                    parentControlTypeScore: parentScore,
+                    siblingPositionScore: siblingScore,
+                    nameScore: nameScore,
+                    positionScore: positionScore),
             };
         }
 

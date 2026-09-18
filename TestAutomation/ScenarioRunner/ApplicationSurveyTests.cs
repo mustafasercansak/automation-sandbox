@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UiModel;
+using AutomationSandbox.UiModel;
 using Xunit;
 
 namespace ScenarioRunner

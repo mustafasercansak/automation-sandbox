@@ -1,9 +1,11 @@
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace WebDiscovery
+namespace AutomationSandbox.WebDiscovery
 {
+    /// <summary>Maps DOM snapshots to the framework-independent structural UI model.</summary>
     public static class WebElementMapper
     {
+        /// <summary>Converts the web tree and its contextual metadata into a tree that the healing scorer can evaluate.</summary>
         public static UiElementInfo ToUiElementTree(WebElementInfo root)
         {
             if (root == null)

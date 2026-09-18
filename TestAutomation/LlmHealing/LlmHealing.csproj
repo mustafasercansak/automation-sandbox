@@ -5,8 +5,11 @@
     <!-- Automatically target .NET 10 when built with .NET 10 SDK (e.g. CI / Visual Studio 2026+) -->
     <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>AutomationSandbox.LlmHealing</RootNamespace>
+
     <PackageId>AutomationSandbox.LlmHealing</PackageId>
     <Description>LLM provider implementations behind a shared ILlmHealingProvider interface for locator resolution: Claude, Gemini, offline Ollama, and an OpenAI provider that accepts any OpenAI-compatible endpoint (Groq, Cerebras, OpenRouter, Cloudflare Workers AI, Azure OpenAI, a local gateway). Includes retry with exponential backoff, dual timeout budgets, and a Retry-After quota guard.</Description>
     <PackageTags>llm;self-healing;test-automation;claude;gemini;openai;ollama;consensus;dotnet</PackageTags>

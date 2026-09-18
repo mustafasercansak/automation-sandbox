@@ -3,9 +3,9 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
-using LlmHealing;
-using SelfHealing;
-using UiModel;
+using AutomationSandbox.LlmHealing;
+using AutomationSandbox.SelfHealing;
+using AutomationSandbox.UiModel;
 namespace ScenarioRunner
 {
     // Pure-logic tests for the LlmHealing prompt/parsing/provider plumbing, run
@@ -63,14 +63,12 @@ namespace ScenarioRunner
                     CandidateId = "c0",
                     Candidate = candidate,
                     TotalScore = 0.9,
-                    Components = new ScoreComponents
-                    {
-                        ControlTypeScore = 1.0,
-                        ParentControlTypeScore = 1.0,
-                        SiblingPositionScore = 1.0,
-                        NameScore = 1.0,
-                        PositionScore = 1.0,
-                    },
+                    Components = new ScoreComponents(
+                        controlTypeScore: 1.0,
+                        parentControlTypeScore: 1.0,
+                        siblingPositionScore: 1.0,
+                        nameScore: 1.0,
+                        positionScore: 1.0),
                 },
             };
         }

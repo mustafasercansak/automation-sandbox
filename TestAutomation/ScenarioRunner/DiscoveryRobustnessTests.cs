@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Discovery;
-using UiModel;
+using AutomationSandbox.Discovery;
+using AutomationSandbox.UiModel;
 using Xunit;
 namespace ScenarioRunner
 {

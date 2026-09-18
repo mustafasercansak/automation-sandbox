@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using IntentAutomation;
+using AutomationSandbox.IntentAutomation;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 using Xunit;
 
 namespace ScenarioRunner
@@ -584,13 +584,11 @@ namespace ScenarioRunner
                     LocatorKey = locatorKey,
                     Snapshot = new UiElementInfo { AutomationId = automationId },
                 },
-                Candidate = new IntentElementCandidate
-                {
-                    LocatorSuggestions = new List<PlaywrightLocatorSuggestion>
+                Candidate = new IntentElementCandidate(
+                    locatorSuggestions: new List<PlaywrightLocatorSuggestion>
                     {
-                        new PlaywrightLocatorSuggestion { Strategy = "Test", Expression = expression, Confidence = 0.9 }
-                    }
-                }
+                        new PlaywrightLocatorSuggestion(strategy: "Test", expression: expression, confidence: 0.9)
+                    })
             };
         }
 

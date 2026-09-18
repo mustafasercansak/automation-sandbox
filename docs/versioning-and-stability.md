@@ -47,14 +47,14 @@ flowchart TD
 ```
 
 #### Tier 1: Stable Public API
-The following NuGet packages and their core types represent the committed public contract. The C# namespace for each package is its unprefixed short name (e.g. `using UiModel;`, not `using AutomationSandbox.UiModel;`):
-- **`AutomationSandbox.UiModel`** (namespace `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`** (namespace `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`** (namespace `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`** (namespace `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`** (namespace `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (namespace `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+The following NuGet packages and their core types represent the committed public contract. As of the namespace migration (#399), the C# namespace for each package matches its NuGet `PackageId` (e.g. `using AutomationSandbox.UiModel;`) — earlier previews used the unprefixed short name (`using UiModel;`); that was a collision-prone surface for a mature SDK and is now a breaking change, called out in the release notes for the version that ships it:
+- **`AutomationSandbox.UiModel`** (namespace `AutomationSandbox.UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (namespace `AutomationSandbox.SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (namespace `AutomationSandbox.LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (namespace `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (namespace `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (namespace `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### Tier 2: Extensibility Points
 Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
@@ -91,6 +91,8 @@ To exit beta and release `1.0.0`, all of the following conditions must be satisf
   - *Status: met.* §8 and §14/§15 of the benchmark guide; `ShareXAblationTests` and `LocatorAblationTests` carry committed baselines.
 - [ ] **Zero Open P0/P1 Safety Issues:** No open issues labeled `safety`, `security`, or `correctness` with P0 or P1 priority.
   - *Status: met* at time of writing. Re-confirm at release-decision time.
+- [ ] **Independent External Validation ([#401](https://github.com/mustafasercansak/automation-sandbox/issues/401)):** Three independent FlaUI test projects have completed integrations with written feedback, and two real applications each have a committed dataset from two genuine versions with measured locator drift. Publish broken-locator counts, correct heals, review referrals, false heals, and estimated maintenance time saved for each integration.
+  - *Status: not met.* No external integration or organic drift dataset is verified. Synthetic mutations and repository-owned quickstarts do not qualify. Follow the [evidence collection plan](external-validation.md); release notes for 1.0 must link the completed evidence and this checklist.
 - [ ] **Cross-Platform CI Stability:** 100% passing tests across the Windows (`net48`) and Linux (`net8.0`) CI matrix legs with zero unhandled flaky retries.
   - *Status: met* for the core `CI` matrix. The nightly consensus gate's reasoning-model regression (#378) is fixed (`OpenAiHealingProvider` folds in `message.reasoning`, the parser recovers a truncated answer object); confirm one green scheduled `Nightly Multi-Provider Consensus Evaluation` run.
 - [ ] **Supply Chain Security:** Zero High or Critical advisories under `dotnet list package --vulnerable` / `NuGetAudit` across all target frameworks.
@@ -138,14 +140,14 @@ flowchart TD
 ```
 
 #### 1. Kademe: Kararlı Genel API
-Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmeyi temsil eder. Her paketin C# ad alanı, önek almamış kısa adıdır (örn. `using AutomationSandbox.UiModel;` değil, `using UiModel;`):
-- **`AutomationSandbox.UiModel`** (ad alanı `UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
-- **`AutomationSandbox.SelfHealing`** (ad alanı `SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
-- **`AutomationSandbox.LlmHealing`** (ad alanı `LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
-- **`AutomationSandbox.WebDiscovery`** (ad alanı `WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
-- **`AutomationSandbox.Discovery`** (ad alanı `Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
-- **`AutomationSandbox.IntentAutomation`** (ad alanı `IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmeyi temsil eder. Ad alanı geçişinden (#399) itibaren her paketin C# ad alanı, NuGet `PackageId`'siyle eşleşir (örn. `using AutomationSandbox.UiModel;`) — önceki önizlemeler önek almamış kısa adı kullanıyordu (`using UiModel;`); bu, olgun bir SDK için çakışmaya açık bir yüzeydi ve artık bunu taşıyan sürümün release notlarında belirtilen kırıcı bir değişikliktir:
+- **`AutomationSandbox.UiModel`** (ad alanı `AutomationSandbox.UiModel`): `UiElementInfo`, `BoundingRectangle`, `CandidateScore`, `ScoreComponents`, `LocatorRepository`, `LocatorRecord`, `LocatorHealingHistoryEntry`, `UiTreeSerializer`.
+- **`AutomationSandbox.SelfHealing`** (ad alanı `AutomationSandbox.SelfHealing`): `SelfHealingEngine`, `SelfHealingResolver`, `SimilarityWeights`, `ThresholdProfile`, `TreeCalibrator`, `HealingMode`, `HealResult`, `HealingReportDocument`.
+- **`AutomationSandbox.LlmHealing`** (ad alanı `AutomationSandbox.LlmHealing`): `ILlmHealingProvider`, `HttpLlmHealingProvider`, `ClaudeHealingProvider`, `GeminiHealingProvider`, `OpenAiHealingProvider`, `OllamaHealingProvider`, `LlmHealingResult`.
+- **`AutomationSandbox.WebDiscovery`** (ad alanı `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
+- **`AutomationSandbox.Discovery`** (ad alanı `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
+- **`AutomationSandbox.IntentAutomation`** (ad alanı `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
 Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.
@@ -182,6 +184,8 @@ Beta sürecini tamamlayıp `1.0.0` genel sürümüne geçmek için aşağıdaki 
   - *Durum: sağlandı.* Benchmark kılavuzu §8 ve §14/§15; `ShareXAblationTests` ve `LocatorAblationTests` kayıtlı baseline'lar taşır.
 - [ ] **Sıfır Açık P0/P1 Güvenlik Hatası:** `safety`, `security` veya `correctness` etiketli hiçbir açık P0/P1 sorun kalmamalıdır.
   - *Durum: yazım anında sağlandı.* Sürüm-kararı anında yeniden doğrulanmalı.
+- [ ] **Bağımsız Dış Doğrulama ([#401](https://github.com/mustafasercansak/automation-sandbox/issues/401)):** Üç bağımsız FlaUI test projesinde entegrasyon tamamlanmalı ve yazılı geri bildirim alınmalıdır. İki gerçek uygulamanın her biri için iki gerçek sürüm arasında ölçülmüş locator değişim veri seti depoya eklenmelidir. Her entegrasyon için bozulan locator, doğru iyileştirme, incelemeye yönlendirme, yanlış iyileştirme sayıları ve tahmini bakım süresi tasarrufu yayımlanmalıdır.
+  - *Durum: sağlanmadı.* Henüz doğrulanmış dış entegrasyon veya doğal değişim veri seti yoktur. Sentetik değişimler ve bu depoya ait örnekler sayılmaz. [Kanıt toplama planı](external-validation.md) izlenmeli; 1.0 sürüm notları tamamlanan kanıtlara ve bu kontrol listesine bağlanmalıdır.
 - [ ] **Çapraz Platform CI Kararlılığı:** Windows (`net48`) ve Linux (`net8.0`) CI iş hatlarında, ele alınmamış kararsız (flaky) yeniden denemeler olmaksızın $\%100$ başarı.
   - *Durum: çekirdek `CI` matrisi için sağlandı.* Nightly konsensüs gate'inin reasoning-model regresyonu (#378) düzeltildi (`OpenAiHealingProvider` `message.reasoning`'i katıyor, ayrıştırıcı kesilmiş yanıt nesnesini kurtarıyor); bir yeşil zamanlanmış `Nightly Multi-Provider Consensus Evaluation` koşusu doğrulanmalı.
 - [ ] **Tedarik Zinciri Güvenliği:** Tüm hedef framework'lerde `NuGetAudit` / `dotnet list package --vulnerable` taramasında sıfır Yüksek/Kritik güvenlik açığı.

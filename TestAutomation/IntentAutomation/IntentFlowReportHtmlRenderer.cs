@@ -3,10 +3,12 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Renders a web or desktop intent flow report as HTML for human review.</summary>
     public static class IntentFlowReportHtmlRenderer
     {
+        /// <summary>Renders the supplied report document as HTML with encoded dynamic content.</summary>
         public static string Render(IntentFlowReportDocument document)
         {
             if (document == null)

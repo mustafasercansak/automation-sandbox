@@ -38,7 +38,7 @@ await engine.ExecuteWithHealingAsync<bool>(
     captureTreeRoot: () => CaptureLiveTree());        // your backend's "snapshot the screen/DOM now" call
 ```
 
-`ExecuteWithHealingAsync<T>` on the engine expects the action to return `Task<T>`. The `SelfHealing.Testing`
+`ExecuteWithHealingAsync<T>` on the engine expects the action to return `Task<T>`. The `AutomationSandbox.SelfHealing.Testing`
 fixtures (below) add a non-generic overload for void actions, so in a test you usually write
 `el => ClickAsync(el)` directly.
 
@@ -83,7 +83,7 @@ callbacks that bind to your backend (`action` and `captureTreeRoot`). Everything
 
 ### 4. Runner-specific wiring
 
-The engine is runner-agnostic; only the fixture plumbing differs. `SelfHealing.Testing` ships helpers for the two
+The engine is runner-agnostic; only the fixture plumbing differs. `AutomationSandbox.SelfHealing.Testing` ships helpers for the two
 xUnit/NUnit shapes so you are not managing temp repository files by hand.
 
 #### Playwright (.NET)
@@ -116,7 +116,7 @@ await engine.ExecuteWithHealingAsync<bool>(
 
 ```csharp
 using NUnit.Framework;
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 [TestFixture]
 public class CheckoutTests : SelfHealingTestBase   // brings a temp repo + engine, disposed for you
@@ -134,7 +134,7 @@ public class CheckoutTests : SelfHealingTestBase   // brings a temp repo + engin
 #### xUnit
 
 ```csharp
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 {
@@ -254,7 +254,7 @@ await engine.ExecuteWithHealingAsync<bool>(
     captureTreeRoot: () => CaptureLiveTree());        // backend'inizin "ekranı/DOM'u şimdi yakala" çağrısı
 ```
 
-Motordaki `ExecuteWithHealingAsync<T>`, action'ın `Task<T>` döndürmesini bekler. Aşağıdaki `SelfHealing.Testing`
+Motordaki `ExecuteWithHealingAsync<T>`, action'ın `Task<T>` döndürmesini bekler. Aşağıdaki `AutomationSandbox.SelfHealing.Testing`
 fikstürleri, void action'lar için jenerik olmayan bir aşırı yükleme ekler; bu yüzden bir testte genellikle
 doğrudan `el => ClickAsync(el)` yazarsınız.
 
@@ -301,7 +301,7 @@ snapshot** ve backend'inize bağlanan iki geri çağrı (`action` ve `captureTre
 
 ### 4. Koşucuya özel bağlama
 
-Motor koşucudan bağımsızdır; yalnızca fikstür tesisatı değişir. `SelfHealing.Testing`, geçici depo dosyalarını
+Motor koşucudan bağımsızdır; yalnızca fikstür tesisatı değişir. `AutomationSandbox.SelfHealing.Testing`, geçici depo dosyalarını
 elle yönetmemeniz için iki xUnit/NUnit şekli için yardımcılar sunar.
 
 #### Playwright (.NET)
@@ -335,7 +335,7 @@ await engine.ExecuteWithHealingAsync<bool>(
 
 ```csharp
 using NUnit.Framework;
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 [TestFixture]
 public class CheckoutTests : SelfHealingTestBase   // sizin için oluşturulup dispose edilen geçici bir repo + engine getirir
@@ -353,7 +353,7 @@ public class CheckoutTests : SelfHealingTestBase   // sizin için oluşturulup d
 #### xUnit
 
 ```csharp
-using SelfHealing.Testing;
+using AutomationSandbox.SelfHealing.Testing;
 
 public class CheckoutTests : IClassFixture<SelfHealingTestFixture>
 {

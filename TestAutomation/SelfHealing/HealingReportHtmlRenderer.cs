@@ -3,12 +3,14 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Renders persisted healing evidence into a human-readable HTML report.</summary>
     public static class HealingReportHtmlRenderer
     {
+        /// <summary>Renders the supplied report document as HTML with encoded dynamic content.</summary>
         public static string Render(HealingReportDocument document)
         {
             if (document == null)

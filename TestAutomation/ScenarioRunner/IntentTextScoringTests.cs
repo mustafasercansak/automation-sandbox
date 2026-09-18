@@ -1,4 +1,4 @@
-using IntentAutomation;
+using AutomationSandbox.IntentAutomation;
 using Xunit;
 
 namespace ScenarioRunner

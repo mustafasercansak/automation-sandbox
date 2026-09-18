@@ -2,9 +2,9 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using WebDiscovery;
+using AutomationSandbox.WebDiscovery;
 
-namespace PlaywrightLiveExploration
+namespace AutomationSandbox.PlaywrightLiveExploration
 {
     // Closes the gap the "MCP Exploration" docs previously described as Planned: instead of
     // requiring a hand-written Playwright test that calls
@@ -14,10 +14,11 @@ namespace PlaywrightLiveExploration
     // docs/intent-driven-automation.md for why a real MCP bridge (Node.js-based Playwright MCP
     // server) was ruled out for this project.
 
+    /// <summary>Owns a Playwright browser session for navigation and DOM capture; dispose asynchronously to release browser resources.</summary>
     public sealed class PlaywrightLiveExplorer : IAsyncDisposable
     {
         // Playwright's own EvaluateAsync<T> deserializer reflects over settable properties and
-        // cannot populate UiModel.BoundingRectangle (a readonly struct with a constructor, no
+        // cannot populate AutomationSandbox.UiModel.BoundingRectangle (a readonly struct with a constructor, no
         // setters) - observed to throw "Property set method not found." live against a real
         // Chromium page. Round-tripping through a JSON string and System.Text.Json (which
         // supports constructor-matched deserialization) sidesteps that, and matches how
@@ -40,6 +41,7 @@ namespace PlaywrightLiveExploration
             _options = options;
         }
 
+        /// <summary>Starts Playwright and launches a browser using the supplied options.</summary>
         public static async Task<PlaywrightLiveExplorer> LaunchAsync(PlaywrightLiveExplorerOptions? options = null)
         {
             var effectiveOptions = options ?? new PlaywrightLiveExplorerOptions();
@@ -59,6 +61,7 @@ namespace PlaywrightLiveExploration
             }
         }
 
+        /// <summary>Navigates to the supplied URL and returns a captured DOM tree.</summary>
         public async Task<WebElementInfo> CaptureAsync(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
@@ -90,6 +93,7 @@ namespace PlaywrightLiveExploration
             }
         }
 
+        /// <summary>Closes the owned browser and releases the Playwright session.</summary>
         public async ValueTask DisposeAsync()
         {
             try

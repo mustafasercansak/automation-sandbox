@@ -1,9 +1,10 @@
 using System;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Coordinates web scenario planning, captured-tree matching, locator recording, and test/report generation.</summary>
     public sealed class IntentAutomationPipeline
     {
         private readonly IIntentPlanner _planner;
@@ -12,6 +13,7 @@ namespace IntentAutomation
         private readonly PlaywrightCSharpTestGenerator _csharpGenerator;
         private readonly PlaywrightTypeScriptTestGenerator _typeScriptGenerator;
 
+        /// <summary>Configures the web pipeline planner and stage options, using deterministic planning when no planner is supplied.</summary>
         public IntentAutomationPipeline(
             IIntentPlanner? planner = null,
             IntentAutomationPipelineOptions? options = null)
@@ -24,6 +26,7 @@ namespace IntentAutomation
             _typeScriptGenerator = new PlaywrightTypeScriptTestGenerator(effectiveOptions.TypeScriptGeneration);
         }
 
+        /// <summary>Plans the request, matches against the supplied captured tree, records eligible locators, and generates test sources and a flow report.</summary>
         public IntentAutomationPipelineResult Run(
             IntentPlanningRequest request,
             WebElementInfo domRoot,

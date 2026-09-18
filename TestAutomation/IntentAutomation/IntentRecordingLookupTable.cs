@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
     /// <summary>
     /// Encapsulates multi-tier locator recording lookup across test generators.
@@ -11,7 +11,7 @@ namespace IntentAutomation
     /// 3. Step target description / locator key
     /// 4. Dynamically synthesized locator key
     /// </summary>
-    public sealed class IntentRecordingLookupTable<TRecording> where TRecording : class
+    internal sealed class IntentRecordingLookupTable<TRecording> where TRecording : class
     {
         private readonly Dictionary<IntentStep, TRecording> _byStep = new Dictionary<IntentStep, TRecording>();
         private readonly Dictionary<int, TRecording> _byOrder = new Dictionary<int, TRecording>();
@@ -85,7 +85,7 @@ namespace IntentAutomation
         }
     }
 
-    public static class IntentRecordingLookupTable
+    internal static class IntentRecordingLookupTable
     {
         public static IntentRecordingLookupTable<IntentLocatorRecordingResult> Create(
             IEnumerable<IntentLocatorRecordingResult>? recordings)

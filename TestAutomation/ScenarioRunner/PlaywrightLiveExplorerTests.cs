@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using PlaywrightLiveExploration;
-using UiModel;
-using WebDiscovery;
+using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.UiModel;
+using AutomationSandbox.WebDiscovery;
 
 namespace ScenarioRunner
 {
@@ -162,22 +162,22 @@ namespace ScenarioRunner
                 Assert.True(checkout.BoundingRectangle.Y >= 3000, $"BoundingRectangle.Y should be >= 3000, actual: {checkout.BoundingRectangle.Y}");
 
                 // Verify IntentExplorationBridge matches the offscreen element
-                var scenario = new IntentAutomation.IntentScenario
+                var scenario = new AutomationSandbox.IntentAutomation.IntentScenario
                 {
                     Goal = "Complete order",
-                    Steps = new System.Collections.Generic.List<IntentAutomation.IntentStep>
+                    Steps = new System.Collections.Generic.List<AutomationSandbox.IntentAutomation.IntentStep>
                     {
-                        new IntentAutomation.IntentStep
+                        new AutomationSandbox.IntentAutomation.IntentStep
                         {
                             Order = 1,
-                            ActionType = IntentAutomation.IntentActionType.Click,
+                            ActionType = AutomationSandbox.IntentAutomation.IntentActionType.Click,
                             TargetDescription = "checkout",
                             TestIntent = "Click checkout button",
                         }
                     }
                 };
 
-                var exploration = new IntentAutomation.IntentExplorationBridge().Match(scenario, dom);
+                var exploration = new AutomationSandbox.IntentAutomation.IntentExplorationBridge().Match(scenario, dom);
                 Assert.False(exploration.StepResults[0].RequiresReview);
                 Assert.Equal("checkout-button", exploration.StepResults[0].Candidates[0].Element.TestId);
 
@@ -284,24 +284,24 @@ namespace ScenarioRunner
                 Assert.Equal("page.FrameLocator(\"iframe[name='details']\").FrameLocator(\"iframe#nestedFrame\").GetByTestId(\"nested-save\")", saveSuggestions[0].Expression);
 
                 // Verify C# and TypeScript generators emit correct FrameLocator code
-                var scenario = new IntentAutomation.IntentScenario
+                var scenario = new AutomationSandbox.IntentAutomation.IntentScenario
                 {
                     Name = "Iframe interaction flow",
                     Goal = "Interact with elements inside nested iframes",
-                    Steps = new System.Collections.Generic.List<IntentAutomation.IntentStep>
+                    Steps = new System.Collections.Generic.List<AutomationSandbox.IntentAutomation.IntentStep>
                     {
-                        new IntentAutomation.IntentStep
+                        new AutomationSandbox.IntentAutomation.IntentStep
                         {
                             Order = 1,
-                            ActionType = IntentAutomation.IntentActionType.Fill,
+                            ActionType = AutomationSandbox.IntentAutomation.IntentActionType.Fill,
                             TargetDescription = "inner email",
                             TestIntent = "Fill inner email",
                             Value = "inner@example.com",
                         },
-                        new IntentAutomation.IntentStep
+                        new AutomationSandbox.IntentAutomation.IntentStep
                         {
                             Order = 2,
-                            ActionType = IntentAutomation.IntentActionType.Click,
+                            ActionType = AutomationSandbox.IntentAutomation.IntentActionType.Click,
                             TargetDescription = "nested save",
                             TestIntent = "Click nested save button",
                         },
@@ -310,11 +310,11 @@ namespace ScenarioRunner
 
                 var repoPath = Path.Combine(tempDir, "locators.json");
                 var repository = new LocatorRepository(repoPath);
-                var exploration = new IntentAutomation.IntentExplorationBridge().Match(scenario, dom);
-                var recordingResults = new IntentAutomation.IntentLocatorRepositoryRecorder().Record(exploration, repository);
+                var exploration = new AutomationSandbox.IntentAutomation.IntentExplorationBridge().Match(scenario, dom);
+                var recordingResults = new AutomationSandbox.IntentAutomation.IntentLocatorRepositoryRecorder().Record(exploration, repository);
 
-                var csharpCode = new IntentAutomation.PlaywrightCSharpTestGenerator().Generate(scenario, recordingResults);
-                var typeScriptCode = new IntentAutomation.PlaywrightTypeScriptTestGenerator().Generate(scenario, recordingResults);
+                var csharpCode = new AutomationSandbox.IntentAutomation.PlaywrightCSharpTestGenerator().Generate(scenario, recordingResults);
+                var typeScriptCode = new AutomationSandbox.IntentAutomation.PlaywrightTypeScriptTestGenerator().Generate(scenario, recordingResults);
 
                 Assert.Contains("Page.FrameLocator(\"iframe[name='details']\").GetByTestId(\"inner-email\")", csharpCode);
                 Assert.Contains("Page.FrameLocator(\"iframe[name='details']\").FrameLocator(\"iframe#nestedFrame\").GetByTestId(\"nested-save\")", csharpCode);

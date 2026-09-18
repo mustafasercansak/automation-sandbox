@@ -2,19 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using UiModel;
+using AutomationSandbox.UiModel;
 
-namespace IntentAutomation
+namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Emits Playwright C# test source from a scenario and recorded web locators.</summary>
     public sealed class PlaywrightCSharpTestGenerator
     {
         private readonly PlaywrightCSharpTestGenerationOptions _options;
 
+        /// <summary>Configures generated C# naming, locator comments, and assertion handling; no browser session is created.</summary>
         public PlaywrightCSharpTestGenerator(PlaywrightCSharpTestGenerationOptions? options = null)
         {
             _options = options ?? new PlaywrightCSharpTestGenerationOptions();
         }
 
+        /// <summary>Generates C# test source using the supplied scenario, recorded locators, and assertion policy.</summary>
         public string Generate(IntentScenario scenario, IReadOnlyList<IntentLocatorRecordingResult> recordingResults)
         {
             if (scenario == null)

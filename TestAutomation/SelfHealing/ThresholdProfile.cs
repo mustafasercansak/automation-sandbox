@@ -1,4 +1,4 @@
-namespace SelfHealing
+namespace AutomationSandbox.SelfHealing
 {
     /// <summary>
     /// Predefined threshold profiles balancing auto-healing recall against false-heal risk.
