@@ -814,6 +814,10 @@ For complete methodologies, component breakdowns, and configuration guidance, se
 
 ## 🗺️ Roadmap
 
+**Product direction ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** build toward a commercial product, starting with safety-first, explainable locator healing for modern .NET Windows UI tests built on FlaUI. Web remains a secondary adapter. Intent planning, test generation, and new LLM providers are feature-frozen; existing functionality receives bug and security fixes. The existing MIT license remains in place; pricing, paid capabilities, and support commitments require pilot evidence before a commercial offer is defined.
+
+The next 90 days prioritize independent desktop pilots, real version-to-version drift measurements, and fixes justified by that feedback. The [external validation plan](docs/external-validation.md) defines the evidence to collect. **1.0 is blocked by [#401](https://github.com/mustafasercansak/automation-sandbox/issues/401):** three independent FlaUI integrations with written feedback and two organic drift datasets with measured outcomes are required. No external integrations or organic drift datasets have been verified yet; synthetic benchmarks and our own samples do not satisfy this gate.
+
 ```mermaid
 graph LR
     subgraph PhaseA [Phase A: Core Hardening]
