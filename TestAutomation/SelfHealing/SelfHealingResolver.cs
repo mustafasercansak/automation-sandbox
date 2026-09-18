@@ -249,6 +249,20 @@ namespace AutomationSandbox.SelfHealing
             // empty or duplicated (the exact scenario this framework exists to heal), while
             // CandidateId is unique within the shortlist we sent.
             var matchedCandidate = shortlist.First(c => c.CandidateId == topGroup.CandidateId);
+
+            // Per-component name/descendant gates (#370, #375) apply to LLM picks too - see
+            // HealResult.IsConfident, which checks them regardless of Source. They were only
+            // ever computed for the heuristic winner (Resolve, above); compute them here for
+            // the LLM-selected candidate as well so a consensus pick with a mismatched name or
+            // container contents is declined the same way a heuristic one would be (#416).
+            var llmMatchedNameScore = !string.IsNullOrEmpty(expected.Name) ? matchedCandidate.Components.NameScore : (double?)null;
+            var llmExpectedWasContainer = !string.IsNullOrEmpty(expected.ChildControlTypeSignature);
+            var llmMatchedChildSignatureSimilarity = llmExpectedWasContainer
+                ? ChildSignature.Similarity(
+                    expected.ChildControlTypeSignature,
+                    UiElementSnapshot.ComputeChildControlTypeSignature(matchedCandidate.Candidate))
+                : (double?)null;
+
             var agreedProviders = topGroup.Votes
                 .Select(r => r.ProviderName)
                 .OrderBy(n => n, StringComparer.Ordinal)
@@ -303,6 +317,10 @@ namespace AutomationSandbox.SelfHealing
                 // fallback. The margin gate itself is not applied to LLM picks (which use the consensus quorum).
                 RunnerUpScore = heuristicResult.RunnerUpScore,
                 MarginThreshold = heuristicResult.MarginThreshold,
+                MatchedNameScore = llmMatchedNameScore,
+                NameGateFloor = w.MinimumNameScoreWhenNamed,
+                MatchedChildSignatureSimilarity = llmMatchedChildSignatureSimilarity,
+                ChildSignatureFloor = w.MinimumChildSignatureSimilarity,
                 Candidates = heuristicResult.Candidates,
                 LlmProviderName = best.ProviderName,
                 LlmConfidence = consensusConfidence,
