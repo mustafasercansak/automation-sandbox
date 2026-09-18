@@ -395,8 +395,9 @@ if (healResult.IsConfident)
 ```
 
 ### 5. Self-Healing JSON Reports
-`SelfHealingEngine` can emit append-only JSON and HTML reports whenever it accepts a
-healed locator. Set `SELF_HEALING_REPORT_PATH` to enable this without changing test code:
+`SelfHealingEngine` can emit an append-only JSON Lines report and an HTML dashboard
+whenever it accepts a healed locator. Set `SELF_HEALING_REPORT_PATH` to enable this
+without changing test code:
 
 ```powershell
 $env:SELF_HEALING_REPORT_PATH = "TestResults/healing-report.json"
@@ -405,9 +406,14 @@ dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration 
 
 By default, the HTML report is written next to the JSON file as
 `healing-report.html`. Override it with `SELF_HEALING_REPORT_HTML_PATH` when needed.
-Updates to an existing JSON report are committed with an atomic same-directory file
-replacement: a failed or interrupted commit leaves the previously recorded history in
-place instead of deleting it first. The HTML file is derived output written afterward.
+The JSON file is **JSON Lines** - one event object per line (#424): `HealingReportFileSink.Record()`
+appends exactly one line per call without reading or rewriting prior history, so recording
+stays O(1) per event instead of the old O(n). Read it back with `HealingReportFileSink.LoadReport()`,
+which returns a `HealingReportDocument`; a single `JsonSerializer.Deserialize<HealingReportDocument>()`
+call over the raw file no longer works, since the file is not one JSON value. The HTML file
+remains derived output, re-rendered from the full history after each append and committed
+with an atomic same-directory file replacement, so a failed or interrupted commit leaves the
+previously rendered dashboard in place instead of deleting it first.
 
 Each report event includes:
 
