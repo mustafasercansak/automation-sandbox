@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
 using AutomationSandbox.PlaywrightLiveExploration;
@@ -382,12 +383,90 @@ namespace ScenarioRunner
             }
         }
 
+        // #419: PlaywrightDomCaptureScript's walk() previously recursed over the whole DOM/shadow/
+        // iframe tree with no depth cap, element-count cap, or timeout, unlike Discovery.DiscoveryOptions
+        // on the desktop side. These two tests generate a synthetic large/deep page and assert the
+        // capture actually stays within a configured WebDiscoveryOptions bound, with the truncation
+        // surfaced on the result rather than silently dropping nodes.
+        [Fact]
+        public async Task CaptureAsync_WithMaxDepth_TruncatesDeeplyNestedTreeAndFlagsHitMaxDepth()
+        {
+            var depthHtmlPath = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_Deep_" + Guid.NewGuid().ToString("N") + ".html");
+            try
+            {
+                var nested = new StringBuilder();
+                for (var i = 0; i < 60; i++)
+                {
+                    nested.Append("<div>");
+                }
+                nested.Append("<span data-testid=\"deepest\">Deep</span>");
+                for (var i = 0; i < 60; i++)
+                {
+                    nested.Append("</div>");
+                }
+                File.WriteAllText(depthHtmlPath, $"<!doctype html><html><body>{nested}</body></html>");
+
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(
+                    new Uri(depthHtmlPath).AbsoluteUri,
+                    new WebDiscoveryOptions { MaxDepth = 10, MaxElements = 5000, Timeout = TimeSpan.FromSeconds(10) });
+
+                Assert.True(dom.HitMaxDepth, "Capture should flag HitMaxDepth when the DOM is deeper than the configured bound.");
+                Assert.True(MaxDepthOf(dom) <= 10, $"Captured tree depth should not exceed the configured MaxDepth, actual: {MaxDepthOf(dom)}");
+                Assert.DoesNotContain(Flatten(dom), e => e.TestId == "deepest");
+            }
+            finally
+            {
+                if (File.Exists(depthHtmlPath))
+                {
+                    File.Delete(depthHtmlPath);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CaptureAsync_WithMaxElements_TruncatesLargeSiblingTreeAndFlagsHitMaxElements()
+        {
+            var wideHtmlPath = Path.Combine(Path.GetTempPath(), "PlaywrightLiveExplorerTests_Wide_" + Guid.NewGuid().ToString("N") + ".html");
+            try
+            {
+                var siblings = new StringBuilder();
+                for (var i = 0; i < 300; i++)
+                {
+                    siblings.Append($"<div data-testid=\"item-{i}\">Item {i}</div>");
+                }
+                File.WriteAllText(wideHtmlPath, $"<!doctype html><html><body>{siblings}</body></html>");
+
+                await using var explorer = await PlaywrightLiveExplorer.LaunchAsync();
+                var dom = await explorer.CaptureAsync(
+                    new Uri(wideHtmlPath).AbsoluteUri,
+                    new WebDiscoveryOptions { MaxDepth = 25, MaxElements = 50, Timeout = TimeSpan.FromSeconds(10) });
+
+                var captured = Flatten(dom).ToList();
+                Assert.True(dom.HitMaxElements, "Capture should flag HitMaxElements when the DOM has more nodes than the configured bound.");
+                Assert.True(captured.Count <= 50, $"Captured element count should not exceed MaxElements, actual: {captured.Count}");
+                Assert.Equal(dom.CapturedCount, captured.Count);
+            }
+            finally
+            {
+                if (File.Exists(wideHtmlPath))
+                {
+                    File.Delete(wideHtmlPath);
+                }
+            }
+        }
+
         public void Dispose()
         {
             if (File.Exists(_htmlPath))
             {
                 File.Delete(_htmlPath);
             }
+        }
+
+        private static int MaxDepthOf(WebElementInfo root)
+        {
+            return root.Children.Count == 0 ? 0 : 1 + root.Children.Max(MaxDepthOf);
         }
 
         private static IEnumerable<WebElementInfo> Flatten(WebElementInfo root)
