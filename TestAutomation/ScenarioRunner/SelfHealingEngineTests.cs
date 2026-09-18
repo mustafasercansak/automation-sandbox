@@ -59,6 +59,14 @@ namespace ScenarioRunner
             }
         }
 
+        // HealingReportFileSink persists entries as JSON Lines (#424): one JSON object per
+        // line, appended without reading or re-serializing prior history. This reads them back
+        // through the sink's own supported LoadReport() API rather than treating the file as a
+        // single JSON document - see the "upgrades"/"forward-compatible" tests below for the
+        // format itself.
+        private static HealingReportDocument ReadReport(string path)
+            => new HealingReportFileSink(path, htmlFilePath: null).LoadReport();
+
         [Fact]
         public void SelfHealingEngine_DefaultsToReviewMode()
         {
@@ -116,7 +124,7 @@ namespace ScenarioRunner
 
             Assert.Null(repository.Find("submit_btn"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal("submit_btn", entry.LocatorKey);
@@ -176,7 +184,7 @@ namespace ScenarioRunner
 
             Assert.Null(repository.Find("submit_btn"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal("submit_btn", entry.LocatorKey);
@@ -218,7 +226,7 @@ namespace ScenarioRunner
             Assert.Equal(0, treeCaptureCount);
             Assert.Null(repository.Find("submit_btn"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal(HealingReportEntry.FailClosedOutcome, entry.Outcome);
@@ -260,7 +268,7 @@ namespace ScenarioRunner
             Assert.True(resultReview.IsConfident);
             Assert.Null(repoReview.Find("email_review"));
 
-            var reportReview = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var reportReview = ReadReport(_tempReportPath);
             var eventReview = Assert.Single(reportReview!.Events);
             Assert.Equal(HealingReportEntry.ManualReviewOutcome, eventReview.Outcome);
 
@@ -272,7 +280,7 @@ namespace ScenarioRunner
             Assert.True(resultObserve.IsConfident);
             Assert.Null(repoObserve.Find("email_observe"));
 
-            var reportObserve = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var reportObserve = ReadReport(_tempReportPath);
             var eventObserve = Assert.Single(reportObserve!.Events);
             Assert.Equal(HealingReportEntry.ObservedOutcome, eventObserve.Outcome);
 
@@ -284,7 +292,7 @@ namespace ScenarioRunner
             Assert.False(resultFail.IsConfident);
             Assert.Null(repoFail.Find("email_fail"));
 
-            var reportFail = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var reportFail = ReadReport(_tempReportPath);
             var eventFail = Assert.Single(reportFail!.Events);
             Assert.Equal(HealingReportEntry.FailClosedOutcome, eventFail.Outcome);
 
@@ -297,7 +305,7 @@ namespace ScenarioRunner
             Assert.NotNull(repoAuto.Find("email_auto"));
             Assert.Equal("new_healed_id", repoAuto.Find("email_auto")!.Snapshot.AutomationId);
 
-            var reportAuto = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var reportAuto = ReadReport(_tempReportPath);
             var eventAuto = Assert.Single(reportAuto!.Events);
             Assert.Equal(HealingReportEntry.AcceptedUnverifiedOutcome, eventAuto.Outcome);
         }
@@ -398,7 +406,7 @@ namespace ScenarioRunner
             Assert.Equal("btnSubmit_Renamed", record!.Snapshot.AutomationId);
             Assert.Single(record.HealingHistory);
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             Assert.Single(report!.Events);
             Assert.Equal("submit_btn", report.Events[0].LocatorKey);
@@ -466,7 +474,7 @@ namespace ScenarioRunner
             Assert.Equal("btnSubmit_Old", record!.Snapshot.AutomationId);
             Assert.Empty(record.HealingHistory);
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal(HealingReportEntry.RetryFailedOutcome, entry.Outcome);
@@ -770,7 +778,7 @@ namespace ScenarioRunner
             Assert.True(healResult.IsConfident);
             Assert.True(File.Exists(_tempReportPath));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal("CustomerForm.Email", entry.LocatorKey);
@@ -809,7 +817,7 @@ namespace ScenarioRunner
             Assert.Equal(HealResolutionStatus.Ambiguous, result.ResolutionStatus);
             Assert.Null(repository.Find("CustomerForm.Email"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal(HealingReportEntry.AmbiguousOutcome, entry.Outcome);
@@ -840,7 +848,7 @@ namespace ScenarioRunner
             Assert.Equal(HealResolutionStatus.NoConsensus, result.ResolutionStatus);
             Assert.Null(repository.Find("CustomerForm.Email"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal(HealingReportEntry.NoConsensusOutcome, entry.Outcome);
@@ -869,7 +877,7 @@ namespace ScenarioRunner
             Assert.Equal(HealResolutionStatus.ProviderError, result.ResolutionStatus);
             Assert.Null(repository.Find("CustomerForm.Email"));
 
-            var report = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
+            var report = ReadReport(_tempReportPath);
             Assert.NotNull(report);
             var entry = Assert.Single(report!.Events);
             Assert.Equal(HealingReportEntry.ProviderErrorOutcome, entry.Outcome);
@@ -933,68 +941,99 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void HealingReportFileSink_LoadsAndUpgradesV1Report_InsteadOfThrowing()
+        public void HealingReportFileSink_Record_AppendsWithoutRewritingPriorLines()
         {
-            // A v1 report left on disk by an older build must not break Record(): v2 only
-            // added fields, so the old file upgrades in place. (The sink serializes with
-            // PascalCase property names - the fixture must match.)
-            File.WriteAllText(_tempReportPath, @"{
-  ""SchemaVersion"": 1,
-  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
-  ""Events"": [
-    { ""LocatorKey"": ""old"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Score"": 0.9, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 1 }
-  ]
-}");
+            // The whole point of #424: Record() must not deserialize the file's existing
+            // history, add to it in memory, and re-serialize everything back out. Seed the
+            // file with one already-recorded line, then prove the new call only ever appends
+            // by checking the original bytes are byte-for-byte untouched afterwards.
+            var existingLine = JsonSerializer.Serialize(new HealingReportEntry
+            {
+                LocatorKey = "existing",
+                Source = "heuristic",
+                ReviewStatus = HealingReportEntry.AcceptedStatus,
+                Score = 0.9,
+                ConfidenceThreshold = 0.5,
+                CandidateCount = 1,
+            });
+            File.WriteAllText(_tempReportPath, existingLine + "\n");
             var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
 
             sink.Record(new HealingReportEntry
             {
                 LocatorKey = "new",
                 Source = "heuristic",
-                ReviewStatus = "accepted",
+                ReviewStatus = HealingReportEntry.AcceptedStatus,
                 ScoreBreakdown = new ScoreComponents(controlTypeScore: 1.0), // other components stay null
             });
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
-            var root = doc.RootElement;
-            Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
-            Assert.Equal(2, root.GetProperty("Events").GetArrayLength());
+            var lines = File.ReadAllLines(_tempReportPath);
+            Assert.Equal(2, lines.Length);
+            Assert.Equal(existingLine, lines[0]); // untouched: never re-read or re-serialized
+
+            using var newLine = JsonDocument.Parse(lines[1]);
+            Assert.Equal("new", newLine.RootElement.GetProperty("LocatorKey").GetString());
             // Null components must round-trip as real JSON nulls - "no evidence" is
             // information the report must not lose.
-            var newEvent = root.GetProperty("Events")[1];
-            Assert.Equal(JsonValueKind.Null, newEvent.GetProperty("ScoreBreakdown").GetProperty("NameScore").ValueKind);
+            Assert.Equal(JsonValueKind.Null, newLine.RootElement.GetProperty("ScoreBreakdown").GetProperty("NameScore").ValueKind);
+
+            var report = ReadReport(_tempReportPath);
+            Assert.Equal(new[] { "existing", "new" }, report.Events.Select(e => e.LocatorKey));
         }
 
         [Fact]
-        public void HealingReportFileSink_CommitFailure_PreservesExistingReport()
+        public void HealingReportFileSink_Record_NeverReadsExistingContent_WhenNoHtmlConfigured()
         {
-            var originalJson = $@"{{
-  ""SchemaVersion"": {HealingReportDocument.CurrentSchemaVersion},
-  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
-  ""Events"": [
-    {{ ""LocatorKey"": ""existing-history"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Outcome"": ""accepted"" }}
-  ]
-}}";
-            File.WriteAllText(_tempReportPath, originalJson);
-            var commitAttempted = false;
+            // If Record() ever opened the file for reading - the old deserialize-append-
+            // serialize cycle #424 removed - this would throw on the garbage bytes below.
+            // Succeeding proves the append is blind to whatever is already on disk, which is
+            // what makes it O(1) regardless of how much history has accumulated.
+            File.WriteAllText(_tempReportPath, "not valid JSON at all {{{" + "\n");
+            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+
+            sink.Record(new HealingReportEntry { LocatorKey = "after-garbage" });
+
+            var lines = File.ReadAllLines(_tempReportPath);
+            Assert.Equal(2, lines.Length);
+            Assert.Equal("not valid JSON at all {{{", lines[0]);
+            using var appended = JsonDocument.Parse(lines[1]);
+            Assert.Equal("after-garbage", appended.RootElement.GetProperty("LocatorKey").GetString());
+        }
+
+        [Fact]
+        public void HealingReportFileSink_AppendFailure_PreservesExistingReport()
+        {
+            var existingLine = JsonSerializer.Serialize(new HealingReportEntry
+            {
+                LocatorKey = "existing-history",
+                Source = "heuristic",
+                ReviewStatus = HealingReportEntry.AcceptedStatus,
+                Outcome = HealingReportEntry.AcceptedOutcome,
+            });
+            File.WriteAllText(_tempReportPath, existingLine + "\n");
+            var appendAttempted = false;
+            var capturedLine = string.Empty;
             var sink = new HealingReportFileSink(
                 _tempReportPath,
                 htmlFilePath: null,
                 replaceExistingFile: (tempPath, destinationPath) =>
+                    throw new InvalidOperationException("HTML is not configured; this must never be invoked."),
+                appendLine: (path, line) =>
                 {
-                    commitAttempted = true;
-                    Assert.True(File.Exists(tempPath));
-                    Assert.True(File.Exists(destinationPath));
-                    throw new IOException("Simulated interruption at the atomic commit boundary.");
+                    appendAttempted = true;
+                    Assert.Equal(_tempReportPath, path);
+                    capturedLine = line;
+                    throw new IOException("Simulated interruption while appending.");
                 });
 
             Assert.Throws<IOException>(() => sink.Record(new HealingReportEntry { LocatorKey = "new-attempt" }));
 
-            Assert.True(commitAttempted);
-            Assert.Equal(originalJson, File.ReadAllText(_tempReportPath));
-            Assert.False(File.Exists(_tempReportPath + ".tmp"));
-            var preserved = JsonSerializer.Deserialize<HealingReportDocument>(File.ReadAllText(_tempReportPath));
-            var entry = Assert.Single(preserved!.Events);
+            Assert.True(appendAttempted);
+            Assert.Contains("new-attempt", capturedLine);
+            // The failed append never touched the file - it is exactly what was there before.
+            Assert.Equal(existingLine + "\n", File.ReadAllText(_tempReportPath));
+            var preserved = ReadReport(_tempReportPath);
+            var entry = Assert.Single(preserved.Events);
             Assert.Equal("existing-history", entry.LocatorKey);
         }
 
@@ -1048,133 +1087,35 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void HealingReportFileSink_UpgradesV4Report_LeavingAgreedProvidersNull()
+        public void HealingReportFileSink_LoadReport_ToleratesOldShapedEntries_WithMissingFieldsNull()
         {
-            // v5 (#10) added AgreedProviders, v6 (#11) added ProviderAttempts, v7 (#82)
-            // added outcome telemetry and v8 (#144) added reconciliation telemetry. An
-            // older v4 file upgrades with new fields left null.
-            File.WriteAllText(_tempReportPath, @"{
-  ""SchemaVersion"": 4,
-  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
-  ""Events"": [
-    { ""LocatorKey"": ""old"", ""Source"": ""Claude"", ""ReviewStatus"": ""accepted-with-llm"", ""Score"": 0.4, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 3, ""LlmConfidence"": 0.9, ""LlmProviderName"": ""Claude"" }
-  ]
-}");
-            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
+            // Each JSON Lines entry is deserialized independently (#424), so a line written by
+            // an older build - before AgreedProviders (v5/#10), ProviderAttempts (v6/#11),
+            // Outcome/Platform/ProviderErrors (v7/#82), or CandidateIdentity/
+            // ReconciliationDisposition (v8/#144) existed - reads back fine with those fields
+            // left null. This is the same nullable-field tolerance the old single-JSON-array
+            // format relied on for its in-place schema upgrade, now expressed per line instead
+            // of by rewriting the whole document on every Record() call.
+            var v4ShapedLine = @"{ ""LocatorKey"": ""old-v4"", ""Source"": ""Claude"", ""ReviewStatus"": ""accepted-with-llm"", ""Score"": 0.4, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 3, ""LlmConfidence"": 0.9, ""LlmProviderName"": ""Claude"" }";
+            var v7ShapedLine = @"{ ""LocatorKey"": ""old-v7"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Outcome"": ""accepted"", ""Score"": 0.9, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 2 }";
+            File.WriteAllText(_tempReportPath, v4ShapedLine + "\n" + v7ShapedLine + "\n");
 
-            sink.Record(HealingReportEntry.FromHealResult(
-                "new",
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                new HealResult
-                {
-                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                    Source = HealSource.Llm,
-                    Score = 0.4,
-                    LlmConfidence = 0.7,
-                    LlmProviderName = "AlphaLlm",
-                    AgreedProviders = new[] { "AlphaLlm", "BetaLlm" },
-                    ProviderAttempts = new Dictionary<string, int> { { "AlphaLlm", 1 }, { "BetaLlm", 2 } },
-                }));
+            var report = ReadReport(_tempReportPath);
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
-            var root = doc.RootElement;
-            Assert.Equal(8, HealingReportDocument.CurrentSchemaVersion);
-            Assert.Equal(HealingReportDocument.CurrentSchemaVersion, root.GetProperty("SchemaVersion").GetInt32());
+            Assert.Equal(new[] { "old-v4", "old-v7" }, report.Events.Select(e => e.LocatorKey));
+            var v4Entry = report.Events[0];
+            Assert.Null(v4Entry.AgreedProviders);
+            Assert.Null(v4Entry.ProviderAttempts);
+            Assert.Null(v4Entry.Outcome);
+            Assert.Null(v4Entry.Platform);
+            Assert.Null(v4Entry.ProviderErrors);
+            Assert.Null(v4Entry.CandidateIdentity);
+            Assert.Null(v4Entry.ReconciliationDisposition);
 
-            var upgraded = root.GetProperty("Events")[0];
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("AgreedProviders").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Outcome").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Platform").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProposedSnapshot").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
-
-            var recorded = root.GetProperty("Events")[1];
-            var agreed = recorded.GetProperty("AgreedProviders").EnumerateArray().Select(e => e.GetString()).ToArray();
-            Assert.Equal(new[] { "AlphaLlm", "BetaLlm" }, agreed);
-            var attempts = recorded.GetProperty("ProviderAttempts");
-            Assert.Equal(1, attempts.GetProperty("AlphaLlm").GetInt32());
-            Assert.Equal(2, attempts.GetProperty("BetaLlm").GetInt32());
-        }
-
-        [Fact]
-        public void HealingReportFileSink_UpgradesV5Report_LeavingProviderAttemptsNull()
-        {
-            // v6 (#11) adds ProviderAttempts, v7 (#82) adds outcome telemetry and v8 (#144)
-            // adds reconciliation telemetry, so a v5 file upgrades in place with unknowns null.
-            File.WriteAllText(_tempReportPath, @"{
-  ""SchemaVersion"": 5,
-  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
-  ""Events"": [
-    { ""LocatorKey"": ""old"", ""Source"": ""Claude"", ""ReviewStatus"": ""accepted-with-llm"", ""Score"": 0.4, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 3, ""LlmConfidence"": 0.9, ""LlmProviderName"": ""Claude"", ""AgreedProviders"": [""Claude"", ""Gemini""] }
-  ]
-}");
-            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
-
-            sink.Record(HealingReportEntry.FromHealResult(
-                "new",
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                new HealResult
-                {
-                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                    Source = HealSource.Llm,
-                    Score = 0.4,
-                    LlmConfidence = 0.7,
-                    LlmProviderName = "Claude",
-                    AgreedProviders = new[] { "Claude", "Gemini" },
-                    ProviderAttempts = new Dictionary<string, int> { { "Claude", 1 }, { "Gemini", 2 } },
-                }));
-
-            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
-            var root = doc.RootElement;
-            Assert.Equal(8, HealingReportDocument.CurrentSchemaVersion);
-
-            var upgraded = root.GetProperty("Events")[0];
-            Assert.Equal(JsonValueKind.Array, upgraded.GetProperty("AgreedProviders").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderAttempts").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("Outcome").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ProviderErrors").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
-
-            var recorded = root.GetProperty("Events")[1];
-            var attempts = recorded.GetProperty("ProviderAttempts");
-            Assert.Equal(1, attempts.GetProperty("Claude").GetInt32());
-            Assert.Equal(2, attempts.GetProperty("Gemini").GetInt32());
-        }
-
-        [Fact]
-        public void HealingReportFileSink_UpgradesV7Report_LeavingReconciliationTelemetryNull()
-        {
-            File.WriteAllText(_tempReportPath, @"{
-  ""SchemaVersion"": 7,
-  ""GeneratedAt"": ""2026-01-01T00:00:00+00:00"",
-  ""Events"": [
-    { ""LocatorKey"": ""old"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""Outcome"": ""accepted"", ""Score"": 0.9, ""ConfidenceThreshold"": 0.5, ""CandidateCount"": 2 }
-  ]
-}");
-            var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
-
-            sink.Record(HealingReportEntry.FromHealResult(
-                "new",
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtOld" },
-                new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                new HealResult
-                {
-                    Matched = new UiElementInfo { ControlType = "Edit", AutomationId = "txtNew" },
-                    Score = 0.9,
-                    ResolutionStatus = HealResolutionStatus.Confident,
-                }));
-
-            using var doc = JsonDocument.Parse(File.ReadAllText(_tempReportPath));
-            Assert.Equal(8, doc.RootElement.GetProperty("SchemaVersion").GetInt32());
-            var upgraded = doc.RootElement.GetProperty("Events")[0];
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("CandidateIdentity").ValueKind);
-            Assert.Equal(JsonValueKind.Null, upgraded.GetProperty("ReconciliationDisposition").ValueKind);
+            var v7Entry = report.Events[1];
+            Assert.Equal("accepted", v7Entry.Outcome);
+            Assert.Null(v7Entry.CandidateIdentity);
+            Assert.Null(v7Entry.ReconciliationDisposition);
         }
 
         [Fact]
@@ -1270,12 +1211,22 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void HealingReportFileSink_RejectsReportFromNewerSchema()
+        public void HealingReportFileSink_LoadReport_IgnoresUnknownFutureFields_InsteadOfThrowing()
         {
-            File.WriteAllText(_tempReportPath, @"{ ""SchemaVersion"": 99, ""Events"": [] }");
+            // The retired single-JSON-array format threw NotSupportedException for a
+            // document-wide SchemaVersion newer than the build understood. JSON Lines drops
+            // that gate (#424): every entry is self-contained, and System.Text.Json already
+            // ignores properties it does not recognize, so a line written by a future build
+            // with an extra field this build has never heard of is read without error - the
+            // unknown value is dropped rather than misread or rejected outright.
+            var futureLine = @"{ ""LocatorKey"": ""from-the-future"", ""Source"": ""heuristic"", ""ReviewStatus"": ""accepted"", ""SomeFieldThisBuildDoesNotKnowAbout"": ""value"" }";
+            File.WriteAllText(_tempReportPath, futureLine + "\n");
             var sink = new HealingReportFileSink(_tempReportPath, htmlFilePath: null);
 
-            Assert.Throws<NotSupportedException>(() => sink.Record(new HealingReportEntry { LocatorKey = "x" }));
+            sink.Record(new HealingReportEntry { LocatorKey = "current" });
+
+            var report = sink.LoadReport();
+            Assert.Equal(new[] { "from-the-future", "current" }, report.Events.Select(e => e.LocatorKey));
         }
 
         [Fact]

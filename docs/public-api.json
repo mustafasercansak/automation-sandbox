@@ -1456,6 +1456,7 @@
       "TestAutomation/SelfHealing/HealingReportFileSink.cs"
     ],
     "Members": [
+      "public HealingReportDocument LoadReport()",
       "public HealingReportFileSink(string filePath)",
       "public HealingReportFileSink(string filePath, string? htmlFilePath)",
       "public const string EnvironmentVariableName;",
