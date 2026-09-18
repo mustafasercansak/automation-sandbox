@@ -1544,5 +1544,36 @@ namespace ScenarioRunner
             Assert.Equal(0.0, result.MatchedChildSignatureSimilarity);
             Assert.Equal(0.50, result.ChildSignatureFloor, 3);
         }
+
+        [Fact]
+        public void ScoreCandidates_ArtificiallyDeepLinearChain_TruncatesInsteadOfStackOverflowing()
+        {
+            // #426: SelfHealingResolver's internal Flatten used to recurse with no depth
+            // guard. A 10,000+-level single-branch chain (the worst case for stack depth -
+            // a balanced tree with the same node count would be far shallower) is well
+            // beyond anything a real UI tree produces, but a hand-built or JSON-deserialized
+            // UiElementInfo tree (see UiElementSnapshot.FromJson) carries no guarantee it
+            // isn't this pathological.
+            const int chainDepth = 12_000;
+            var root = new UiElementInfo { ControlType = "Pane", AutomationId = "node-0" };
+            var current = root;
+            for (var i = 1; i < chainDepth; i++)
+            {
+                var child = new UiElementInfo { ControlType = "Pane", AutomationId = $"node-{i}" };
+                current.Children.Add(child);
+                current = child;
+            }
+
+            var expected = new UiElementInfo { ControlType = "Pane", AutomationId = "node-0" };
+            var weights = new SimilarityWeights { MinCandidateScore = 0.0 };
+
+            // Must not throw a StackOverflowException (which the CLR can't catch anyway -
+            // an uncaught one kills the test process outright rather than failing the test)
+            // and must not walk the full 12,000-node chain: it should come back truncated.
+            var scored = SelfHealingResolver.ScoreCandidates(expected, root, weights);
+
+            Assert.NotEmpty(scored);
+            Assert.True(scored.Count < chainDepth, $"Expected the flatten to truncate well below the full {chainDepth}-node chain, but scored {scored.Count} candidates.");
+        }
     }
 }

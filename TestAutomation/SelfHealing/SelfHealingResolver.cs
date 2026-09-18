@@ -372,14 +372,34 @@ namespace AutomationSandbox.SelfHealing
                 .ToList();
         }
 
+        // A hand-built or JSON-deserialized tree has no guarantee of the depth bound a live
+        // UiTreeWalker capture enforces via Discovery.DiscoveryOptions.MaxDepth (#426). This
+        // is a generous backstop - far beyond any real UI's nesting - not an operational
+        // parameter callers are expected to hit; it exists only to turn a pathological input
+        // into a truncated (still-scored) result instead of a stack overflow.
+        private const int MaxFlattenDepth = 5000;
+
         private static IEnumerable<UiElementInfo> Flatten(UiElementInfo node)
         {
-            yield return node;
-            foreach (var child in node.Children)
+            // Iterative (an explicit stack, not recursion) so traversal depth is bounded by
+            // heap space rather than call-stack space, and MaxFlattenDepth below can
+            // therefore stop a pathologically deep branch instead of overflowing first
+            // (#426). A node at the cap is still yielded (and scored); only its deeper
+            // descendants are skipped.
+            var stack = new Stack<(UiElementInfo Node, int Depth)>();
+            stack.Push((node, 0));
+            while (stack.Count > 0)
             {
-                foreach (var descendant in Flatten(child))
+                var (current, depth) = stack.Pop();
+                yield return current;
+                if (depth >= MaxFlattenDepth)
                 {
-                    yield return descendant;
+                    continue;
+                }
+
+                for (var i = current.Children.Count - 1; i >= 0; i--)
+                {
+                    stack.Push((current.Children[i], depth + 1));
                 }
             }
         }
