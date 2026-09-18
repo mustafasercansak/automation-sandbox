@@ -5,6 +5,7 @@
     <!-- Automatically target .NET 10 when built with .NET 10 SDK (e.g. CI / Visual Studio 2026+) -->
     <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>AutomationSandbox.LlmHealing</RootNamespace>

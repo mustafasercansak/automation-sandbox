@@ -84,17 +84,13 @@ namespace ScenarioRunner
         public void Synthesize_FallsBackToWebCandidate_WhenTargetDescriptionIsEmpty()
         {
             var step = new IntentStep { ActionType = IntentActionType.Fill, TargetDescription = "" };
-            var candidate = new IntentElementCandidate
-            {
-                Element = new WebElementInfo { AccessibleName = "Email Address", TestId = "email-box" }
-            };
+            var candidate = new IntentElementCandidate(
+                element: new WebElementInfo { AccessibleName = "Email Address", TestId = "email-box" });
 
             Assert.Equal("Field.EmailAddress", IntentLocatorKeySynthesizer.Synthesize(step, candidate));
 
-            var candidateOnlyTestId = new IntentElementCandidate
-            {
-                Element = new WebElementInfo { TestId = "customer-id" }
-            };
+            var candidateOnlyTestId = new IntentElementCandidate(
+                element: new WebElementInfo { TestId = "customer-id" });
             Assert.Equal("Field.CustomerId", IntentLocatorKeySynthesizer.Synthesize(step, candidateOnlyTestId));
         }
 
@@ -102,17 +98,13 @@ namespace ScenarioRunner
         public void Synthesize_FallsBackToDesktopCandidate_WhenTargetDescriptionIsEmpty()
         {
             var step = new IntentStep { ActionType = IntentActionType.Fill, TargetDescription = "" };
-            var candidate = new IntentDesktopElementCandidate
-            {
-                Element = new UiElementInfo { Name = "First Name", AutomationId = "txtFirst" }
-            };
+            var candidate = new IntentDesktopElementCandidate(
+                element: new UiElementInfo { Name = "First Name", AutomationId = "txtFirst" });
 
             Assert.Equal("Field.FirstName", IntentLocatorKeySynthesizer.Synthesize(step, candidate));
 
-            var candidateOnlyAutomationId = new IntentDesktopElementCandidate
-            {
-                Element = new UiElementInfo { AutomationId = "txtLastName" }
-            };
+            var candidateOnlyAutomationId = new IntentDesktopElementCandidate(
+                element: new UiElementInfo { AutomationId = "txtLastName" });
             Assert.Equal("Field.TxtLastName", IntentLocatorKeySynthesizer.Synthesize(step, candidateOnlyAutomationId));
         }
 

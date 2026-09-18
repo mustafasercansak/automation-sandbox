@@ -9,6 +9,7 @@ namespace AutomationSandbox.UiModel
     // serialize instead of racing and silently dropping each other's updates.
     // In-memory document and O(1) lookup dictionary are cached across repeated Find/Load calls
     // and invalidated whenever the underlying file's content changes (verified via content hash, dirty-check).
+    /// <summary>File-backed locator storage with synchronized load, save, and upsert operations.</summary>
     public sealed class LocatorRepository
     {
         private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(10);
@@ -22,8 +23,10 @@ namespace AutomationSandbox.UiModel
         private LocatorRepositoryDocument? _cachedDocument;
         private Dictionary<string, LocatorRecord>? _cachedLookup;
 
+        /// <summary>Path of the JSON document read or written by this instance.</summary>
         public string FilePath { get; }
 
+        /// <summary>Creates a repository bound to the supplied JSON file path; load and save operations synchronize on that path.</summary>
         public LocatorRepository(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -36,6 +39,7 @@ namespace AutomationSandbox.UiModel
 
         // A missing file is an empty, not-yet-populated repository, not an error - the first
         // heal in a fresh environment is exactly when this file doesn't exist yet.
+        /// <summary>Loads the repository document, or creates an empty document when the file does not exist.</summary>
         public LocatorRepositoryDocument Load()
         {
             lock (_syncRoot)
@@ -45,6 +49,7 @@ namespace AutomationSandbox.UiModel
             }
         }
 
+        /// <summary>Validates and writes the supplied repository document while holding the file lock.</summary>
         public void Save(LocatorRepositoryDocument document)
         {
             if (document == null)
@@ -95,6 +100,7 @@ namespace AutomationSandbox.UiModel
             }
         }
 
+        /// <summary>Loads and returns the record for a logical locator key, or null if it is not stored.</summary>
         public LocatorRecord? Find(string locatorKey)
         {
             if (locatorKey == null)
@@ -206,6 +212,7 @@ namespace AutomationSandbox.UiModel
         // Adds or updates the record for locatorKey under an exclusive lock spanning the whole
         // load-modify-save cycle, and returns the updated record. Safe for multiple callers -
         // in-process or cross-process - to call concurrently against the same file.
+        /// <summary>Captures the supplied element and inserts or updates its logical locator record, optionally appending healing history.</summary>
         public LocatorRecord Upsert(
             string locatorKey,
             UiElementInfo snapshot,

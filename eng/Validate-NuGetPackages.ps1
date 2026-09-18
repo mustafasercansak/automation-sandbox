@@ -46,6 +46,26 @@ foreach ($packageId in $packageIds) {
             throw "$packagePath does not contain a library assembly"
         }
 
+        foreach ($assemblyEntry in $archive.Entries | Where-Object { $_.FullName -like "lib/*.dll" }) {
+            $xmlPath = [System.IO.Path]::ChangeExtension($assemblyEntry.FullName, ".xml")
+            $xmlEntry = $archive.GetEntry($xmlPath)
+            if ($null -eq $xmlEntry) {
+                throw "$packagePath does not contain IntelliSense documentation for $($assemblyEntry.FullName)"
+            }
+            $xmlReader = [System.IO.StreamReader]::new($xmlEntry.Open())
+            try {
+                [xml] $documentation = $xmlReader.ReadToEnd()
+                $assemblyName = [System.IO.Path]::GetFileNameWithoutExtension($assemblyEntry.FullName)
+                if ($documentation.doc.assembly.name -ne $assemblyName -or
+                    @($documentation.doc.members.member).Count -eq 0) {
+                    throw "$packagePath contains empty or mismatched IntelliSense documentation at $xmlPath"
+                }
+            }
+            finally {
+                $xmlReader.Dispose()
+            }
+        }
+
         # The embedded README must be the per-package landing page (docs/nuget/README.<Name>.md),
         # not the monorepo root README that would fall back in via Directory.Build.props (#338).
         # The per-package files open with "# <PackageId>"; the root README opens with

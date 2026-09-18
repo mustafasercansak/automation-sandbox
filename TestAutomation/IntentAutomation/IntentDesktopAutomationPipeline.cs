@@ -7,6 +7,7 @@ namespace AutomationSandbox.IntentAutomation
     // works for both platforms), matches them against a live UiElementInfo tree, records accepted
     // locators, and generates an xUnit + FlaUI test skeleton.
 
+    /// <summary>Desktop counterpart to IntentAutomationPipeline: plans intent steps (the same IIntentPlanner works for both platforms), matches them against a live UiElementInfo tree, records accepted locators, and generates an xUnit + FlaUI test skeleton.</summary>
     public sealed class IntentDesktopAutomationPipeline
     {
         private readonly IIntentPlanner _planner;
@@ -14,6 +15,7 @@ namespace AutomationSandbox.IntentAutomation
         private readonly IntentDesktopLocatorRepositoryRecorder _recorder;
         private readonly FlaUiCSharpTestGenerator _generator;
 
+        /// <summary>Configures the desktop pipeline planner and stage options, using deterministic planning when no planner is supplied.</summary>
         public IntentDesktopAutomationPipeline(
             IIntentPlanner? planner = null,
             IntentDesktopAutomationPipelineOptions? options = null)
@@ -25,6 +27,7 @@ namespace AutomationSandbox.IntentAutomation
             _generator = new FlaUiCSharpTestGenerator(effectiveOptions.Generation);
         }
 
+        /// <summary>Plans the desktop request, matches against the supplied captured tree, records eligible locators, and generates FlaUI test source and a flow report.</summary>
         public IntentDesktopAutomationPipelineResult Run(
             IntentDesktopPlanningRequest request,
             UiElementInfo desktopRoot,
@@ -38,6 +41,7 @@ namespace AutomationSandbox.IntentAutomation
             return Run(request.ToPlanningRequest(), desktopRoot, repository);
         }
 
+        /// <summary>Plans the desktop request, matches against the supplied captured tree, records eligible locators, and generates FlaUI test source and a flow report.</summary>
         public IntentDesktopAutomationPipelineResult Run(
             string goal,
             UiElementInfo desktopRoot,
@@ -52,6 +56,7 @@ namespace AutomationSandbox.IntentAutomation
             return Run(request, desktopRoot, repository);
         }
 
+        /// <summary>Plans the desktop request, matches against the supplied captured tree, records eligible locators, and generates FlaUI test source and a flow report.</summary>
         public IntentDesktopAutomationPipelineResult Run(
             IntentPlanningRequest request,
             UiElementInfo desktopRoot,

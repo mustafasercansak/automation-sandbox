@@ -281,7 +281,7 @@ namespace ScenarioRunner
 
             // The hallucination guard discards off-shortlist votes before counting; mirror that
             // here so a hallucinating provider costs itself a vote and nothing more.
-            return shortlistIds.Contains(result.MatchedCandidateId) ? result.MatchedCandidateId : null;
+            return shortlistIds.Contains(result.MatchedCandidateId!) ? result.MatchedCandidateId : null;
         }
 
         internal static QuorumVerdict EvaluateQuorum(IReadOnlyList<ProviderVote> votes, string expectedCandidateId)

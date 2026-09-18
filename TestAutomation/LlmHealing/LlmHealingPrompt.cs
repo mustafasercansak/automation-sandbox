@@ -14,8 +14,10 @@ namespace AutomationSandbox.LlmHealing
     // choose from a closed, enumerated set it was actually shown, rather than returning any
     // string it likes.
 
+    /// <summary>Shared prompt/response format so every provider is asked the same question the same way - that&apos;s what makes the evaluator&apos;s comparison meaningful. Public so it&apos;s independently unit-testable from other assemblies.  The model is given a bounded shortlist of pre-scored candidates (not the full UI tree) and asked to pick one by its opaque candidateId - not by AutomationId. This bounds prompt/token cost on large trees and is harder to hallucinate past: the model can only choose from a closed, enumerated set it was actually shown, rather than returning any string it likes.</summary>
     public static class LlmHealingPrompt
     {
+        /// <summary>Builds a bounded candidate-selection prompt with optional business intent and text sanitization.</summary>
         public static string Build(UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, Func<string, string>? textSanitizer = null)
         {
             var effectivePlatform = !string.IsNullOrWhiteSpace(platform)
@@ -90,6 +92,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
         // from desktop controls by ControlType/ClassName alone because WebElementMapper normalizes them
         // to desktop ControlTypes (Button, Edit) without adding a scope tag. Therefore, callers should
         // always pass the platform explicitly whenever known.
+        /// <summary>Fallback platform inference for callers that do not explicitly pass a platform. As documented in issue #24, light-DOM web elements (&lt;button&gt;, &lt;input&gt;) are indistinguishable from desktop controls by ControlType/ClassName alone because WebElementMapper normalizes them to desktop ControlTypes (Button, Edit) without adding a scope tag. Therefore, callers should always pass the platform explicitly whenever known.</summary>
         public static string InferPlatformFallback(UiElementInfo? expected)
         {
             if (expected == null)
@@ -111,6 +114,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text:
             return "windows-uia";
         }
 
+        /// <summary>Parses a model candidate-selection response; malformed output becomes a failed result rather than an accepted proposal.</summary>
         public static (string? CandidateId, double Confidence, string Reasoning) ParseResponse(string rawText)
         {
             var json = FindFirstResponseJsonObject(rawText) ?? TryRepairTruncatedResponseObject(rawText);

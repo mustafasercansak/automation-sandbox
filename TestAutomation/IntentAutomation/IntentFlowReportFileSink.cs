@@ -4,6 +4,7 @@ using System.Text.Json;
 
 namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Writes intent flow reports as JSON and optional HTML.</summary>
     public sealed class IntentFlowReportFileSink
     {
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions
@@ -11,11 +12,13 @@ namespace AutomationSandbox.IntentAutomation
             WriteIndented = true,
         };
 
+        /// <summary>Configures JSON flow-report storage and optional HTML output paths.</summary>
         public IntentFlowReportFileSink(string filePath)
             : this(filePath, Path.ChangeExtension(filePath, ".html"))
         {
         }
 
+        /// <summary>Configures JSON flow-report storage and optional HTML output paths.</summary>
         public IntentFlowReportFileSink(string filePath, string? htmlFilePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -27,9 +30,12 @@ namespace AutomationSandbox.IntentAutomation
             HtmlFilePath = htmlFilePath;
         }
 
+        /// <summary>Path of the JSON document read or written by this instance.</summary>
         public string FilePath { get; }
+        /// <summary>Optional destination of the HTML report rendered alongside JSON.</summary>
         public string? HtmlFilePath { get; }
 
+        /// <summary>Writes the supplied flow report and refreshes the optional HTML output.</summary>
         public void Write(IntentFlowReportDocument document)
         {
             if (document == null)

@@ -8,13 +8,16 @@ namespace AutomationSandbox.Discovery
 {
     // Framework-agnostic connection point: whether the target is WinForms, WPF, or any
     // other Windows desktop app doesn't matter - UIA3 talks to it the same way from outside.
+    /// <summary>Framework-agnostic connection point: whether the target is WinForms, WPF, or any other Windows desktop app doesn&apos;t matter - UIA3 talks to it the same way from outside.</summary>
     public sealed class ApplicationConnector : IDisposable
     {
         private static readonly TimeSpan DefaultMainWindowTimeout = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan LookupSlice = TimeSpan.FromMilliseconds(500);
         private static readonly TimeSpan LookupInterval = TimeSpan.FromMilliseconds(100);
 
+        /// <summary>FlaUI application wrapper attached to the target process.</summary>
         public Application App { get; }
+        /// <summary>UIA3 automation instance owned by this connector.</summary>
         public UIA3Automation Automation { get; }
 
         private readonly int _processId;
@@ -26,6 +29,7 @@ namespace AutomationSandbox.Discovery
             _processId = app.ProcessId;
         }
 
+        /// <summary>Starts the target executable and returns a connector for its process; wait for readiness with GetMainWindow before capture.</summary>
         public static ApplicationConnector Launch(string exePath)
         {
             var app = Application.Launch(exePath);
@@ -53,6 +57,7 @@ namespace AutomationSandbox.Discovery
             }
         }
 
+        /// <summary>Attaches a connector to an existing process selected by its name.</summary>
         public static ApplicationConnector Attach(string processName)
         {
             var app = Application.Attach(processName);
@@ -68,6 +73,7 @@ namespace AutomationSandbox.Discovery
             }
         }
 
+        /// <summary>Waits for a usable main window, detecting early process exit and rejecting ambiguous fallback windows.</summary>
         public Window GetMainWindow(TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? DefaultMainWindowTimeout;
@@ -141,6 +147,7 @@ namespace AutomationSandbox.Discovery
                 lastUiaError: lastUiaError);
         }
 
+        /// <summary>Closes the wrapped application, killing it if graceful close fails, then releases automation and process resources. This also closes applications selected with Attach.</summary>
         public void Dispose()
         {
             try

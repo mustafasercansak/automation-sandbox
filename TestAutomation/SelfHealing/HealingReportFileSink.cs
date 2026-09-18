@@ -4,13 +4,17 @@ using System.Text.Json;
 
 namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Persistence boundary for engine healing-attempt telemetry.</summary>
     public interface IHealingReportSink
     {
+        /// <summary>Records one classified healing attempt.</summary>
         void Record(HealingReportEntry entry);
     }
 
+    /// <summary>Writes versioned healing JSON and optional HTML while synchronizing access to the report file.</summary>
     public sealed class HealingReportFileSink : IHealingReportSink
     {
+        /// <summary>Environment variable used to opt into file-backed healing reports.</summary>
         public const string EnvironmentVariableName = "SELF_HEALING_REPORT_PATH";
         private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(10);
         private readonly Action<string, string> _replaceExistingFile;
@@ -20,11 +24,13 @@ namespace AutomationSandbox.SelfHealing
             WriteIndented = true,
         };
 
+        /// <summary>Configures JSON report storage and optional HTML rendering for the supplied output paths.</summary>
         public HealingReportFileSink(string filePath)
             : this(filePath, Path.ChangeExtension(filePath, ".html"))
         {
         }
 
+        /// <summary>Configures JSON report storage and optional HTML rendering for the supplied output paths.</summary>
         public HealingReportFileSink(string filePath, string? htmlFilePath)
             : this(filePath, htmlFilePath, ReplaceExistingFile)
         {
@@ -50,9 +56,12 @@ namespace AutomationSandbox.SelfHealing
             _replaceExistingFile = replaceExistingFile;
         }
 
+        /// <summary>Path of the JSON document read or written by this instance.</summary>
         public string FilePath { get; }
+        /// <summary>Optional destination of the HTML report rendered alongside JSON.</summary>
         public string? HtmlFilePath { get; }
 
+        /// <summary>Creates the optional report sink configured by the environment, or returns null when reporting is not configured.</summary>
         public static HealingReportFileSink? FromEnvironment()
         {
             var filePath = Environment.GetEnvironmentVariable(EnvironmentVariableName);
@@ -65,6 +74,7 @@ namespace AutomationSandbox.SelfHealing
             return new HealingReportFileSink(filePath!, string.IsNullOrWhiteSpace(htmlFilePath) ? Path.ChangeExtension(filePath, ".html") : htmlFilePath);
         }
 
+        /// <summary>Appends the attempt to the persisted report and refreshes the optional HTML view.</summary>
         public void Record(HealingReportEntry entry)
         {
             if (entry == null)

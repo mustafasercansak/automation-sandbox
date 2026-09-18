@@ -13,20 +13,27 @@ namespace AutomationSandbox.LlmHealing
     // evaluation (August 2026). If requests start failing, re-check the current docs:
     // this surface has already changed shape once.
 
+    /// <summary>The Interactions API superseded the older per-model generateContent endpoint, which the Google documentation labels legacy. Its request/response shapes and x-goog-api-key header are verified by mocked contract tests and live consensus evaluation (August 2026). If requests start failing, re-check the current docs: this surface has already changed shape once.</summary>
     public sealed class GeminiHealingProvider : HttpLlmHealingProvider
     {
         private const string ApiUrl = "https://generativelanguage.googleapis.com/v1beta/interactions";
         private const string DefaultModel = "gemini-3.6-flash";
+        /// <summary>Default deadline for one HTTP attempt.</summary>
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        /// <summary>Default deadline for the entire provider operation, including retries and backoff.</summary>
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
+        /// <summary>Default number of retries after the initial provider request.</summary>
         public static readonly int DefaultMaxRetries = 2;
 
         private readonly string? _apiKey;
         private readonly string _model;
 
+        /// <inheritdoc/>
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        /// <inheritdoc/>
         protected override string UnavailableErrorMessage => "GEMINI_API_KEY is not set.";
 
+        /// <summary>Configures Gemini transport and model settings, using environment configuration for omitted provider settings.</summary>
         public GeminiHealingProvider(
             HttpClient? httpClient = null,
             string? apiKey = null,
@@ -56,6 +63,7 @@ namespace AutomationSandbox.LlmHealing
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("GEMINI_MODEL")) ?? DefaultModel;
         }
 
+        /// <inheritdoc/>
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
             var requestBody = new { model = _model, input = prompt };
@@ -70,6 +78,7 @@ namespace AutomationSandbox.LlmHealing
 
         // Mirrors the Interactions API SDKs' "output_text" convenience property:
         // find the model_output step(s) and concatenate their text content blocks.
+        /// <inheritdoc/>
         protected override string ExtractText(string responseBody)
         {
             using var doc = JsonDocument.Parse(responseBody);

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace AutomationSandbox.LlmHealing
 {
+    /// <summary>Fallback provider for a local Ollama service, allowing candidate proposals without disclosing captured UI data to a hosted service.</summary>
     public sealed class OllamaHealingProvider : HttpLlmHealingProvider
     {
         private const string DefaultHost = "http://localhost:11434";
@@ -14,21 +15,27 @@ namespace AutomationSandbox.LlmHealing
 
         // Ollama runs locally on CPU/GPU where cold-start model loading can take longer
         // than lightweight cloud API roundtrips. 30s provides sufficient headroom.
+        /// <summary>Ollama runs locally on CPU/GPU where cold-start model loading can take longer than lightweight cloud API roundtrips. 30s provides sufficient headroom.</summary>
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+        /// <summary>Default deadline for the entire provider operation, including retries and backoff.</summary>
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(70);
+        /// <summary>Default number of retries after the initial provider request.</summary>
         public static readonly int DefaultMaxRetries = 2;
 
         private readonly string _host;
         private readonly string _model;
         private readonly bool _explicitlyConfigured;
 
+        /// <inheritdoc/>
         public override bool IsAvailable => _explicitlyConfigured ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OLLAMA_HOST")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OLLAMA_MODEL")) ||
             string.Equals(Environment.GetEnvironmentVariable("OLLAMA_ENABLED"), "true", StringComparison.OrdinalIgnoreCase);
 
+        /// <inheritdoc/>
         protected override string UnavailableErrorMessage => "Ollama is not enabled or configured.";
 
+        /// <summary>Configures an Ollama endpoint and model with bounded request and total-operation deadlines.</summary>
         public OllamaHealingProvider(
             HttpClient? httpClient = null,
             string? host = null,
@@ -59,6 +66,7 @@ namespace AutomationSandbox.LlmHealing
             _model = NullIfEmpty(model) ?? NullIfEmpty(Environment.GetEnvironmentVariable("OLLAMA_MODEL")) ?? DefaultModel;
         }
 
+        /// <inheritdoc/>
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
             var requestBody = new
@@ -78,6 +86,7 @@ namespace AutomationSandbox.LlmHealing
             };
         }
 
+        /// <inheritdoc/>
         protected override string ExtractText(string responseBody)
         {
             using var doc = JsonDocument.Parse(responseBody);

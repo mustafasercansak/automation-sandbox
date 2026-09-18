@@ -8,7 +8,8 @@ TestResults/
 .vs/
 .vscode/
 *.suo
-/eng/
+/eng/*
+!/eng/PublicApiAudit/
 /vulnerable-report.json
 /outdated-report.json
 

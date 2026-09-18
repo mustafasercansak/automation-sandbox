@@ -12,22 +12,35 @@ namespace AutomationSandbox.SelfHealing
     /// </summary>
     public sealed class ProfileCalibrationResult
     {
+        /// <summary>Threshold profile evaluated by this calibration result.</summary>
         public ThresholdProfile Profile { get; set; }
+        /// <summary>Minimum structural score required for heuristic acceptance.</summary>
         public double ConfidenceThreshold { get; set; }
+        /// <summary>Required structural-score separation from the runner-up for heuristic acceptance.</summary>
         public double MarginThreshold { get; set; }
+        /// <summary>Minimum evidence coverage used for these calibration probes.</summary>
         public double EvidenceWeightThreshold { get; set; }
 
+        /// <summary>Number of evaluated synthetic mutations with an expected surviving target.</summary>
         public int SuccessorScenarios { get; set; }
+        /// <summary>Number of evaluated synthetic mutations with the target removed.</summary>
         public int RemovalScenarios { get; set; }
 
+        /// <summary>Number of synthetic successor scenarios accepted on the expected successor.</summary>
         public int CorrectHeals { get; set; }
+        /// <summary>Number of synthetic successor scenarios accepted on the wrong element.</summary>
         public int FalseHeals { get; set; }
+        /// <summary>Number of synthetic successor scenarios declined by the resolver.</summary>
         public int MissedHeals { get; set; }
+        /// <summary>Number of synthetic removal scenarios where the resolver declined to heal.</summary>
         public int CorrectDeclines { get; set; }
+        /// <summary>Number of synthetic removal scenarios incorrectly accepted on another element.</summary>
         public int FalseHealsOnRemoved { get; set; }
 
+        /// <summary>Correct heals divided by successor scenarios; zero when no successor scenario was evaluated.</summary>
         public double Recall => SuccessorScenarios == 0 ? 0.0 : (double)CorrectHeals / SuccessorScenarios;
 
+        /// <summary>Correct heals divided by all accepted proposals; one when no proposal was accepted.</summary>
         public double Precision
         {
             get
@@ -37,6 +50,7 @@ namespace AutomationSandbox.SelfHealing
             }
         }
 
+        /// <summary>Incorrect heals divided by all accepted proposals; zero when no proposal was accepted.</summary>
         public double FalseHealRate
         {
             get
@@ -46,6 +60,7 @@ namespace AutomationSandbox.SelfHealing
             }
         }
 
+        /// <summary>Declined probes divided by all evaluated scenarios; zero when no scenario was evaluated.</summary>
         public double ManualReviewRate
         {
             get
@@ -61,12 +76,19 @@ namespace AutomationSandbox.SelfHealing
     /// </summary>
     public sealed class TreeCalibrationReport
     {
+        /// <summary>Application label used to identify the captured or tested system in reports and storage.</summary>
         public string ApplicationName { get; set; } = "Application";
+        /// <summary>Number of nodes in the supplied calibration tree, including the root.</summary>
         public int TotalTreeElements { get; set; }
+        /// <summary>Number of eligible nodes selected for synthetic mutation probes.</summary>
         public int ProbedElementsCount { get; set; }
+        /// <summary>Total number of synthetic mutation scenarios evaluated for each profile.</summary>
         public int TotalScenariosEvaluated { get; set; }
+        /// <summary>Per-profile measurements on the same synthetic mutation probes.</summary>
         public IReadOnlyList<ProfileCalibrationResult> ProfileResults { get; set; } = new List<ProfileCalibrationResult>();
+        /// <summary>Profile selected from this tree&apos;s synthetic measurements; not a guarantee for other applications.</summary>
         public ThresholdProfile RecommendedProfile { get; set; }
+        /// <summary>Explanation of the measured trade-off that selected the recommended profile.</summary>
         public string RecommendationReasoning { get; set; } = string.Empty;
 
         /// <summary>
@@ -115,6 +137,7 @@ namespace AutomationSandbox.SelfHealing
             return sb.ToString();
         }
 
+        /// <inheritdoc/>
         public override string ToString() => ToMarkdownReport();
     }
 

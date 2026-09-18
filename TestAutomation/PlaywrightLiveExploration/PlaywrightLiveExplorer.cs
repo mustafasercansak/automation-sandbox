@@ -14,6 +14,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
     // docs/intent-driven-automation.md for why a real MCP bridge (Node.js-based Playwright MCP
     // server) was ruled out for this project.
 
+    /// <summary>Owns a Playwright browser session for navigation and DOM capture; dispose asynchronously to release browser resources.</summary>
     public sealed class PlaywrightLiveExplorer : IAsyncDisposable
     {
         // Playwright's own EvaluateAsync<T> deserializer reflects over settable properties and
@@ -40,6 +41,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             _options = options;
         }
 
+        /// <summary>Starts Playwright and launches a browser using the supplied options.</summary>
         public static async Task<PlaywrightLiveExplorer> LaunchAsync(PlaywrightLiveExplorerOptions? options = null)
         {
             var effectiveOptions = options ?? new PlaywrightLiveExplorerOptions();
@@ -59,6 +61,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             }
         }
 
+        /// <summary>Navigates to the supplied URL and returns a captured DOM tree.</summary>
         public async Task<WebElementInfo> CaptureAsync(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
@@ -90,6 +93,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             }
         }
 
+        /// <summary>Closes the owned browser and releases the Playwright session.</summary>
         public async ValueTask DisposeAsync()
         {
             try

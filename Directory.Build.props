@@ -48,15 +48,6 @@
 
     <WarningsAsErrors Condition="'$(ContinuousIntegrationBuild)' == 'true'">$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
 
-    <!-- #400: .NET analyzers at the latest analysis level for the packable libraries' public
-         API surface. Verified 0 new findings across all 7 libraries and every target framework
-         before landing this - see the PR for the exact command. GenerateDocumentationFile is a
-         separate, much larger piece of #400 (~1700 undocumented public members) and is
-         deliberately not enabled here; see the issue for the measured count. -->
-    <AnalysisLevel Condition="'$(IsPackable)' != 'false'">latest</AnalysisLevel>
-
-    <EnableNETAnalyzers Condition="'$(IsPackable)' != 'false'">true</EnableNETAnalyzers>
-
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' != 'false'">

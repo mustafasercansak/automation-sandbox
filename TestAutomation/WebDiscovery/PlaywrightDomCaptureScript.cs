@@ -1,7 +1,9 @@
 namespace AutomationSandbox.WebDiscovery
 {
+    /// <summary>Browser-side DOM capture source used with Playwright page evaluation.</summary>
     public static class PlaywrightDomCaptureScript
     {
+        /// <summary>JavaScript expression that captures the regular DOM, open shadow roots, and accessible same-origin frames.</summary>
         public const string JavaScript =
 @"() => {
   const roleMap = {

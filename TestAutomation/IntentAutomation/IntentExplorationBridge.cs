@@ -6,10 +6,12 @@ using AutomationSandbox.WebDiscovery;
 
 namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Matches scenario target descriptions against a captured DOM tree using structural and semantic evidence.</summary>
     public sealed class IntentExplorationBridge
     {
         private readonly IntentExplorationOptions _options;
 
+        /// <summary>Configures web shortlist and review thresholds; omitted options use the standard exploration policy.</summary>
         public IntentExplorationBridge(IntentExplorationOptions? options = null)
         {
             _options = options ?? new IntentExplorationOptions();
@@ -31,6 +33,7 @@ namespace AutomationSandbox.IntentAutomation
             }
         }
 
+        /// <summary>Ranks web candidates for each scenario step and applies review, semantic, and runner-up gates.</summary>
         public IntentExplorationResult Match(IntentScenario scenario, WebElementInfo root)
         {
             if (scenario == null)
@@ -109,7 +112,7 @@ namespace AutomationSandbox.IntentAutomation
             var actionScore = ActionCompatibility(step.ActionType, element);
             if (actionScore <= 0.0)
             {
-                return new IntentElementCandidate { Step = step, Element = element };
+                return new IntentElementCandidate(step: step, element: element);
             }
 
             var targetText = IntentTextScoring.BuildMatchingText(step);
@@ -130,15 +133,13 @@ namespace AutomationSandbox.IntentAutomation
                 : 0.0;
 
             var score = Math.Min(1.0, (actionScore * 0.45) + (semanticScore * 0.40) + (locatorScore * 0.15) + exactBonus);
-            return new IntentElementCandidate
-            {
-                Step = step,
-                Element = element,
-                Score = score,
-                SemanticScore = semanticScore,
-                Reason = $"action={actionScore:F2}; semantic={semanticScore:F2}; locator={locatorScore:F2}",
-                LocatorSuggestions = locatorSuggestions,
-            };
+            return new IntentElementCandidate(
+                step: step,
+                element: element,
+                score: score,
+                semanticScore: semanticScore,
+                reason: $"action={actionScore:F2}; semantic={semanticScore:F2}; locator={locatorScore:F2}",
+                locatorSuggestions: locatorSuggestions);
         }
 
         private static double ActionCompatibility(IntentActionType actionType, WebElementInfo element)

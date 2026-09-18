@@ -111,6 +111,14 @@ New to the library? The [Published Package Quickstart](docs/consumer-quickstart.
 
 While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change to Tier 1 (always called out in the release notes); a **patch** bump (`0.2.0` → `0.2.1`) never does. Full policy and the 1.0 exit criteria: [API Stability & Versioning](docs/versioning-and-stability.md).
 
+Source builds include XML IntelliSense documentation for every packable library. The
+[public API audit and migration guide](docs/public-api-audit.md) records the reviewed
+surface and deliberate mutability contracts. For the next breaking release, construct
+`ScoreComponents`, `PlaywrightLocatorSuggestion`, `IntentElementCandidate`, and
+`IntentDesktopElementCandidate` with named constructor arguments instead of object
+initializers. Their properties are get-only; candidate references still point to editable
+steps and captured elements. This source change does not alter packages already published.
+
 ---
 
 ## 📌 Implementation Status

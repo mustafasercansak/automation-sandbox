@@ -4,17 +4,25 @@ using AutomationSandbox.UiModel;
 
 namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Outcome of optional one-candidate ownership reconciliation.</summary>
     public enum BatchReconciliationDisposition
     {
+        /// <summary>Single-locator acceptance already declined this request.</summary>
         BaselineDecline,
+        /// <summary>No other accepted request claimed this live node.</summary>
         PreservedUncontested,
+        /// <summary>This claim won under the source-specific separation rule.</summary>
         WonContention,
+        /// <summary>A sufficiently stronger same-source claim won ownership.</summary>
         DeclinedByStrongerClaim,
+        /// <summary>Contention could not be resolved unambiguously, including mixed heuristic and LLM claims.</summary>
         DeclinedAmbiguousContention,
     }
 
+    /// <summary>Logical locator key and expected evidence for one request in an opt-in batch.</summary>
     public sealed class BatchHealingRequest
     {
+        /// <summary>Associates a logical locator key with the expected snapshot for one batch request.</summary>
         public BatchHealingRequest(string locatorKey, UiElementInfo expected)
         {
             if (string.IsNullOrWhiteSpace(locatorKey))
@@ -26,10 +34,13 @@ namespace AutomationSandbox.SelfHealing
             Expected = expected ?? throw new ArgumentNullException(nameof(expected));
         }
 
+        /// <summary>Logical repository key identifying a locator independently of its current automation identifier.</summary>
         public string LocatorKey { get; }
+        /// <summary>Stored evidence for the element whose locator needs resolution.</summary>
         public UiElementInfo Expected { get; }
     }
 
+    /// <summary>One independently resolved locator and its ownership-reconciliation outcome.</summary>
     public sealed class BatchHealingItemResult
     {
         internal BatchHealingItemResult(BatchHealingRequest request, HealResult result)
@@ -39,14 +50,20 @@ namespace AutomationSandbox.SelfHealing
             WasIndependentlyConfident = result.IsConfident;
         }
 
+        /// <summary>Original batch request associated with this outcome.</summary>
         public BatchHealingRequest Request { get; }
+        /// <summary>Resolution evidence after ownership reconciliation.</summary>
         public HealResult Result { get; }
+        /// <summary>Whether single-locator acceptance passed before ownership reconciliation.</summary>
         public bool WasIndependentlyConfident { get; }
+        /// <summary>Opaque pre-order tree path identifying the candidate within this captured tree only.</summary>
         public string? CandidateIdentity => Result.CandidateIdentity;
+        /// <summary>Ownership decision applied to the independently proposed candidate.</summary>
         public BatchReconciliationDisposition ReconciliationDisposition =>
             Result.ReconciliationDisposition ?? BatchReconciliationDisposition.BaselineDecline;
     }
 
+    /// <summary>Batch outcomes after reconciling accepted claims against one shared captured tree.</summary>
     public sealed class BatchHealingResult
     {
         internal BatchHealingResult(IReadOnlyList<BatchHealingItemResult> items)
@@ -54,14 +71,18 @@ namespace AutomationSandbox.SelfHealing
             Items = items;
         }
 
+        /// <summary>Results in request order.</summary>
         public IReadOnlyList<BatchHealingItemResult> Items { get; }
+        /// <summary>Number of live nodes claimed by more than one independently accepted request.</summary>
         public int ContestedCandidateCount => Items
             .Where(i => i.WasIndependentlyConfident && i.CandidateIdentity != null)
             .GroupBy(i => i.CandidateIdentity!, StringComparer.Ordinal)
             .Count(g => g.Count() > 1);
+        /// <summary>Number of previously accepted claims declined by ownership reconciliation.</summary>
         public int ReconciliationDeclineCount => Items.Count(i => i.Result.RejectedByReconciliation);
     }
 
+    /// <summary>Deterministic locator resolution with optional independent-provider fallback and explicit batch ownership reconciliation.</summary>
     public static partial class SelfHealingResolver
     {
         /// <summary>

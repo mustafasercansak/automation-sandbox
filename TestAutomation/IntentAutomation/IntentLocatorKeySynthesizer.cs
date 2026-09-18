@@ -4,8 +4,10 @@ using System.Linq;
 
 namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Creates stable logical locator keys from action and target descriptions when callers have not supplied keys.</summary>
     public static class IntentLocatorKeySynthesizer
     {
+        /// <summary>Builds a logical key from the step and optional matched element metadata.</summary>
         public static string Synthesize(IntentStep step, IntentElementCandidate? candidate = null)
         {
             if (step == null || step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
@@ -24,6 +26,7 @@ namespace AutomationSandbox.IntentAutomation
             return SynthesizeCore(step.ActionType, target);
         }
 
+        /// <summary>Builds a logical key from the step and optional matched element metadata.</summary>
         public static string Synthesize(IntentStep step, IntentDesktopElementCandidate? candidate)
         {
             if (step == null || step.ActionType == IntentActionType.Navigate || step.ActionType == IntentActionType.Unknown)
@@ -40,6 +43,7 @@ namespace AutomationSandbox.IntentAutomation
             return SynthesizeCore(step.ActionType, target);
         }
 
+        /// <summary>Combines an action label with normalized target text to form a logical locator key.</summary>
         public static string SynthesizeCore(IntentActionType actionType, string target)
         {
             if (string.IsNullOrWhiteSpace(target))
@@ -86,6 +90,7 @@ namespace AutomationSandbox.IntentAutomation
             }
         }
 
+        /// <summary>Normalizes text into a Pascal-style key suitable for logical locator names.</summary>
         public static string ToPascalKey(string key)
         {
             if (string.IsNullOrWhiteSpace(key))

@@ -6,10 +6,12 @@ using AutomationSandbox.WebDiscovery;
 
 namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Records eligible web intent matches as reusable locator snapshots.</summary>
     public sealed class IntentLocatorRepositoryRecorder
     {
         private readonly IntentLocatorRecordingOptions _options;
 
+        /// <summary>Configures web recording thresholds and repository metadata; omitted options use the standard recording policy.</summary>
         public IntentLocatorRepositoryRecorder(IntentLocatorRecordingOptions? options = null)
         {
             _options = options ?? new IntentLocatorRecordingOptions();
@@ -19,6 +21,7 @@ namespace AutomationSandbox.IntentAutomation
             }
         }
 
+        /// <summary>Evaluates exploration results against recording policy and persists eligible locator snapshots.</summary>
         public IReadOnlyList<IntentLocatorRecordingResult> Record(
             IntentExplorationResult explorationResult,
             LocatorRepository repository)

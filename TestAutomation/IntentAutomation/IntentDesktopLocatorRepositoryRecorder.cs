@@ -5,10 +5,12 @@ using AutomationSandbox.UiModel;
 
 namespace AutomationSandbox.IntentAutomation
 {
+    /// <summary>Records eligible desktop intent matches as reusable locator snapshots.</summary>
     public sealed class IntentDesktopLocatorRepositoryRecorder
     {
         private readonly IntentDesktopLocatorRecordingOptions _options;
 
+        /// <summary>Configures desktop recording thresholds and repository metadata; omitted options use the standard recording policy.</summary>
         public IntentDesktopLocatorRepositoryRecorder(IntentDesktopLocatorRecordingOptions? options = null)
         {
             _options = options ?? new IntentDesktopLocatorRecordingOptions();
@@ -18,6 +20,7 @@ namespace AutomationSandbox.IntentAutomation
             }
         }
 
+        /// <summary>Evaluates desktop exploration results against recording policy and persists eligible locator snapshots.</summary>
         public IReadOnlyList<IntentDesktopLocatorRecordingResult> Record(
             IntentDesktopExplorationResult explorationResult,
             LocatorRepository repository)

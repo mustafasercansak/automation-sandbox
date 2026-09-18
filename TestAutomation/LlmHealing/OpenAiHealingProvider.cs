@@ -8,13 +8,17 @@ using System.Threading.Tasks;
 
 namespace AutomationSandbox.LlmHealing
 {
+    /// <summary>Fallback provider for OpenAI-compatible chat-completion endpoints. Give each configured instance a unique name.</summary>
     public sealed class OpenAiHealingProvider : HttpLlmHealingProvider
     {
         private const string DefaultApiUrl = "https://api.openai.com/v1/chat/completions";
         private const string DefaultModel = "gpt-4o-mini";
         private const int DefaultMaxOutputTokens = 1024;
+        /// <summary>Default deadline for one HTTP attempt.</summary>
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        /// <summary>Default deadline for the entire provider operation, including retries and backoff.</summary>
         public static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromSeconds(35);
+        /// <summary>Default number of retries after the initial provider request.</summary>
         public static readonly int DefaultMaxRetries = 2;
 
         private readonly string? _apiKey;
@@ -23,14 +27,18 @@ namespace AutomationSandbox.LlmHealing
         private readonly bool _requestJsonResponse;
         private readonly int _maxOutputTokens;
 
+        /// <inheritdoc/>
         public override bool IsAvailable => !string.IsNullOrEmpty(_apiKey);
+        /// <inheritdoc/>
         protected override string UnavailableErrorMessage => "OPENAI_API_KEY is not set.";
+        /// <summary>Resolved HTTP endpoint used by this provider instance.</summary>
         public string ApiUrl => _apiUrl;
 
         // name matters more here than on the other providers: this one talks to any
         // OpenAI-compatible endpoint, so a consensus run can legitimately hold several
         // instances of it (Groq, Cerebras, OpenRouter). Leaving them all called "OpenAI"
         // would make the votes in HealResult.AgreedProviders indistinguishable.
+        /// <summary>Configures an OpenAI-compatible endpoint, model, credentials, retry policy, and independently identifiable provider name.</summary>
         public OpenAiHealingProvider(
             HttpClient? httpClient = null,
             string? apiKey = null,
@@ -90,6 +98,7 @@ namespace AutomationSandbox.LlmHealing
             return $"{trimmed}/chat/completions";
         }
 
+        /// <inheritdoc/>
         protected override HttpRequestMessage CreateRequest(string prompt)
         {
             object requestBody = _requestJsonResponse
@@ -123,6 +132,7 @@ namespace AutomationSandbox.LlmHealing
             return request;
         }
 
+        /// <inheritdoc/>
         protected override string ExtractText(string responseBody)
         {
             using var doc = JsonDocument.Parse(responseBody);

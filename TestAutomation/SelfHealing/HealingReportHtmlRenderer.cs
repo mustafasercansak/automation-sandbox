@@ -7,8 +7,10 @@ using AutomationSandbox.UiModel;
 
 namespace AutomationSandbox.SelfHealing
 {
+    /// <summary>Renders persisted healing evidence into a human-readable HTML report.</summary>
     public static class HealingReportHtmlRenderer
     {
+        /// <summary>Renders the supplied report document as HTML with encoded dynamic content.</summary>
         public static string Render(HealingReportDocument document)
         {
             if (document == null)

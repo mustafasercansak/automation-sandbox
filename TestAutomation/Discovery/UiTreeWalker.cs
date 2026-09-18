@@ -8,6 +8,7 @@ using FlaUI.Core.AutomationElements;
 using AutomationSandbox.UiModel;
 namespace AutomationSandbox.Discovery
 {
+    /// <summary>Captures FlaUI elements as framework-independent UI trees with bounded traversal and diagnostics.</summary>
     public static class UiTreeWalker
     {
         private const int DefaultMaxDepth = 25;
@@ -21,6 +22,7 @@ namespace AutomationSandbox.Discovery
         // tree needs a budget that matches MaxElements' generosity, not the scoped default.
         private static readonly TimeSpan DefaultBuildTreeTimeout = TimeSpan.FromSeconds(60);
 
+        /// <summary>Captures a live UIA tree using the convenience traversal settings.</summary>
         public static UiElementInfo BuildTree(AutomationElement element, int maxDepth = DefaultMaxDepth, int maxElements = DefaultMaxElements)
         {
             var options = new DiscoveryOptions
@@ -33,6 +35,7 @@ namespace AutomationSandbox.Discovery
             return Discover(element, options).Root ?? new UiElementInfo();
         }
 
+        /// <summary>Captures a live UIA tree and returns traversal counters, limits, and warnings.</summary>
         public static DiscoveryResult Discover(
             AutomationElement element,
             DiscoveryOptions? options = null,

@@ -138,28 +138,24 @@ namespace ScenarioRunner
                     CandidateId = "c0",
                     Candidate = emailCandidate,
                     TotalScore = 0.85,
-                    Components = new ScoreComponents
-                    {
-                        ControlTypeScore = 1.0,
-                        ParentControlTypeScore = 1.0,
-                        SiblingPositionScore = 1.0,
-                        NameScore = 0.8,
-                        PositionScore = 1.0,
-                    },
+                    Components = new ScoreComponents(
+                        controlTypeScore: 1.0,
+                        parentControlTypeScore: 1.0,
+                        siblingPositionScore: 1.0,
+                        nameScore: 0.8,
+                        positionScore: 1.0),
                 },
                 new()
                 {
                     CandidateId = "c1",
                     Candidate = saveCandidate,
                     TotalScore = 0.10,
-                    Components = new ScoreComponents
-                    {
-                        ControlTypeScore = 0.0,
-                        ParentControlTypeScore = 1.0,
-                        SiblingPositionScore = 0.5,
-                        NameScore = 0.0,
-                        PositionScore = 0.5,
-                    },
+                    Components = new ScoreComponents(
+                        controlTypeScore: 0.0,
+                        parentControlTypeScore: 1.0,
+                        siblingPositionScore: 0.5,
+                        nameScore: 0.0,
+                        positionScore: 0.5),
                 },
             };
 
