@@ -125,17 +125,18 @@ namespace AutomationSandbox.Discovery
                     cancellationToken,
                     precomputed);
             }
-            catch (COMException ex)
+            catch (Exception ex)
             {
-                HandleElementError(result, options, $"Stale element encountered at depth {depth}", ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                HandleElementError(result, options, $"Invalid operation at depth {depth}", ex);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                HandleElementError(result, options, $"Access denied at depth {depth}", ex);
+                // Broad by design (#425): ContinueOnElementError's contract is that ANY
+                // per-element access failure becomes a recorded warning instead of aborting
+                // the whole capture. FlaUI/UIA3 property and child accessors are not
+                // guaranteed to only throw the three COM-adjacent types this used to
+                // whitelist, and a stray unhandled type used to propagate past every ancestor
+                // WalkNodeSafely frame and out of Discover() entirely. Truly fatal CLR
+                // exceptions (OutOfMemoryException, StackOverflowException, ...) cannot be
+                // caught by any handler and propagate regardless, so this is not weaker than
+                // the narrow version was ever able to guarantee.
+                HandleElementError(result, options, $"Error encountered at depth {depth}", ex);
             }
 
             return null;
@@ -252,17 +253,10 @@ namespace AutomationSandbox.Discovery
 
                     validChildren.Add((child, new PrecomputedProperties(childType, childClass, childRect, childOffscreen)));
                 }
-                catch (COMException ex)
+                catch (Exception ex)
                 {
-                    HandleElementError(result, options, $"Stale element encountered while filtering at depth {depth + 1}", ex);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    HandleElementError(result, options, $"Invalid operation while filtering at depth {depth + 1}", ex);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    HandleElementError(result, options, $"Access denied while filtering at depth {depth + 1}", ex);
+                    // See the broad-catch rationale on WalkNodeSafely (#425).
+                    HandleElementError(result, options, $"Error while filtering at depth {depth + 1}", ex);
                 }
             }
 
@@ -309,19 +303,10 @@ namespace AutomationSandbox.Discovery
             {
                 return element.FindAllChildren();
             }
-            catch (COMException ex)
+            catch (Exception ex)
             {
-                HandleElementError(result, options, "COMException while finding children", ex);
-                return Array.Empty<AutomationElement>();
-            }
-            catch (InvalidOperationException ex)
-            {
-                HandleElementError(result, options, "InvalidOperationException while finding children", ex);
-                return Array.Empty<AutomationElement>();
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                HandleElementError(result, options, "UnauthorizedAccessException while finding children", ex);
+                // See the broad-catch rationale on WalkNodeSafely (#425).
+                HandleElementError(result, options, "Error while finding children", ex);
                 return Array.Empty<AutomationElement>();
             }
         }
@@ -354,7 +339,10 @@ namespace AutomationSandbox.Discovery
             Exception exception)
         {
             result.ErrorCount++;
-            result.Warnings.Add($"{context}: {exception.Message}");
+            // The exception's own type name is now part of the recorded warning: with the
+            // catch broadened to general Exception (#425), the context string alone no longer
+            // implies which type was thrown.
+            result.Warnings.Add($"{context}: {exception.GetType().Name}: {exception.Message}");
             if (!options.ContinueOnElementError)
             {
                 ExceptionDispatchInfo.Capture(exception).Throw();

@@ -47,6 +47,7 @@
     <Compile Remove="MainFormScenarioTests.cs" />
     <Compile Remove="WpfMainWindowScenarioTests.cs" />
     <Compile Remove="DiscoveryRobustnessTests.cs" />
+    <Compile Remove="UiTreeWalkerExceptionResilienceTests.cs" />
     <Compile Remove="LlmHealingEvaluationTests.cs" />
     <Compile Remove="WindowsAppSurveyRunner.cs" />
     <Compile Remove="WindowsAppSurveyLiveTests.cs" />
