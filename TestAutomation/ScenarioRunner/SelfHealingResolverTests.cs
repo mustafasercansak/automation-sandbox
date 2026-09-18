@@ -1405,6 +1405,28 @@ namespace ScenarioRunner
             Assert.True(result.IsConfident);
         }
 
+        [Fact]
+        public async Task ResolveAsync_LlmConsensus_NameGate_RejectsStructurallyPerfectMatch_WhenNamedLocatorGetsLowNameScore()
+        {
+            // #416: the per-component gates must veto an LLM-consensus pick the same way they
+            // veto a heuristic pick. Before the fix, MatchedNameScore/NameGateFloor were never
+            // populated on the LLM branch, so NameGateFloor defaulted to 0.0 and this gate was
+            // silently disabled for every consensus-accepted result.
+            var (expected, tree) = NameGateFixture("Summary", "Dimensions");
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, tree, AgreeingProviders("c0"), weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(2, result.AgreedProviders.Count);
+            Assert.NotNull(result.Matched);
+            Assert.False(result.IsConfident, "The name gate should veto an LLM-consensus pick whose NameScore contradicts it, the same way it vetoes a heuristic pick.");
+            Assert.NotNull(result.MatchedNameScore);
+            Assert.True(result.MatchedNameScore < result.NameGateFloor);
+            Assert.Equal(0.30, result.NameGateFloor, 3);
+        }
+
         // --- #375: per-component descendant (child-signature) gate ---
 
         // An unnamed container that heals with a perfect structural score onto a structurally
@@ -1502,6 +1524,25 @@ namespace ScenarioRunner
 
             Assert.Equal(0.0, result.ChildSignatureFloor);
             Assert.True(result.IsConfident, "Default weights ship with the gate disabled (MinimumChildSignatureSimilarity = 0).");
+        }
+
+        [Fact]
+        public async Task ResolveAsync_LlmConsensus_ChildSignatureGate_RejectsStructurallyPerfectMatch_WhenTheContainerHeldSomethingElse()
+        {
+            // #416: same rationale as the name-gate LLM regression test above, for the
+            // descendant gate.
+            var (expected, tree) = ChildSignatureFixture("DataGrid", "Pane");
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, tree, AgreeingProviders("c0"), weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(2, result.AgreedProviders.Count);
+            Assert.NotNull(result.Matched);
+            Assert.False(result.IsConfident, "The descendant gate should veto an LLM-consensus pick whose contents contradict it, the same way it vetoes a heuristic pick.");
+            Assert.Equal(0.0, result.MatchedChildSignatureSimilarity);
+            Assert.Equal(0.50, result.ChildSignatureFloor, 3);
         }
     }
 }
