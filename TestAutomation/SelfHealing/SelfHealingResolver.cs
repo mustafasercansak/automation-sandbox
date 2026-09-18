@@ -249,6 +249,20 @@ namespace AutomationSandbox.SelfHealing
             // empty or duplicated (the exact scenario this framework exists to heal), while
             // CandidateId is unique within the shortlist we sent.
             var matchedCandidate = shortlist.First(c => c.CandidateId == topGroup.CandidateId);
+
+            // Per-component name/descendant gates (#370, #375) apply to LLM picks too - see
+            // HealResult.IsConfident, which checks them regardless of Source. They were only
+            // ever computed for the heuristic winner (Resolve, above); compute them here for
+            // the LLM-selected candidate as well so a consensus pick with a mismatched name or
+            // container contents is declined the same way a heuristic one would be (#416).
+            var llmMatchedNameScore = !string.IsNullOrEmpty(expected.Name) ? matchedCandidate.Components.NameScore : (double?)null;
+            var llmExpectedWasContainer = !string.IsNullOrEmpty(expected.ChildControlTypeSignature);
+            var llmMatchedChildSignatureSimilarity = llmExpectedWasContainer
+                ? ChildSignature.Similarity(
+                    expected.ChildControlTypeSignature,
+                    UiElementSnapshot.ComputeChildControlTypeSignature(matchedCandidate.Candidate))
+                : (double?)null;
+
             var agreedProviders = topGroup.Votes
                 .Select(r => r.ProviderName)
                 .OrderBy(n => n, StringComparer.Ordinal)
@@ -303,6 +317,10 @@ namespace AutomationSandbox.SelfHealing
                 // fallback. The margin gate itself is not applied to LLM picks (which use the consensus quorum).
                 RunnerUpScore = heuristicResult.RunnerUpScore,
                 MarginThreshold = heuristicResult.MarginThreshold,
+                MatchedNameScore = llmMatchedNameScore,
+                NameGateFloor = w.MinimumNameScoreWhenNamed,
+                MatchedChildSignatureSimilarity = llmMatchedChildSignatureSimilarity,
+                ChildSignatureFloor = w.MinimumChildSignatureSimilarity,
                 Candidates = heuristicResult.Candidates,
                 LlmProviderName = best.ProviderName,
                 LlmConfidence = consensusConfidence,
@@ -354,14 +372,34 @@ namespace AutomationSandbox.SelfHealing
                 .ToList();
         }
 
+        // A hand-built or JSON-deserialized tree has no guarantee of the depth bound a live
+        // UiTreeWalker capture enforces via Discovery.DiscoveryOptions.MaxDepth (#426). This
+        // is a generous backstop - far beyond any real UI's nesting - not an operational
+        // parameter callers are expected to hit; it exists only to turn a pathological input
+        // into a truncated (still-scored) result instead of a stack overflow.
+        private const int MaxFlattenDepth = 5000;
+
         private static IEnumerable<UiElementInfo> Flatten(UiElementInfo node)
         {
-            yield return node;
-            foreach (var child in node.Children)
+            // Iterative (an explicit stack, not recursion) so traversal depth is bounded by
+            // heap space rather than call-stack space, and MaxFlattenDepth below can
+            // therefore stop a pathologically deep branch instead of overflowing first
+            // (#426). A node at the cap is still yielded (and scored); only its deeper
+            // descendants are skipped.
+            var stack = new Stack<(UiElementInfo Node, int Depth)>();
+            stack.Push((node, 0));
+            while (stack.Count > 0)
             {
-                foreach (var descendant in Flatten(child))
+                var (current, depth) = stack.Pop();
+                yield return current;
+                if (depth >= MaxFlattenDepth)
                 {
-                    yield return descendant;
+                    continue;
+                }
+
+                for (var i = current.Children.Count - 1; i >= 0; i--)
+                {
+                    stack.Push((current.Children[i], depth + 1));
                 }
             }
         }

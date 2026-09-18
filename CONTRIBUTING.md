@@ -36,6 +36,18 @@ Create a dedicated branch per issue:
 - Documentation-only changes: `docs/<issue-number>-<short-description>` (e.g. `docs/180-llm-security-model`)
 - Research / investigation spikes: `research/<issue-number>-<short-description>` (e.g. `research/179-absence-signals-investigation`)
 
+### Local Hook Setup
+
+Run this once after cloning, before your first commit:
+
+```bash
+git config core.hooksPath githooks
+```
+
+This activates `githooks/commit-msg`, which rejects any commit message that credits an
+AI tool as (co-)author (`Co-Authored-By: Claude`, `Signed-off-by: Copilot`, etc.) — see
+`AGENTS.md`. Without this step, the hook is inert and protects no one.
+
 ### Bilingual Documentation
 Documentation that includes both English and Turkish lives in one Markdown file, with the
 English section before the `## Türkçe` section. Keep the two sections structurally aligned:

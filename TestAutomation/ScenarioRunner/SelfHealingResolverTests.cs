@@ -1405,6 +1405,28 @@ namespace ScenarioRunner
             Assert.True(result.IsConfident);
         }
 
+        [Fact]
+        public async Task ResolveAsync_LlmConsensus_NameGate_RejectsStructurallyPerfectMatch_WhenNamedLocatorGetsLowNameScore()
+        {
+            // #416: the per-component gates must veto an LLM-consensus pick the same way they
+            // veto a heuristic pick. Before the fix, MatchedNameScore/NameGateFloor were never
+            // populated on the LLM branch, so NameGateFloor defaulted to 0.0 and this gate was
+            // silently disabled for every consensus-accepted result.
+            var (expected, tree) = NameGateFixture("Summary", "Dimensions");
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, tree, AgreeingProviders("c0"), weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(2, result.AgreedProviders.Count);
+            Assert.NotNull(result.Matched);
+            Assert.False(result.IsConfident, "The name gate should veto an LLM-consensus pick whose NameScore contradicts it, the same way it vetoes a heuristic pick.");
+            Assert.NotNull(result.MatchedNameScore);
+            Assert.True(result.MatchedNameScore < result.NameGateFloor);
+            Assert.Equal(0.30, result.NameGateFloor, 3);
+        }
+
         // --- #375: per-component descendant (child-signature) gate ---
 
         // An unnamed container that heals with a perfect structural score onto a structurally
@@ -1502,6 +1524,56 @@ namespace ScenarioRunner
 
             Assert.Equal(0.0, result.ChildSignatureFloor);
             Assert.True(result.IsConfident, "Default weights ship with the gate disabled (MinimumChildSignatureSimilarity = 0).");
+        }
+
+        [Fact]
+        public async Task ResolveAsync_LlmConsensus_ChildSignatureGate_RejectsStructurallyPerfectMatch_WhenTheContainerHeldSomethingElse()
+        {
+            // #416: same rationale as the name-gate LLM regression test above, for the
+            // descendant gate.
+            var (expected, tree) = ChildSignatureFixture("DataGrid", "Pane");
+            var weights = SimilarityWeights.FromProfile(ThresholdProfile.Balanced);
+
+            var result = await SelfHealingResolver.ResolveAsync(
+                expected, tree, AgreeingProviders("c0"), weights, log: _ => { });
+
+            Assert.Equal(HealSource.Llm, result.Source);
+            Assert.Equal(2, result.AgreedProviders.Count);
+            Assert.NotNull(result.Matched);
+            Assert.False(result.IsConfident, "The descendant gate should veto an LLM-consensus pick whose contents contradict it, the same way it vetoes a heuristic pick.");
+            Assert.Equal(0.0, result.MatchedChildSignatureSimilarity);
+            Assert.Equal(0.50, result.ChildSignatureFloor, 3);
+        }
+
+        [Fact]
+        public void ScoreCandidates_ArtificiallyDeepLinearChain_TruncatesInsteadOfStackOverflowing()
+        {
+            // #426: SelfHealingResolver's internal Flatten used to recurse with no depth
+            // guard. A 10,000+-level single-branch chain (the worst case for stack depth -
+            // a balanced tree with the same node count would be far shallower) is well
+            // beyond anything a real UI tree produces, but a hand-built or JSON-deserialized
+            // UiElementInfo tree (see UiElementSnapshot.FromJson) carries no guarantee it
+            // isn't this pathological.
+            const int chainDepth = 12_000;
+            var root = new UiElementInfo { ControlType = "Pane", AutomationId = "node-0" };
+            var current = root;
+            for (var i = 1; i < chainDepth; i++)
+            {
+                var child = new UiElementInfo { ControlType = "Pane", AutomationId = $"node-{i}" };
+                current.Children.Add(child);
+                current = child;
+            }
+
+            var expected = new UiElementInfo { ControlType = "Pane", AutomationId = "node-0" };
+            var weights = new SimilarityWeights { MinCandidateScore = 0.0 };
+
+            // Must not throw a StackOverflowException (which the CLR can't catch anyway -
+            // an uncaught one kills the test process outright rather than failing the test)
+            // and must not walk the full 12,000-node chain: it should come back truncated.
+            var scored = SelfHealingResolver.ScoreCandidates(expected, root, weights);
+
+            Assert.NotEmpty(scored);
+            Assert.True(scored.Count < chainDepth, $"Expected the flatten to truncate well below the full {chainDepth}-node chain, but scored {scored.Count} candidates.");
         }
     }
 }

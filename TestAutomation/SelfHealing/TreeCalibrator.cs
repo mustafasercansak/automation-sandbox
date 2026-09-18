@@ -525,7 +525,14 @@ namespace AutomationSandbox.SelfHealing
                 SiblingIndex = element.SiblingIndex,
                 SiblingCount = element.SiblingCount,
                 ClassName = element.ClassName,
-                TestIntent = element.TestIntent
+                TestIntent = element.TestIntent,
+                // Computed the same way UiElementSnapshot.Capture computes it (#418). Without
+                // this, every CalibrationProbe.ExpectedTarget built by GenerateProbes carried a
+                // null ChildControlTypeSignature, so expectedWasContainer in
+                // SelfHealingResolver.Resolve was always false and the descendant/child-signature
+                // gate never actually engaged while TreeCalibrator.Calibrate() measured
+                // precision/false-heal numbers for the Balanced/Conservative profiles.
+                ChildControlTypeSignature = UiElementSnapshot.ComputeChildControlTypeSignature(element)
             };
         }
 

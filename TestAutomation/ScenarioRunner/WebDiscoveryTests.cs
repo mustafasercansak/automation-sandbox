@@ -440,5 +440,114 @@ namespace ScenarioRunner
             Assert.DoesNotContain(suggestions, s => s.Strategy == "Role");
             Assert.Contains(suggestions, s => s.Strategy == "TestId");
         }
+
+        [Fact]
+        public void WebElementMapper_ArtificiallyDeepLinearDom_TruncatesInsteadOfStackOverflowing()
+        {
+            // #426: WebElementMapper.Map used to recurse with no depth guard. Framework-
+            // generated markup (a wrapper div per component) can legitimately nest hundreds
+            // of levels, but nothing bounds how deep a captured DOM snapshot can be before it
+            // reaches this mapper, so a 10,000+-level single-branch chain (the worst case for
+            // stack depth) has to come back truncated rather than crash the process.
+            const int chainDepth = 12_000;
+            var root = new WebElementInfo { TagName = "div", Id = "node-0" };
+            var current = root;
+            for (var i = 1; i < chainDepth; i++)
+            {
+                var child = new WebElementInfo { TagName = "div", Id = $"node-{i}" };
+                current.Children.Add(child);
+                current = child;
+            }
+
+            // Must not throw a StackOverflowException (which the CLR can't catch anyway -
+            // an uncaught one kills the test process outright rather than failing the test).
+            var tree = WebElementMapper.ToUiElementTree(root);
+
+            var mappedDepth = 0;
+            var node = tree;
+            while (node.Children.Count > 0)
+            {
+                node = node.Children[0];
+                mappedDepth++;
+            }
+
+            Assert.True(mappedDepth < chainDepth - 1, $"Expected the mapped chain to be truncated well below the full {chainDepth}-node input, but it was {mappedDepth + 1} nodes deep.");
+        }
+
+        // #419: the web capture path had no MaxDepth/MaxElements/Timeout equivalent to
+        // Discovery.DiscoveryOptions - a large SPA or data-grid page could produce an unbounded
+        // JSON payload over the Playwright protocol with no way to cap it. These tests cover the
+        // script-generation side (always runs, no browser needed); PlaywrightLiveExplorerTests
+        // covers the bound actually being enforced against a real page.
+        [Fact]
+        public void WebDiscoveryOptions_Default_MirrorsDiscoveryOptionsDefaults()
+        {
+            var options = WebDiscoveryOptions.Default;
+
+            Assert.Equal(25, options.MaxDepth);
+            Assert.Equal(5000, options.MaxElements);
+            Assert.Equal(TimeSpan.FromSeconds(10), options.Timeout);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_DefaultsEmbedDiscoveryOptionsBoundsAndTruncationFields()
+        {
+            var script = PlaywrightDomCaptureScript.BuildJavaScript();
+
+            Assert.Contains("maxDepth: 25", script);
+            Assert.Contains("maxElements: 5000", script);
+            Assert.Contains("deadline: Date.now() + 10000", script);
+            Assert.Contains("HitMaxDepth", script);
+            Assert.Contains("HitMaxElements", script);
+            Assert.Contains("TimedOut", script);
+            Assert.Contains("CapturedCount", script);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_EmbedsCustomBounds()
+        {
+            var script = PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions
+            {
+                MaxDepth = 3,
+                MaxElements = 10,
+                Timeout = TimeSpan.FromSeconds(2),
+            });
+
+            Assert.Contains("maxDepth: 3", script);
+            Assert.Contains("maxElements: 10", script);
+            Assert.Contains("deadline: Date.now() + 2000", script);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_RejectsNegativeMaxDepth()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions { MaxDepth = -1 }));
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_RejectsMaxElementsBelowOne()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions { MaxElements = 0 }));
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_RejectsNonPositiveTimeout()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions { Timeout = TimeSpan.Zero }));
+        }
+
+        [Fact]
+        public void WebElementInfo_TruncationFields_DefaultToUntruncated()
+        {
+            var element = new WebElementInfo();
+
+            Assert.False(element.HitMaxDepth);
+            Assert.False(element.HitMaxElements);
+            Assert.False(element.TimedOut);
+            Assert.Equal(0, element.CapturedCount);
+        }
     }
 }
