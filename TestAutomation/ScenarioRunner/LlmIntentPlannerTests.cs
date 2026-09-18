@@ -66,6 +66,68 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void ParseScenario_RecoversCompletedSteps_FromAResponseTruncatedMidStep()
+        {
+            // Simulates a plan response cut off by max_tokens mid-way through the third step's
+            // "testIntent" value (#427) - the array-shaped sibling of
+            // LlmHealingPrompt.TryRepairTruncatedResponseObject's reasoning-truncation repair
+            // (#378). The first two steps are structurally complete and should be recovered
+            // instead of discarding the whole plan.
+            var truncated = "{\"steps\": ["
+                + "{\"actionType\": \"Navigate\", \"targetDescription\": \"target page\", \"value\": \"https://example.test/customers\", \"testIntent\": \"open the page\", \"expectedOutcome\": \"page loaded\"}, "
+                + "{\"actionType\": \"Fill\", \"targetDescription\": \"email field\", \"value\": \"jane.doe@example.com\", \"testIntent\": \"enter email\", \"expectedOutcome\": \"email filled\"}, "
+                + "{\"actionType\": \"Click\", \"targetDescription\": \"save button\", \"value\": \"\", \"testIntent\": \"submit the fo";
+
+            var scenario = LlmIntentPlanningPrompt.ParseScenario(truncated, BuildRequest());
+
+            Assert.Equal(2, scenario.Steps.Count);
+            Assert.Equal(IntentActionType.Navigate, scenario.Steps[0].ActionType);
+            Assert.Equal("target page", scenario.Steps[0].TargetDescription);
+            Assert.Equal(IntentActionType.Fill, scenario.Steps[1].ActionType);
+            Assert.Equal("email field", scenario.Steps[1].TargetDescription);
+        }
+
+        [Fact]
+        public void ParseScenario_Throws_WhenNoStepInTheResponseIsStructurallyComplete()
+        {
+            // Nothing is recoverable when even the first step never closed - same behavior as
+            // before #427 for this case, still degrading via LlmIntentPlanner's normal fallback.
+            var truncated = "{\"steps\": [{\"actionType\": \"Navigate\", \"targetDescription\": \"target pa";
+
+            Assert.Throws<FormatException>(() => LlmIntentPlanningPrompt.ParseScenario(truncated, BuildRequest()));
+        }
+
+        [Fact]
+        public async Task LlmIntentPlanner_RecoversCompletedSteps_FromATruncatedPlanResponse_InsteadOfDegrading()
+        {
+            // End-to-end: the Anthropic response envelope itself is well-formed, but the model's
+            // "text" payload inside it is the same mid-step-truncated JSON as above - what
+            // max_tokens: 2048 (LlmIntentPlanner.cs) would produce for a long multi-step plan.
+            // Before #427 this discarded every completed step and silently degraded to
+            // DeterministicIntentPlanner.
+            var truncatedStepsJson = "{\"steps\": ["
+                + "{\"actionType\": \"Navigate\", \"targetDescription\": \"target page\", \"value\": \"https://example.test/customers\", \"testIntent\": \"open the page\", \"expectedOutcome\": \"page loaded\"}, "
+                + "{\"actionType\": \"Fill\", \"targetDescription\": \"email field\", \"value\": \"jane.doe@example.com\", \"testIntent\": \"enter email\", \"expectedOutcome\": \"email filled\"}, "
+                + "{\"actionType\": \"Click\", \"targetDescription\": \"save button\", \"value\": \"\", \"testIntent\": \"submit the fo";
+            var anthropicResponseJson = JsonSerializer.Serialize(new
+            {
+                content = new[] { new { type = "text", text = truncatedStepsJson } },
+            });
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(anthropicResponseJson, Encoding.UTF8, "application/json"),
+            });
+            var planner = new LlmIntentPlanner(httpClient: new HttpClient(handler), apiKey: "sk-test-key");
+
+            var result = await planner.PlanAsync(BuildRequest());
+
+            Assert.Empty(result.Diagnostics); // did not degrade to DeterministicIntentPlanner
+            Assert.Equal(2, result.Scenario.Steps.Count);
+            Assert.Equal(IntentActionType.Navigate, result.Scenario.Steps[0].ActionType);
+            Assert.Equal(IntentActionType.Fill, result.Scenario.Steps[1].ActionType);
+        }
+
+        [Fact]
         public void PlanningPrompt_AdvertisesCommonInteractionActions()
         {
             var prompt = LlmIntentPlanningPrompt.Build(BuildRequest());

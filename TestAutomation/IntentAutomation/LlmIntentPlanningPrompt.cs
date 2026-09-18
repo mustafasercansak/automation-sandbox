@@ -82,7 +82,7 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
         /// <summary>Parses and validates model-generated steps against the supported action vocabulary and request context.</summary>
         public static IntentScenario ParseScenario(string rawText, IntentPlanningRequest request, Func<string, string>? textSanitizer = null)
         {
-            var json = FindFirstResponseJsonObject(rawText);
+            var json = FindFirstResponseJsonObject(rawText) ?? TryRepairTruncatedStepsResponse(rawText);
             if (json is null)
             {
                 throw new FormatException($"No JSON object found in model response: {rawText}");
@@ -260,6 +260,69 @@ Respond with ONLY a single JSON object, no markdown fences, no other text, in th
         {
             var trimmed = goal.Trim();
             return trimmed.Length <= 80 ? trimmed : trimmed.Substring(0, 80).Trim();
+        }
+
+        // Last-resort recovery for a plan response whose "steps" array was cut off mid-way,
+        // typically by the configured max_tokens ceiling (see LlmIntentPlanner.cs) rather than
+        // the reasoning-format artifacts LlmHealingPrompt.TryRepairTruncatedResponseObject (#378)
+        // was written for - but it's the same underlying failure mode this sibling prompt shares:
+        // an otherwise-usable model response fails the whole parse because it ends mid-JSON.
+        // The shape here is different from the healing prompt's single answer object, so instead
+        // of closing an in-progress string/object to salvage one value, this walks the "steps"
+        // array directly and keeps only the step objects that are structurally complete - "recover
+        // the completed steps" rather than guessing at how a cut-off step would have ended.
+        // Bounded single pass (reuses FindMatchingObjectEnd below); returns null when nothing in
+        // the array is recoverable.
+        private static string? TryRepairTruncatedStepsResponse(string rawText)
+        {
+            var stepsMarker = rawText.IndexOf("\"steps\"", StringComparison.Ordinal);
+            if (stepsMarker < 0)
+            {
+                return null;
+            }
+
+            var arrayStart = rawText.IndexOf('[', stepsMarker);
+            if (arrayStart < 0)
+            {
+                return null;
+            }
+
+            var completeSteps = new List<string>();
+            var i = arrayStart + 1;
+            while (i < rawText.Length)
+            {
+                var c = rawText[i];
+                if (c == ']')
+                {
+                    // The array itself closed cleanly - nothing more to recover from within it.
+                    break;
+                }
+
+                if (c != '{')
+                {
+                    // Whitespace or the comma between elements.
+                    i++;
+                    continue;
+                }
+
+                var objectEnd = FindMatchingObjectEnd(rawText, i);
+                if (objectEnd < 0)
+                {
+                    // This step object never closed - it's the one the model was mid-way through
+                    // when the response was cut off. Stop here rather than guess at its remainder.
+                    break;
+                }
+
+                completeSteps.Add(rawText.Substring(i, objectEnd - i + 1));
+                i = objectEnd + 1;
+            }
+
+            if (completeSteps.Count == 0)
+            {
+                return null;
+            }
+
+            return "{\"steps\": [" + string.Join(",", completeSteps) + "]}";
         }
 
         private static string? FindFirstResponseJsonObject(string rawText)
