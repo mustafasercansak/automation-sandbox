@@ -387,6 +387,51 @@ namespace ScenarioRunner
             Assert.DoesNotContain("must-not-be-logged", diagnostic);
         }
 
+        [Fact]
+        public void LlmProviderFactory_CustomEntryWithEmptyName_IsSkippedAndPreservesBuiltInProviders()
+        {
+            // #417: a validation failure on one optional custom entry must not discard the
+            // built-in providers already constructed above it.
+            var env = new Dictionary<string, string>
+            {
+                ["GEMINI_API_KEY"] = "gemini-test-key",
+                ["LLM_CUSTOM_PROVIDERS"] = "[{\"Name\":\"  \",\"ApiKey\":\"custom-key\",\"Endpoint\":\"https://example.com/v1\",\"Model\":\"custom-model\"}]",
+            };
+            var diagnostics = new List<string>();
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: null,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null,
+                log: diagnostics.Add);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal("Gemini", provider.Name);
+            Assert.Contains(diagnostics, d => d.Contains("non-empty Name"));
+        }
+
+        [Fact]
+        public void LlmProviderFactory_CustomEntryWithInvalidTimeout_IsSkippedAndPreservesBuiltInProviders()
+        {
+            // #417: OpenAiHealingProvider's constructor throws ArgumentOutOfRangeException for a
+            // zero/negative TimeoutSeconds; that must be caught per-entry, not left to unwind the
+            // whole factory and discard the already-constructed built-in providers.
+            var env = new Dictionary<string, string>
+            {
+                ["GEMINI_API_KEY"] = "gemini-test-key",
+                ["LLM_CUSTOM_PROVIDERS"] = "[{\"Name\":\"Broken\",\"ApiKey\":\"custom-key\",\"Endpoint\":\"https://example.com/v1\",\"Model\":\"custom-model\",\"TimeoutSeconds\":0}]",
+            };
+            var diagnostics = new List<string>();
+
+            var providers = LlmProviderFactory.CreateConfiguredProviders(
+                httpClient: null,
+                getEnv: key => env.TryGetValue(key, out var val) ? val : null,
+                log: diagnostics.Add);
+
+            var provider = Assert.Single(providers);
+            Assert.Equal("Gemini", provider.Name);
+            Assert.Contains(diagnostics, d => d.Contains("Broken") && d.Contains("invalid"));
+        }
+
         [Theory]
         [InlineData("[{\"Name\":\"Custom\",\"ApiKey\":\"custom-key\",\"Endpoint\":\"https://example.com/v1\"}]", "Model")]
         [InlineData("[{\"Name\":\"Custom\",\"ApiKey\":\"custom-key\",\"Model\":\"custom-model\"}]", "Endpoint")]

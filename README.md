@@ -139,7 +139,7 @@ steps and captured elements. This source change does not alter packages already 
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
-| **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, and Playwright locator emitter. |
+| **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, Playwright locator emitter, and `WebDiscoveryOptions` (MaxDepth, MaxElements, Timeout) bounding DOM capture with an observable truncation signal. |
 | **NuGet Preview Packaging** | ✅ Implemented | Seven validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
 | **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
@@ -453,6 +453,15 @@ locators). Offscreen elements retain their geometry, while hidden elements are m
 bounding rectangle. For cross-origin iframes (where browser Same-Origin Policy blocks parent
 DOM inspection), evaluate `PlaywrightDomCaptureScript.JavaScript` directly inside the target
 `IFrame` context via `frame.EvaluateAsync` — see [Web Automation Guide](docs/web-automation.md) for details.
+Traversal is bounded by `WebDiscoveryOptions` (`MaxDepth`/`MaxElements`/`Timeout`, mirroring
+`Discovery.DiscoveryOptions`), enforced by the generated script itself since a single
+`page.EvaluateAsync` call cannot be interrupted mid-flight; `PlaywrightLiveExplorer.CaptureAsync`
+applies `WebDiscoveryOptions.Default` (25 / 5000 / 10s) unless a caller passes its own, and
+`PlaywrightDomCaptureScript.BuildJavaScript(options)` builds the same bounded script for a
+hand-written Playwright test. A truncated capture stamps `HitMaxDepth`/`HitMaxElements`/
+`TimedOut`/`CapturedCount` onto the returned root `WebElementInfo` instead of silently dropping
+nodes; the unbounded `PlaywrightDomCaptureScript.JavaScript` constant above remains available
+for callers who evaluate it directly and want the full tree.
 Locator string values are emitted as valid C# source literals: quotes, backslashes, and
 CR/LF/tab characters are escaped before the suggestions flow into generated tests. CSS
 attribute-string values keep their separate CSS escaping inside that C# literal.
