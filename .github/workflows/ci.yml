@@ -23,6 +23,10 @@ jobs:
             coverage-note: Includes the net48-only Discovery assembly and FlaUI live UIA paths.
             run-flaui: true
             audit-target: AutomationSandbox.sln
+            # Observed ~7m24s (run 35374520400): full-solution build, FlaUI live UIA tests,
+            # and a real live LLM call (ANTHROPIC_API_KEY/GEMINI_API_KEY). Generous headroom
+            # for a cold runner and retried LLM calls.
+            timeout-minutes: 35
           - os: ubuntu-latest
             framework: net8.0
             name: Linux (Cross-Platform Core & Web Suite)
@@ -30,8 +34,12 @@ jobs:
             coverage-note: Discovery and FlaUI live UIA paths are absent by design because they are net48/Windows-only.
             run-flaui: false
             audit-target: TestAutomation/ScenarioRunner/ScenarioRunner.csproj
+            # Observed ~2m10s (run 35374520400): cross-platform core/web build plus a
+            # Chromium download for the live Playwright tests.
+            timeout-minutes: 20
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
+    timeout-minutes: ${{ matrix.timeout-minutes }}
 
     steps:
       - name: Checkout
@@ -212,6 +220,8 @@ jobs:
   sample-source-compat:
     name: Sample Compiles Against Source
     runs-on: ubuntu-latest
+    # Observed ~37s (run 35374520400): restore + build + run the sample against repo source.
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -232,6 +242,9 @@ jobs:
   playwright-sample:
     name: Playwright End-to-End Sample
     runs-on: ubuntu-latest
+    # Observed ~54s (run 35374520400): build plus a one-time Chromium browser download,
+    # which can be slow on a cold cache.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -257,6 +270,8 @@ jobs:
   nunit-fixture-tests:
     name: NUnit Test Fixture Helper
     runs-on: ubuntu-latest
+    # Observed ~30s (run 35374520400).
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -272,6 +287,8 @@ jobs:
   calibration-cli:
     name: Calibration CLI
     runs-on: ubuntu-latest
+    # Observed ~32s (run 35374520400).
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -288,6 +305,8 @@ jobs:
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest
+    # Observed ~24s (run 35374520400); Ruby setup + gem install can be slower on a cold cache.
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -314,6 +333,8 @@ jobs:
     needs: [test, sample-source-compat, nunit-fixture-tests, calibration-cli, docs-build-preview]
     runs-on: ubuntu-latest
     if: always()
+    # Trivial status-check aggregation; observed ~4s (run 35374520400).
+    timeout-minutes: 5
     steps:
       - name: Verify matrix results
         run: |

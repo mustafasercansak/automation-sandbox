@@ -27,6 +27,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # Observed 42-55s across recent runs: Jekyll build plus GitHub Pages deploy.
+    timeout-minutes: 15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7

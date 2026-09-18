@@ -12,6 +12,9 @@ jobs:
   survey:
     name: Open-Source App Pairs Survey (windows-2025)
     runs-on: windows-2025
+    # Observed 3m52s-5m17s across recent runs: full-solution build plus a live survey
+    # across released version pairs of real applications (ShareX, HandBrake).
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
