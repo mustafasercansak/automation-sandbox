@@ -61,8 +61,12 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             }
         }
 
-        /// <summary>Navigates to the supplied URL and returns a captured DOM tree.</summary>
-        public async Task<WebElementInfo> CaptureAsync(string url)
+        /// <summary>Navigates to the supplied URL and returns a captured DOM tree, bounded by
+        /// <paramref name="discoveryOptions" /> (or <see cref="WebDiscoveryOptions.Default" /> when omitted) so a
+        /// large SPA or data-grid page cannot produce an unbounded JSON payload over the Playwright protocol;
+        /// check <see cref="WebElementInfo.HitMaxDepth" />, <see cref="WebElementInfo.HitMaxElements" />, and
+        /// <see cref="WebElementInfo.TimedOut" /> on the result to detect a truncated capture.</summary>
+        public async Task<WebElementInfo> CaptureAsync(string url, WebDiscoveryOptions? discoveryOptions = null)
         {
             if (string.IsNullOrWhiteSpace(url))
             {
@@ -77,7 +81,8 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                     Timeout = _options.NavigationTimeoutMilliseconds,
                 }).ConfigureAwait(false);
 
-                var stringifyScript = $"() => JSON.stringify(({PlaywrightDomCaptureScript.JavaScript})())";
+                var captureScript = PlaywrightDomCaptureScript.BuildJavaScript(discoveryOptions);
+                var stringifyScript = $"() => JSON.stringify(({captureScript})())";
                 var json = await page.EvaluateAsync<string>(stringifyScript).ConfigureAwait(false);
                 var dom = string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<WebElementInfo>(json, JsonOptions);
                 if (dom == null)

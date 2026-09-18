@@ -1162,7 +1162,7 @@
       "TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExplorer.cs"
     ],
     "Members": [
-      "public async Task<WebElementInfo> CaptureAsync(string url)",
+      "public async Task<WebElementInfo> CaptureAsync(string url, WebDiscoveryOptions? discoveryOptions = null)",
       "public async ValueTask DisposeAsync()",
       "public static async Task<PlaywrightLiveExplorer> LaunchAsync(PlaywrightLiveExplorerOptions? options = null)"
     ]
@@ -2019,7 +2019,8 @@
       "TestAutomation/WebDiscovery/PlaywrightDomCaptureScript.cs"
     ],
     "Members": [
-      "public const string JavaScript;"
+      "public const string JavaScript;",
+      "public static string BuildJavaScript(WebDiscoveryOptions? options = null)"
     ]
   },
   {
@@ -2056,8 +2057,25 @@
   },
   {
     "Package": "WebDiscovery",
+    "Type": "AutomationSandbox.WebDiscovery.WebDiscoveryOptions",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class WebDiscoveryOptions"
+    ],
+    "Files": [
+      "TestAutomation/WebDiscovery/WebDiscoveryOptions.cs"
+    ],
+    "Members": [
+      "public TimeSpan Timeout { get; set; }",
+      "public int MaxDepth { get; set; }",
+      "public int MaxElements { get; set; }",
+      "public static WebDiscoveryOptions Default { get; }"
+    ]
+  },
+  {
+    "Package": "WebDiscovery",
     "Type": "AutomationSandbox.WebDiscovery.WebElementInfo",
-    "PublicMutableProperties": 19,
+    "PublicMutableProperties": 23,
     "Declarations": [
       "public sealed class WebElementInfo"
     ],
@@ -2068,10 +2086,14 @@
       "public BoundingRectangle BoundingRectangle { get; set; }",
       "public List<WebElementInfo> Children { get; set; }",
       "public List<string> FrameAncestry { get; set; }",
+      "public bool HitMaxDepth { get; set; }",
+      "public bool HitMaxElements { get; set; }",
       "public bool IsCrossOriginFrame { get; set; }",
       "public bool IsHidden { get; set; }",
       "public bool IsOffscreen { get; set; }",
       "public bool IsStructuralCssSelector { get; set; }",
+      "public bool TimedOut { get; set; }",
+      "public int CapturedCount { get; set; }",
       "public string AccessibleName { get; set; }",
       "public string ClassName { get; set; }",
       "public string CssSelector { get; set; }",
