@@ -48,6 +48,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
 | 📊 [**Healing Reports & Dashboard**](healing-reports.md) | JSON and HTML telemetry for accepted, declined, and failed locator-resolution attempts. |
+| 📈 [**DORA & Reliability Metrics**](dora-metrics.md) | Weekly DORA metrics (deployment frequency, lead time, change failure rate, MTTR) and self-healing reliability gates read directly from the engine configuration. |
 | 🧭 [**Intent-Driven Automation**](intent-driven-automation.md) | M6: intent planning (deterministic + LLM-backed), DOM/desktop matching, locator recording, Playwright/FlaUI test generation, intent flow reports, pipeline orchestration, and live page exploration. |
 | 🔬 [**Benchmark & Calibration**](benchmark-calibration.md) | Multi-signal locator ablation benchmark on real organic apps, score overlap findings, and threshold trade-off analysis. |
 | 📝 [**Can You Trust an LLM to Fix a Broken Locator?**](blog/llm-false-heal-study.md) | Standalone write-up of the multi-provider consensus study: 34/34 unanimous verdicts on deleted elements were false heals, why, and how the design responds. |
@@ -57,6 +58,8 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🔐 [**LLM Security Model**](llm-security-model.md) | Trust boundaries, disclosed fields, prompt-injection and PII limitations, provider retention, and local report handling. |
 | 📄 [**JSON Schema Reference**](json-schema.md) | Field-by-field breakdown of the `.locator.json` repository file. |
 | 📦 [**NuGet Packaging**](nuget-packaging.md) | Creating preview `.nupkg` artifacts and preparing a publish checklist. |
+| 🧪 [**External Validation**](external-validation.md) | Pilot evidence protocol for the #401 gate blocking 1.0: independent FlaUI integrations, organic version-drift datasets, and what counts as evidence. |
+| 🔍 [**Public API Audit**](public-api-audit.md) | Source API inventory, package boundaries, and deliberate mutability decisions behind the API-stability tiers (#400). |
 | 🛡️ [**API Stability & Beta-Exit Criteria**](versioning-and-stability.md) | Public API contracts, semantic versioning policy, and concrete checkable beta-exit criteria for 1.0. |
 
 ---
@@ -89,6 +92,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
 | 📊 [**İyileştirme Raporları & Panel**](healing-reports.md) | Kabul edilen, reddedilen ve başarısız locator çözüm denemeleri için JSON ve HTML telemetrisi. |
+| 📈 [**DORA ve Güvenilirlik Metrikleri**](dora-metrics.md) | Haftalık DORA metrikleri (dağıtım sıklığı, değişiklik teslim süresi, değişiklik başarısızlık oranı, MTTR) ve motor yapılandırmasından doğrudan okunan self-healing güvenilirlik eşikleri. |
 | 🧭 [**Intent Tabanlı Otomasyon**](intent-driven-automation.md) | M6: intent planlama (deterministic + LLM destekli), DOM/masaüstü eşleştirme, locator kaydı, Playwright/FlaUI test üretimi, intent raporu, pipeline orkestrasyonu ve canlı sayfa keşfi. |
 | 🔬 [**Benchmark ve Kalibrasyon**](benchmark-calibration.md) | Gerçek uygulamalarda çoklu sinyal ablasyon testi, skor çakışması bulguları ve eşik denge analizi. |
 | 📝 [**Bir LLM'e Kırık Locator'ı Düzelttirebilir misiniz?**](blog/llm-false-heal-study.md) | Çok-sağlayıcılı konsensüs çalışmasının bağımsız yazısı: silinmiş elemanlarda 34/34 oybirliği yanlış iyileştirmeydi — nedeni ve tasarıma yansıması. |
@@ -98,6 +102,8 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🔐 [**LLM Güvenlik Modeli**](llm-security-model.md) | Güven sınırları, açıklanan alanlar, prompt injection ve PII sınırları, sağlayıcı retention ve yerel rapor güvenliği. |
 | 📄 [**JSON Şema Rehberi**](json-schema.md) | `.locator.json` kayıt dosyasının alan alan detaylı açıklaması. |
 | 📦 [**NuGet Paketleme**](nuget-packaging.md) | Preview `.nupkg` artifact üretimi ve yayın kontrol listesi. |
+| 🧪 [**Dış Doğrulama**](external-validation.md) | 1.0 sürümünü engelleyen #401 kapısı için pilot kanıt protokolü: bağımsız FlaUI entegrasyonları, doğal versiyon-drift veri setleri ve neyin kanıt sayıldığı. |
+| 🔍 [**Genel API Denetimi**](public-api-audit.md) | Kaynak API envanteri, paket sınırları ve API-kararlılık kademelerinin arkasındaki bilinçli mutability kararları (#400). |
 | 🛡️ [**API Kararlılığı & Beta Çıkış Kriterleri**](versioning-and-stability.md) | Genel API sözleşmeleri, semantik sürümleme politikası ve 1.0 için somut kontrol listesi. |
 
 ---
