@@ -16,6 +16,14 @@ namespace AutomationSandbox.WebDiscovery
             return Map(root, parentControlType: "", parentAutomationId: "", siblingIndex: 0, siblingCount: 1);
         }
 
+        // Framework-generated DOM markup (component-per-wrapper-div frameworks especially)
+        // can nest hundreds of levels deep with no bound comparable to
+        // Discovery.DiscoveryOptions.MaxDepth on the desktop side (#426). This is a generous
+        // backstop - well beyond that - not an operational parameter callers are expected to
+        // hit; it exists only to turn a pathological DOM into a truncated (still-mapped)
+        // result instead of a stack overflow.
+        private const int MaxMapDepth = 5000;
+
         private static UiElementInfo Map(
             WebElementInfo element,
             string parentControlType,
@@ -23,8 +31,47 @@ namespace AutomationSandbox.WebDiscovery
             int siblingIndex,
             int siblingCount)
         {
+            var root = BuildNode(element, parentControlType, parentAutomationId, siblingIndex, siblingCount);
+
+            // Iterative (an explicit stack, not recursion) so traversal depth is bounded by
+            // heap space rather than call-stack space, and MaxMapDepth below can therefore
+            // stop a pathologically deep branch instead of overflowing first (#426). Each
+            // child is mapped and attached to its parent's Children list as soon as it is
+            // built, so list order matches the source DOM regardless of stack processing
+            // order. A node at the cap is still mapped; only its deeper descendants are
+            // skipped - the same truncation shape UiTreeWalker uses for HitMaxDepth.
+            var stack = new Stack<(WebElementInfo Source, UiElementInfo Mapped, int Depth)>();
+            stack.Push((element, root, 0));
+            while (stack.Count > 0)
+            {
+                var (sourceElement, mappedNode, depth) = stack.Pop();
+                if (depth >= MaxMapDepth)
+                {
+                    continue;
+                }
+
+                var childCount = sourceElement.Children.Count;
+                for (var i = 0; i < childCount; i++)
+                {
+                    var childSource = sourceElement.Children[i];
+                    var childNode = BuildNode(childSource, mappedNode.ControlType, mappedNode.AutomationId, i, childCount);
+                    mappedNode.Children.Add(childNode);
+                    stack.Push((childSource, childNode, depth + 1));
+                }
+            }
+
+            return root;
+        }
+
+        private static UiElementInfo BuildNode(
+            WebElementInfo element,
+            string parentControlType,
+            string parentAutomationId,
+            int siblingIndex,
+            int siblingCount)
+        {
             var automationId = FirstNonEmpty(element.TestId, element.Id, element.NameAttribute);
-            var node = new UiElementInfo
+            return new UiElementInfo
             {
                 ControlType = ToControlType(element),
                 Name = FirstNonEmpty(element.AccessibleName, element.Text),
@@ -38,18 +85,6 @@ namespace AutomationSandbox.WebDiscovery
                 SiblingIndex = siblingIndex,
                 SiblingCount = siblingCount,
             };
-
-            for (var i = 0; i < element.Children.Count; i++)
-            {
-                node.Children.Add(Map(
-                    element.Children[i],
-                    node.ControlType,
-                    node.AutomationId,
-                    i,
-                    element.Children.Count));
-            }
-
-            return node;
         }
 
         private static string ToControlType(WebElementInfo element)

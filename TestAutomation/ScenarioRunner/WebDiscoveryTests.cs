@@ -440,5 +440,38 @@ namespace ScenarioRunner
             Assert.DoesNotContain(suggestions, s => s.Strategy == "Role");
             Assert.Contains(suggestions, s => s.Strategy == "TestId");
         }
+
+        [Fact]
+        public void WebElementMapper_ArtificiallyDeepLinearDom_TruncatesInsteadOfStackOverflowing()
+        {
+            // #426: WebElementMapper.Map used to recurse with no depth guard. Framework-
+            // generated markup (a wrapper div per component) can legitimately nest hundreds
+            // of levels, but nothing bounds how deep a captured DOM snapshot can be before it
+            // reaches this mapper, so a 10,000+-level single-branch chain (the worst case for
+            // stack depth) has to come back truncated rather than crash the process.
+            const int chainDepth = 12_000;
+            var root = new WebElementInfo { TagName = "div", Id = "node-0" };
+            var current = root;
+            for (var i = 1; i < chainDepth; i++)
+            {
+                var child = new WebElementInfo { TagName = "div", Id = $"node-{i}" };
+                current.Children.Add(child);
+                current = child;
+            }
+
+            // Must not throw a StackOverflowException (which the CLR can't catch anyway -
+            // an uncaught one kills the test process outright rather than failing the test).
+            var tree = WebElementMapper.ToUiElementTree(root);
+
+            var mappedDepth = 0;
+            var node = tree;
+            while (node.Children.Count > 0)
+            {
+                node = node.Children[0];
+                mappedDepth++;
+            }
+
+            Assert.True(mappedDepth < chainDepth - 1, $"Expected the mapped chain to be truncated well below the full {chainDepth}-node input, but it was {mappedDepth + 1} nodes deep.");
+        }
     }
 }
