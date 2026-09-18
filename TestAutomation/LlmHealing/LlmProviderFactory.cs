@@ -239,7 +239,10 @@ namespace AutomationSandbox.LlmHealing
                 {
                     if (string.IsNullOrWhiteSpace(config.Name))
                     {
-                        throw new ArgumentException("Custom LLM provider configuration must specify a non-empty Name.");
+                        // A single malformed custom-provider entry must not take down the built-in
+                        // providers already constructed above - skip just this entry. See #417.
+                        log("[LlmProviderFactory] Skipped a custom provider entry because it did not specify a non-empty Name.");
+                        continue;
                     }
 
                     var providerName = config.Name.Trim();
@@ -272,15 +275,24 @@ namespace AutomationSandbox.LlmHealing
                             ? TimeSpan.FromSeconds(config.TotalTimeoutSeconds.Value)
                             : null;
 
-                        providers.Add(new OpenAiHealingProvider(
-                            httpClient: httpClient,
-                            apiKey: apiKey,
-                            model: config.Model!.Trim(),
-                            endpoint: config.Endpoint!.Trim(),
-                            name: providerName,
-                            timeout: timeout,
-                            totalTimeout: totalTimeout,
-                            maxRetries: config.MaxRetries));
+                        try
+                        {
+                            providers.Add(new OpenAiHealingProvider(
+                                httpClient: httpClient,
+                                apiKey: apiKey,
+                                model: config.Model!.Trim(),
+                                endpoint: config.Endpoint!.Trim(),
+                                name: providerName,
+                                timeout: timeout,
+                                totalTimeout: totalTimeout,
+                                maxRetries: config.MaxRetries));
+                        }
+                        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException)
+                        {
+                            // Same rationale as the empty-Name case above: an invalid field on one
+                            // optional custom provider must not discard the built-in providers.
+                            log($"[LlmProviderFactory] Skipped custom provider '{providerName}' because its configuration is invalid: {ex.Message}");
+                        }
                     }
                 }
             }
