@@ -161,8 +161,13 @@ read the goal directly instead of pattern-matching keywords, so goals phrased ou
 that fixed vocabulary still produce a complete plan. It never trusts the model's output
 blindly: a structurally invalid response (unparseable `ActionType`, empty steps array),
 a missing `ANTHROPIC_API_KEY`, or an HTTP failure all degrade to
-`DeterministicIntentPlanner`'s own result rather than surfacing malformed steps. It is
-a drop-in `IIntentPlanner`, so it can be passed directly to `IntentAutomationPipeline`:
+`DeterministicIntentPlanner`'s own result rather than surfacing malformed steps. A plan
+response cut off mid-JSON by the configured `max_tokens` ceiling is a partial exception to
+that rule (#427): `LlmIntentPlanningPrompt.ParseScenario` recovers whichever steps in the
+`"steps"` array are structurally complete - mirroring `LlmHealingPrompt`'s reasoning-model
+truncation repair (#378) - and only falls back to `DeterministicIntentPlanner` when no step
+in the response is complete enough to recover. It is a drop-in `IIntentPlanner`, so it can
+be passed directly to `IntentAutomationPipeline`:
 
 ```csharp
 var pipeline = new IntentAutomationPipeline(planner: new LlmIntentPlanner());
@@ -396,7 +401,10 @@ repository'ye kaydedebilir, Playwright C#/TypeScript test iskeleti üretebilir v
 intent flow raporunu JSON/HTML olarak dışa verebilir (hem web hem masaüstü hattı raporu üretir). `LlmIntentPlanner` ile hedef
 metni sabit bir anahtar kelime kümesine bağlı kalmadan, doğal dilden doğrudan
 planlanabilir; API anahtarı yoksa veya model çıktısı bozuksa sistem otomatik olarak
-`DeterministicIntentPlanner`'a düşer. `IntentDesktopAutomationPipeline` ile aynı akış
+`DeterministicIntentPlanner`'a düşer. `max_tokens` sınırı yüzünden yanıt JSON'un ortasında
+kesilirse (#427), `LlmIntentPlanningPrompt.ParseScenario` yapısal olarak tamamlanmış adımları
+kurtarır ve yalnızca hiçbir adım tamamlanmamışsa `DeterministicIntentPlanner`'a düşer.
+`IntentDesktopAutomationPipeline` ile aynı akış
 Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent adımları canlı bir
 `UiElementInfo` ağacıyla eşleştirilir, xUnit + FlaUI test iskeleti ve web hattıyla aynı yapıda bir `IntentFlowReportDocument` üretilir.
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
