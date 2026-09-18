@@ -17,6 +17,9 @@ permissions:
 jobs:
   pack:
     runs-on: windows-latest
+    # Observed 1m55s-2m25s across recent runs: Release build plus 7 dotnet pack invocations
+    # and package validation.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout

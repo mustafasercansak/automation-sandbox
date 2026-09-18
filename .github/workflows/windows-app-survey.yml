@@ -21,6 +21,9 @@ jobs:
         os:
           - windows-2022
           - windows-2025
+    # Observed 3m2s-4m8s across recent runs: full-solution build plus a live FlaUI survey
+    # across multiple real desktop applications.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -59,6 +62,8 @@ jobs:
     needs: survey
     runs-on: ubuntu-latest
     if: always()
+    # Observed ~43s (2026-08-15 run): download two artifacts plus a comparison test run.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout

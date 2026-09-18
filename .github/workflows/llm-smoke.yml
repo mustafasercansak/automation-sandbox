@@ -22,6 +22,10 @@ jobs:
   smoke-test:
     name: GitHub Models Live Smoke (Linux net8.0)
     runs-on: ubuntu-latest
+    # Observed 44-52s across recent runs, but this makes a real live LLM call subject to
+    # HttpLlmHealingProvider retry/backoff (per-attempt 15s, overall op timeout 35s) plus
+    # build time - generous headroom for a slow or retried live call.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout

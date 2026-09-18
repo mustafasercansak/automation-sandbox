@@ -14,6 +14,9 @@ permissions:
 jobs:
   calculate-dora:
     runs-on: ubuntu-latest
+    # Observed 12-31s across recent runs; the script makes repeated GitHub API calls,
+    # which can be slower or rate-limited.
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

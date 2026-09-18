@@ -31,6 +31,10 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    # Observed 2m0s-6m21s across recent runs, but a full publish_to_nuget=true run adds SBOM
+    # generation for 7 packages, a nuget.org push, and verify-published.ps1's indexing-lag
+    # retry loop - generous headroom for that slower, less commonly exercised path.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
