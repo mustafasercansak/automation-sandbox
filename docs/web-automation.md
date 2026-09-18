@@ -61,6 +61,36 @@ uses the Playwright .NET SDK directly rather than a real MCP bridge (which would
 required a Node.js-based Playwright MCP server process - a first for this otherwise pure
 C#/.NET codebase).
 
+### Bounding a Capture (Depth / Element Count / Timeout)
+
+`CaptureAsync` accepts an optional `WebDiscoveryOptions` (`MaxDepth`, `MaxElements`,
+`Timeout`), mirroring `Discovery.DiscoveryOptions` on the desktop side, and defaults to
+`WebDiscoveryOptions.Default` (`MaxDepth = 25`, `MaxElements = 5000`, `Timeout = 10s`) when
+omitted - so a large SPA or data-grid page cannot produce an unbounded JSON payload over the
+Playwright protocol even when the caller passes nothing:
+
+```csharp
+var dom = await explorer.CaptureAsync(
+    "https://example.test/customers",
+    new WebDiscoveryOptions { MaxDepth = 15, MaxElements = 2000, Timeout = TimeSpan.FromSeconds(5) });
+
+if (dom.HitMaxDepth || dom.HitMaxElements || dom.TimedOut)
+{
+    Console.WriteLine($"Capture truncated (elements: {dom.CapturedCount}); results may be incomplete.");
+}
+```
+
+The bounds are enforced by the browser-side script itself, not by .NET, because a single
+`page.EvaluateAsync` call cannot be interrupted mid-flight once it starts running: the
+generated `walk()` tracks a running element count and a `Date.now()` deadline, stops
+descending once either is exceeded, and stamps `HitMaxDepth`/`HitMaxElements`/`TimedOut`/
+`CapturedCount` onto the returned root element so a cut-short capture is observable rather
+than silently missing nodes. Calling `PlaywrightDomCaptureScript.JavaScript` directly (as
+shown above and in the cross-origin iframe example below) still runs the original unbounded
+walk for callers who evaluate the script themselves; use
+`PlaywrightDomCaptureScript.BuildJavaScript(options)` to get the same bounded script that
+`CaptureAsync` uses.
+
 ### Complete Web Automation Example
 
 ```csharp
@@ -215,6 +245,36 @@ uyumludur. Bu projenin neden gerçek bir MCP köprüsü yerine (bu, saf C#/.NET 
 kez bir Node.js tabanlı Playwright MCP sunucu süreci gerektirirdi) doğrudan Playwright .NET
 SDK'sını kullandığına dair gerekçe için [Intent Tabanlı Otomasyon](intent-driven-automation.md)
 sayfasına bakın.
+
+### Taramayı Sınırlama (Derinlik / Eleman Sayısı / Zaman Aşımı)
+
+`CaptureAsync`, masaüstü tarafındaki `Discovery.DiscoveryOptions`'ı yansıtan isteğe bağlı bir
+`WebDiscoveryOptions` (`MaxDepth`, `MaxElements`, `Timeout`) parametresi kabul eder ve
+belirtilmediğinde `WebDiscoveryOptions.Default` (`MaxDepth = 25`, `MaxElements = 5000`,
+`Timeout = 10s`) kullanılır - böylece büyük bir SPA veya veri ızgarası sayfası, çağıran hiçbir
+şey vermese bile Playwright protokolü üzerinden sınırsız bir JSON yükü üretemez:
+
+```csharp
+var dom = await explorer.CaptureAsync(
+    "https://example.test/customers",
+    new WebDiscoveryOptions { MaxDepth = 15, MaxElements = 2000, Timeout = TimeSpan.FromSeconds(5) });
+
+if (dom.HitMaxDepth || dom.HitMaxElements || dom.TimedOut)
+{
+    Console.WriteLine($"Tarama kesildi (eleman sayısı: {dom.CapturedCount}); sonuçlar eksik olabilir.");
+}
+```
+
+Sınırlar .NET tarafından değil, tarayıcı tarafındaki betiğin kendisi tarafından uygulanır;
+çünkü tek bir `page.EvaluateAsync` çağrısı çalışmaya başladıktan sonra yarıda kesilemez:
+üretilen `walk()` fonksiyonu çalışan bir eleman sayacı ve bir `Date.now()` son tarihi takip
+eder, ikisinden biri aşıldığında derinleşmeyi durdurur ve dönen kök elemana
+`HitMaxDepth`/`HitMaxElements`/`TimedOut`/`CapturedCount` değerlerini damgalar; böylece
+kesilen bir tarama, düğümleri sessizce kaybetmek yerine gözlemlenebilir olur.
+`PlaywrightDomCaptureScript.JavaScript` betiğini doğrudan çağırmak (yukarıda ve aşağıdaki
+cross-origin iframe örneğinde olduğu gibi) hâlâ, betiği kendisi değerlendiren çağıranlar için
+orijinal sınırsız taramayı çalıştırır; `CaptureAsync`'in kullandığı aynı sınırlı betiği almak
+için `PlaywrightDomCaptureScript.BuildJavaScript(options)` kullanın.
 
 ### Tam C# Web Otomasyon Örneği
 
