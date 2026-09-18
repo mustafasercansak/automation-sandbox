@@ -39,7 +39,17 @@ Whenever you perform a test step, **Automation Sandbox** manages elements using 
 
 ### Step 3: Complete Working Code Example
 
-Create a new console or test project and copy this complete code:
+Create a new console project and add the package the example below uses (`SelfHealing`
+pulls `LlmHealing` and `UiModel` in transitively, so a single `dotnet add package` is
+enough):
+
+```powershell
+dotnet new console -o AutomationSandboxQuickstart
+cd AutomationSandboxQuickstart
+dotnet add package AutomationSandbox.SelfHealing --prerelease
+```
+
+Then replace the generated `Program.cs` with this complete code:
 
 ```csharp
 using System;
@@ -148,7 +158,17 @@ Bir test adımı çalıştırdığınızda **Automation Sandbox** 3 adımda işl
 
 ### Adım 3: Tam ve Çalışan Kopyala-Yapıştır Kod Örneği
 
-Yeni bir konsol projesi oluşturun ve aşağıdaki tam kodu kopyalayıp çalıştırın:
+Yeni bir konsol projesi oluşturun ve aşağıdaki örnekte kullanılan paketi ekleyin
+(`SelfHealing`, `LlmHealing` ve `UiModel`'i bağımlılık olarak otomatik getirdiği için tek
+bir `dotnet add package` yeterlidir):
+
+```powershell
+dotnet new console -o AutomationSandboxQuickstart
+cd AutomationSandboxQuickstart
+dotnet add package AutomationSandbox.SelfHealing --prerelease
+```
+
+Ardından oluşturulan `Program.cs` dosyasının içeriğini aşağıdaki tam kodla değiştirin:
 
 ```csharp
 using System;
