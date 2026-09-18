@@ -50,5 +50,20 @@ namespace AutomationSandbox.WebDiscovery
         public BoundingRectangle BoundingRectangle { get; set; }
         /// <summary>Editable direct children in capture order; populate before resolving against the tree.</summary>
         public List<WebElementInfo> Children { get; set; } = new();
+
+        // These four fields are capture-wide telemetry, not per-element data: PlaywrightDomCaptureScript's
+        // bounded walk (see BuildJavaScript) stamps them once, onto the root element it returns, the same
+        // way AutomationSandbox.Discovery.DiscoveryResult carries HitMaxDepth/HitMaxElements/TimedOut
+        // alongside (rather than inside) its captured UiElementInfo tree. There is no separate result
+        // wrapper on the web capture path, so they live here instead; every descendant node keeps the
+        // default false/0 values.
+        /// <summary>Whether the bounded capture reached <see cref="WebDiscoveryOptions.MaxDepth" /> before completing. Populated on the capture root only.</summary>
+        public bool HitMaxDepth { get; set; }
+        /// <summary>Whether the bounded capture reached <see cref="WebDiscoveryOptions.MaxElements" /> before completing, so some nodes were truncated rather than captured. Populated on the capture root only.</summary>
+        public bool HitMaxElements { get; set; }
+        /// <summary>Whether the bounded capture stopped because its <see cref="WebDiscoveryOptions.Timeout" /> budget expired. Populated on the capture root only.</summary>
+        public bool TimedOut { get; set; }
+        /// <summary>Total number of elements included in the captured tree. Populated on the capture root only.</summary>
+        public int CapturedCount { get; set; }
     }
 }
