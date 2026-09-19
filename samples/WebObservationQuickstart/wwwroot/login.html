@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<body>
+    <h1>Sign in</h1>
+    <input data-testid="username" placeholder="Username" />
+    <button data-testid="login-button">Log in</button>
+    <script>
+        document.querySelector('[data-testid=login-button]').addEventListener('click', () => {
+            const username = document.querySelector('[data-testid=username]').value;
+            localStorage.setItem('authToken', 'token-for-' + username);
+            window.location.href = 'dashboard.html';
+        });
+    </script>
+</body>
+</html>
