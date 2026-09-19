@@ -127,6 +127,83 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             });
         }
 
+        /// <summary>Selects the option with the given value in the &lt;select&gt; matched by <paramref name="cssSelector" />.</summary>
+        public Task SelectAsync(string cssSelector, string value)
+        {
+            return _page.Locator(cssSelector).SelectOptionAsync(value);
+        }
+
+        /// <summary>Checks the checkbox or radio button matched by <paramref name="cssSelector" />.</summary>
+        public Task CheckAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).CheckAsync();
+        }
+
+        /// <summary>Unchecks the checkbox matched by <paramref name="cssSelector" />.</summary>
+        public Task UncheckAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).UncheckAsync();
+        }
+
+        /// <summary>Hovers the pointer over the element matched by <paramref name="cssSelector" />.</summary>
+        public Task HoverAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).HoverAsync();
+        }
+
+        /// <summary>Assigns <paramref name="filePath" /> to the file input matched by <paramref name="cssSelector" />.</summary>
+        public Task UploadFileAsync(string cssSelector, string filePath)
+        {
+            return _page.Locator(cssSelector).SetInputFilesAsync(filePath);
+        }
+
+        /// <summary>Sends <paramref name="key" /> (Playwright key syntax, e.g. <c>"Enter"</c>) to the element matched
+        /// by <paramref name="cssSelector" />.</summary>
+        public Task PressKeyAsync(string cssSelector, string key)
+        {
+            return _page.Locator(cssSelector).PressAsync(key);
+        }
+
+        /// <summary>Waits for the element matched by <paramref name="cssSelector" /> to become visible, up to
+        /// <paramref name="timeout" /> (or the session's navigation timeout when omitted).</summary>
+        public Task WaitForVisibleAsync(string cssSelector, TimeSpan? timeout = null)
+        {
+            return _page.Locator(cssSelector).WaitForAsync(new LocatorWaitForOptions
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = (float?)(timeout ?? TimeSpan.FromMilliseconds(_options.NavigationTimeoutMilliseconds)).TotalMilliseconds,
+            });
+        }
+
+        /// <summary>Whether the element matched by <paramref name="cssSelector" /> is currently visible.</summary>
+        public Task<bool> IsVisibleAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).IsVisibleAsync();
+        }
+
+        /// <summary>Whether the checkbox or radio button matched by <paramref name="cssSelector" /> is currently
+        /// checked - the observable half of <see cref="CheckAsync" />/<see cref="UncheckAsync" />.</summary>
+        public Task<bool> IsCheckedAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).IsCheckedAsync();
+        }
+
+        /// <summary>The rendered text of the element matched by <paramref name="cssSelector" />, the same way
+        /// <see cref="WebElementInfo.Text" /> is captured (<c>innerText</c>).</summary>
+        public Task<string> GetTextAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).InnerTextAsync();
+        }
+
+        /// <summary>The current value of the input, textarea, or select matched by <paramref name="cssSelector" />.</summary>
+        public Task<string> GetValueAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).InputValueAsync();
+        }
+
+        /// <summary>The session page's current URL.</summary>
+        public string CurrentUrl => _page.Url;
+
         /// <summary>Every console message observed on the page since the session started.</summary>
         public IReadOnlyList<WebConsoleMessage> ConsoleMessages
         {
