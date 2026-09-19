@@ -1296,13 +1296,25 @@
       "public IReadOnlyList<WebNetworkResponse> NetworkResponses { get; }",
       "public IReadOnlyList<WebRequestFailure> RequestFailures { get; }",
       "public IReadOnlyList<string> PageErrors { get; }",
+      "public Task CheckAsync(string cssSelector)",
       "public Task ClickAsync(string cssSelector)",
       "public Task FillAsync(string cssSelector, string value)",
+      "public Task HoverAsync(string cssSelector)",
       "public Task NavigateAsync(string url)",
+      "public Task PressKeyAsync(string cssSelector, string key)",
       "public Task SaveStorageStateAsync(string path)",
+      "public Task SelectAsync(string cssSelector, string value)",
+      "public Task UncheckAsync(string cssSelector)",
+      "public Task UploadFileAsync(string cssSelector, string filePath)",
+      "public Task WaitForVisibleAsync(string cssSelector, TimeSpan? timeout = null)",
       "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",
+      "public Task<bool> IsCheckedAsync(string cssSelector)",
+      "public Task<bool> IsVisibleAsync(string cssSelector)",
+      "public Task<string> GetTextAsync(string cssSelector)",
+      "public Task<string> GetValueAsync(string cssSelector)",
       "public async ValueTask DisposeAsync()",
-      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)"
+      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)",
+      "public string CurrentUrl { get; }"
     ]
   },
   {

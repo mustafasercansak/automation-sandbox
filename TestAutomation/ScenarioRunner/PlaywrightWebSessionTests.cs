@@ -144,6 +144,182 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task SelectAsync_SelectsTheGivenOption()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_Select", """
+                <select data-testid="country">
+                    <option value="tr">Turkey</option>
+                    <option value="us">USA</option>
+                </select>
+                """);
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                await session.SelectAsync("[data-testid='country']", "us");
+
+                Assert.Equal("us", await session.GetValueAsync("[data-testid='country']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task CheckAsync_And_UncheckAsync_ToggleTheCheckedState()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_Checkbox", """
+                <input type="checkbox" data-testid="agree" />
+                """);
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                Assert.False(await session.IsCheckedAsync("[data-testid='agree']"));
+
+                await session.CheckAsync("[data-testid='agree']");
+                Assert.True(await session.IsCheckedAsync("[data-testid='agree']"));
+
+                await session.UncheckAsync("[data-testid='agree']");
+                Assert.False(await session.IsCheckedAsync("[data-testid='agree']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task HoverAsync_TriggersARealHoverStateChange()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_Hover", """
+                <div data-testid="hover-target">idle</div>
+                <script>
+                    document.querySelector('[data-testid=hover-target]').addEventListener('mouseenter', () => {
+                        document.querySelector('[data-testid=hover-target]').textContent = 'hovered';
+                    });
+                </script>
+                """);
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                await session.HoverAsync("[data-testid='hover-target']");
+
+                Assert.Equal("hovered", await session.GetTextAsync("[data-testid='hover-target']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task UploadFileAsync_SetsTheFileInputsSelectedFile()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_Upload", """
+                <input type="file" data-testid="resume" />
+                """);
+            var uploadPath = Path.Combine(Path.GetTempPath(), "PlaywrightWebSessionTests_resume_" + Guid.NewGuid().ToString("N") + ".txt");
+            File.WriteAllText(uploadPath, "resume contents");
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                await session.UploadFileAsync("[data-testid='resume']", uploadPath);
+
+                var selectedValue = await session.GetValueAsync("[data-testid='resume']");
+                Assert.EndsWith(Path.GetFileName(uploadPath), selectedValue, StringComparison.Ordinal);
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+                DeleteIfExists(uploadPath);
+            }
+        }
+
+        [Fact]
+        public async Task PressKeyAsync_SendsAKeyToTheTargetElement()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_PressKey", """
+                <input data-testid="key-input" />
+                <div data-testid="key-result"></div>
+                <script>
+                    document.querySelector('[data-testid=key-input]').addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            document.querySelector('[data-testid=key-result]').textContent = 'enter-pressed';
+                        }
+                    });
+                </script>
+                """);
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                await session.PressKeyAsync("[data-testid='key-input']", "Enter");
+
+                Assert.Equal("enter-pressed", await session.GetTextAsync("[data-testid='key-result']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task WaitForVisibleAsync_WaitsForAnElementThatAppearsAfterADelay()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_DelayedVisible", """
+                <div data-testid="delayed" style="display:none">appeared</div>
+                <script>
+                    setTimeout(() => {
+                        document.querySelector('[data-testid=delayed]').style.display = 'block';
+                    }, 200);
+                </script>
+                """);
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(htmlPath).AbsoluteUri);
+
+                Assert.False(await session.IsVisibleAsync("[data-testid='delayed']"));
+
+                await session.WaitForVisibleAsync("[data-testid='delayed']", TimeSpan.FromSeconds(5));
+
+                Assert.True(await session.IsVisibleAsync("[data-testid='delayed']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task CurrentUrl_ReflectsTheSessionsCurrentPage()
+        {
+            var htmlPath = WriteTempHtml("PlaywrightWebSessionTests_CurrentUrl", "<p>hi</p>");
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var url = new Uri(htmlPath).AbsoluteUri;
+
+                await session.NavigateAsync(url);
+
+                Assert.Equal(url, session.CurrentUrl);
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
         public async Task SaveStorageStateAsync_PersistsAcrossSessions_NewSessionStartsAlreadyAuthenticated()
         {
             const string loginFixtureHtml = """
