@@ -54,10 +54,11 @@ The following NuGet packages and their core types represent the committed public
 - **`AutomationSandbox.WebDiscovery`** (namespace `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
 - **`AutomationSandbox.Discovery`** (namespace `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
 - **`AutomationSandbox.IntentAutomation`** (namespace `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`, `PlaywrightWebSession`.
+- **`AutomationSandbox.ContentAnalysis`** (namespace `AutomationSandbox.ContentAnalysis`): `ContentAnalyzer`, `ContentIssue`, `IContentAnalysisProvider`, `ClaudeContentAnalysisProvider`.
 
 #### Tier 2: Extensibility Points
-Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
+Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`, `IContentAnalysisProvider`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
 
 #### Tier 3: Internal & Experimental
 Types in `ScenarioRunner` (such as `JointLocatorAssignmentEvaluator` and `LocatorAblationHarness`) are research or benchmark tools and do not constitute a public NuGet API contract.
@@ -147,10 +148,11 @@ Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmey
 - **`AutomationSandbox.WebDiscovery`** (ad alanı `AutomationSandbox.WebDiscovery`): `WebElementInfo`, `WebElementMapper`, `PlaywrightDomCaptureScript`, `PlaywrightLocatorEmitter`.
 - **`AutomationSandbox.Discovery`** (ad alanı `AutomationSandbox.Discovery`): `UiTreeWalker`, `ApplicationConnector`, `DiscoveryOptions`, `DiscoveryResult`.
 - **`AutomationSandbox.IntentAutomation`** (ad alanı `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
-- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`.
+- **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`, `PlaywrightWebSession`.
+- **`AutomationSandbox.ContentAnalysis`** (ad alanı `AutomationSandbox.ContentAnalysis`): `ContentAnalyzer`, `ContentIssue`, `IContentAnalysisProvider`, `ClaudeContentAnalysisProvider`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
-Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.
+Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`, `IContentAnalysisProvider`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.
 
 #### 3. Kademe: Dahili ve Deneysel Araçlar
 `ScenarioRunner` içindeki araştırma amaçlı sınıflar (`JointLocatorAssignmentEvaluator`, `LocatorAblationHarness` vb.) genel NuGet API sözleşmesine dahil değildir.

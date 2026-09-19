@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
 using AutomationSandbox.WebDiscovery;
@@ -17,17 +16,6 @@ namespace AutomationSandbox.PlaywrightLiveExploration
     /// <summary>Owns a Playwright browser session for navigation and DOM capture; dispose asynchronously to release browser resources.</summary>
     public sealed class PlaywrightLiveExplorer : IAsyncDisposable
     {
-        // Playwright's own EvaluateAsync<T> deserializer reflects over settable properties and
-        // cannot populate AutomationSandbox.UiModel.BoundingRectangle (a readonly struct with a constructor, no
-        // setters) - observed to throw "Property set method not found." live against a real
-        // Chromium page. Round-tripping through a JSON string and System.Text.Json (which
-        // supports constructor-matched deserialization) sidesteps that, and matches how
-        // PlaywrightApplicationConnector.ParseJson already deserializes DOM capture JSON.
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
         private readonly IPlaywright _playwright;
         private readonly IBrowser _browser;
         private readonly PlaywrightLiveExplorerOptions _options;
@@ -81,16 +69,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                     Timeout = _options.NavigationTimeoutMilliseconds,
                 }).ConfigureAwait(false);
 
-                var captureScript = PlaywrightDomCaptureScript.BuildJavaScript(discoveryOptions);
-                var stringifyScript = $"() => JSON.stringify(({captureScript})())";
-                var json = await page.EvaluateAsync<string>(stringifyScript).ConfigureAwait(false);
-                var dom = string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<WebElementInfo>(json, JsonOptions);
-                if (dom == null)
-                {
-                    throw new InvalidOperationException($"DOM capture script returned no result for '{url}'.");
-                }
-
-                return dom;
+                return await PlaywrightDomCapture.CaptureAsync(page, discoveryOptions, url).ConfigureAwait(false);
             }
             finally
             {

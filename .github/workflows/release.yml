@@ -92,6 +92,9 @@ jobs:
       - name: Pack PlaywrightLiveExploration
         run: dotnet pack TestAutomation/PlaywrightLiveExploration/PlaywrightLiveExploration.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      - name: Pack ContentAnalysis
+        run: dotnet pack TestAutomation/ContentAnalysis/ContentAnalysis.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       # SBOM (#274): one CycloneDX JSON BOM per published package, generated from the
       # Release dependency graph so consumers can audit the full transitive closure
       # independent of nuget.org metadata. CycloneDX 6.x runs on the .NET 10 runtime,
@@ -109,7 +112,8 @@ jobs:
             'Discovery',
             'WebDiscovery',
             'IntentAutomation',
-            'PlaywrightLiveExploration'
+            'PlaywrightLiveExploration',
+            'ContentAnalysis'
           )
           foreach ($name in $projects) {
             dotnet-CycloneDX "TestAutomation/$name/$name.csproj" `
