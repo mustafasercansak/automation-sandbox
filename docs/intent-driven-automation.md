@@ -36,6 +36,8 @@ Playwright C#/TypeScript test skeletons, and render a reviewable intent flow rep
 | Generate xUnit + FlaUI test skeletons from recorded desktop intent locators | Implemented (`FlaUiCSharpTestGenerator`) |
 | Run desktop planning, matching, recording, and generation through one pipeline API | Implemented (`IntentDesktopAutomationPipeline`) |
 | Explore a live page via the Playwright .NET SDK (not MCP - see below) | Implemented (`PlaywrightLiveExplorer`) |
+| Reuse one browser page across many navigations/actions, with observation (console/network/request-failure/page-error) and storage-state persistence | Implemented (`PlaywrightWebSession`) |
+| Actually execute a planned scenario against a live page, step by step, instead of only generating test source | Implemented (`IntentWebExecutor`, package `AutomationSandbox.IntentExecution`) |
 
 ## M6 Target Architecture
 
@@ -229,6 +231,44 @@ The generator can output:
 - healing report JSON/HTML
 - Playwright TypeScript snippets for npm users
 
+### 6. Live Execution
+
+Everything above ends in generated test *source* - `IntentAutomationPipeline.Run` matches
+one static `WebElementInfo` snapshot and hands back code to run later. `IntentWebExecutor`
+(`AutomationSandbox.IntentExecution`) closes that gap: it plans a goal and then actually
+performs each step against a live `PlaywrightWebSession`, re-capturing the DOM and
+re-matching before every step (through the same `IntentExplorationBridge` used everywhere
+else - no separate matching logic), so it reflects whatever the previous step changed on
+the page.
+
+```csharp
+var session = await PlaywrightWebSession.StartAsync();
+var executor = new IntentWebExecutor(); // defaults to DeterministicIntentPlanner
+
+var request = new IntentPlanningRequest
+{
+    Goal = "Create a customer record with valid email",
+    TargetUrl = "https://example.test/customers",
+    TestData = new Dictionary<string, string> { ["email"] = "jane.doe@example.com" },
+};
+
+IntentWebExecutionResult result = await executor.RunAsync(request, session);
+
+foreach (var step in result.StepResults)
+{
+    Console.WriteLine($"{step.Step.ActionType}: {(step.Success ? "ok" : "FAILED")} - {step.Diagnostic}");
+}
+```
+
+Execution stops at the first failed or unmatched step - a broken early step usually makes
+the rest of the scenario meaningless. Two `Assert` cases need no element match at all:
+`AssertionKind.UrlEquals`/`UrlContains` read `PlaywrightWebSession.CurrentUrl` directly. One
+case is a genuine, permanent limitation rather than something left to implement:
+`AssertionKind.NotVisible` (and, for the same reason, a `Wait` step whose target starts
+`display:none`) can never be matched, because `IntentExplorationBridge` excludes hidden
+elements from its candidate pool before scoring even runs - there is no candidate to
+confirm as absent, or to discover before it becomes visible.
+
 ## Pipeline Usage
 
 ```csharp
@@ -385,6 +425,7 @@ added `BestCandidateSemanticScore` and `RunnerUpScore`.
 | M6.9 | Desktop intent automation: `IntentDesktopExplorationBridge`, `IntentDesktopLocatorRepositoryRecorder`, `FlaUiCSharpTestGenerator`, `IntentDesktopAutomationPipeline`. Implemented. |
 | M6.10 | Live page exploration via the Playwright .NET SDK (`PlaywrightLiveExplorer`), superseding the originally planned Node.js-based MCP bridge. Implemented. |
 | M6.11 | Optional npm adapter for direct Playwright/TypeScript users. |
+| M6.12 | Long-lived `PlaywrightWebSession` (navigate/capture reuse, console/network/request-failure/page-error observation, storage-state persistence) and `IntentWebExecutor` (`AutomationSandbox.IntentExecution`), which plans a goal and actually executes it against a live session instead of only generating test source. Implemented. |
 
 ---
 
@@ -395,7 +436,7 @@ metadata'dır. M6 ile hedef bunu bir üst seviyeye taşımaktır: kullanıcı i�
 yazar, sistem sayfayı keşfeder, aday elementleri bulur, locator deposuna kaydeder ve
 çalıştırılabilir test adımları üretir.
 
-M6.1-M6.10 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
+M6.1-M6.12 tamamlandı. Sistem artık tek pipeline çağrısıyla intent adımlarını
 planlayabilir, DOM adaylarıyla eşleştirebilir, review gerekmeyen locator'ları
 repository'ye kaydedebilir, Playwright C#/TypeScript test iskeleti üretebilir ve
 intent flow raporunu JSON/HTML olarak dışa verebilir (hem web hem masaüstü hattı raporu üretir). `LlmIntentPlanner` ile hedef
@@ -409,7 +450,18 @@ Windows masaüstü uygulamaları (WinForms/WPF) için de çalışır: intent ad�
 `UiElementInfo` ağacıyla eşleştirilir, xUnit + FlaUI test iskeleti ve web hattıyla aynı yapıda bir `IntentFlowReportDocument` üretilir.
 `PlaywrightLiveExplorer` ile canlı sayfa keşfi de tamamlandı - bu, Node.js tabanlı bir
 MCP sunucusu yerine doğrudan Playwright .NET SDK'sını kullanır, projeyi saf C#/.NET
-olarak tutar.
+olarak tutar. Buraya kadarki her şey **üretilen test kaynağıyla** biter -
+`IntentAutomationPipeline.Run` tek bir statik `WebElementInfo` anlık görüntüsünü eşleştirir
+ve sonradan çalıştırılacak kodu döner. `PlaywrightWebSession` (tek sayfanın birden fazla
+gezinme/aksiyon boyunca yeniden kullanılması, konsol/ağ/istek hatası/sayfa hatası gözlemi,
+storage-state kalıcılığı) ve `IntentWebExecutor` (`AutomationSandbox.IntentExecution`) bu
+boşluğu kapatır: bir hedefi planlayıp her adımı **gerçekten** canlı bir oturuma karşı
+çalıştırır - her adımdan önce DOM'u yeniden yakalayıp aynı `IntentExplorationBridge` ile
+yeniden eşleştirerek. İlk başarısız/eşleşmeyen adımda durur. `AssertionKind.NotVisible`
+(ve aynı sebeple `display:none` ile başlayan bir hedefi bekleyen `Wait` adımı) kalıcı bir
+sınırdır: `IntentExplorationBridge` skorlama başlamadan önce gizli elementleri aday
+havuzundan çıkarır, yani yokluğunu doğrulayacak veya görünür olmadan önce keşfedecek bir
+aday hiç bulunmaz.
 
 Intent adımlarında element eşleştirmesi için yetkili serbest metin alanı
 `TargetDescription`'dır. `TestIntent` adımın iş gerekçesini anlatır ve üretilen
