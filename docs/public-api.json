@@ -1183,6 +1183,75 @@
     ]
   },
   {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.PlaywrightWebSession",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightWebSession : IAsyncDisposable"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/PlaywrightWebSession.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<WebConsoleMessage> ConsoleMessages { get; }",
+      "public IReadOnlyList<WebNetworkResponse> NetworkResponses { get; }",
+      "public IReadOnlyList<WebRequestFailure> RequestFailures { get; }",
+      "public IReadOnlyList<string> PageErrors { get; }",
+      "public Task NavigateAsync(string url)",
+      "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",
+      "public async ValueTask DisposeAsync()",
+      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null)"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebConsoleMessage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebConsoleMessage"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebConsoleMessage.cs"
+    ],
+    "Members": [
+      "public WebConsoleMessage(string messageType, string text)",
+      "public string MessageType { get; }",
+      "public string Text { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebNetworkResponse",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebNetworkResponse"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebNetworkResponse.cs"
+    ],
+    "Members": [
+      "public WebNetworkResponse(string url, int status)",
+      "public int Status { get; }",
+      "public string Url { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebRequestFailure",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebRequestFailure"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebRequestFailure.cs"
+    ],
+    "Members": [
+      "public WebRequestFailure(string url, string? failureText)",
+      "public string Url { get; }",
+      "public string? FailureText { get; }"
+    ]
+  },
+  {
     "Package": "SelfHealing",
     "Type": "AutomationSandbox.SelfHealing.BatchHealingItemResult",
     "PublicMutableProperties": 0,
