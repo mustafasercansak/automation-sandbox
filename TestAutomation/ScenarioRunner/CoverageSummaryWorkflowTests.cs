@@ -130,6 +130,8 @@ namespace ScenarioRunner
                 "WebDiscovery",
                 "IntentAutomation",
                 "PlaywrightLiveExploration",
+                "ContentAnalysis",
+                "IntentExecution",
             };
             foreach (var assembly in assemblies)
             {
