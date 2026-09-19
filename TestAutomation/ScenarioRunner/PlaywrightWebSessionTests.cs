@@ -260,7 +260,8 @@ namespace ScenarioRunner
 
                     context.Response.ContentType = "text/html";
                     context.Response.ContentLength64 = bytes.Length;
-                    await context.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
+                    // net48 has no Stream.WriteAsync(byte[]) overload - only the (buffer, offset, count) one.
+                    await context.Response.OutputStream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
                     context.Response.OutputStream.Close();
                 }
             }
