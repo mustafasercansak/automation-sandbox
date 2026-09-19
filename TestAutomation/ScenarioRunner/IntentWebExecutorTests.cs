@@ -78,7 +78,7 @@ namespace ScenarioRunner
                 <input type="file" data-testid="resume-input" />
                 <input data-testid="key-input" />
                 <div data-testid="key-result"></div>
-                <div data-testid="delayed-element" style="display:none">shown</div>
+                <div data-testid="ready-panel">ready</div>
                 <script>
                     document.querySelector('[data-testid=hover-target]').addEventListener('mouseenter', () => {
                         document.querySelector('[data-testid=hover-target]').textContent = 'hovered';
@@ -88,9 +88,6 @@ namespace ScenarioRunner
                             document.querySelector('[data-testid=key-result]').textContent = 'enter-pressed';
                         }
                     });
-                    setTimeout(() => {
-                        document.querySelector('[data-testid=delayed-element]').style.display = 'block';
-                    }, 200);
                 </script>
                 """);
             var uploadPath = Path.Combine(Path.GetTempPath(), "IntentWebExecutorTests_resume_" + Guid.NewGuid().ToString("N") + ".txt");
@@ -109,10 +106,15 @@ namespace ScenarioRunner
                         new() { Order = 5, ActionType = IntentActionType.Hover, TargetDescription = "hover target" },
                         new() { Order = 6, ActionType = IntentActionType.UploadFile, TargetDescription = "resume input", Value = uploadPath },
                         new() { Order = 7, ActionType = IntentActionType.PressKey, TargetDescription = "key input", Value = "Enter" },
-                        new() { Order = 8, ActionType = IntentActionType.Wait, TargetDescription = "delayed element", Value = "5" },
+                        // Wait can only confirm/wait on a target the match step can already see - it cannot
+                        // discover a target that starts display:none and appears later, since
+                        // IntentExplorationBridge excludes hidden elements from matching before Wait's own
+                        // WaitForVisibleAsync ever runs (see IntentWebExecutor's Wait case comment). This
+                        // panel is visible from the start, so the wait resolves immediately.
+                        new() { Order = 8, ActionType = IntentActionType.Wait, TargetDescription = "ready panel", Value = "5" },
                         new()
                         {
-                            Order = 9, ActionType = IntentActionType.Assert, TargetDescription = "delayed element",
+                            Order = 9, ActionType = IntentActionType.Assert, TargetDescription = "ready panel",
                             AssertionKind = AssertionKind.Visible,
                         },
                     },

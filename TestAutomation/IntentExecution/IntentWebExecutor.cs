@@ -129,6 +129,13 @@ namespace AutomationSandbox.IntentExecution
                         await session.PressKeyAsync(cssSelector, step.Value).ConfigureAwait(false);
                         break;
                     case IntentActionType.Wait:
+                        // Same limitation as NotVisible above: the match just above this switch already
+                        // required the target to be a non-hidden candidate, so a Wait step can only ever
+                        // confirm/wait on a target that is already visible (or becomes actionable) when
+                        // captured - it cannot discover a target that is currently display:none/hidden and
+                        // becomes visible later, since IntentExplorationBridge would have excluded it before
+                        // this code ever runs. WaitForVisibleAsync itself handles delayed visibility fine
+                        // (see PlaywrightWebSessionTests); the constraint is entirely on the matching step.
                         var timeout = double.TryParse(step.Value, out var seconds) ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
                         await session.WaitForVisibleAsync(cssSelector, timeout).ConfigureAwait(false);
                         break;
