@@ -18,7 +18,7 @@ namespace ScenarioRunner
         private static readonly string[] Packages =
         {
             "UiModel", "SelfHealing", "LlmHealing", "Discovery",
-            "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration",
+            "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration", "ContentAnalysis",
         };
 
         private static string FindRepoRoot()
@@ -39,8 +39,8 @@ namespace ScenarioRunner
         }
 
         // Writes one or more fake source files into a single package folder of a throwaway
-        // fixture tree (all seven package folders are created, matching the tool's hardcoded
-        // package list, so it never hits a DirectoryNotFoundException on the six it doesn't
+        // fixture tree (all eight package folders are created, matching the tool's hardcoded
+        // package list, so it never hits a DirectoryNotFoundException on the seven it doesn't
         // populate) and returns the parsed JSON array the real tool produced.
         private static JsonElement[] RunAudit(string package, params (string FileName, string Source)[] files)
         {
@@ -59,23 +59,29 @@ namespace ScenarioRunner
                 }
 
                 var outputPath = Path.Combine(fixtureRoot, "output.json");
-                var psi = new ProcessStartInfo("dotnet")
+                // ProcessStartInfo.ArgumentList and Process.WaitForExit(TimeSpan) are both
+                // .NET-Core-only (missing on net48, which this project also targets on Windows) -
+                // hence the manually quoted Arguments string and the int-milliseconds overload.
+                var arguments = string.Join(" ", new[]
+                {
+                    "run",
+                    "--project",
+                    QuoteArgument(Path.Combine(repoRoot, "eng", "PublicApiAudit")),
+                    "--",
+                    QuoteArgument(fixtureRoot),
+                    QuoteArgument(outputPath),
+                });
+                var psi = new ProcessStartInfo("dotnet", arguments)
                 {
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                 };
-                psi.ArgumentList.Add("run");
-                psi.ArgumentList.Add("--project");
-                psi.ArgumentList.Add(Path.Combine(repoRoot, "eng", "PublicApiAudit"));
-                psi.ArgumentList.Add("--");
-                psi.ArgumentList.Add(fixtureRoot);
-                psi.ArgumentList.Add(outputPath);
 
                 using var process = Process.Start(psi)!;
                 var stdout = process.StandardOutput.ReadToEnd();
                 var stderr = process.StandardError.ReadToEnd();
-                Assert.True(process.WaitForExit(TimeSpan.FromSeconds(60)), "PublicApiAudit did not exit within 60s.");
+                Assert.True(process.WaitForExit(60_000), "PublicApiAudit did not exit within 60s.");
                 Assert.True(process.ExitCode == 0, $"PublicApiAudit exited {process.ExitCode}.\nstdout: {stdout}\nstderr: {stderr}");
 
                 return JsonSerializer.Deserialize<JsonElement[]>(File.ReadAllText(outputPath))!;
@@ -88,6 +94,11 @@ namespace ScenarioRunner
                 }
             }
         }
+
+        // Windows temp paths are unlikely but not guaranteed to be space-free (a repo checked
+        // out under "C:\Users\Jane Doe\..."), so each argument is quoted defensively; escaping
+        // embedded quotes keeps this correct even though none of the current call sites need it.
+        private static string QuoteArgument(string argument) => "\"" + argument.Replace("\"", "\\\"") + "\"";
 
         private static JsonElement? FindType(JsonElement[] entries, string fullName) =>
             entries.Cast<JsonElement?>().FirstOrDefault(e => e!.Value.GetProperty("Type").GetString() == fullName);
