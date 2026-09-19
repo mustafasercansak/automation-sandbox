@@ -56,6 +56,7 @@ The following NuGet packages and their core types represent the committed public
 - **`AutomationSandbox.IntentAutomation`** (namespace `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
 - **`AutomationSandbox.PlaywrightLiveExploration`** (namespace `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`, `PlaywrightWebSession`.
 - **`AutomationSandbox.ContentAnalysis`** (namespace `AutomationSandbox.ContentAnalysis`): `ContentAnalyzer`, `ContentIssue`, `IContentAnalysisProvider`, `ClaudeContentAnalysisProvider`.
+- **`AutomationSandbox.IntentExecution`** (namespace `AutomationSandbox.IntentExecution`): `IntentWebExecutor`, `IntentStepExecutionResult`, `IntentWebExecutionResult`.
 
 #### Tier 2: Extensibility Points
 Interfaces intended for consumer extension (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`, `IContentAnalysisProvider`) are protected against breaking changes post-1.0. Any additive default methods will provide default implementations or non-breaking base templates.
@@ -97,7 +98,7 @@ To exit beta and release `1.0.0`, all of the following conditions must be satisf
 - [ ] **Cross-Platform CI Stability:** 100% passing tests across the Windows (`net48`) and Linux (`net8.0`) CI matrix legs with zero unhandled flaky retries.
   - *Status: met* for the core `CI` matrix. The nightly consensus gate's reasoning-model regression (#378) is fixed (`OpenAiHealingProvider` folds in `message.reasoning`, the parser recovers a truncated answer object); confirmed with 5 consecutive green scheduled `Nightly Multi-Provider Consensus Evaluation` runs, 2026-09-14 through 2026-09-18.
 - [ ] **Supply Chain Security:** Zero High or Critical advisories under `dotnet list package --vulnerable` / `NuGetAudit` across all target frameworks.
-  - *Status: met.* `NuGetAudit` (`NU1903`/`NU1904`) is a CI build error; no advisories outstanding. Re-confirmed 2026-09-19 via `dotnet list package --vulnerable --include-transitive` across all eight packable projects (including the new ContentAnalysis package): zero vulnerable packages.
+  - *Status: met.* `NuGetAudit` (`NU1903`/`NU1904`) is a CI build error; no advisories outstanding. Re-confirmed 2026-09-19 via `dotnet list package --vulnerable --include-transitive` across all nine packable projects (including the new ContentAnalysis and IntentExecution packages): zero vulnerable packages.
 - [ ] **Bilingual Documentation Parity (guides):** 100% structural and conceptual parity between the English and Turkish sections of every **numbered guide** at `docs/*.md` — same `###` heading sequence and fenced-code-block count, enforced by `DocumentationSiteIntegrityTests.BilingualDocumentation_HasMatchingEnglishAndTurkishStructure`. Blog posts under `docs/blog/**` and `*-research.md` notes are English-primary with a Turkish abstract (`> **TR:**` or `## Türkçe Özet`) by deliberate convention and are exempt.
   - *Status: met.* Criterion scoped (#369); `comparison.md` and `integration-existing-suite.md` are fully bilingual and enforced by the test.
 - [ ] **Verified Consumer Quickstarts:** Automated CI execution of both standalone sample projects: `HeuristicHealingQuickstart` restoring purely from nuget.org / published artifacts, and `PlaywrightEndToEndQuickstart` built and run in CI against the current source tree.
@@ -150,6 +151,7 @@ Aşağıdaki NuGet paketleri ve temel türleri taahhüt edilen genel sözleşmey
 - **`AutomationSandbox.IntentAutomation`** (ad alanı `AutomationSandbox.IntentAutomation`): `IIntentPlanner`, `DeterministicIntentPlanner`, `LlmIntentPlanner`, `IntentActionType`, `PlaywrightCSharpTestGenerator`, `PlaywrightTypeScriptTestGenerator`, `FlaUiCSharpTestGenerator`, `IntentAutomationPipeline`, `IntentDesktopAutomationPipeline`, `IntentDesktopExplorationBridge`.
 - **`AutomationSandbox.PlaywrightLiveExploration`** (ad alanı `AutomationSandbox.PlaywrightLiveExploration`): `PlaywrightLiveExplorer`, `PlaywrightWebSession`.
 - **`AutomationSandbox.ContentAnalysis`** (ad alanı `AutomationSandbox.ContentAnalysis`): `ContentAnalyzer`, `ContentIssue`, `IContentAnalysisProvider`, `ClaudeContentAnalysisProvider`.
+- **`AutomationSandbox.IntentExecution`** (ad alanı `AutomationSandbox.IntentExecution`): `IntentWebExecutor`, `IntentStepExecutionResult`, `IntentWebExecutionResult`.
 
 #### 2. Kademe: Genişletilebilirlik Noktaları
 Tüketici eklentileri için tasarlanan arayüzler (`ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner`, `IContentAnalysisProvider`), 1.0 sonrasında kırıcı değişikliklere karşı korunur.

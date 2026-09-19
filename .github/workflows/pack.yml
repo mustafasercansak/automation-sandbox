@@ -77,6 +77,9 @@ jobs:
       - name: Pack ContentAnalysis
         run: dotnet pack TestAutomation/ContentAnalysis/ContentAnalysis.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      - name: Pack IntentExecution
+        run: dotnet pack TestAutomation/IntentExecution/IntentExecution.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Validate package contents
         shell: pwsh
         run: ./eng/Validate-NuGetPackages.ps1 -PackageDirectory ./nupkgs -Version $env:PACKAGE_VERSION

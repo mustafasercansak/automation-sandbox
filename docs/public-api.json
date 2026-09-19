@@ -995,6 +995,55 @@
     ]
   },
   {
+    "Package": "IntentExecution",
+    "Type": "AutomationSandbox.IntentExecution.IntentStepExecutionResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentStepExecutionResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentExecution/IntentStepExecutionResult.cs"
+    ],
+    "Members": [
+      "public IntentStep Step { get; }",
+      "public IntentStepExecutionResult(IntentStep step, bool success, string? cssSelector, string diagnostic)",
+      "public bool Success { get; }",
+      "public string Diagnostic { get; }",
+      "public string? CssSelector { get; }"
+    ]
+  },
+  {
+    "Package": "IntentExecution",
+    "Type": "AutomationSandbox.IntentExecution.IntentWebExecutionResult",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class IntentWebExecutionResult"
+    ],
+    "Files": [
+      "TestAutomation/IntentExecution/IntentWebExecutionResult.cs"
+    ],
+    "Members": [
+      "public IntentScenario Scenario { get; set; }",
+      "public List<IntentStepExecutionResult> StepResults { get; set; }",
+      "public bool Success { get; set; }"
+    ]
+  },
+  {
+    "Package": "IntentExecution",
+    "Type": "AutomationSandbox.IntentExecution.IntentWebExecutor",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IntentWebExecutor"
+    ],
+    "Files": [
+      "TestAutomation/IntentExecution/IntentWebExecutor.cs"
+    ],
+    "Members": [
+      "public IntentWebExecutor(IIntentPlanner? planner = null, IntentExplorationBridge? explorationBridge = null)",
+      "public async Task<IntentWebExecutionResult> RunAsync( IntentPlanningRequest request, PlaywrightWebSession session, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
     "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.ClaudeHealingProvider",
     "PublicMutableProperties": 0,

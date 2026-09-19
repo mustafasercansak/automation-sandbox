@@ -175,7 +175,7 @@ jobs:
         run: |
           ./.github/scripts/assert-coverage-assemblies.ps1 `
             -CoverageSearchPath ./TestAutomation/ScenarioRunner/TestResults `
-            -RequiredAssembly UiModel,SelfHealing,LlmHealing,Discovery,WebDiscovery,IntentAutomation,PlaywrightLiveExploration,ContentAnalysis
+            -RequiredAssembly UiModel,SelfHealing,LlmHealing,Discovery,WebDiscovery,IntentAutomation,PlaywrightLiveExploration,ContentAnalysis,IntentExecution
 
       - name: Summarize locator ablation metrics for ${{ matrix.coverage-label }}
         if: always()

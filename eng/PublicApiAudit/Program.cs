@@ -10,7 +10,7 @@ if (args.Length != 2)
 }
 
 var root = Path.GetFullPath(args[0]);
-var packages = new[] { "UiModel", "SelfHealing", "LlmHealing", "Discovery", "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration", "ContentAnalysis" };
+var packages = new[] { "UiModel", "SelfHealing", "LlmHealing", "Discovery", "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration", "ContentAnalysis", "IntentExecution" };
 var entries = new Dictionary<string, ApiType>(StringComparer.Ordinal);
 foreach (var package in packages)
 {
