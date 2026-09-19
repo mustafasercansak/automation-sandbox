@@ -311,6 +311,33 @@ jobs:
       - name: Run SelfHealingTestBase under the real NUnit runner
         run: dotnet test TestAutomation/NUnitFixtureTests/NUnitFixtureTests.csproj --configuration Debug --logger "console;verbosity=normal"
 
+  public-api-audit-sync:
+    name: Public API Audit Stays In Sync
+    runs-on: ubuntu-latest
+    # Observed ~15s for restore+run of eng/PublicApiAudit against seven small projects.
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      # docs/public-api.json is a committed artifact, not derived at build time, so
+      # nothing previously caught it drifting from source - it was only ever regenerated
+      # by hand, on the honor system. Regenerate it here and fail if the working tree
+      # changes, the same pattern verify.ps1 uses for the sample.
+      - name: Regenerate the public API inventory and fail on drift
+        run: |
+          dotnet run --project eng/PublicApiAudit -- . docs/public-api.json
+          git diff --exit-code -- docs/public-api.json || {
+            echo "::error::docs/public-api.json is out of date. Run: dotnet run --project eng/PublicApiAudit -- . docs/public-api.json" \
+              "and commit the result."
+            exit 1
+          }
+
   calibration-cli:
     name: Calibration CLI
     runs-on: ubuntu-latest
