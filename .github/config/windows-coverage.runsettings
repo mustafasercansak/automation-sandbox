@@ -9,7 +9,7 @@
   <CodeCoverage>
     <ModulePaths>
       <Include>
-        <ModulePath>.*[\\/](UiModel|SelfHealing|LlmHealing|Discovery|WebDiscovery|IntentAutomation|PlaywrightLiveExploration)\.dll$</ModulePath>
+        <ModulePath>.*[\\/](UiModel|SelfHealing|LlmHealing|Discovery|WebDiscovery|IntentAutomation|PlaywrightLiveExploration|ContentAnalysis|IntentExecution)\.dll$</ModulePath>
       </Include>
     </ModulePaths>
   </CodeCoverage>

@@ -60,7 +60,7 @@ not evaluate translation quality. Single-language documentation is not subject t
 
 - **Language:** Modern C# (`<LangVersion>latest</LangVersion>`).
 - **Target Frameworks:**
-  - **Cross-Platform Core Libraries (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`):** Multi-targeted for `netstandard2.0;net8.0` (+ `net10.0` conditionally). No Windows/FlaUI dependencies allowed here; must build and run cross-platform on Linux, macOS, and Windows.
+  - **Cross-Platform Core Libraries (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`, `ContentAnalysis`, `IntentExecution`):** Multi-targeted for `netstandard2.0;net8.0` (+ `net10.0` conditionally). No Windows/FlaUI dependencies allowed here; must build and run cross-platform on Linux, macOS, and Windows.
   - **Windows Desktop Discovery & Demos (`Discovery`, `WinFormsApp`, `WpfApp`):** .NET Framework 4.8 (`net48`) and .NET 8.0-windows (`net8.0-windows`).
   - **Test Suite (`ScenarioRunner`):** Multi-targeted for `net48` (Windows) and `net8.0` (Linux/macOS/cross-platform).
 - **Package Management:** Managed via `Directory.Build.props` for versioning and pack metadata.
