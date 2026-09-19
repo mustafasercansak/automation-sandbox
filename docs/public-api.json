@@ -1,5 +1,104 @@
 [
   {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ClaudeContentAnalysisProvider",
+    "PublicMutableProperties": 1,
+    "Declarations": [
+      "public sealed class ClaudeContentAnalysisProvider : IContentAnalysisProvider"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ClaudeContentAnalysisProvider.cs"
+    ],
+    "Members": [
+      "public ClaudeContentAnalysisProvider( HttpClient? httpClient = null, string? apiKey = null, string? model = null, TimeSpan? timeout = null, int? maxRetries = null)",
+      "public Func<string, string>? TextSanitizer { get; set; }",
+      "public async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync(IReadOnlyList<ContentPassage> passages, CancellationToken cancellationToken = default)",
+      "public bool IsAvailable { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentAnalyzer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class ContentAnalyzer"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentAnalyzer.cs"
+    ],
+    "Members": [
+      "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
+      "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentIssue",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ContentIssue"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentIssue.cs"
+    ],
+    "Members": [
+      "public ContentIssue(string cssSelector, string text, string issueType, string message, ContentIssueSource source)",
+      "public ContentIssueSource Source { get; }",
+      "public string CssSelector { get; }",
+      "public string IssueType { get; }",
+      "public string Message { get; }",
+      "public string Text { get; }"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentIssueSource",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum ContentIssueSource"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentIssueSource.cs"
+    ],
+    "Members": [
+      "Heuristic = 0",
+      "Llm = 1"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentPassage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ContentPassage"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentPassage.cs"
+    ],
+    "Members": [
+      "public ContentPassage(string cssSelector, string text)",
+      "public string CssSelector { get; }",
+      "public string Text { get; }"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.IContentAnalysisProvider",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public interface IContentAnalysisProvider"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/IContentAnalysisProvider.cs"
+    ],
+    "Members": [
+      "Task<IReadOnlyList<ContentIssue>> AnalyzeAsync(IReadOnlyList<ContentPassage> passages, CancellationToken cancellationToken = default)",
+      "bool IsAvailable { get; }"
+    ]
+  },
+  {
     "Package": "Discovery",
     "Type": "AutomationSandbox.Discovery.ApplicationConnector",
     "PublicMutableProperties": 0,
@@ -1180,6 +1279,78 @@
     "Members": [
       "public bool Headless { get; set; }",
       "public int NavigationTimeoutMilliseconds { get; set; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.PlaywrightWebSession",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class PlaywrightWebSession : IAsyncDisposable"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/PlaywrightWebSession.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<WebConsoleMessage> ConsoleMessages { get; }",
+      "public IReadOnlyList<WebNetworkResponse> NetworkResponses { get; }",
+      "public IReadOnlyList<WebRequestFailure> RequestFailures { get; }",
+      "public IReadOnlyList<string> PageErrors { get; }",
+      "public Task ClickAsync(string cssSelector)",
+      "public Task FillAsync(string cssSelector, string value)",
+      "public Task NavigateAsync(string url)",
+      "public Task SaveStorageStateAsync(string path)",
+      "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",
+      "public async ValueTask DisposeAsync()",
+      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebConsoleMessage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebConsoleMessage"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebConsoleMessage.cs"
+    ],
+    "Members": [
+      "public WebConsoleMessage(string messageType, string text)",
+      "public string MessageType { get; }",
+      "public string Text { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebNetworkResponse",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebNetworkResponse"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebNetworkResponse.cs"
+    ],
+    "Members": [
+      "public WebNetworkResponse(string url, int status)",
+      "public int Status { get; }",
+      "public string Url { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.WebRequestFailure",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class WebRequestFailure"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/WebRequestFailure.cs"
+    ],
+    "Members": [
+      "public WebRequestFailure(string url, string? failureText)",
+      "public string Url { get; }",
+      "public string? FailureText { get; }"
     ]
   },
   {

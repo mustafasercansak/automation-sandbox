@@ -59,13 +59,15 @@ that outcome for review and does not persist the proposed locator.
 
 > 🌐 **Try it Live (Web & Playwright):** Run the end-to-end browser sample (`dotnet run --project samples/PlaywrightEndToEndQuickstart`) demonstrating real Playwright live DOM capture, safe healing of a refactored button, and false-heal prevention on a deleted element across two app versions with interactive HTML reporting. See the [Playwright End-to-End Quickstart](samples/PlaywrightEndToEndQuickstart/README.md).
 
+> 🔭 **Try it Live (Sessions & Content Analysis):** Run `dotnet run --project samples/WebObservationQuickstart` to see `PlaywrightWebSession` authenticate once, persist the session via storage state with no repeated login, and `ContentAnalysis` flag a planted content defect while the observation layer catches a planted broken image as a real 404. See the [Web Observation Quickstart](samples/WebObservationQuickstart/README.md).
+
 > 🚀 **Published Package Quickstart:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
 > 🔌 **Already have a test suite?** [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers the `Observe` → `AutoHeal` rollout and minimal wiring for Playwright, NUnit, xUnit, Reqnroll, and FlaUI.
 
 > 📚 **Documentation Hub & GitHub Pages:** For complete guides, detailed architecture, JSON schemas, and API references, visit our [**Documentation Hub**](docs/index.md).
 
-> 📦 **Preview Packages:** The latest prerelease packages are published on [GitHub Releases](https://github.com/mustafasercansak/automation-sandbox/releases) and [nuget.org](https://www.nuget.org/profiles/mustafasercansak). All seven `AutomationSandbox.*` packages are available from nuget.org and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
+> 📦 **Preview Packages:** The latest prerelease packages are published on [GitHub Releases](https://github.com/mustafasercansak/automation-sandbox/releases) and [nuget.org](https://www.nuget.org/profiles/mustafasercansak). All eight `AutomationSandbox.*` packages are available from nuget.org and as GitHub Release assets. The manual [Release workflow](.github/workflows/release.yml) publishes through Trusted Publishing (OIDC, without a stored API key); the separate [Pack workflow](.github/workflows/pack.yml) remains artifact-only. See the [NuGet Packaging Guide](docs/nuget-packaging.md).
 
 > 🎤 **Project Showcase:** For a bilingual (EN/TR) architecture presentation and executive summary, see [PROJECT_SHOWCASE.md](PROJECT_SHOWCASE.md).
 
@@ -86,7 +88,7 @@ For how this scope and approach compare with Healenium and the commercial healer
 
 ## 📦 Which Package Do I Need?
 
-The seven packages follow real dependency boundaries (cross-platform core vs. `net48`/FlaUI, a Playwright dependency vs. pure DTOs). Install only the ones your scenario needs — dependencies below are pulled transitively.
+The eight packages follow real dependency boundaries (cross-platform core vs. `net48`/FlaUI, a Playwright dependency vs. pure DTOs). Install only the ones your scenario needs — dependencies below are pulled transitively.
 
 | I want to… | Install | Notes |
 | :--- | :--- | :--- |
@@ -96,6 +98,7 @@ The seven packages follow real dependency boundaries (cross-platform core vs. `n
 | Capture a **web DOM** snapshot / get Playwright locator suggestions | `AutomationSandbox.WebDiscovery` | Framework-agnostic DOM model and `PlaywrightLocatorEmitter`. |
 | …and **launch a browser** to capture a page with no hand-written Playwright test | `+ AutomationSandbox.PlaywrightLiveExploration` | Brings `Microsoft.Playwright`. |
 | Generate **Playwright / FlaUI test skeletons from an intent** | `AutomationSandbox.IntentAutomation` | Intent planning, DOM/desktop matching, locator recording, C#/TypeScript codegen. Pulls `WebDiscovery`. |
+| Check captured page text for spelling/grammar/leftover-placeholder issues | `AutomationSandbox.ContentAnalysis` | Zero-dependency heuristics plus an optional single-provider LLM review. Pulls `WebDiscovery`. |
 
 `AutomationSandbox.UiModel` is the shared DTO layer (`UiElementInfo` and its JSON serializer). Every package above depends on it transitively — **you never install `UiModel` directly.**
 
@@ -105,7 +108,7 @@ New to the library? The [Published Package Quickstart](docs/consumer-quickstart.
 
 | Tier | Surface | Compatibility |
 | :--- | :--- | :--- |
-| **1 — Stable public API** | The core types of the seven `AutomationSandbox.*` packages (`UiElementInfo`, `SelfHealingEngine`, `SimilarityWeights`, `HealResult`, `ILlmHealingProvider`, `WebElementInfo`, `IIntentPlanner`, …) | The committed contract. Breaking changes only on a minor bump, with migration notes in the release notes. |
+| **1 — Stable public API** | The core types of the eight `AutomationSandbox.*` packages (`UiElementInfo`, `SelfHealingEngine`, `SimilarityWeights`, `HealResult`, `ILlmHealingProvider`, `WebElementInfo`, `IIntentPlanner`, `IContentAnalysisProvider`, …) | The committed contract. Breaking changes only on a minor bump, with migration notes in the release notes. |
 | **2 — Extensibility points** | `ILlmHealingProvider`, `IHealingReportSink`, `IIntentPlanner` implementations | SemVer-gated; additive members ship with default implementations. |
 | **3 — Internal / experimental** | `ScenarioRunner` internals, ablation harness, offline research evaluators | Not a NuGet contract; iterates freely. |
 
@@ -140,12 +143,15 @@ steps and captured elements. This source change does not alter packages already 
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, Playwright locator emitter, and `WebDiscoveryOptions` (MaxDepth, MaxElements, Timeout) bounding DOM capture with an observable truncation signal. |
-| **NuGet Preview Packaging** | ✅ Implemented | Seven validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
+| **NuGet Preview Packaging** | ✅ Implemented | Eight validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
 | **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
+| **Web Observation Sample** | ✅ Implemented | Live browser quickstart (`samples/WebObservationQuickstart`) exercising `PlaywrightWebSession` and `ContentAnalysis` together against a real local HTTP server: authenticate once, reuse the session via storage-state persistence with no repeated login, flag a planted content defect, and observe a planted broken image as a real 404. |
 | **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
 | **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `AutomationSandbox.Discovery.ApplicationConnector`, and emits the same schema-v4 `IntentFlowReportDocument` (JSON + HTML) as the web pipeline. |
 | **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
+| **Long-Lived Web Sessions** | ✅ Implemented | `PlaywrightWebSession` (`AutomationSandbox.PlaywrightLiveExploration`) reuses one browser page across multiple `NavigateAsync`/`CaptureAsync` calls instead of `PlaywrightLiveExplorer`'s per-call page, and records console messages, HTTP responses, request failures, and uncaught page errors observed for the life of the session. `FillAsync`/`ClickAsync` drive the page, and `SaveStorageStateAsync` persists cookies/local storage so a later `StartAsync(storageStatePath: ...)` starts already authenticated instead of logging in again. |
+| **Content Quality Analysis** | ✅ Implemented | `AutomationSandbox.ContentAnalysis` checks captured `WebElementInfo` text for duplicate words, leftover template placeholders, and malformed punctuation with zero dependencies, plus an optional single-provider (Claude) LLM review — guarded the same way `LlmIntentPlanner` is: no dependency on `LlmHealing`, degrades to heuristic-only results on any failure or missing key. |
 | **Organic Benchmark & Calibration** | ✅ Implemented | Controlled multi-signal locator ablation on organic application trees (`HandBrake 1.8.2`), empirical score distribution overlap findings, and threshold trade-off analysis. See [Benchmark & Calibration Guide](docs/benchmark-calibration.md). |
 
 ---
@@ -710,6 +716,8 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
 | **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
 | **Live Page Exploration** | Real headless-Chromium browser launch, navigation, and DOM capture via `PlaywrightLiveExplorer` against a local HTML fixture | [PlaywrightLiveExplorerTests](TestAutomation/ScenarioRunner/PlaywrightLiveExplorerTests.cs) |
+| **Long-Lived Web Sessions** | Multi-navigation page reuse, console/network-response/request-failure/page-error capture, real form fill/click, and storage-state persistence round-tripping across sessions via `PlaywrightWebSession` against real headless Chromium (including a real loopback HTTP server for the storage-state case) | [PlaywrightWebSessionTests](TestAutomation/ScenarioRunner/PlaywrightWebSessionTests.cs) |
+| **Content Quality Analysis** | Every heuristic's true-positive and true-negative case, ancestor/descendant text-duplication dedup, LLM-provider composition via a fake provider, hallucinated-selector rejection, and the Claude provider's no-API-key degrade path | [ContentAnalysisTests](TestAutomation/ScenarioRunner/ContentAnalysisTests.cs) |
 | **CI Coverage Visibility** | Separate Windows `net48` and Linux `net8.0` step summaries, overall and per-assembly rows, missing-report handling, artifact retention | [CoverageSummaryWorkflowTests](TestAutomation/ScenarioRunner/CoverageSummaryWorkflowTests.cs) |
 | **Package Security Audit** | `NuGetAudit` build-break gate on High/Critical advisories, vulnerable/outdated-package step summaries on both matrix legs, missing/malformed-report handling | [SecurityAuditWorkflowTests](TestAutomation/ScenarioRunner/SecurityAuditWorkflowTests.cs) |
 
