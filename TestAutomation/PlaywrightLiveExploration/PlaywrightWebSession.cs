@@ -40,8 +40,11 @@ namespace AutomationSandbox.PlaywrightLiveExploration
         }
 
         /// <summary>Starts Playwright, launches a browser, and opens the one page the session will reuse
-        /// across every subsequent navigation.</summary>
-        public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null)
+        /// across every subsequent navigation. When <paramref name="storageStatePath" /> is supplied, the
+        /// browser context is pre-loaded with that previously saved <see cref="SaveStorageStateAsync" /> state
+        /// (cookies and local storage), so a caller can authenticate once and reuse the result across later
+        /// sessions instead of logging in again.</summary>
+        public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)
         {
             var effectiveOptions = options ?? new PlaywrightLiveExplorerOptions();
             var playwright = await Playwright.CreateAsync().ConfigureAwait(false);
@@ -53,7 +56,10 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                 }).ConfigureAwait(false);
                 try
                 {
-                    var context = await browser.NewContextAsync().ConfigureAwait(false);
+                    var context = await browser.NewContextAsync(new BrowserNewContextOptions
+                    {
+                        StorageStatePath = storageStatePath,
+                    }).ConfigureAwait(false);
                     try
                     {
                         var page = await context.NewPageAsync().ConfigureAwait(false);
@@ -97,6 +103,28 @@ namespace AutomationSandbox.PlaywrightLiveExploration
         public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)
         {
             return PlaywrightDomCapture.CaptureAsync(_page, discoveryOptions, _page.Url);
+        }
+
+        /// <summary>Fills the element matched by <paramref name="cssSelector" /> with <paramref name="value" />.</summary>
+        public Task FillAsync(string cssSelector, string value)
+        {
+            return _page.Locator(cssSelector).FillAsync(value);
+        }
+
+        /// <summary>Clicks the element matched by <paramref name="cssSelector" />.</summary>
+        public Task ClickAsync(string cssSelector)
+        {
+            return _page.Locator(cssSelector).ClickAsync();
+        }
+
+        /// <summary>Saves the session's current cookies and local storage to <paramref name="path" />, so a later
+        /// <see cref="StartAsync" /> call can load it back and skip re-authenticating.</summary>
+        public Task SaveStorageStateAsync(string path)
+        {
+            return _context.StorageStateAsync(new BrowserContextStorageStateOptions
+            {
+                Path = path,
+            });
         }
 
         /// <summary>Every console message observed on the page since the session started.</summary>
