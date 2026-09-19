@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<body>
+    <h1>Dashboard</h1>
+    <div data-testid="welcome"></div>
+    <p data-testid="notice">TODO: replace this notice before launch.</p>
+    <img data-testid="promo-image" src="missing-asset.png" alt="promo" />
+    <script>
+        const token = localStorage.getItem('authToken');
+        document.querySelector('[data-testid=welcome]').textContent =
+            token ? ('Welcome back, ' + token) : 'Not logged in';
+    </script>
+</body>
+</html>
