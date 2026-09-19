@@ -72,6 +72,21 @@ Each event in the report contains:
 
 `HealingReportDocument.Events` contains every attempt. Consumers that need the pre-v7 accepted-only view can use `HealingReportDocument.AcceptedEvents`; it includes `accepted`, `accepted-unverified`, and all legacy entries without requiring hand-written filtering.
 
+### 📈 Aggregate Summary for CI Gates
+
+`HealingReportSummary.Summarize(document)` computes the numbers a CI gate or dashboard usually wants — accepted/declined counts, an `AcceptanceRate`, counts grouped by `Outcome`, how many accepted heals were LLM-assisted or diverged from the heuristic winner, and which `LocatorKey`s hit a provider error — in a single pass, without parsing the HTML report or hand-writing LINQ over `Events`:
+
+```csharp
+var document = HealingReportFileSink.LoadReport(reportPath);
+var summary = HealingReportSummary.Summarize(document);
+
+Console.WriteLine($"{summary.AcceptedCount}/{summary.TotalEvents} accepted ({summary.AcceptanceRate:P1})");
+if (summary.LocatorsWithProviderErrors.Count > 0)
+{
+    Console.WriteLine($"Provider errors on: {string.Join(", ", summary.LocatorsWithProviderErrors)}");
+}
+```
+
 Reports can contain captured UI text, automation IDs, model reasoning, and provider error
 details (including a bounded raw response when parsing fails). Treat both JSON and HTML as
 sensitive test artifacts; see the [LLM Healing Security Model](llm-security-model.md#local-telemetry-is-sensitive-too).
@@ -145,6 +160,21 @@ Rapordaki her olay şu bilgileri içerir:
 - **`Candidates`** (şema v2+): Yalnızca kazanan değil, skorlanan **tüm** adaylar — `TotalScore`, `Components` ve `EvidenceCoverage` ile birlikte; eşiklerin çevrimdışı yeniden ayarlanabilmesi için.
 
 `HealingReportDocument.Events` tüm denemeleri içerir. v7 öncesindeki yalnızca-kabul-edilen görünümüne ihtiyaç duyan tüketiciler elle filtre yazmadan `HealingReportDocument.AcceptedEvents` kullanabilir; bu görünüm `accepted`, `accepted-unverified` ve tüm eski girdileri kapsar.
+
+### 📈 CI Kapıları İçin Toplu Özet
+
+`HealingReportSummary.Summarize(document)`, bir CI kapısının veya panelin genelde ihtiyaç duyduğu sayıları — kabul/red sayıları, `AcceptanceRate`, `Outcome`'a göre gruplanmış sayımlar, kabul edilen iyileştirmelerin kaçının LLM destekli olduğu veya sezgisel kazanandan saptığı, hangi `LocatorKey`'lerin sağlayıcı hatasına takıldığı — HTML raporunu ayrıştırmadan veya `Events` üzerinde elle LINQ yazmadan, tek geçişte hesaplar:
+
+```csharp
+var document = HealingReportFileSink.LoadReport(reportPath);
+var summary = HealingReportSummary.Summarize(document);
+
+Console.WriteLine($"{summary.AcceptedCount}/{summary.TotalEvents} kabul edildi ({summary.AcceptanceRate:P1})");
+if (summary.LocatorsWithProviderErrors.Count > 0)
+{
+    Console.WriteLine($"Sağlayıcı hatası olanlar: {string.Join(", ", summary.LocatorsWithProviderErrors)}");
+}
+```
 
 Raporlar yakalanmış UI metni, automation ID, model reasoning'i ve sağlayıcı hata ayrıntıları
 (parse başarısız olduğunda sınırlı bir ham yanıt dahil) içerebilir. JSON ve HTML'yi hassas
