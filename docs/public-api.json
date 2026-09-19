@@ -1197,10 +1197,13 @@
       "public IReadOnlyList<WebNetworkResponse> NetworkResponses { get; }",
       "public IReadOnlyList<WebRequestFailure> RequestFailures { get; }",
       "public IReadOnlyList<string> PageErrors { get; }",
+      "public Task ClickAsync(string cssSelector)",
+      "public Task FillAsync(string cssSelector, string value)",
       "public Task NavigateAsync(string url)",
+      "public Task SaveStorageStateAsync(string path)",
       "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",
       "public async ValueTask DisposeAsync()",
-      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null)"
+      "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)"
     ]
   },
   {
