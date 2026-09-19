@@ -17,7 +17,8 @@ $packageIds = @(
     "AutomationSandbox.WebDiscovery",
     "AutomationSandbox.IntentAutomation",
     "AutomationSandbox.PlaywrightLiveExploration",
-    "AutomationSandbox.ContentAnalysis"
+    "AutomationSandbox.ContentAnalysis",
+    "AutomationSandbox.IntentExecution"
 )
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem

@@ -18,7 +18,7 @@ namespace ScenarioRunner
         private static readonly string[] Packages =
         {
             "UiModel", "SelfHealing", "LlmHealing", "Discovery",
-            "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration", "ContentAnalysis",
+            "WebDiscovery", "IntentAutomation", "PlaywrightLiveExploration", "ContentAnalysis", "IntentExecution",
         };
 
         private static string FindRepoRoot()
@@ -39,8 +39,8 @@ namespace ScenarioRunner
         }
 
         // Writes one or more fake source files into a single package folder of a throwaway
-        // fixture tree (all eight package folders are created, matching the tool's hardcoded
-        // package list, so it never hits a DirectoryNotFoundException on the seven it doesn't
+        // fixture tree (all nine package folders are created, matching the tool's hardcoded
+        // package list, so it never hits a DirectoryNotFoundException on the eight it doesn't
         // populate) and returns the parsed JSON array the real tool produced.
         private static JsonElement[] RunAudit(string package, params (string FileName, string Source)[] files)
         {

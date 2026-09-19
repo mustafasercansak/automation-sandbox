@@ -13,7 +13,7 @@ Published packages are available from
 [nuget.org](https://www.nuget.org/profiles/mustafasercansak), as well as from the
 GitHub prerelease assets.
 
-M5 preview packaging is implemented. Both packaging workflows build all eight packages,
+M5 preview packaging is implemented. Both packaging workflows build all nine packages,
 validate their package/symbol pairs and required contents, and expose the artifacts
 either as a workflow download or as GitHub prerelease assets. A nuget.org Trusted
 Publishing policy (owner `mustafasercansak`, repo `automation-sandbox`, workflow
@@ -32,6 +32,7 @@ per run via `publish_to_nuget` rather than automatic on every release.
 | `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic + LLM-backed planning, web and desktop candidate matching, locator recording, Playwright C#/TypeScript and FlaUI test generation, intent flow reports, and pipeline orchestration. |
 | `AutomationSandbox.PlaywrightLiveExploration` | `PlaywrightLiveExplorer`/`PlaywrightWebSession`: live browser page capture and long-lived session automation (Microsoft.Playwright .NET SDK). |
 | `AutomationSandbox.ContentAnalysis` | Content-quality checks over a captured `WebElementInfo` tree: zero-dependency heuristics plus an optional single-provider LLM review. |
+| `AutomationSandbox.IntentExecution` | `IntentWebExecutor`: plans an `IntentAutomation` scenario and actually executes it step by step against a live `PlaywrightWebSession`, instead of only generating test source. |
 
 For the public API surface definition, semantic versioning rules, and checkable criteria required to graduate to 1.0 GA, see the [API Stability & Beta-Exit Criteria](versioning-and-stability.md) guide.
 
@@ -127,7 +128,7 @@ next to the others: `eng/Validate-NuGetPackages.ps1` fails a package whose embed
 `README.md` is not the per-package file (it checks the first heading is `# <PackageId>`),
 whose README still carries LaTeX/mermaid, or that is missing `icon.png`.
 
-The eight library project files enable XML documentation before the SDK computes output items.
+The nine library project files enable XML documentation before the SDK computes output items.
 `Directory.Build.targets` enables .NET analyzers and documentation warning gates after each
 project has declared whether it is packable. Missing public API comments fail the library build.
 The package validator requires a non-empty XML IntelliSense document beside every library
@@ -137,7 +138,7 @@ DLL for every packaged target framework, with the matching assembly name.
 
 - CI is green on `main`.
 - Pack workflow produces all expected `.nupkg` and `.snupkg` files.
-- GitHub Release assets include all eight packages and their symbol packages, plus one CycloneDX SBOM (`.bom.json`) per package.
+- GitHub Release assets include all nine packages and their symbol packages, plus one CycloneDX SBOM (`.bom.json`) per package.
 - Package names, README, license, repository URL, and symbols are present.
 - Every library DLL has matching XML IntelliSense documentation; run `eng/Validate-NuGetPackages.ps1`.
 ## Version Bumps / Sürüm Güncelleme

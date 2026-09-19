@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlaywrightLiveExploration",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentAnalysis", "TestAutomation\ContentAnalysis\ContentAnalysis.csproj", "{9CB5EE4F-D584-4D90-8264-5E88148979B8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntentExecution", "TestAutomation\IntentExecution\IntentExecution.csproj", "{FE1B4D29-0295-4525-9121-2C3D8BBDC55F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +79,10 @@ Global
 		{9CB5EE4F-D584-4D90-8264-5E88148979B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CB5EE4F-D584-4D90-8264-5E88148979B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CB5EE4F-D584-4D90-8264-5E88148979B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE1B4D29-0295-4525-9121-2C3D8BBDC55F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE1B4D29-0295-4525-9121-2C3D8BBDC55F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE1B4D29-0295-4525-9121-2C3D8BBDC55F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE1B4D29-0295-4525-9121-2C3D8BBDC55F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -91,6 +97,7 @@ Global
 		{AE5EC857-6897-43A7-82AB-3D217B5089EB} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 		{A08AE137-88B1-4838-BE66-DC2098D51955} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 		{9CB5EE4F-D584-4D90-8264-5E88148979B8} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
+		{FE1B4D29-0295-4525-9121-2C3D8BBDC55F} = {AB95D906-A1B3-45BA-9E0B-B7C03394A5CB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EA91CBE7-566C-4B00-B8E9-0B27D1D598EA}
