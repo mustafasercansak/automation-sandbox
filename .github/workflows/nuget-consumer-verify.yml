@@ -1,0 +1,50 @@
+name: Published Package Consumer Verification
+
+# Closes a real gap in the "Verified Consumer Quickstarts" 1.0 criterion
+# (versioning-and-stability.md §3): ci.yml's `sample-source-compat` job swaps in a
+# ProjectReference and only ever proves the sample builds against current `main` - it
+# cannot catch drift between `main` and what a consumer actually restores from
+# nuget.org. release.yml's `verify-published.ps1` step is the only thing that does that,
+# and it only runs once, at the moment of a release. A consumer who restores next week
+# gets no ongoing guarantee the published package still resolves and runs - see #415,
+# where exactly that drift shipped undetected between v0.2.0-beta.5 and its fix.
+#
+# This runs the same verify-published.ps1 script, nightly and on demand, against
+# whatever version is currently live (Directory.Build.props's <Version> by default, or
+# an explicit override), independent of the release process.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to verify (leave empty to use Directory.Build.props)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  verify-published:
+    name: Verify published package as a nuget.org consumer
+    runs-on: ubuntu-latest
+    # verify-published.ps1 polls nuget.org indexing for up to 30 attempts * 50s (~25 min)
+    # before giving up; a nightly run against an already-indexed version normally resolves
+    # on the first attempt (seconds), so this is headroom for the rare case nuget.org is
+    # slow, not the expected duration.
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Verify the published package for a consumer
+        run: ./samples/HeuristicHealingQuickstart/verify-published.ps1 -Version '${{ inputs.version }}'
+        shell: pwsh
