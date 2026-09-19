@@ -1482,6 +1482,28 @@
   },
   {
     "Package": "SelfHealing",
+    "Type": "AutomationSandbox.SelfHealing.HealingReportSummary",
+    "PublicMutableProperties": 7,
+    "Declarations": [
+      "public sealed class HealingReportSummary"
+    ],
+    "Files": [
+      "TestAutomation/SelfHealing/HealingReportSummary.cs"
+    ],
+    "Members": [
+      "public IReadOnlyDictionary<string, int> CountsByOutcome { get; set; }",
+      "public IReadOnlyList<string> LocatorsWithProviderErrors { get; set; }",
+      "public double AcceptanceRate { get; }",
+      "public int AcceptedCount { get; set; }",
+      "public int AcceptedWithLlmCount { get; set; }",
+      "public int DeclinedCount { get; set; }",
+      "public int DivergedFromHeuristicCount { get; set; }",
+      "public int TotalEvents { get; set; }",
+      "public static HealingReportSummary Summarize(HealingReportDocument document)"
+    ]
+  },
+  {
+    "Package": "SelfHealing",
     "Type": "AutomationSandbox.SelfHealing.IHealingReportSink",
     "PublicMutableProperties": 0,
     "Declarations": [
