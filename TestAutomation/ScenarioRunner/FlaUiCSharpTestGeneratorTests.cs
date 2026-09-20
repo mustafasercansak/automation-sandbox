@@ -113,6 +113,71 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsWaitForText_WhenWaitStepHasTextEqualsAssertionKind()
+        {
+            // A Wait step reuses AssertionKind/ExpectedValue (not just Assert steps), mirroring the two
+            // Playwright generators (#480/#483): Retry.WhileFalse already polls until the condition holds
+            // or the timeout elapses, so it doubles as a text-based wait - the shape needed for something
+            // like a language switch, where a plain existence wait on an already-matched element would
+            // resolve immediately and prove nothing (#482).
+            var scenario = new IntentScenario
+            {
+                Goal = "Wait for the greeting to switch language",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Wait,
+                        TargetDescription = "Greeting",
+                        AssertionKind = AssertionKind.TextEquals,
+                        ExpectedValue = "Merhaba",
+                        Value = "3000",
+                    }
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Greeting", "lblGreeting")
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("Assert.True(Retry.WhileFalse(() => window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblGreeting\"))?.Name == \"Merhaba\", timeout: TimeSpan.FromMilliseconds(3000)).Success);", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        [Fact]
+        public void Generate_EmitsWaitForTextContains_WhenWaitStepHasTextContainsAssertionKind()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Wait for the banner to mention the promo",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Wait,
+                        TargetDescription = "Banner",
+                        AssertionKind = AssertionKind.TextContains,
+                        ExpectedValue = "50% off",
+                        Value = "2000",
+                    }
+                }
+            };
+            var recordings = new List<IntentDesktopLocatorRecordingResult>
+            {
+                Recorded("Banner", "lblBanner")
+            };
+
+            var code = new FlaUiCSharpTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("Assert.True(Retry.WhileFalse(() => window.FindFirstDescendant(cf => cf.ByAutomationId(\"lblBanner\"))?.Name?.Contains(\"50% off\") == true, timeout: TimeSpan.FromMilliseconds(2000)).Success);", code);
+            AssertValidCSharpSyntax(code);
+        }
+
+        [Fact]
         public void Generate_EmitsCommonInteractionActions()
         {
             var scenario = new IntentScenario

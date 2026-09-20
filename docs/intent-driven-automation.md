@@ -101,8 +101,10 @@ content that re-renders in place, like a language switch. `AssertionKind.None` (
 keeps the original visibility-wait behavior unchanged. `PlaywrightWebSession.WaitForTextAsync`
 is the underlying primitive for live execution; `PlaywrightCSharpTestGenerator`/
 `PlaywrightTypeScriptTestGenerator` emit the equivalent `Expect(...).ToHaveTextAsync`/
-`expect(...).toHaveText` polling assertion for generated tests. FlaUI desktop generator parity
-for this is a tracked follow-up, not yet implemented. Web upload matching requires a captured
+`expect(...).toHaveText` polling assertion for generated tests, and `FlaUiCSharpTestGenerator`
+has the matching desktop behavior (#482): `Retry.WhileFalse(() => window.{locator}?.Name ==
+"expected", ...).Success` — UIA's `Name` surfaces static labels, headers, and element names,
+the same field `Assert`'s `TextEquals`/`TextContains` already reads. Web upload matching requires a captured
 `<input type="file">`; desktop generation drives a real file dialog (invoking the trigger button,
 setting the file path in the dialog, and confirming the Open button) or emits an explicit failure
 marker if manual handling is required. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
@@ -496,9 +498,11 @@ değişimi gibi yerinde yeniden render olan içerik için hiçbir şey gözlemle
 (varsayılan) orijinal görünürlük-bekleme davranışını değiştirmeden korur.
 `PlaywrightWebSession.WaitForTextAsync` canlı yürütme için temel ilkeldir;
 `PlaywrightCSharpTestGenerator`/`PlaywrightTypeScriptTestGenerator` üretilen testler için
-eşdeğer `Expect(...).ToHaveTextAsync`/`expect(...).toHaveText` poll eden doğrulamasını üretir.
-FlaUI masaüstü üreteci için bu paritesi takip edilen bir sonraki adım, henüz uygulanmadı.
-Web upload eşleştirmesi yakalanmış
+eşdeğer `Expect(...).ToHaveTextAsync`/`expect(...).toHaveText` poll eden doğrulamasını üretir,
+`FlaUiCSharpTestGenerator` ise eşdeğer masaüstü davranışına sahiptir (#482):
+`Retry.WhileFalse(() => window.{locator}?.Name == "beklenen", ...).Success` — UIA'da `Name`,
+statik etiketleri, başlıkları ve eleman adlarını yüzeye çıkarır; `Assert`'in `TextEquals`/
+`TextContains`'ının zaten okuduğu aynı alandır. Web upload eşleştirmesi yakalanmış
 `<input type="file">` sinyalini zorunlu tutar; desktop üretimi gerçek bir dosya diyaloğunu
 yönetir (tetikleyici butonu tıklar, diyalogdaki dosya yolu alanını doldurur ve Aç butonunu onaylar)
 veya manuel müdahale gerekiyorsa açık bir hata işareti üretir. `Check`/`Uncheck` onay kutuları ve radyo düğmeleri

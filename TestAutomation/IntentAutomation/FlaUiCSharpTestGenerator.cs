@@ -187,7 +187,28 @@ namespace AutomationSandbox.IntentAutomation
                     }
                     break;
                 case IntentActionType.Wait:
-                    code.AppendLine($"            Assert.NotNull(Retry.WhileNull(() => window.{findExpression}, timeout: TimeSpan.FromMilliseconds({CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)})).Result);");
+                    // AssertionKind/ExpectedValue are reused here, not just on Assert steps - the same
+                    // choice the two Playwright generators make (#480/#483): Retry.WhileFalse already polls
+                    // until the condition holds or the timeout elapses, so it doubles as a text-based wait.
+                    // In UIA, Name surfaces static label text, headers, and element names (see
+                    // AssertionCodeEmitter's TextEquals/TextContains handling for Assert steps, which this
+                    // mirrors). Default (AssertionKind.None) keeps the original existence-wait behavior.
+                    switch (step.AssertionKind)
+                    {
+                        case AssertionKind.TextEquals:
+                            // ?. rather than the Assert-step convention's ! : a Wait step polls before the
+                            // element is guaranteed settled, and null == "expected" is just another false
+                            // (retry again) rather than a NullReferenceException aborting the whole retry.
+                            code.AppendLine($"            Assert.True(Retry.WhileFalse(() => window.{findExpression}?.Name == \"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\", timeout: TimeSpan.FromMilliseconds({CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)})).Success);");
+                            break;
+                        case AssertionKind.TextContains:
+                            code.AppendLine($"            Assert.True(Retry.WhileFalse(() => window.{findExpression}?.Name?.Contains(\"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\") == true, timeout: TimeSpan.FromMilliseconds({CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)})).Success);");
+                            break;
+                        default:
+                            code.AppendLine($"            Assert.NotNull(Retry.WhileNull(() => window.{findExpression}, timeout: TimeSpan.FromMilliseconds({CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)})).Result);");
+                            break;
+                    }
+
                     break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitFlaUiCSharp(step, findExpression, _options.AssertGenerationMode, code);
