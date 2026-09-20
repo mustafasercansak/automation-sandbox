@@ -84,6 +84,16 @@ namespace AutomationSandbox.ContentAnalysis
 
             void Visit(WebElementInfo node)
             {
+                // <pre>/<code> holds source code, not prose: identifiers, symbols, and deliberate markers
+                // like "// TODO" read as spelling/duplicate-word/placeholder defects to these heuristics
+                // (and would read the same way to an LLM reviewer) but are not content-quality issues.
+                // Skipping the whole subtree - not just the pre/code node itself - keeps a syntax-highlighted
+                // child <span> from being extracted as its own passage too.
+                if (IsCodeElement(node.TagName))
+                {
+                    return;
+                }
+
                 var text = node.Text;
                 var duplicatesAChild = node.Children.Exists(child => child.Text == text);
                 if (!node.IsHidden && !string.IsNullOrWhiteSpace(text) && !duplicatesAChild && seenText.Add(text))
@@ -96,6 +106,12 @@ namespace AutomationSandbox.ContentAnalysis
                     Visit(child);
                 }
             }
+        }
+
+        private static bool IsCodeElement(string tagName)
+        {
+            return string.Equals(tagName, "pre", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(tagName, "code", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
