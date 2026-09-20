@@ -117,13 +117,14 @@ While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change t
 
 Source builds include XML IntelliSense documentation for every packable library. The
 [public API audit and migration guide](docs/public-api-audit.md) records the reviewed
-surface and deliberate mutability contracts. As of `v0.2.0-beta.6` (#400), `ScoreComponents`,
-`PlaywrightLocatorSuggestion`, `IntentElementCandidate`, and `IntentDesktopElementCandidate`
-take named constructor arguments instead of object initializers — replace
-`new ScoreComponents { NameScore = 0.8 }` with `new ScoreComponents(nameScore: 0.8)`. Their
-properties are get-only; candidate references still point to editable steps and captured
-elements. Packages published before `v0.2.0-beta.6` are unaffected retroactively; only
-consumers upgrading to `v0.2.0-beta.6` or later need to switch construction syntax.
+surface and deliberate mutability contracts. Since the public API freeze (#400),
+`ScoreComponents`, `PlaywrightLocatorSuggestion`, `IntentElementCandidate`, and
+`IntentDesktopElementCandidate` take named constructor arguments instead of object
+initializers — replace `new ScoreComponents { NameScore = 0.8 }` with
+`new ScoreComponents(nameScore: 0.8)`. Their properties are get-only; candidate references
+still point to editable steps and captured elements. Earlier packages are unaffected
+retroactively; only consumers upgrading past the freeze need to switch construction syntax
+(see the [migration guide](docs/public-api-audit.md) for the exact release).
 
 ---
 
