@@ -1424,6 +1424,7 @@
       "public Task SelectAsync(string cssSelector, string value)",
       "public Task UncheckAsync(string cssSelector)",
       "public Task UploadFileAsync(string cssSelector, string filePath)",
+      "public Task WaitForTextAsync(string cssSelector, string expectedText, bool exact = true, TimeSpan? timeout = null)",
       "public Task WaitForTextChangeAsync(string cssSelector, string? previousText, TimeSpan? timeout = null)",
       "public Task WaitForVisibleAsync(string cssSelector, TimeSpan? timeout = null)",
       "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",

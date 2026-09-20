@@ -172,6 +172,68 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void Generate_EmitsWaitForText_WhenWaitStepHasTextEqualsAssertionKind()
+        {
+            // A Wait step reuses AssertionKind/ExpectedValue (not just Assert steps): expect(...).toHaveText
+            // already polls until the condition holds or the timeout elapses, so it doubles as a text-based
+            // wait - the shape needed for something like a language switch, where a plain visibility wait on
+            // an already-visible element would resolve immediately and prove nothing.
+            var scenario = new IntentScenario
+            {
+                Goal = "Wait for the greeting to switch language",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Wait,
+                        TargetDescription = "Greeting",
+                        AssertionKind = AssertionKind.TextEquals,
+                        ExpectedValue = "Merhaba",
+                        Value = "3000",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Greeting", "greeting", "page.GetByTestId(\"greeting\")")
+            };
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await expect(page.getByTestId('greeting')).toHaveText('Merhaba', { timeout: 3000 });", code);
+        }
+
+        [Fact]
+        public void Generate_EmitsWaitForTextContains_WhenWaitStepHasTextContainsAssertionKind()
+        {
+            var scenario = new IntentScenario
+            {
+                Goal = "Wait for the banner to mention the promo",
+                Steps = new List<IntentStep>
+                {
+                    new IntentStep
+                    {
+                        Order = 1,
+                        ActionType = IntentActionType.Wait,
+                        TargetDescription = "Banner",
+                        AssertionKind = AssertionKind.TextContains,
+                        ExpectedValue = "50% off",
+                        Value = "2000",
+                    }
+                }
+            };
+            var recordings = new List<IntentLocatorRecordingResult>
+            {
+                Recorded("Banner", "banner", "page.GetByTestId(\"banner\")")
+            };
+
+            var code = new PlaywrightTypeScriptTestGenerator().Generate(scenario, recordings);
+
+            Assert.Contains("await expect(page.getByTestId('banner')).toContainText('50% off', { timeout: 2000 });", code);
+        }
+
+        [Fact]
         public void Generate_EmitsUrlAssertion_WithoutRequiringElementLocator()
         {
             var scenario = new IntentScenario

@@ -137,7 +137,25 @@ namespace AutomationSandbox.IntentExecution
                         // this code ever runs. WaitForVisibleAsync itself handles delayed visibility fine
                         // (see PlaywrightWebSessionTests); the constraint is entirely on the matching step.
                         var timeout = double.TryParse(step.Value, out var seconds) ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
-                        await session.WaitForVisibleAsync(cssSelector, timeout).ConfigureAwait(false);
+
+                        // AssertionKind/ExpectedValue are reused here (not just on Assert steps): a Wait step
+                        // already required a visible candidate, so re-waiting for visibility is a near no-op
+                        // for content that re-renders in place, like a language switch. TextEquals/TextContains
+                        // let a scenario say what it expects to see instead - the default (AssertionKind.None)
+                        // keeps today's visibility-wait behavior unchanged.
+                        switch (step.AssertionKind)
+                        {
+                            case AssertionKind.TextEquals:
+                                await session.WaitForTextAsync(cssSelector, step.ExpectedValue, exact: true, timeout).ConfigureAwait(false);
+                                break;
+                            case AssertionKind.TextContains:
+                                await session.WaitForTextAsync(cssSelector, step.ExpectedValue, exact: false, timeout).ConfigureAwait(false);
+                                break;
+                            default:
+                                await session.WaitForVisibleAsync(cssSelector, timeout).ConfigureAwait(false);
+                                break;
+                        }
+
                         break;
                     case IntentActionType.Assert:
                         return await EvaluateElementAssertionAsync(step, session, cssSelector).ConfigureAwait(false);
