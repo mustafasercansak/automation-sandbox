@@ -802,7 +802,8 @@ AutomationSandbox.sln
     ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 8)
     ├── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
     ├── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 8)
-    └── SiteContentAuditQuickstart/  SiteCrawler + ContentAnalyzer + ContentAnalysisReportFileSink: URL in, JSON/HTML content-quality report out (.NET 8)
+    ├── SiteContentAuditQuickstart/  SiteCrawler + ContentAnalyzer + ContentAnalysisReportFileSink: URL in, JSON/HTML content-quality report out (.NET 8)
+    └── DesktopAppExplorerQuickstart/  ApplicationConnector + UiTreeWalker against any real Windows desktop app by exe path or process name (net8.0-windows, Windows-only)
 ```
 
 ---

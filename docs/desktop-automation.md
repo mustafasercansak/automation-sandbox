@@ -71,6 +71,12 @@ class DesktopTest
 }
 ```
 
+To point this at any real desktop application instead of a hand-authored `expected` snapshot -
+by exe path or by attaching to an already-running process - see the runnable
+[`samples/DesktopAppExplorerQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/DesktopAppExplorerQuickstart)
+sample, which also reports locator health (empty/duplicate `AutomationId` counts) across the
+whole captured tree.
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -130,3 +136,9 @@ class DesktopTest
     }
 }
 ```
+
+Bunu elle yazılmış bir `expected` snapshot yerine gerçek herhangi bir masaüstü uygulamasına
+yöneltmek için - exe yoluyla ya da zaten çalışan bir işleme bağlanarak - çalıştırılabilir
+[`samples/DesktopAppExplorerQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/DesktopAppExplorerQuickstart)
+örneğine bakın; bu örnek yakalanan ağaçtaki locator sağlığını da (boş/tekrarlanan
+`AutomationId` sayıları) raporlar.
