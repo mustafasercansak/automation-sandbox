@@ -1424,15 +1424,78 @@
       "public Task SelectAsync(string cssSelector, string value)",
       "public Task UncheckAsync(string cssSelector)",
       "public Task UploadFileAsync(string cssSelector, string filePath)",
+      "public Task WaitForTextChangeAsync(string cssSelector, string? previousText, TimeSpan? timeout = null)",
       "public Task WaitForVisibleAsync(string cssSelector, TimeSpan? timeout = null)",
       "public Task<WebElementInfo> CaptureAsync(WebDiscoveryOptions? discoveryOptions = null)",
       "public Task<bool> IsCheckedAsync(string cssSelector)",
       "public Task<bool> IsVisibleAsync(string cssSelector)",
       "public Task<string> GetTextAsync(string cssSelector)",
       "public Task<string> GetValueAsync(string cssSelector)",
+      "public async Task<IReadOnlyList<string>> GetLinksAsync()",
       "public async ValueTask DisposeAsync()",
       "public static async Task<PlaywrightWebSession> StartAsync(PlaywrightLiveExplorerOptions? options = null, string? storageStatePath = null)",
       "public string CurrentUrl { get; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlFailure",
+    "PublicMutableProperties": 2,
+    "Declarations": [
+      "public sealed class SiteCrawlFailure"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SiteCrawlResult.cs"
+    ],
+    "Members": [
+      "public string Diagnostic { get; set; }",
+      "public string Url { get; set; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlOptions",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class SiteCrawlOptions"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SiteCrawlOptions.cs"
+    ],
+    "Members": [
+      "public bool SameOriginOnly { get; set; }",
+      "public int MaxDepth { get; set; }",
+      "public int MaxPages { get; set; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlResult",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class SiteCrawlResult"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SiteCrawlResult.cs"
+    ],
+    "Members": [
+      "public List<SiteCrawlFailure> Failures { get; set; }",
+      "public List<string> SkippedUrls { get; set; }",
+      "public List<string> VisitedUrls { get; set; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawler",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class SiteCrawler"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SiteCrawler.cs"
+    ],
+    "Members": [
+      "public static async Task<SiteCrawlResult> CrawlAsync( PlaywrightWebSession session, string startUrl, SiteCrawlOptions? options = null, Func<string, WebElementInfo, CancellationToken, Task>? onPageCaptured = null, CancellationToken cancellationToken = default)"
     ]
   },
   {

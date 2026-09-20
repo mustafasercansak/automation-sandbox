@@ -181,6 +181,55 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             return _page.Locator(cssSelector).IsVisibleAsync();
         }
 
+        /// <summary>Waits until the element matched by <paramref name="cssSelector" /> exists and its text
+        /// content differs from <paramref name="previousText" />, up to <paramref name="timeout" /> (or the
+        /// session's navigation timeout when omitted). <see cref="WaitForVisibleAsync" /> only waits on an
+        /// element's visibility, which does nothing for content that re-renders in place - a language switch
+        /// or any other async update that changes an already-visible element's text without changing its
+        /// attachment or visibility state. Capture the element's text before triggering the change, then await
+        /// this before capturing again.</summary>
+        public Task WaitForTextChangeAsync(string cssSelector, string? previousText, TimeSpan? timeout = null)
+        {
+            if (string.IsNullOrWhiteSpace(cssSelector))
+            {
+                throw new ArgumentException("cssSelector must not be null or empty.", nameof(cssSelector));
+            }
+
+            return _page.WaitForFunctionAsync(
+                "(args) => { const el = document.querySelector(args.selector); " +
+                "return el !== null && el.textContent !== args.previousText; }",
+                new { selector = cssSelector, previousText },
+                new PageWaitForFunctionOptions
+                {
+                    Timeout = (float?)(timeout ?? TimeSpan.FromMilliseconds(_options.NavigationTimeoutMilliseconds)).TotalMilliseconds,
+                });
+        }
+
+        /// <summary>Every absolute <c>http(s)</c> hyperlink on the current page, deduplicated and in document
+        /// order - the raw material <see cref="SiteCrawler" /> walks to discover pages without a hand-authored
+        /// navigation path. Relative <c>href</c> values are resolved to absolute URLs by the browser itself
+        /// (the DOM's <c>a.href</c> property, not the raw attribute), so no manual URL resolution is needed
+        /// here.</summary>
+        public async Task<IReadOnlyList<string>> GetLinksAsync()
+        {
+            var hrefs = await _page.EvaluateAsync<string[]>(
+                "() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)").ConfigureAwait(false);
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var links = new List<string>();
+            foreach (var href in hrefs)
+            {
+                if ((href.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                     href.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
+                    seen.Add(href))
+                {
+                    links.Add(href);
+                }
+            }
+
+            return links;
+        }
+
         /// <summary>Whether the checkbox or radio button matched by <paramref name="cssSelector" /> is currently
         /// checked - the observable half of <see cref="CheckAsync" />/<see cref="UncheckAsync" />.</summary>
         public Task<bool> IsCheckedAsync(string cssSelector)

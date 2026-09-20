@@ -106,6 +106,41 @@ assertion semantics, and worked examples, and the runnable
 sample for `PlaywrightWebSession` authenticate-once storage-state reuse plus
 `AutomationSandbox.ContentAnalysis` against a real local HTTP server.
 
+### Waiting for Dynamic Content, and Crawling a Site
+
+`CaptureAsync` is a point-in-time snapshot - it does not wait for a client-side re-render.
+`WaitForVisibleAsync` only helps when an element's *visibility* changes, which does nothing for
+a language switch or any other update that mutates an already-visible element's text.
+`WaitForTextChangeAsync` waits for that instead:
+
+```csharp
+var before = await session.GetTextAsync("#greeting");
+await session.ClickAsync("#language-switch");
+await session.WaitForTextChangeAsync("#greeting", before); // resolves once the text actually differs
+```
+
+`SiteCrawler.CrawlAsync` (#475) walks a site breadth-first from one starting URL using
+`session.GetLinksAsync()` (every absolute `http(s)` link on the current page) - so a caller with
+no per-page navigation script can hand over just a URL:
+
+```csharp
+var result = await SiteCrawler.CrawlAsync(
+    session,
+    "https://example.com",
+    new SiteCrawlOptions { MaxPages = 50, MaxDepth = 3 }, // same-origin only by default
+    onPageCaptured: async (url, dom, ct) =>
+    {
+        // run AutomationSandbox.ContentAnalysis here, record locators, or anything else per page -
+        // SiteCrawler itself has no dependency on those packages
+    });
+```
+
+A page that fails to navigate or capture is recorded in `result.Failures` and the crawl
+continues with the rest of the queue rather than aborting the whole run. Whatever the session
+was started with - headless or headed, with or without a saved storage state - applies to every
+page the crawl visits, so an authenticated session (`PlaywrightWebSession.StartAsync` with
+`storageStatePath`) crawls behind login for free.
+
 ### Bounding a Capture (Depth / Element Count / Timeout)
 
 `CaptureAsync` accepts an optional `WebDiscoveryOptions` (`MaxDepth`, `MaxElements`,
@@ -336,6 +371,43 @@ oturum kalıcılığı ile `AutomationSandbox.ContentAnalysis`'in gerçek bir ye
 karşı birlikte çalışmasını gösteren çalıştırılabilir örnek için
 [`samples/WebObservationQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/WebObservationQuickstart)
 örneğine bakın.
+
+### Dinamik İçeriği Beklemek ve Bir Siteyi Taramak
+
+`CaptureAsync`, o anki DOM'un tek bir anlık görüntüsüdür - istemci tarafı bir yeniden
+render'ı beklemez. `WaitForVisibleAsync` yalnızca bir elemanın *görünürlüğü* değiştiğinde
+yardımcı olur; bu, zaten görünür olan bir elemanın metnini değiştiren bir dil değişimi veya
+başka bir güncelleme için işe yaramaz. `WaitForTextChangeAsync` tam olarak bunu bekler:
+
+```csharp
+var before = await session.GetTextAsync("#greeting");
+await session.ClickAsync("#language-switch");
+await session.WaitForTextChangeAsync("#greeting", before); // metin gerçekten değişince döner
+```
+
+`SiteCrawler.CrawlAsync` (#475), `session.GetLinksAsync()`'i (mevcut sayfadaki her mutlak
+`http(s)` bağlantı) kullanarak tek bir başlangıç URL'sinden siteyi genişlik-öncelikli (breadth-first)
+geziyor - sayfa başına elle yazılmış bir gezinme betiğine gerek kalmadan sadece bir URL
+verilebiliyor:
+
+```csharp
+var result = await SiteCrawler.CrawlAsync(
+    session,
+    "https://example.com",
+    new SiteCrawlOptions { MaxPages = 50, MaxDepth = 3 }, // varsayılan olarak sadece aynı origin
+    onPageCaptured: async (url, dom, ct) =>
+    {
+        // burada AutomationSandbox.ContentAnalysis çalıştırılabilir, locator kaydedilebilir
+        // veya sayfa başına başka herhangi bir iş yapılabilir - SiteCrawler'ın bu paketlere
+        // bir bağımlılığı yoktur
+    });
+```
+
+Gezinemediği veya yakalayamadığı bir sayfa `result.Failures`'a kaydedilir ve tarama tüm
+çalışmayı iptal etmek yerine kuyruktaki diğer sayfalarla devam eder. Oturum ne şekilde
+başlatıldıysa - headless/headed, kayıtlı bir storage state ile veya onsuz - taranan her
+sayfada aynen geçerli olur; yani kimlik doğrulamalı bir oturum
+(`storageStatePath` ile `PlaywrightWebSession.StartAsync`) giriş arkasını ücretsiz tarar.
 
 ### Taramayı Sınırlama (Derinlik / Eleman Sayısı / Zaman Aşımı)
 
