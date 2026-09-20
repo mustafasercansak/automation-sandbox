@@ -111,7 +111,8 @@ namespace ScenarioRunner
                         // IntentExplorationBridge excludes hidden elements from matching before Wait's own
                         // WaitForVisibleAsync ever runs (see IntentWebExecutor's Wait case comment). This
                         // panel is visible from the start, so the wait resolves immediately.
-                        new() { Order = 8, ActionType = IntentActionType.Wait, TargetDescription = "ready panel", Value = "5" },
+                        // Value is milliseconds (#481), not seconds.
+                        new() { Order = 8, ActionType = IntentActionType.Wait, TargetDescription = "ready panel", Value = "5000" },
                         new()
                         {
                             Order = 9, ActionType = IntentActionType.Assert, TargetDescription = "ready panel",
@@ -160,7 +161,8 @@ namespace ScenarioRunner
                         new()
                         {
                             Order = 3, ActionType = IntentActionType.Wait, TargetDescription = "greeting",
-                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "5",
+                            // Value is milliseconds (#481), not seconds.
+                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "5000",
                         },
                     },
                 };
@@ -194,7 +196,10 @@ namespace ScenarioRunner
                         new()
                         {
                             Order = 2, ActionType = IntentActionType.Wait, TargetDescription = "greeting",
-                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "0.3",
+                            // Value is milliseconds (#481), not seconds - "0.3" would fail to parse as an
+                            // integer and silently fall back to the 5000ms default, defeating this test's
+                            // point of a short, fast timeout.
+                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "300",
                         },
                     },
                 };
@@ -211,6 +216,25 @@ namespace ScenarioRunner
             {
                 DeleteIfExists(htmlPath);
             }
+        }
+
+        [Fact]
+        public void WaitStepTimeoutValue_MeansTheSameDurationLiveAsItDoesInGeneratedCode()
+        {
+            // #481: IntentWebExecutor used to parse a Wait step's Value as seconds while every code
+            // generator parsed the exact same field as milliseconds via CodeGenerationUtilities
+            // .WaitTimeoutMilliseconds - the same scenario meant two different real-world wait durations
+            // depending on whether it was executed live or turned into a generated test. IntentWebExecutor
+            // now calls this helper directly (InternalsVisibleTo, #481) instead of re-implementing the
+            // parsing, so there is exactly one definition of what a Wait step's Value means - this test
+            // locks in that shared behavior rather than two independently-matching implementations that
+            // could drift apart again.
+            Assert.Equal(1500, CodeGenerationUtilities.WaitTimeoutMilliseconds("1500"));
+            Assert.Equal(5000, CodeGenerationUtilities.WaitTimeoutMilliseconds(null));
+            Assert.Equal(5000, CodeGenerationUtilities.WaitTimeoutMilliseconds(""));
+            Assert.Equal(5000, CodeGenerationUtilities.WaitTimeoutMilliseconds("not a number"));
+            Assert.Equal(5000, CodeGenerationUtilities.WaitTimeoutMilliseconds("0.3")); // not an integer - falls back, doesn't misread units
+            Assert.Equal(5000, CodeGenerationUtilities.WaitTimeoutMilliseconds("-100")); // rejects non-positive values
         }
 
         [Fact]

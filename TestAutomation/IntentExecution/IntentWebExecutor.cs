@@ -136,7 +136,15 @@ namespace AutomationSandbox.IntentExecution
                         // becomes visible later, since IntentExplorationBridge would have excluded it before
                         // this code ever runs. WaitForVisibleAsync itself handles delayed visibility fine
                         // (see PlaywrightWebSessionTests); the constraint is entirely on the matching step.
-                        var timeout = double.TryParse(step.Value, out var seconds) ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
+                        //
+                        // step.Value is milliseconds, not seconds (#481): DeterministicIntentPlanner's
+                        // ExtractWaitTimeoutMilliseconds always produces milliseconds, and so do all three
+                        // code generators via CodeGenerationUtilities.WaitTimeoutMilliseconds - this used to
+                        // be the one place that parsed it as seconds instead, so the same Value meant two
+                        // different real-world durations depending on whether a scenario was executed live
+                        // or turned into a generated test. Calling the exact same helper (rather than
+                        // re-implementing the parsing) is what prevents this class of drift recurring.
+                        var timeout = TimeSpan.FromMilliseconds(CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value));
 
                         // AssertionKind/ExpectedValue are reused here (not just on Assert steps): a Wait step
                         // already required a visible candidate, so re-waiting for visibility is a near no-op
