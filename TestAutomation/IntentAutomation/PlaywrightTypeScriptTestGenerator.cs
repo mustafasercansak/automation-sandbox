@@ -109,7 +109,23 @@ namespace AutomationSandbox.IntentAutomation
                     code.AppendLine($"  await {locatorExpression}.press('{CodeGenerationUtilities.EscapeSingleQuoted(step.Value)}');");
                     break;
                 case IntentActionType.Wait:
-                    code.AppendLine($"  await {locatorExpression}.waitFor({{ state: 'visible', timeout: {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                    // AssertionKind/ExpectedValue are reused here, not just on Assert steps: expect(...)
+                    // .toHaveText/.toContainText already poll until the condition holds or the timeout
+                    // elapses, so they double as a text-based wait. Default (AssertionKind.None) keeps the
+                    // original visibility-wait behavior.
+                    switch (step.AssertionKind)
+                    {
+                        case AssertionKind.TextEquals:
+                            code.AppendLine($"  await expect({locatorExpression}).toHaveText('{CodeGenerationUtilities.EscapeSingleQuoted(step.ExpectedValue)}', {{ timeout: {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                        case AssertionKind.TextContains:
+                            code.AppendLine($"  await expect({locatorExpression}).toContainText('{CodeGenerationUtilities.EscapeSingleQuoted(step.ExpectedValue)}', {{ timeout: {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                        default:
+                            code.AppendLine($"  await {locatorExpression}.waitFor({{ state: 'visible', timeout: {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                    }
+
                     break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitPlaywrightTypeScript(step, locatorExpression, _options.AssertGenerationMode, code);

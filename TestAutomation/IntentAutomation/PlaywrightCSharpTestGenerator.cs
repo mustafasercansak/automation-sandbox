@@ -124,7 +124,23 @@ namespace AutomationSandbox.IntentAutomation
                     code.AppendLine($"            await {locatorExpression}.PressAsync(\"{CodeGenerationUtilities.EscapeString(step.Value)}\");");
                     break;
                 case IntentActionType.Wait:
-                    code.AppendLine($"            await {locatorExpression}.WaitForAsync(new() {{ State = WaitForSelectorState.Visible, Timeout = {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                    // AssertionKind/ExpectedValue are reused here, not just on Assert steps: Expect(...)
+                    // .ToHaveTextAsync/.ToContainTextAsync already poll until the condition holds or the
+                    // timeout elapses, so they double as a text-based wait. Default (AssertionKind.None)
+                    // keeps the original visibility-wait behavior.
+                    switch (step.AssertionKind)
+                    {
+                        case AssertionKind.TextEquals:
+                            code.AppendLine($"            await Expect({locatorExpression}).ToHaveTextAsync(\"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\", new() {{ Timeout = {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                        case AssertionKind.TextContains:
+                            code.AppendLine($"            await Expect({locatorExpression}).ToContainTextAsync(\"{CodeGenerationUtilities.EscapeString(step.ExpectedValue)}\", new() {{ Timeout = {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                        default:
+                            code.AppendLine($"            await {locatorExpression}.WaitForAsync(new() {{ State = WaitForSelectorState.Visible, Timeout = {CodeGenerationUtilities.WaitTimeoutMilliseconds(step.Value)} }});");
+                            break;
+                    }
+
                     break;
                 case IntentActionType.Assert:
                     AssertionCodeEmitter.EmitPlaywrightCSharp(step, locatorExpression, _options.AssertGenerationMode, code);

@@ -92,7 +92,17 @@ Each step can carry:
 For `UploadFile`, `Value` is the file path. For `PressKey`, it is a Playwright-style
 key name such as `Enter` or `ArrowDown`. For `Wait`, it is an optional positive timeout
 in milliseconds (default `5000`); wait generation polls for the target element to become
-visible/present instead of emitting a fixed sleep. Web upload matching requires a captured
+visible/present instead of emitting a fixed sleep. A `Wait` step also reuses `AssertionKind`/
+`ExpectedValue` (otherwise only meaningful on `Assert` steps): `TextEquals`/`TextContains`
+wait for the matched element's text to actually reach the expected value, not just for it to
+be visible (#480) — a `Wait` step's target is already visible by construction (see the matching
+constraint below), so a plain visibility wait resolves immediately and observes nothing for
+content that re-renders in place, like a language switch. `AssertionKind.None` (the default)
+keeps the original visibility-wait behavior unchanged. `PlaywrightWebSession.WaitForTextAsync`
+is the underlying primitive for live execution; `PlaywrightCSharpTestGenerator`/
+`PlaywrightTypeScriptTestGenerator` emit the equivalent `Expect(...).ToHaveTextAsync`/
+`expect(...).toHaveText` polling assertion for generated tests. FlaUI desktop generator parity
+for this is a tracked follow-up, not yet implemented. Web upload matching requires a captured
 `<input type="file">`; desktop generation drives a real file dialog (invoking the trigger button,
 setting the file path in the dialog, and confirming the Open button) or emits an explicit failure
 marker if manual handling is required. Desktop key generation supports Enter, Tab, Escape, Space, navigation/editing keys,
@@ -477,7 +487,18 @@ Eylem sözlüğü artık `Navigate`, `Fill`, `Click`, `Select`, `Check`, `Unchec
 `UploadFile`, `PressKey`, `Wait` ve `Assert` değerlerini kapsar. `UploadFile` için `Value` dosya yolu,
 `PressKey` için `Enter`/`ArrowDown` gibi tuş adı, `Wait` içinse isteğe bağlı pozitif
 milisaniye timeout değeridir (varsayılan `5000`). `Wait` sabit uyku üretmez; hedef
-elementin görünür/var olmasını poll eder. Web upload eşleştirmesi yakalanmış
+elementin görünür/var olmasını poll eder. Bir `Wait` adımı `AssertionKind`/`ExpectedValue`'i
+de yeniden kullanır (normalde yalnızca `Assert` adımlarında anlamlıdır): `TextEquals`/
+`TextContains`, eşleşen elemanın metninin sadece görünür olmasını değil, gerçekten beklenen
+değere ulaşmasını bekler (#480) — bir `Wait` adımının hedefi eşleştirme kısıtı gereği zaten
+görünür durumdadır, bu yüzden düz bir görünürlük beklemesi anında sonuçlanır ve bir dil
+değişimi gibi yerinde yeniden render olan içerik için hiçbir şey gözlemlemez. `AssertionKind.None`
+(varsayılan) orijinal görünürlük-bekleme davranışını değiştirmeden korur.
+`PlaywrightWebSession.WaitForTextAsync` canlı yürütme için temel ilkeldir;
+`PlaywrightCSharpTestGenerator`/`PlaywrightTypeScriptTestGenerator` üretilen testler için
+eşdeğer `Expect(...).ToHaveTextAsync`/`expect(...).toHaveText` poll eden doğrulamasını üretir.
+FlaUI masaüstü üreteci için bu paritesi takip edilen bir sonraki adım, henüz uygulanmadı.
+Web upload eşleştirmesi yakalanmış
 `<input type="file">` sinyalini zorunlu tutar; desktop üretimi gerçek bir dosya diyaloğunu
 yönetir (tetikleyici butonu tıklar, diyalogdaki dosya yolu alanını doldurur ve Aç butonunu onaylar)
 veya manuel müdahale gerekiyorsa açık bir hata işareti üretir. `Check`/`Uncheck` onay kutuları ve radyo düğmeleri

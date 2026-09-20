@@ -140,6 +140,80 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task RunAsync_WaitWithTextEquals_WaitsForALanguageSwitchNotJustVisibility()
+        {
+            // The greeting is visible from the start - a plain Wait step (AssertionKind.None) would resolve
+            // immediately without ever observing the switch. AssertionKind.TextEquals on a Wait step is what
+            // makes it actually wait for the click's effect.
+            var htmlPath = WriteTempHtml(
+                "<h1 data-testid=\"greeting\">Hello</h1>" +
+                "<button data-testid=\"switch-language\" onclick=\"document.querySelector('[data-testid=greeting]').textContent = 'Merhaba'\">switch</button>");
+            try
+            {
+                var url = new Uri(htmlPath).AbsoluteUri;
+                var scenario = new IntentScenario
+                {
+                    Steps = new List<IntentStep>
+                    {
+                        new() { Order = 1, ActionType = IntentActionType.Navigate, Value = url },
+                        new() { Order = 2, ActionType = IntentActionType.Click, TargetDescription = "switch language button" },
+                        new()
+                        {
+                            Order = 3, ActionType = IntentActionType.Wait, TargetDescription = "greeting",
+                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "5",
+                        },
+                    },
+                };
+
+                var executor = new IntentWebExecutor(new FixedScenarioPlanner(scenario));
+                await using var session = await PlaywrightWebSession.StartAsync();
+
+                var result = await executor.RunAsync(new IntentPlanningRequest { Goal = "Switch language and wait", TargetUrl = url }, session);
+
+                Assert.True(result.Success, DiagnosticsOf(result));
+                Assert.Equal("Merhaba", await session.GetTextAsync("[data-testid='greeting']"));
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
+        public async Task RunAsync_WaitWithTextEquals_FailsTheStep_WhenTextNeverMatches()
+        {
+            var htmlPath = WriteTempHtml("<h1 data-testid=\"greeting\">Hello</h1>");
+            try
+            {
+                var url = new Uri(htmlPath).AbsoluteUri;
+                var scenario = new IntentScenario
+                {
+                    Steps = new List<IntentStep>
+                    {
+                        new() { Order = 1, ActionType = IntentActionType.Navigate, Value = url },
+                        new()
+                        {
+                            Order = 2, ActionType = IntentActionType.Wait, TargetDescription = "greeting",
+                            AssertionKind = AssertionKind.TextEquals, ExpectedValue = "Merhaba", Value = "0.3",
+                        },
+                    },
+                };
+
+                var executor = new IntentWebExecutor(new FixedScenarioPlanner(scenario));
+                await using var session = await PlaywrightWebSession.StartAsync();
+
+                var result = await executor.RunAsync(new IntentPlanningRequest { Goal = "Wait for text that never arrives", TargetUrl = url }, session);
+
+                Assert.False(result.Success);
+                Assert.False(result.StepResults[1].Success);
+            }
+            finally
+            {
+                DeleteIfExists(htmlPath);
+            }
+        }
+
+        [Fact]
         public async Task RunAsync_AbortsOnTheFirstFailedStep_AndDoesNotAttemptLaterSteps()
         {
             var htmlPath = WriteTempHtml("<button data-testid=\"real-button\">Real</button>");

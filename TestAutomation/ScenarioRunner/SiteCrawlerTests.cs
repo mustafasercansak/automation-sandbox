@@ -279,6 +279,70 @@ namespace ScenarioRunner
             }
         }
 
+        [Fact]
+        public async Task WaitForTextAsync_Exact_ResolvesOnceTextEqualsTheExpectedValue()
+        {
+            var path = WriteTempHtml(
+                "SiteCrawlerTests_TextEquals",
+                "<h1 id=\"greeting\">Hello</h1>" +
+                "<button id=\"switch-language\" onclick=\"document.getElementById('greeting').textContent = 'Merhaba'\">switch</button>");
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(path).AbsoluteUri);
+
+                await session.ClickAsync("#switch-language");
+                await session.WaitForTextAsync("#greeting", "Merhaba", exact: true, TimeSpan.FromSeconds(5));
+
+                Assert.Equal("Merhaba", await session.GetTextAsync("#greeting"));
+            }
+            finally
+            {
+                DeleteIfExists(path);
+            }
+        }
+
+        [Fact]
+        public async Task WaitForTextAsync_Exact_TimesOut_WhenTextNeverEqualsTheExpectedValue()
+        {
+            var path = WriteTempHtml("SiteCrawlerTests_TextEqualsTimeout", "<h1 id=\"greeting\">Hello</h1>");
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(path).AbsoluteUri);
+
+                await Assert.ThrowsAsync<TimeoutException>(
+                    () => session.WaitForTextAsync("#greeting", "Merhaba", exact: true, TimeSpan.FromMilliseconds(300)));
+            }
+            finally
+            {
+                DeleteIfExists(path);
+            }
+        }
+
+        [Fact]
+        public async Task WaitForTextAsync_Contains_ResolvesOnceTextContainsTheExpectedSubstring()
+        {
+            var path = WriteTempHtml(
+                "SiteCrawlerTests_TextContains",
+                "<h1 id=\"greeting\">Hello</h1>" +
+                "<button id=\"switch-language\" onclick=\"document.getElementById('greeting').textContent = 'Merhaba, world'\">switch</button>");
+            try
+            {
+                await using var session = await PlaywrightWebSession.StartAsync();
+                await session.NavigateAsync(new Uri(path).AbsoluteUri);
+
+                await session.ClickAsync("#switch-language");
+                await session.WaitForTextAsync("#greeting", "world", exact: false, TimeSpan.FromSeconds(5));
+
+                Assert.Equal("Merhaba, world", await session.GetTextAsync("#greeting"));
+            }
+            finally
+            {
+                DeleteIfExists(path);
+            }
+        }
+
         private static string CreateTempDir()
         {
             var dir = Path.Combine(Path.GetTempPath(), "SiteCrawlerTests_" + Guid.NewGuid().ToString("N"));

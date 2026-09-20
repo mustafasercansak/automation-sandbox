@@ -205,6 +205,34 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                 });
         }
 
+        /// <summary>Waits until the element matched by <paramref name="cssSelector" /> exists and its text
+        /// content equals (or, when <paramref name="exact" /> is false, contains) <paramref name="expectedText" />,
+        /// up to <paramref name="timeout" /> (or the session's navigation timeout when omitted). Unlike
+        /// <see cref="WaitForTextChangeAsync" /> (which waits for *any* change from a known baseline), this
+        /// waits for a specific target value - the natural shape for a scripted step that already knows what
+        /// it expects to see, e.g. after a language switch.</summary>
+        public Task WaitForTextAsync(string cssSelector, string expectedText, bool exact = true, TimeSpan? timeout = null)
+        {
+            if (string.IsNullOrWhiteSpace(cssSelector))
+            {
+                throw new ArgumentException("cssSelector must not be null or empty.", nameof(cssSelector));
+            }
+
+            var predicate = exact
+                ? "(args) => { const el = document.querySelector(args.selector); " +
+                  "return el !== null && el.textContent === args.expectedText; }"
+                : "(args) => { const el = document.querySelector(args.selector); " +
+                  "return el !== null && el.textContent !== null && el.textContent.includes(args.expectedText); }";
+
+            return _page.WaitForFunctionAsync(
+                predicate,
+                new { selector = cssSelector, expectedText },
+                new PageWaitForFunctionOptions
+                {
+                    Timeout = (float?)(timeout ?? TimeSpan.FromMilliseconds(_options.NavigationTimeoutMilliseconds)).TotalMilliseconds,
+                });
+        }
+
         /// <summary>Every absolute <c>http(s)</c> hyperlink on the current page, deduplicated and in document
         /// order - the raw material <see cref="SiteCrawler" /> walks to discover pages without a hand-authored
         /// navigation path. Relative <c>href</c> values are resolved to absolute URLs by the browser itself
