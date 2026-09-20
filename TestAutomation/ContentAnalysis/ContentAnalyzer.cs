@@ -11,6 +11,20 @@ namespace AutomationSandbox.ContentAnalysis
     /// review layer when one is supplied and available.</summary>
     public static class ContentAnalyzer
     {
+        /// <summary>Counts the text passages <see cref="RunHeuristics" />/<see cref="AnalyzeAsync" /> would
+        /// consider for <paramref name="dom" />, without running any check. A page-scan report can record
+        /// this alongside its issue count: zero passages on a page that should have visible text usually
+        /// means the DOM was captured before dynamic content rendered, not that the page is clean.</summary>
+        public static int CountPassages(WebElementInfo dom)
+        {
+            if (dom == null)
+            {
+                throw new ArgumentNullException(nameof(dom));
+            }
+
+            return ExtractPassages(dom).Count;
+        }
+
         /// <summary>Runs only the zero-dependency heuristic checks.</summary>
         public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)
         {

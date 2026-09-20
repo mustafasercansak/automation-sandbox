@@ -53,6 +53,10 @@ Every remaining public type is listed below. Setter counts are after the change.
 | Package / type | Public setters | Decision |
 | :--- | ---: | :--- |
 | ContentAnalysis / `ClaudeContentAnalysisProvider` | 1 | Keep sanitizer mutable: callers configure the redaction policy before content analysis, mirroring `LlmIntentPlanner`. |
+| ContentAnalysis / `ContentAnalysisReportDocument` | 3 | Keep editable: `ContentAnalysisReportFileSink.LoadReport` materializes this from the JSON Lines log on read, the same pattern `HealingReportDocument` uses (#424). |
+| ContentAnalysis / `ContentAnalysisReportEntry` | 4 | Keep editable: `FromAnalysis` populates one page's scan result; consumers may adjust fields before recording a custom entry. |
+| ContentAnalysis / `ContentAnalysisReportFileSink` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| ContentAnalysis / `ContentAnalysisReportHtmlRenderer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | ContentAnalysis / `ContentAnalyzer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | ContentAnalysis / `ContentIssue` | 0 | Freeze five properties: one detected content defect, constructed once by a heuristic check or provider and never mutated. |
 | ContentAnalysis / `ContentIssueSource` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |

@@ -26,6 +26,24 @@ IReadOnlyList<ContentIssue> issues = ContentAnalyzer.RunHeuristics(dom);
 issues = await ContentAnalyzer.AnalyzeAsync(dom, new ClaudeContentAnalysisProvider());
 ```
 
+### Reporting across a multi-page scan
+
+`ContentAnalysisReportFileSink` persists findings as an append-only JSON Lines log (one `ContentAnalysisReportEntry` per page, the same pattern `AutomationSandbox.SelfHealing`'s `HealingReportFileSink` uses) plus an optional HTML dashboard, so a scan across many pages accumulates one readable report instead of an in-memory list per call:
+
+```csharp
+var sink = new ContentAnalysisReportFileSink("content-report.json"); // content-report.html alongside it
+
+foreach (var url in urlsToScan)
+{
+    await session.NavigateAsync(url);
+    var dom = await session.CaptureAsync();
+    var issues = await ContentAnalyzer.AnalyzeAsync(dom, new ClaudeContentAnalysisProvider());
+    sink.Record(ContentAnalysisReportEntry.FromAnalysis(url, dom, issues));
+}
+```
+
+`ContentAnalysisReportEntry.PassageCount` (via `ContentAnalyzer.CountPassages`) records how much text a page actually had: zero passages on a page expected to show text is a signal the DOM was captured before dynamic content rendered, not that the page is clean.
+
 ## Related packages
 
 - `AutomationSandbox.WebDiscovery` — the `WebElementInfo` DOM model this package analyzes (transitive).

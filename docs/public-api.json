@@ -20,6 +20,74 @@
   },
   {
     "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentAnalysisReportDocument",
+    "PublicMutableProperties": 3,
+    "Declarations": [
+      "public sealed class ContentAnalysisReportDocument"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentAnalysisReportDocument.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset GeneratedAt { get; set; }",
+      "public List<ContentAnalysisReportEntry> Entries { get; set; }",
+      "public const int CurrentSchemaVersion;",
+      "public int SchemaVersion { get; set; }"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentAnalysisReportEntry",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class ContentAnalysisReportEntry"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentAnalysisReportEntry.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset CapturedAtUtc { get; set; }",
+      "public List<ContentIssue> Issues { get; set; }",
+      "public int PassageCount { get; set; }",
+      "public static ContentAnalysisReportEntry FromAnalysis(string url, WebElementInfo dom, IReadOnlyList<ContentIssue> issues)",
+      "public string Url { get; set; }"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentAnalysisReportFileSink",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ContentAnalysisReportFileSink"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentAnalysisReportFileSink.cs"
+    ],
+    "Members": [
+      "public ContentAnalysisReportDocument LoadReport()",
+      "public ContentAnalysisReportFileSink(string filePath)",
+      "public ContentAnalysisReportFileSink(string filePath, string? htmlFilePath)",
+      "public string FilePath { get; }",
+      "public string? HtmlFilePath { get; }",
+      "public void Record(ContentAnalysisReportEntry entry)"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.ContentAnalysisReportHtmlRenderer",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class ContentAnalysisReportHtmlRenderer"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/ContentAnalysisReportHtmlRenderer.cs"
+    ],
+    "Members": [
+      "public static string Render(ContentAnalysisReportDocument document)"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
     "Type": "AutomationSandbox.ContentAnalysis.ContentAnalyzer",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -30,7 +98,8 @@
     ],
     "Members": [
       "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
-      "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)"
+      "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)",
+      "public static int CountPassages(WebElementInfo dom)"
     ]
   },
   {
