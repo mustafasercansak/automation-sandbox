@@ -117,11 +117,14 @@ While on `0.x`, a **minor** bump (`0.2` → `0.3`) may carry a breaking change t
 
 Source builds include XML IntelliSense documentation for every packable library. The
 [public API audit and migration guide](docs/public-api-audit.md) records the reviewed
-surface and deliberate mutability contracts. For the next breaking release, construct
+surface and deliberate mutability contracts. Since the public API freeze (#400),
 `ScoreComponents`, `PlaywrightLocatorSuggestion`, `IntentElementCandidate`, and
-`IntentDesktopElementCandidate` with named constructor arguments instead of object
-initializers. Their properties are get-only; candidate references still point to editable
-steps and captured elements. This source change does not alter packages already published.
+`IntentDesktopElementCandidate` take named constructor arguments instead of object
+initializers — replace `new ScoreComponents { NameScore = 0.8 }` with
+`new ScoreComponents(nameScore: 0.8)`. Their properties are get-only; candidate references
+still point to editable steps and captured elements. Earlier packages are unaffected
+retroactively; only consumers upgrading past the freeze need to switch construction syntax
+(see the [migration guide](docs/public-api-audit.md) for the exact release).
 
 ---
 
@@ -144,7 +147,7 @@ steps and captured elements. This source change does not alter packages already 
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
 | **Playwright Web Automation** | ✅ Implemented | `WebDiscovery` DOM snapshot model, Shadow DOM / iframe traversal, `PlaywrightApplicationConnector`, Playwright locator emitter, and `WebDiscoveryOptions` (MaxDepth, MaxElements, Timeout) bounding DOM capture with an observable truncation signal. |
-| **NuGet Preview Packaging** | ✅ Implemented | Eight validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
+| **NuGet Preview Packaging** | ✅ Implemented | Nine validated `AutomationSandbox.*` packages with README/license/repository metadata, symbol packages, manual artifact packaging, and GitHub prerelease assets. |
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
 | **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
 | **Web Observation Sample** | ✅ Implemented | Live browser quickstart (`samples/WebObservationQuickstart`) exercising `PlaywrightWebSession` and `ContentAnalysis` together against a real local HTTP server: authenticate once, reuse the session via storage-state persistence with no repeated login, flag a planted content defect, and observe a planted broken image as a real 404. |
@@ -162,7 +165,7 @@ steps and captured elements. This source change does not alter packages already 
 
 **Platform breakdown:** Core heuristic engine: cross-platform. Desktop automation: Windows-only (FlaUI). Web automation: cross-platform (Playwright).
 
-The core logic (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`) targets `netstandard2.0`, `.NET 8`, and `.NET 10` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, intent planning, and cross-platform unit tests to execute on Linux, macOS, and Windows. CI runs on a matrix across both Windows (`windows-latest` for full suite including FlaUI) and Linux (`ubuntu-latest` for cross-platform core and web suite).
+The core logic (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`, `ContentAnalysis`, `IntentExecution`) targets `netstandard2.0`, `.NET 8`, and `.NET 10` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, intent planning, and cross-platform unit tests to execute on Linux, macOS, and Windows. CI runs on a matrix across both Windows (`windows-latest` for full suite including FlaUI) and Linux (`ubuntu-latest` for cross-platform core and web suite).
 
 ```mermaid
 flowchart TB
@@ -272,6 +275,8 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 > **`RunnerUpScore` & `MinimumCandidateMargin`:** a heuristic match additionally requires `best - runnerUp >= MinimumCandidateMargin` (0.05 by default). Two near-identical candidates mean "I don't know" — the resolver falls back to LLM/manual review instead of silently picking the tie-break winner. The margin gate does not apply to LLM picks (they use the independent-agreement quorum).
 >
 > **Unusable Rectangle Handling:** If a control has a `(0,0,0,0)` bounding box (e.g. offscreen, unrendered, or collapsed), `PositionScore` evaluates to `null` — the same missing-signal rule, so offscreen controls are neither penalized nor erroneously awarded 1.0 center-point matches.
+>
+> **Per-component gates (`MinimumNameScoreWhenNamed`, `MinimumChildSignatureSimilarity`):** the weighted total above cannot override two additional gates, both disabled by default and set to a non-zero floor by the `Balanced`/`Conservative` profiles. The **name gate** requires the winning candidate's `NameScore` to independently clear `MinimumNameScoreWhenNamed` (0.30) whenever the stale locator had a name. The **descendant gate** requires the candidate's live direct-child `ControlType` multiset to match the stale locator's recorded `ChildControlTypeSignature` (0.50 by default) whenever the stale locator was a container. Both gates apply to LLM picks too; the margin gate above does not. Together with opt-in `ReconcileAgainstRepository`, these gates are what bring the measured false-heal rate on the committed HandBrake/ShareX fixtures to 0% under `Balanced`.
 
 > [!IMPORTANT]
 > **How a heuristic match is accepted vs. how an LLM pick is accepted:**
@@ -785,12 +790,15 @@ AutomationSandbox.sln
 │   ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
 │   ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
 │   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
+│   ├── ContentAnalysis/    Content-quality checks over a captured WebElementInfo tree: heuristics + optional single-provider LLM review (netstandard2.0, net8.0, net10.0)
+│   ├── IntentExecution/    IntentWebExecutor: plans and actually executes an intent scenario against a live PlaywrightWebSession (netstandard2.0, net8.0, net10.0)
 │   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net8.0)
 │   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
 └── samples/
     ├── CalibrationCli/     CLI calibration tool for evaluating dataset ablation benchmarks (.NET 8)
     ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 8)
-    └── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
+    ├── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
+    └── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 8)
 ```
 
 ---

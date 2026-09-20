@@ -86,7 +86,7 @@ Install the latest prerelease package:
 dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
-The other six packages use the same version. Add only the packages whose APIs the
+The other eight packages use the same version. Add only the packages whose APIs the
 consumer uses; NuGet restores their package dependencies transitively.
 
 For a complete first run, use the [Published Package Quickstart](consumer-quickstart.md).
@@ -160,7 +160,7 @@ The packaging workflows (`pack.yml`, `release.yml`) and `verify.ps1` resolve `<V
 `Pack` workflow'u NuGet paketlerini yalnızca artifact olarak üretir ve herhangi bir
 feed'e yayın yapmaz. `Release Preview Packages` workflow'u ise `publish_to_nuget`
 etkinleştirildiğinde saklanan bir API anahtarı olmadan Trusted Publishing (OIDC) ile
-nuget.org'a yayın yapabilir. Yayınlanan yedi paketin tamamı nuget.org'da ve GitHub
+nuget.org'a yayın yapabilir. Yayınlanan dokuz paketin tamamı nuget.org'da ve GitHub
 prerelease asset'lerinde bulunur. Her release çalıştırması ayrıca yayınlanan her paket
 için bir CycloneDX JSON SBOM'u (`UiModel.bom.json` gibi) üretir; bu dosyalar paketin
 Release build'indeki geçişli NuGet bağımlılık grafiğini listeler ve `release-sboms`

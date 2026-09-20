@@ -25,8 +25,10 @@ exclude:
   - samples
   # Per-package NuGet READMEs (#338): embedded in the .nupkg files, not pages on the docs
   # site. They deliberately carry no Jekyll front matter (nuget.org would render it), so
-  # Jekyll would otherwise copy them out as raw .md.
-  - docs/nuget
+  # Jekyll would otherwise copy them out as raw .md. The trailing slash matters: a bare
+  # "docs/nuget" here silently swallows docs/nuget-packaging.md too (its relative path
+  # starts with the same prefix), 404ing that page on the live site with no build error.
+  - docs/nuget/
   - docs/blog/demo-storyboard.md
   - docs/blog/distribution-kit.md
   - docs/blog/gen-demo-gif.py
