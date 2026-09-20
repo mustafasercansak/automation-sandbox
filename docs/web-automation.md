@@ -146,6 +146,63 @@ See the runnable
 sample for the full crawl-then-analyze-then-report flow against either a bundled fixture site
 or any real URL you pass on the command line.
 
+### Real-World Example: Scripting a JS-Only Language Switcher
+
+The scenario above assumes a stable selector whose text changes in place. Verified live against
+several unmodified production sites while building this feature - not a synthetic fixture - three
+patterns showed up that are worth expecting on a real site, none of which needed a code change to
+handle:
+
+1. **Same-origin sites vary in how "findable" their switcher is.** Some (e.g. a documentation
+   site built with real per-language URLs) are pure `<a href="/de/">` links - `SiteCrawler`
+   discovers these automatically, no scripting needed. Others render a menu button whose *options*
+   turn out to be `<a href>` too, just not visible until the menu opens - `GetLinksAsync` still
+   finds them, since it reads `href` attributes from the DOM regardless of CSS visibility. The
+   remaining case - a switcher built entirely from `<button>`/`<div onclick>` elements, no `href`
+   anywhere, even after opening the menu - is the one that genuinely needs the explicit
+   `ClickAsync` + `WaitForTextChangeAsync`/`WaitForTextAsync` steps below; confirmed on a live site
+   this way (its trigger *and* its menu options were both `href`-less buttons - the mechanism this
+   section demonstrates was necessary, not just a hypothetical worst case).
+2. **A promo/consent overlay often covers the page before you can interact with anything else.**
+   This is unrelated to language switching but near-universal on real commercial sites - dismiss it
+   first, the same way you'd handle a cookie banner in any other automated test.
+3. **A visible label like "English (US)" is often not unique on the page** (e.g. it appears once
+   in a "recommended for you" shortcut list and again in the full language list). Playwright's
+   `text=` selector throws a strict-mode error rather than guessing - scope it further
+   (`text=English (US) >> nth=0`) or use a more specific selector.
+
+```csharp
+await using var session = await PlaywrightWebSession.StartAsync();
+await session.NavigateAsync("https://example.test/");
+
+// 1. Dismiss whatever's blocking interaction first - specific to the site, not to language
+//    switching itself.
+if (await session.IsVisibleAsync("[aria-label='Close']"))
+{
+    await session.ClickAsync("[aria-label='Close']");
+}
+
+// 2. Open the switcher (a real <button>, no href - SiteCrawler could never discover this step).
+const string trigger = "[data-testid='language-picker-trigger']";
+var before = await session.GetTextAsync("html");
+await session.ClickAsync(trigger);
+
+// 3. Pick a specific option, disambiguating if the same label appears more than once.
+await session.WaitForVisibleAsync("text=English (US) >> nth=0", TimeSpan.FromSeconds(5));
+await session.ClickAsync("text=English (US) >> nth=0");
+
+// 4. Wait for the real DOM to actually change - no fixed sleep.
+await session.WaitForTextChangeAsync("html", before, TimeSpan.FromSeconds(10));
+```
+
+None of this requires a new capability - it is the existing `ClickAsync`/`IsVisibleAsync`/
+`WaitForVisibleAsync`/`WaitForTextChangeAsync` vocabulary, composed for what a real site actually
+looks like. `SiteCrawler` is deliberately read-only (link-following only, never clicking) and stays
+that way - guessing which button on a page is "probably" a language switcher and clicking it blind
+is a correctness *and* safety risk (it could just as easily be "Delete Account" or "Confirm
+Payment"). A human (or an explicit `IntentScenario` step) names the target; the engine's job is
+making that step resilient, not discovering it.
+
 ### Bounding a Capture (Depth / Element Count / Timeout)
 
 `CaptureAsync` accepts an optional `WebDiscoveryOptions` (`MaxDepth`, `MaxElements`,
@@ -418,6 +475,62 @@ Tara-sonra-analiz et-sonra-raporla akışının tamamı için çalıştırılabi
 [`samples/SiteContentAuditQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/SiteContentAuditQuickstart)
 örneğine bakın — ekli örnek siteye veya komut satırından verdiğiniz herhangi bir gerçek
 URL'ye karşı çalışır.
+
+### Gerçek Dünya Örneği: JS-Only Bir Dil Değiştiricisini Script'lemek
+
+Yukarıdaki senaryo, metni yerinde değişen sabit bir selector varsayıyor. Bu özelliği inşa
+ederken birkaç gerçek, değiştirilmemiş üretim sitesine karşı canlı doğrulanan (sentetik bir
+fixture değil) üç pattern, kod değişikliği gerektirmeden karşılaşmaya değer:
+
+1. **Aynı-origin siteler "bulunabilirlik" açısından farklılık gösteriyor.** Bazıları (ör. gerçek
+   dil-başına-URL ile kurulmuş bir dokümantasyon sitesi) saf `<a href="/de/">` linkleri — bunları
+   `SiteCrawler` otomatik buluyor, script gerekmiyor. Bazıları bir menü butonu render ediyor ama
+   *içindeki seçenekler* aslında `<a href>` — sadece menü açılana kadar görünür değiller;
+   `GetLinksAsync` bunları yine de buluyor, çünkü CSS görünürlüğünden bağımsız olarak DOM'daki
+   `href` attribute'larını okuyor. Geriye kalan durum — menü açıldıktan sonra bile hiçbir yerde
+   `href` olmayan, tamamen `<button>`/`<div onclick>` elemanlarından kurulu bir değiştirici — aşağıdaki
+   açık `ClickAsync` + `WaitForTextChangeAsync`/`WaitForTextAsync` adımlarını gerçekten gerektiren
+   durum; canlı bir sitede bu şekilde doğrulandı (hem tetikleyicisi hem menü seçenekleri `href`'siz
+   butondu — bu bölümün gösterdiği mekanizma varsayımsal bir en kötü durum değil, gerçekten
+   gerekliydi).
+2. **Bir promosyon/onay katmanı genelde başka bir şeyle etkileşime geçmeden önce sayfayı kaplıyor.**
+   Bu dil değişimiyle ilgisiz ama gerçek ticari sitelerde neredeyse evrensel — herhangi bir
+   otomatik testte çerez banner'ını nasıl ele alırsanız aynı şekilde önce onu kapatın.
+3. **"English (US)" gibi görünür bir etiket sayfada genelde tek değil** (ör. bir kez "sizin için
+   önerilen" kısa listesinde, bir kez de tam dil listesinde görünüyor). Playwright'ın `text=`
+   selector'ı tahmin yürütmek yerine strict-mode hatası fırlatıyor — daha da daraltın
+   (`text=English (US) >> nth=0`) ya da daha spesifik bir selector kullanın.
+
+```csharp
+await using var session = await PlaywrightWebSession.StartAsync();
+await session.NavigateAsync("https://example.test/");
+
+// 1. Önce etkileşimi engelleyen her ne ise kapatın - dil değişiminin kendisiyle değil, siteyle ilgili.
+if (await session.IsVisibleAsync("[aria-label='Close']"))
+{
+    await session.ClickAsync("[aria-label='Close']");
+}
+
+// 2. Değiştiriciyi açın (gerçek bir <button>, href yok - SiteCrawler bu adımı asla keşfedemez).
+const string trigger = "[data-testid='language-picker-trigger']";
+var before = await session.GetTextAsync("html");
+await session.ClickAsync(trigger);
+
+// 3. Aynı etiket birden fazla yerde çıkıyorsa netleştirerek belirli bir seçeneği seçin.
+await session.WaitForVisibleAsync("text=English (US) >> nth=0", TimeSpan.FromSeconds(5));
+await session.ClickAsync("text=English (US) >> nth=0");
+
+// 4. Gerçek DOM'un değişmesini bekleyin - sabit bir uyku değil.
+await session.WaitForTextChangeAsync("html", before, TimeSpan.FromSeconds(10));
+```
+
+Bunların hiçbiri yeni bir yetenek gerektirmiyor — mevcut `ClickAsync`/`IsVisibleAsync`/
+`WaitForVisibleAsync`/`WaitForTextChangeAsync` sözlüğünün, gerçek bir sitenin gerçekte nasıl
+göründüğüne göre bir araya getirilmiş hali. `SiteCrawler` kasıtlı olarak salt-okunur kalıyor
+(sadece link takibi, asla tıklama) ve öyle kalacak — bir sayfadaki hangi butonun "muhtemelen" dil
+değiştirici olduğunu tahmin edip körlemesine tıklamak hem doğruluk hem güvenlik riski (o buton aynı
+kolaylıkla "Hesabı Sil" ya da "Ödemeyi Onayla" olabilir). Hedefi bir insan (veya açık bir
+`IntentScenario` adımı) belirler; motorun işi o adımı dayanıklı hale getirmek, keşfetmek değil.
 
 ### Taramayı Sınırlama (Derinlik / Eleman Sayısı / Zaman Aşımı)
 
