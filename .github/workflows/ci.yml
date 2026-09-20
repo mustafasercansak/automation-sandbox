@@ -294,6 +294,35 @@ jobs:
         shell: pwsh
         run: ./samples/WebObservationQuickstart/verify.ps1
 
+  site-content-audit-sample:
+    name: Site Content Audit Sample
+    runs-on: ubuntu-latest
+    # Same shape/cost as web-observation-sample above - build plus a one-time Chromium download.
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      # Build once so the generated playwright.ps1 install script exists in the sample's
+      # own build output before verify.ps1 runs it via `dotnet run`.
+      - name: Build sample
+        run: dotnet build samples/SiteContentAuditQuickstart --configuration Debug
+
+      - name: Install Playwright Chromium (one-time browser download for the sample's live run)
+        shell: pwsh
+        run: pwsh ./samples/SiteContentAuditQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium
+
+      # No arguments: audits the bundled fixture site, not a real URL, so this stays
+      # network-independent and deterministic like every other required PR check.
+      - name: Run sample verification
+        shell: pwsh
+        run: ./samples/SiteContentAuditQuickstart/verify.ps1
+
   nunit-fixture-tests:
     name: NUnit Test Fixture Helper
     runs-on: ubuntu-latest
