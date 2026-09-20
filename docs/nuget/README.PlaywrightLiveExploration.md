@@ -31,6 +31,41 @@ WebElementInfo snapshot = await explorer.CaptureAsync("https://example.com/login
 
 The snapshot feeds `AutomationSandbox.IntentAutomation` pipelines and `AutomationSandbox.WebDiscovery` mapping directly.
 
+## Long-lived sessions, waiting for dynamic content, and crawling a site
+
+`PlaywrightLiveExplorer` opens one page per call. `PlaywrightWebSession` reuses a single page across many actions instead - authenticate once, then fill/click/navigate repeatedly:
+
+```csharp
+await using var session = await PlaywrightWebSession.StartAsync(); // or StartAsync(storageStatePath: "auth.json") to skip login
+await session.NavigateAsync("https://example.com/dashboard");
+WebElementInfo dom = await session.CaptureAsync();
+```
+
+A capture is a point-in-time snapshot - it does not wait for a client-side re-render. `WaitForVisibleAsync` only helps when an element's *visibility* changes; a language switch or any other update that mutates an already-visible element's text needs `WaitForTextChangeAsync` instead:
+
+```csharp
+var before = await session.GetTextAsync("#greeting");
+await session.ClickAsync("#language-switch");
+await session.WaitForTextChangeAsync("#greeting", before); // resolves once the text actually differs
+```
+
+`SiteCrawler.CrawlAsync` walks a site breadth-first from a single starting URL - no hand-authored per-page navigation needed:
+
+```csharp
+var result = await SiteCrawler.CrawlAsync(
+    session,
+    "https://example.com",
+    new SiteCrawlOptions { MaxPages = 50, MaxDepth = 3 }, // same-origin only by default
+    onPageCaptured: async (url, dom, ct) =>
+    {
+        // e.g. run AutomationSandbox.ContentAnalysis here, or record locators, or anything else per page
+    });
+
+// result.VisitedUrls, result.SkippedUrls (off-origin), result.Failures (navigation/capture errors, crawl continues past them)
+```
+
+Whatever the session was started with - headless or headed, with or without a saved storage state - applies to every page the crawl visits, so an authenticated session crawls behind login for free.
+
 ## Related packages
 
 - `AutomationSandbox.WebDiscovery` — the DOM snapshot model this package produces (transitive).

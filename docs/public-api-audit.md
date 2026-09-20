@@ -131,6 +131,10 @@ Every remaining public type is listed below. Setter counts are after the change.
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| PlaywrightLiveExploration / `SiteCrawlFailure` | 2 | Keep editable: one failed page `SiteCrawler.CrawlAsync` recorded; callers may adjust fields when composing a custom failure report. |
+| PlaywrightLiveExploration / `SiteCrawlOptions` | 3 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
+| PlaywrightLiveExploration / `SiteCrawlResult` | 3 | Keep editable: `SiteCrawler.CrawlAsync` accumulates visited, skipped, and failed URLs as the breadth-first walk proceeds. |
+| PlaywrightLiveExploration / `SiteCrawler` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `WebConsoleMessage` | 0 | Freeze two properties: one console message observed during a live session, never mutated after capture. |
 | PlaywrightLiveExploration / `WebNetworkResponse` | 0 | Freeze two properties: one network response observed during a live session, never mutated after capture. |
 | PlaywrightLiveExploration / `WebRequestFailure` | 0 | Freeze two properties: one failed request observed during a live session, never mutated after capture. |
