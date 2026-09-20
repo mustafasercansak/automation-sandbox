@@ -314,7 +314,7 @@ jobs:
   public-api-audit-sync:
     name: Public API Audit Stays In Sync
     runs-on: ubuntu-latest
-    # Observed ~15s for restore+run of eng/PublicApiAudit against seven small projects.
+    # Observed ~15s for restore+run of eng/PublicApiAudit against nine small projects.
     timeout-minutes: 10
     steps:
       - name: Checkout
