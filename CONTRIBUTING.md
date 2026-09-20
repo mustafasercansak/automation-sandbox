@@ -61,7 +61,7 @@ not evaluate translation quality. Single-language documentation is not subject t
 - **Language:** Modern C# (`<LangVersion>latest</LangVersion>`).
 - **Target Frameworks:**
   - **Cross-Platform Core Libraries (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`, `ContentAnalysis`, `IntentExecution`):** Multi-targeted for `netstandard2.0;net8.0` (+ `net10.0` conditionally). No Windows/FlaUI dependencies allowed here; must build and run cross-platform on Linux, macOS, and Windows.
-  - **Windows Desktop Discovery & Demos (`Discovery`, `WinFormsApp`, `WpfApp`):** .NET Framework 4.8 (`net48`) and .NET 8.0-windows (`net8.0-windows`).
+  - **Windows Desktop Discovery & Demos (`Discovery`, `WinFormsApp`, `WpfApp`):** `WinFormsApp` and `ScenarioRunner` are `net48` only; `Discovery` and `WpfApp` target `net8.0-windows` (`Discovery` also `net48`), plus `net10.0-windows` conditionally on a .NET 10 SDK (`$(NETCoreSdkVersion)` >= 10).
   - **Test Suite (`ScenarioRunner`):** Multi-targeted for `net48` (Windows) and `net8.0` (Linux/macOS/cross-platform).
 - **Package Management:** Managed via `Directory.Build.props` for versioning and pack metadata.
 
@@ -73,7 +73,7 @@ not evaluate translation quality. Single-language documentation is not subject t
 ## 3. Security, Auditing & Quality Gates
 
 - **Mandatory Package Security Auditing (#223):** MSBuild `NuGetAudit` is enabled repo-wide (`NuGetAuditMode=all`, `NuGetAuditLevel=moderate`). In CI (`ContinuousIntegrationBuild=true`), any High or Critical advisory (`NU1903` direct, `NU1904` transitive) causes a **hard build failure**.
-- **Verified GitHub Actions & Modern Dependencies Standard (#228):** Hallucinated future action tags (`@v6`, `@v7`, `@v8`) and deprecated actions (`actions/jekyll-build-pages`) are strictly forbidden. All workflow action calls are verified by `WorkflowActionVersionTests` in CI.
+- **Verified GitHub Actions & Modern Dependencies Standard (#228):** Every `actions/*` use must be pinned to its current, real, officially released major (currently `actions/checkout@v7`, `actions/setup-dotnet@v6`, `actions/upload-artifact@v7`, `actions/download-artifact@v8`, `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`, `NuGet/login@v1`) — never a hallucinated/nonexistent tag and never two majors of the same action coexisting in the repo. Deprecated actions (such as `actions/jekyll-build-pages`) are strictly forbidden. All workflow action calls are verified by `WorkflowActionVersionTests` in CI.
 - **Mandatory Ownership & Labels:** Every active issue and PR must always be assigned to the responsible contributor (`--assignee <username>`) and tagged with relevant GitHub labels (`--label <labels>`, e.g. `testing`, `documentation`, `ci`, `enhancement`, `bug`, `safety`). Unlabeled issues or PRs are not allowed.
 - **Zero Build Warnings:** Code must compile cleanly with `0 Warning(s), 0 Error(s)` across all targeted frameworks. Analyzer warnings (such as `xUnit.analyzers` `xUnit2031`) must be resolved rather than suppressed.
 - **Testing Rules:**

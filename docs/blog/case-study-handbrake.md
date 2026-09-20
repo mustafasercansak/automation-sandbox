@@ -106,8 +106,8 @@ A second #370 guard, `SelfHealingEngine.ReconcileAgainstRepository`, catches thi
 the other side: `pictureTab` is *itself* an authored locator, so once the engine re-resolves the rest of the
 suite against the live tree it sees the node is already owned and declines the heal. Across the full HandBrake
 ablation it takes deleted-element false heals from `17 %` (7 of 42) to **zero**, with no recall cost
-([the measurement](../benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)). On
-ShareX had one residual — an unnamed container landing on a structurally identical sibling no other test uses —
+([the measurement](../benchmark-calibration.md#14-repository-ownership-reconciliation-in-the-engine-370)). ShareX
+had one residual — an unnamed container landing on a structurally identical sibling no other test uses —
 which a third gate on the element's own child contents also drives to zero
 ([§15](../benchmark-calibration.md#15-a-non-structural-signal-for-the-uncontested-residual-375)).
 

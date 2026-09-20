@@ -61,6 +61,51 @@ uses the Playwright .NET SDK directly rather than a real MCP bridge (which would
 required a Node.js-based Playwright MCP server process - a first for this otherwise pure
 C#/.NET codebase).
 
+### Persistent Sessions and Live Execution
+
+`PlaywrightLiveExplorer` above is a one-shot capture: launch, navigate, capture, dispose.
+For a scenario that needs to interact with a page across many steps -
+`PlaywrightWebSession` (`AutomationSandbox.PlaywrightLiveExploration`, #448/#450/#456) is the
+long-lived counterpart: one page reused across the full `IntentActionType` vocabulary
+(`NavigateAsync`/`CaptureAsync`/`FillAsync`/`ClickAsync`/`SelectAsync`/`CheckAsync`/
+`UncheckAsync`/`HoverAsync`/`UploadFileAsync`/`PressKeyAsync`/`WaitForVisibleAsync`, plus
+`IsVisibleAsync`/`IsCheckedAsync`/`GetTextAsync`/`GetValueAsync`/`CurrentUrl` reads for
+assertions), with console/network/request-failure/page-error observation and
+`SaveStorageStateAsync`/`StartAsync(storageStatePath:)` for authenticate-once reuse across
+sessions. Every action goes through `IPage.Locator`, which only resolves the main frame, so
+cross-frame elements needing a `FrameLocator` chain (see the iframe sections below) are out
+of scope for `PlaywrightWebSession` itself.
+
+`IntentWebExecutor` (`AutomationSandbox.IntentExecution`, #458) plans a goal - by default with
+`DeterministicIntentPlanner` - and executes each step against a live `PlaywrightWebSession`:
+`Navigate` and page-level `Assert` (`UrlEquals`/`UrlContains`) need no element match; every
+other step captures a fresh DOM and matches it through `IntentExplorationBridge.Match` before
+dispatching to the matching `PlaywrightWebSession` method. It stops at the first
+failed/unmatched step.
+
+```csharp
+using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.IntentExecution;
+
+await using var session = await PlaywrightWebSession.StartAsync();
+var executor = new IntentWebExecutor(); // defaults to DeterministicIntentPlanner
+
+var request = new IntentPlanningRequest
+{
+    Goal = "Create a customer record with valid email",
+    TargetUrl = "https://example.test/customers",
+};
+
+IntentWebExecutionResult result = await executor.RunAsync(request, session);
+```
+
+See [Intent-Driven Automation](intent-driven-automation.md) for the full action vocabulary,
+assertion semantics, and worked examples, and the runnable
+[`samples/WebObservationQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/WebObservationQuickstart)
+sample for `PlaywrightWebSession` authenticate-once storage-state reuse plus
+`AutomationSandbox.ContentAnalysis` against a real local HTTP server.
+
 ### Bounding a Capture (Depth / Element Count / Timeout)
 
 `CaptureAsync` accepts an optional `WebDiscoveryOptions` (`MaxDepth`, `MaxElements`,
@@ -245,6 +290,52 @@ uyumludur. Bu projenin neden gerçek bir MCP köprüsü yerine (bu, saf C#/.NET 
 kez bir Node.js tabanlı Playwright MCP sunucu süreci gerektirirdi) doğrudan Playwright .NET
 SDK'sını kullandığına dair gerekçe için [Intent Tabanlı Otomasyon](intent-driven-automation.md)
 sayfasına bakın.
+
+### Kalıcı Oturumlar ve Canlı Yürütme
+
+Yukarıdaki `PlaywrightLiveExplorer` tek seferlik bir yakalamadır: başlat, git, yakala, kapat.
+Bir sayfayla birçok adım boyunca etkileşim kurması gereken bir senaryo için
+`PlaywrightWebSession` (`AutomationSandbox.PlaywrightLiveExploration`, #448/#450/#456) uzun
+ömürlü karşılığıdır: tüm `IntentActionType` sözcük dağarcığında
+(`NavigateAsync`/`CaptureAsync`/`FillAsync`/`ClickAsync`/`SelectAsync`/`CheckAsync`/
+`UncheckAsync`/`HoverAsync`/`UploadFileAsync`/`PressKeyAsync`/`WaitForVisibleAsync`, ayrıca
+assertion'lar için `IsVisibleAsync`/`IsCheckedAsync`/`GetTextAsync`/`GetValueAsync`/`CurrentUrl`
+okumaları) yeniden kullanılan tek bir sayfa; konsol/ağ/istek-hatası/sayfa-hatası gözlemi ve
+oturumlar arası kimlik doğrulamayı bir kez yapıp tekrar kullanmak için
+`SaveStorageStateAsync`/`StartAsync(storageStatePath:)` ile birlikte gelir. Her eylem yalnızca
+ana çerçeveyi çözen `IPage.Locator` üzerinden geçer; bu yüzden `FrameLocator` zinciri
+gerektiren çapraz-çerçeve elemanlar (aşağıdaki iframe bölümlerine bakın) `PlaywrightWebSession`
+için kapsam dışıdır.
+
+`IntentWebExecutor` (`AutomationSandbox.IntentExecution`, #458) bir hedefi planlar - varsayılan
+olarak `DeterministicIntentPlanner` ile - ve her adımı canlı bir `PlaywrightWebSession`'a karşı
+yürütür: `Navigate` ve sayfa düzeyindeki `Assert` (`UrlEquals`/`UrlContains`) eleman eşleşmesi
+gerektirmez; diğer her adım, `PlaywrightWebSession` metoduna göndermeden önce taze bir DOM
+yakalar ve `IntentExplorationBridge.Match` ile eşler. İlk başarısız/eşleşmeyen adımda durur.
+
+```csharp
+using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.IntentAutomation;
+using AutomationSandbox.IntentExecution;
+
+await using var session = await PlaywrightWebSession.StartAsync();
+var executor = new IntentWebExecutor(); // varsayılan olarak DeterministicIntentPlanner
+
+var request = new IntentPlanningRequest
+{
+    Goal = "Create a customer record with valid email",
+    TargetUrl = "https://example.test/customers",
+};
+
+IntentWebExecutionResult result = await executor.RunAsync(request, session);
+```
+
+Tam eylem sözcük dağarcığı, assertion semantiği ve çalıştırılabilir örnekler için
+[Intent Tabanlı Otomasyon](intent-driven-automation.md) sayfasına, `PlaywrightWebSession`
+oturum kalıcılığı ile `AutomationSandbox.ContentAnalysis`'in gerçek bir yerel HTTP sunucusuna
+karşı birlikte çalışmasını gösteren çalıştırılabilir örnek için
+[`samples/WebObservationQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/WebObservationQuickstart)
+örneğine bakın.
 
 ### Taramayı Sınırlama (Derinlik / Eleman Sayısı / Zaman Aşımı)
 

@@ -121,6 +121,8 @@ request headers and configured API credentials are not appended to the diagnosti
 
 An LLM pick is accepted only when **at least two providers independently name the same candidate**. The public API calls this `MinimumConsensusVotes`, and reports use `no-consensus`; these names describe the quorum mechanism, not a correctness guarantee. Self-reported confidence is recorded but never compared or thresholded: Claude's `0.72` and Gemini's `0.95` do not live on the same scale.
 
+Agreement is a necessary condition, not the only one: an LLM-consensus pick must also clear the same **per-component name and descendant/child-signature gates** a heuristic winner must clear (`SimilarityWeights.MinimumNameScoreWhenNamed`, `MinimumChildSignatureSimilarity`; see the healing pipeline description in `AGENTS.md`). Before #416, those two gates were computed only for the heuristic winner, so a name- or content-mismatched candidate agreed on by two providers could still be accepted as confident; both gates are now computed and enforced identically regardless of `HealResult.Source`. The runner-up margin gate remains heuristic-only — vote-count margins and structural-score margins are not on the same scale (#268).
+
 > [!WARNING]
 > **Agreement is an additional signal, not proof that the chosen element is correct.** Across four live runs, providers unanimously agreed in 34 deleted-element scenarios and all 34 verdicts were false heals, including cases where three independently sourced model families chose the same decoy. The measured separation came from providers disagreeing more often when an element was absent, not from agreement establishing correctness. See the [formal finding](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97).
 
@@ -417,6 +419,8 @@ istek başlıkları ve yapılandırılmış API kimlik bilgileri tanı mesajına
 ### 🤝 Bağımsız Model Uzlaşması (`Consensus` API)
 
 Bir LLM seçimi yalnızca **en az iki bağımsız sağlayıcı aynı adayı seçtiğinde** kabul edilir. Public API bu eşiği `MinimumConsensusVotes`, raporlar ise başarısız sonucu `no-consensus` olarak adlandırır; bu adlar doğruluk garantisini değil quorum mekanizmasını ifade eder. Modellerin kendi beyan ettiği güven puanları karşılaştırılmaz.
+
+Uzlaşma tek başına yeterli değildir: bir LLM-uzlaşma seçimi de sezgisel kazananın geçmesi gereken aynı **isim ve descendant/child-signature per-component kapılarını** geçmelidir (`SimilarityWeights.MinimumNameScoreWhenNamed`, `MinimumChildSignatureSimilarity`; bkz. `AGENTS.md` healing pipeline bölümü). #416 öncesinde bu iki kapı yalnızca sezgisel kazanan için hesaplanıyordu; bu yüzden iki sağlayıcının anlaştığı isim veya içerik uyuşmazlığı olan bir aday yine de güvenilir kabul edilebiliyordu. Artık her iki kapı da `HealResult.Source` fark etmeksizin aynı şekilde hesaplanıp uygulanır. Runner-up marj kapısı yalnızca sezgisel kalır — oy sayısı marjları ile yapısal skor marjları aynı ölçekte değildir (#268).
 
 > [!WARNING]
 > **Uzlaşma ek bir sinyaldir; seçilen elemanın doğru olduğunun kanıtı değildir.** Dört canlı koşuda sağlayıcılar 34 silinmiş-eleman senaryosunda oybirliğine ulaştı ve 34 kararın tamamı yanlış iyileştirmeydi; üç bağımsız kaynaklı model ailesinin aynı yanlış komşuyu seçtiği vakalar da buna dahildi. Ölçülen ayrışma, eleman yokken sağlayıcıların daha sık anlaşamamasından doğdu; anlaşmaları doğruluğu kanıtlamadı. [Resmi bulguya](benchmark-calibration.md#6-multi-provider-llm-consensus-as-an-absence-detector-97) bakın.

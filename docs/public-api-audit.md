@@ -9,7 +9,7 @@ title: Public API Audit
 
 ### Scope and measurement
 
-Baseline: `8eec935` on `main`, before this change. The source inventory parses the seven library directories, includes public/protected declarations and interface members, excludes internal/private types, and combines partial declarations. It is a source review artifact, not a binary compatibility checker. Compiler-generated constructors and inherited members are not enumerated. No target-specific public declarations exist in the audited sources; Windows runtime validation remains separate.
+Baseline: `8eec935` on `main`, before this change. At that baseline the source inventory parsed the seven library directories that existed at the time; `eng/PublicApiAudit/Program.cs` now enumerates nine library directories, `ContentAnalysis` (#452) and `IntentExecution` (#458) having been added since. It includes public/protected declarations and interface members, excludes internal/private types, and combines partial declarations. It is a source review artifact, not a binary compatibility checker. Compiler-generated constructors and inherited members are not enumerated. No target-specific public declarations exist in the audited sources; Windows runtime validation remains separate.
 
 | Metric | Before | After |
 | :--- | ---: | ---: |
@@ -28,7 +28,7 @@ The exporter uses Roslyn from the selected .NET SDK without adding a NuGet depen
 
 ### Package boundaries
 
-All seven packages are retained. Fewer package names would not remove code: merging these boundaries would force optional platform or browser dependencies into consumers that do not use them.
+All nine packages are retained (seven at the #400 baseline, plus `ContentAnalysis` and `IntentExecution` added afterward by #452/#458). Fewer package names would not remove code: merging these boundaries would force optional platform or browser dependencies into consumers that do not use them.
 
 | Package | Reason to retain |
 | :--- | :--- |
@@ -39,6 +39,8 @@ All seven packages are retained. Fewer package names would not remove code: merg
 | WebDiscovery | DOM mapping and locator suggestions remain usable without launching a browser. |
 | PlaywrightLiveExploration | Isolates the live Microsoft.Playwright dependency and browser lifecycle. |
 | IntentAutomation | Optional planning/recording/generation capability; core healing does not depend on it. |
+| ContentAnalysis | Content-quality heuristics and optional LLM review stay opt-in; core healing and web discovery do not depend on it. |
+| IntentExecution | The cross-cutting `IntentAutomation` + `PlaywrightLiveExploration` dependency for live execution belongs to neither package on its own. |
 
 ### Mutability and visibility decisions
 
@@ -175,7 +177,7 @@ var candidate = new IntentElementCandidate(
 
 These source-breaking changes belong in the next minor release alongside #399; see the [unreleased migration notes](release-notes/unreleased-public-api.md). Existing published packages are unchanged.
 
-XML comments are generated for all seven libraries. Each library project enables documentation before the SDK computes output items. `Directory.Build.targets` evaluates after `IsPackable` is known, enables analyzers, and fails missing/malformed public documentation. `eng/Validate-NuGetPackages.ps1` opens every package and requires non-empty, assembly-matched XML documentation beside every library DLL.
+XML comments are generated for all nine libraries. Each library project enables documentation before the SDK computes output items. `Directory.Build.targets` evaluates after `IsPackable` is known, enables analyzers, and fails missing/malformed public documentation. `eng/Validate-NuGetPackages.ps1` opens every package and requires non-empty, assembly-matched XML documentation beside every library DLL.
 
 Behavioral verification covers missing-versus-zero score evidence through JSON, round-trip preservation of locator proposals, and isolation from subsequent mutations of an input suggestion list. Existing rejection-path tests remain in place. The complete cross-platform suite and NUnit consumer fixture are required, together with `netstandard2.0` library compilation, package validation, security audit, and the Windows CI leg for UIA/net48 execution.
 
@@ -183,7 +185,7 @@ Behavioral verification covers missing-versus-zero score evidence through JSON, 
 
 ### Kapsam ve ölçüm
 
-İnceleme yedi paketin tamamını kapsar. Aynı kaynak envanteriyle public tip sayısı 116 → 110, public setter sayısı 358 → 338 olarak ölçülmüştür. Altı uygulama yardımcısı internal yapılmıştır; hiçbir mevcut davranış testi silinmemiştir.
+İnceleme, #400 taban çizgisindeki yedi paketin tamamını kapsıyordu; `eng/PublicApiAudit/Program.cs` artık dokuz paket dizinini tarar (sonradan eklenen `ContentAnalysis` (#452) ve `IntentExecution` (#458) dahil). Aynı kaynak envanteriyle #400 taban çizgisinde public tip sayısı 116 → 110, public setter sayısı 358 → 338 olarak ölçülmüştür. Altı uygulama yardımcısı internal yapılmıştır; hiçbir mevcut davranış testi silinmemiştir.
 
 Kaynak envanteri `dotnet run --project eng/PublicApiAudit -- . docs/public-api.json` komutuyla yeniden üretilir. Partial bildirimler birleştirilir; internal/private tipler, derleyicinin ürettiği constructor'lar ve kalıtımla gelen üyeler sayılmaz. Bu liste bir binary uyumluluk denetleyicisi değildir.
 
@@ -193,7 +195,7 @@ dotnet run --project eng/PublicApiAudit -- . docs/public-api.json
 
 ### Paket sınırları
 
-Yedi paket korunmuştur: `UiModel` ortak veri modelini, `LlmHealing` provider katmanını, `SelfHealing` çekirdek iyileştirmeyi, `Discovery` Windows/FlaUI bağımlılığını, `WebDiscovery` tarayıcı başlatmadan DOM eşlemeyi, `PlaywrightLiveExploration` canlı tarayıcı bağımlılığını ve `IntentAutomation` isteğe bağlı planlama/kod üretimini ayırır. Paketleri birleştirmek, kullanılmayan platform bağımlılıklarını tüketicilere zorunlu kılacaktır.
+Dokuz paket korunmuştur: `UiModel` ortak veri modelini, `LlmHealing` provider katmanını, `SelfHealing` çekirdek iyileştirmeyi, `Discovery` Windows/FlaUI bağımlılığını, `WebDiscovery` tarayıcı başlatmadan DOM eşlemeyi, `PlaywrightLiveExploration` canlı tarayıcı bağımlılığını, `IntentAutomation` isteğe bağlı planlama/kod üretimini, `ContentAnalysis` isteğe bağlı içerik-kalitesi kontrollerini ve `IntentExecution` canlı yürütme için gereken çapraz bağımlılığı ayırır. Paketleri birleştirmek, kullanılmayan platform bağımlılıklarını tüketicilere zorunlu kılacaktır.
 
 ### Değiştirilebilirlik ve görünürlük kararları
 

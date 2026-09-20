@@ -209,6 +209,8 @@ graph LR
     M3 --> M4 --> M5 --> M6
 ```
 
+> **Current product direction ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** M1–M6 above is the historical milestone sequence; it is not the current roadmap. The project is now working toward a commercial product centered on safety-first, explainable FlaUI locator healing for desktop. Web stays a secondary adapter, and intent planning, test generation, and new LLM providers (the subject of M6 above) are feature-frozen — they receive bug and security fixes only. See the [Roadmap section of README.md](README.md#️-roadmap) for the current phase tracking.
+
 </details>
 
 ---
@@ -415,6 +417,8 @@ graph LR
     end
     M3 --> M4 --> M5 --> M6
 ```
+
+> **Güncel ürün yönü ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** Yukarıdaki M1–M6 tarihsel kilometre taşı sırasıdır; güncel yol haritası değildir. Proje artık masaüstü için güvenlik öncelikli, açıklanabilir FlaUI locator iyileştirmesine odaklanan ticari bir ürüne doğru ilerliyor. Web ikincil bir bağlayıcı olarak kalıyor; intent planlama, test üretimi ve yeni LLM sağlayıcıları (yukarıdaki M6'nın konusu) artık dondurulmuş durumda — yalnızca hata ve güvenlik düzeltmeleri alıyorlar. Güncel faz takibi için [README.md'nin Roadmap bölümüne](README.md#️-roadmap) bakın.
 
 </details>
 
