@@ -61,6 +61,8 @@ that outcome for review and does not persist the proposed locator.
 
 > 🔭 **Try it Live (Sessions & Content Analysis):** Run `dotnet run --project samples/WebObservationQuickstart` to see `PlaywrightWebSession` authenticate once, persist the session via storage state with no repeated login, and `ContentAnalysis` flag a planted content defect while the observation layer catches a planted broken image as a real 404. See the [Web Observation Quickstart](samples/WebObservationQuickstart/README.md).
 
+> 🕸️ **Try it Live (Site Crawl & Content Audit):** Run `dotnet run --project samples/SiteContentAuditQuickstart -- <url>` to point `SiteCrawler` at any real site (try the project's own [docs site](https://mustafasercansak.github.io/automation-sandbox/)), crawl it breadth-first, run `ContentAnalyzer` on every page, and write the accumulated findings as a JSON Lines log plus an HTML dashboard via `ContentAnalysisReportFileSink`. See the [Site Content Audit Quickstart](samples/SiteContentAuditQuickstart/README.md).
+
 > 🚀 **Published Package Quickstart:** Go from `dotnet add package AutomationSandbox.SelfHealing --prerelease` to a successful persisted heal with the [Published Package Quickstart](docs/consumer-quickstart.md) and its maintained [runnable sample](samples/HeuristicHealingQuickstart/README.md).
 
 > 🔌 **Already have a test suite?** [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers the `Observe` → `AutoHeal` rollout and minimal wiring for Playwright, NUnit, xUnit, Reqnroll, and FlaUI.
@@ -151,6 +153,7 @@ retroactively; only consumers upgrading past the freeze need to switch construct
 | **Published-Package Consumer Sample** | ✅ Implemented | Cross-platform, API-key-free quickstart consumes `AutomationSandbox.SelfHealing` from nuget.org (no project reference), runs a persisted heuristic heal, and is verified from a clean package directory in CI. |
 | **Playwright End-to-End Sample** | ✅ Implemented | Live browser quickstart (`samples/PlaywrightEndToEndQuickstart`) exercising DOM capture, safe healing, and false-heal avoidance on a real two-version app with HTML report telemetry. |
 | **Web Observation Sample** | ✅ Implemented | Live browser quickstart (`samples/WebObservationQuickstart`) exercising `PlaywrightWebSession` and `ContentAnalysis` together against a real local HTTP server: authenticate once, reuse the session via storage-state persistence with no repeated login, flag a planted content defect, and observe a planted broken image as a real 404. |
+| **Site Content Audit Sample** | ✅ Implemented | Live browser quickstart (`samples/SiteContentAuditQuickstart`) chaining `SiteCrawler` → `ContentAnalyzer` → `ContentAnalysisReportFileSink`: given a URL, crawls the site breadth-first and writes a JSON Lines + HTML report; with no arguments it audits a bundled fixture site with planted findings for CI. |
 | **Intent-Driven Automation** | ✅ Implemented | `AutomationSandbox.IntentAutomation` includes intent contracts, both a deterministic and an opt-in LLM-backed (`LlmIntentPlanner`, guarded with fallback) planner, DOM matching against captured `WebDiscovery` snapshots, locator recording, Playwright C#/TypeScript generation, intent flow reports, and an end-to-end pipeline API. See [Intent-Driven Automation guide](docs/intent-driven-automation.md#current-capability). |
 | **Desktop Intent Automation** | ✅ Implemented | `IntentDesktopAutomationPipeline` mirrors the web intent pipeline for Windows desktop apps: matches intent steps against a live `UiElementInfo` tree (`IntentDesktopExplorationBridge`), records accepted locators, generates an xUnit + FlaUI test skeleton (`FlaUiCSharpTestGenerator`) built on this project's own `AutomationSandbox.Discovery.ApplicationConnector`, and emits the same schema-v4 `IntentFlowReportDocument` (JSON + HTML) as the web pipeline. |
 | **Live Page Exploration** | ✅ Implemented | `PlaywrightLiveExplorer` (`AutomationSandbox.PlaywrightLiveExploration`) launches a browser, navigates to a URL, and captures a `WebElementInfo` DOM snapshot directly via the Microsoft.Playwright .NET SDK — no hand-written Playwright test, and (deliberately) no Node.js-based MCP server. See [why](docs/intent-driven-automation.md#3-live-page-exploration). |
@@ -798,7 +801,8 @@ AutomationSandbox.sln
     ├── CalibrationCli/     CLI calibration tool for evaluating dataset ablation benchmarks (.NET 8)
     ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 8)
     ├── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
-    └── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 8)
+    ├── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 8)
+    └── SiteContentAuditQuickstart/  SiteCrawler + ContentAnalyzer + ContentAnalysisReportFileSink: URL in, JSON/HTML content-quality report out (.NET 8)
 ```
 
 ---

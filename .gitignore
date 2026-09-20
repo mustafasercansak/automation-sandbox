@@ -12,6 +12,9 @@ TestResults/
 !/eng/PublicApiAudit/
 /vulnerable-report.json
 /outdated-report.json
+/site-content-audit-report.json
+/site-content-audit-report.json.lock
+/site-content-audit-report.html
 
 # Local hidden files/directories. Keep .gitignore tracked so these rules are shared.
 .*

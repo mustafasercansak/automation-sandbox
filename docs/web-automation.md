@@ -141,6 +141,11 @@ was started with - headless or headed, with or without a saved storage state - a
 page the crawl visits, so an authenticated session (`PlaywrightWebSession.StartAsync` with
 `storageStatePath`) crawls behind login for free.
 
+See the runnable
+[`samples/SiteContentAuditQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/SiteContentAuditQuickstart)
+sample for the full crawl-then-analyze-then-report flow against either a bundled fixture site
+or any real URL you pass on the command line.
+
 ### Bounding a Capture (Depth / Element Count / Timeout)
 
 `CaptureAsync` accepts an optional `WebDiscoveryOptions` (`MaxDepth`, `MaxElements`,
@@ -408,6 +413,11 @@ Gezinemediği veya yakalayamadığı bir sayfa `result.Failures`'a kaydedilir ve
 başlatıldıysa - headless/headed, kayıtlı bir storage state ile veya onsuz - taranan her
 sayfada aynen geçerli olur; yani kimlik doğrulamalı bir oturum
 (`storageStatePath` ile `PlaywrightWebSession.StartAsync`) giriş arkasını ücretsiz tarar.
+
+Tara-sonra-analiz et-sonra-raporla akışının tamamı için çalıştırılabilir
+[`samples/SiteContentAuditQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/SiteContentAuditQuickstart)
+örneğine bakın — ekli örnek siteye veya komut satırından verdiğiniz herhangi bir gerçek
+URL'ye karşı çalışır.
 
 ### Taramayı Sınırlama (Derinlik / Eleman Sayısı / Zaman Aşımı)
 
