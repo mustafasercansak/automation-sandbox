@@ -209,7 +209,7 @@ graph LR
     M3 --> M4 --> M5 --> M6
 ```
 
-> **Current product direction ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** M1–M6 above is the historical milestone sequence; it is not the current roadmap. The project is now working toward a commercial product centered on safety-first, explainable FlaUI locator healing for desktop. Web stays a secondary adapter, and intent planning, test generation, and new LLM providers (the subject of M6 above) are feature-frozen — they receive bug and security fixes only. See the [Roadmap section of README.md](README.md#️-roadmap) for the current phase tracking.
+> **Current product direction ([#469](https://github.com/mustafasercansak/automation-sandbox/issues/469), superseding [#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** M1–M6 above is the historical milestone sequence; it is not the current roadmap. The project is working toward a commercial product covering safety-first, explainable locator healing across **both** desktop (FlaUI) and web (Playwright) — equal-priority platforms. Intent planning, test generation, and new LLM providers (the subject of M6 above) are active feature areas again, not frozen. See the [Roadmap section of README.md](README.md#️-roadmap) for the current phase tracking.
 
 </details>
 
@@ -418,7 +418,7 @@ graph LR
     M3 --> M4 --> M5 --> M6
 ```
 
-> **Güncel ürün yönü ([#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)):** Yukarıdaki M1–M6 tarihsel kilometre taşı sırasıdır; güncel yol haritası değildir. Proje artık masaüstü için güvenlik öncelikli, açıklanabilir FlaUI locator iyileştirmesine odaklanan ticari bir ürüne doğru ilerliyor. Web ikincil bir bağlayıcı olarak kalıyor; intent planlama, test üretimi ve yeni LLM sağlayıcıları (yukarıdaki M6'nın konusu) artık dondurulmuş durumda — yalnızca hata ve güvenlik düzeltmeleri alıyorlar. Güncel faz takibi için [README.md'nin Roadmap bölümüne](README.md#️-roadmap) bakın.
+> **Güncel ürün yönü ([#469](https://github.com/mustafasercansak/automation-sandbox/issues/469), [#402](https://github.com/mustafasercansak/automation-sandbox/issues/402)'nin yerine geçer):** Yukarıdaki M1–M6 tarihsel kilometre taşı sırasıdır; güncel yol haritası değildir. Proje, masaüstü (FlaUI) ve web (Playwright) üzerinde güvenlik öncelikli, açıklanabilir locator iyileştirmesini kapsayan ticari bir ürüne doğru ilerliyor — ikisi de eşit öncelikli. İntent planlama, test üretimi ve yeni LLM sağlayıcıları (yukarıdaki M6'nın konusu) artık yeniden aktif geliştirme alanı, dondurulmuş değil. Güncel faz takibi için [README.md'nin Roadmap bölümüne](README.md#️-roadmap) bakın.
 
 </details>
 

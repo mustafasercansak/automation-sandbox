@@ -52,6 +52,12 @@ Every remaining public type is listed below. Setter counts are after the change.
 
 | Package / type | Public setters | Decision |
 | :--- | ---: | :--- |
+| ContentAnalysis / `ClaudeContentAnalysisProvider` | 1 | Keep sanitizer mutable: callers configure the redaction policy before content analysis, mirroring `LlmIntentPlanner`. |
+| ContentAnalysis / `ContentAnalyzer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| ContentAnalysis / `ContentIssue` | 0 | Freeze five properties: one detected content defect, constructed once by a heuristic check or provider and never mutated. |
+| ContentAnalysis / `ContentIssueSource` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| ContentAnalysis / `ContentPassage` | 0 | Freeze two properties: one extracted text passage paired with the CSS selector it came from. |
+| ContentAnalysis / `IContentAnalysisProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | Discovery / `ApplicationConnector` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | Discovery / `DiscoveryOptions` | 7 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | Discovery / `DiscoveryResult` | 11 | Keep editable: traversal accumulates counters, warnings, and the tree as elements are visited. |
@@ -102,6 +108,9 @@ Every remaining public type is listed below. Setter counts are after the change.
 | IntentAutomation / `PlaywrightCSharpTestGenerator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | IntentAutomation / `PlaywrightTypeScriptTestGenerationOptions` | 3 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | IntentAutomation / `PlaywrightTypeScriptTestGenerator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| IntentExecution / `IntentStepExecutionResult` | 0 | Freeze four properties: records one step's execution outcome, constructed once by `IntentWebExecutor` and never mutated. |
+| IntentExecution / `IntentWebExecutionResult` | 3 | Keep editable: the executor assembles Scenario and appends each step's result as execution proceeds, then sets Success once the run completes or stops. |
+| IntentExecution / `IntentWebExecutor` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `ClaudeHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `GeminiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `HttpLlmHealingProvider` | 3 | Keep tunables mutable: sanitizer and batch timeout overrides are deliberate provider-instance configuration. |
@@ -117,6 +126,10 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `OpenAiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
+| PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| PlaywrightLiveExploration / `WebConsoleMessage` | 0 | Freeze two properties: one console message observed during a live session, never mutated after capture. |
+| PlaywrightLiveExploration / `WebNetworkResponse` | 0 | Freeze two properties: one network response observed during a live session, never mutated after capture. |
+| PlaywrightLiveExploration / `WebRequestFailure` | 0 | Freeze two properties: one failed request observed during a live session, never mutated after capture. |
 | SelfHealing / `BatchHealingItemResult` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `BatchHealingRequest` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `BatchHealingResult` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
@@ -130,6 +143,7 @@ Every remaining public type is listed below. Setter counts are after the change.
 | SelfHealing / `HealingReportEntry` | 27 | Keep editable: the engine records proposal evidence and adds execution outcome after the retry. |
 | SelfHealing / `HealingReportFileSink` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `HealingReportHtmlRenderer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| SelfHealing / `HealingReportSummary` | 7 | Keep editable: `Summarize` populates aggregate counts from a healing report; consumers may recompute or override fields when composing custom dashboards. |
 | SelfHealing / `IHealingReportSink` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `LocatorHealingHistoryEntryFactory` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | SelfHealing / `ProfileCalibrationResult` | 11 | Keep editable: calibration accumulates per-probe counters; consumers can assemble measurements for reporting. |
@@ -160,7 +174,8 @@ Every remaining public type is listed below. Setter counts are after the change.
 | WebDiscovery / `PlaywrightDomCaptureScript` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | WebDiscovery / `PlaywrightLocatorEmitter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | WebDiscovery / `PlaywrightLocatorSuggestion` | 0 | Freeze four scalar properties: the strategy, expression, ranking, and explanation form one proposal. |
-| WebDiscovery / `WebElementInfo` | 19 | Keep editable: DOM capture and consumer adapters assemble trees and frame metadata. |
+| WebDiscovery / `WebDiscoveryOptions` | 3 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
+| WebDiscovery / `WebElementInfo` | 23 | Keep editable: DOM capture and consumer adapters assemble trees and frame metadata. |
 | WebDiscovery / `WebElementMapper` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 
 ### Migration and verification

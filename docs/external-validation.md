@@ -9,13 +9,13 @@ title: External Validation - Automation Sandbox
 
 ### 1. Commercial Goal and Current Evidence
 
-The product goal is a future commercial offering centered on safety-first, explainable FlaUI locator healing for modern .NET Windows tests (#402). The first audience to validate is teams maintaining FlaUI desktop suites. Web is secondary; intent planning, code generation, and new provider features are frozen while existing features receive bug and security fixes. The MIT license remains unchanged. Pricing, packaging of paid capabilities, and service commitments are undecided.
+The product goal is a future commercial offering centered on safety-first, explainable locator healing across **both** desktop (FlaUI) and web (Playwright) tests, as equal-priority platforms (#469, superseding #402). The audience to validate spans teams maintaining FlaUI desktop suites and teams maintaining Playwright/web suites. Intent planning, code generation, and new provider features are active development areas, not frozen. The MIT license remains unchanged. Pricing, packaging of paid capabilities, and service commitments are undecided.
 
 As of September 18, 2026, there are no verified independent integrations, written pilot feedback, or organic drift datasets. Existing HandBrake/ShareX synthetic mutations support calibration only. This document is a collection protocol, not a report of completed pilots. [Issue #401](https://github.com/mustafasercansak/automation-sandbox/issues/401) blocks 1.0 until its evidence criteria are met.
 
 ### 2. Pilot Evidence to Collect
 
-Recruit three independently maintained FlaUI test projects outside this repository when access becomes available. Record project ownership, repository or permitted evidence reference, framework, engine commit/package version, application versions, test commands, and the maintainer's written feedback. A fork or sample maintained by this repository does not establish an independent integration.
+Recruit three independently maintained test projects (FlaUI desktop or Playwright web) outside this repository when access becomes available. Record project ownership, repository or permitted evidence reference, framework, engine commit/package version, application versions, test commands, and the maintainer's written feedback. A fork or sample maintained by this repository does not establish an independent integration.
 
 For at least two real applications, capture UI trees and stored locators from two genuine released versions. Record release URLs, artifact hashes, capture environment, repeatable navigation steps, and locator differences. Preserve the original snapshots; do not manufacture drift by renaming or deleting nodes. Obtain permission to publish data and remove secrets or personal data before committing it.
 
@@ -37,7 +37,7 @@ Keep raw reports, ground truth, commands, and feedback references beside each da
 
 ### 3. Next 90 Days and Release Decision
 
-The sequence is partner identification and access, repeatable baseline capture, supervised integrations, then publication and commercial offer assessment. Timing depends on external participation; the 90-day planning window is not a release promise. Prefer improvements demonstrated necessary by pilot feedback over new feature families. Reuse #401 for the validation work; create implementation issues only for concrete findings aligned with the desktop focus.
+The sequence is partner identification and access, repeatable baseline capture, supervised integrations, then publication and commercial offer assessment. Timing depends on external participation; the 90-day planning window is not a release promise. Prefer improvements demonstrated necessary by pilot feedback over new feature families. Reuse #401 for the validation work; create implementation issues only for concrete findings aligned with either platform's pilot feedback.
 
 Before 1.0, verify three independent integrations with written feedback and two organic drift datasets with measured outcomes. Link these artifacts from #401 and the release notes, then re-check every [beta-exit criterion](versioning-and-stability.md). Until then, keep #401 open and describe the product as preview, with commercial viability unvalidated.
 
@@ -45,7 +45,7 @@ Before 1.0, verify three independent integrations with written feedback and two 
 
 ### 1. Ticari Hedef ve Mevcut Kanıtlar
 
-Ürün hedefi, modern .NET Windows testleri için güvenliği önceleyen, açıklanabilir FlaUI locator iyileştirmesine odaklanan gelecekteki bir ticari üründür (#402). İlk doğrulanacak hedef kitle, FlaUI masaüstü testlerini sürdüren ekiplerdir. Web ikincildir; intent planlama, kod üretimi ve yeni sağlayıcı özellikleri dondurulmuştur. Mevcut özelliklerde hata ve güvenlik düzeltmeleri sürer. MIT lisansı değişmez. Fiyatlandırma, ücretli özelliklerin paketlenmesi ve hizmet taahhütleri henüz belirlenmemiştir.
+Ürün hedefi, hem masaüstü (FlaUI) hem web (Playwright) testleri için güvenliği önceleyen, açıklanabilir locator iyileştirmesini kapsayan, ikisi de eşit öncelikli gelecekteki bir ticari üründür (#402'nin yerine geçen #469). Doğrulanacak hedef kitle hem FlaUI masaüstü testlerini hem de Playwright/web testlerini sürdüren ekipleri kapsar. İntent planlama, kod üretimi ve yeni sağlayıcı özellikleri aktif geliştirme alanlarıdır, dondurulmuş değildir. MIT lisansı değişmez. Fiyatlandırma, ücretli özelliklerin paketlenmesi ve hizmet taahhütleri henüz belirlenmemiştir.
 
 18 Eylül 2026 itibarıyla doğrulanmış bağımsız entegrasyon, yazılı pilot geri bildirimi veya doğal değişim veri seti yoktur. Mevcut HandBrake/ShareX sentetik değişimleri yalnızca kalibrasyon kanıtıdır. Bu belge tamamlanmış pilot raporu değil, veri toplama protokolüdür. [Issue #401](https://github.com/mustafasercansak/automation-sandbox/issues/401), kanıt kriterleri sağlanana kadar 1.0 sürümünü engeller.
 
