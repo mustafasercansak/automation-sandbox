@@ -323,6 +323,29 @@ jobs:
         shell: pwsh
         run: ./samples/SiteContentAuditQuickstart/verify.ps1
 
+  desktop-app-explorer-sample:
+    name: Desktop App Explorer Sample
+    runs-on: windows-latest
+    # Character Map and Registry Editor ship with every windows-latest runner - real,
+    # unmodified, third-party-authored Win32 apps, not this repo's own WinFormsApp/WpfApp
+    # demos - so a green run here is genuine evidence the sample works against arbitrary
+    # external UIA applications (#494). This does not close #489: that issue asks for
+    # verification against an arbitrary application at a maintainer's own workplace,
+    # which two fixed, repo-selected built-in apps cannot substitute for.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run sample verification against Character Map and Registry Editor
+        shell: pwsh
+        run: ./samples/DesktopAppExplorerQuickstart/verify.ps1
+
   nunit-fixture-tests:
     name: NUnit Test Fixture Helper
     runs-on: ubuntu-latest

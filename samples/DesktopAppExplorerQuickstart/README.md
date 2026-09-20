@@ -6,18 +6,28 @@ Bu .NET 8 console örneği, `Discovery` paketinin `ApplicationConnector` + `UiTr
 
 ---
 
-**Unlike this repository's other samples, this one has not been run end-to-end by the assistant
-that wrote it - it was written and compile-verified (`dotnet build`, cross-targeting
-`net8.0-windows` from Linux via `EnableWindowsTargeting`) but never executed, because FlaUI/UIA3
-requires real Windows UI Automation COM APIs that only exist on Windows. Run it on a Windows
-machine and treat the first run as a real test of this sample, not just of your application.**
+**CI runtime-verifies this sample on every PR** (`Desktop App Explorer Sample` in `ci.yml`,
+#494): it runs the built sample against Character Map (`charmap.exe`) and Registry Editor
+(`regedit.exe`) - two real, unmodified applications that ship with every `windows-latest`
+runner, not this repository's own `WinFormsApp`/`WpfApp` demos. That proves `ApplicationConnector`
+and `UiTreeWalker` genuinely work against arbitrary external UIA applications, not just against
+apps this repository built and controls. What CI does **not** cover: an arbitrary third-party
+application at your own workplace, with its own quirks (a wrapped web view, an unusually deep
+tree, a slow-loading main window) - that verification is tracked separately by
+[#489](https://github.com/mustafasercansak/automation-sandbox/issues/489) and stays open until
+someone runs it there and reports back.
 
-**Bu depodaki diğer örneklerin aksine, bu örnek onu yazan asistan tarafından uçtan uca
-çalıştırılmadı** - yazıldı ve derleme seviyesinde doğrulandı (`dotnet build`, Linux'tan
-`EnableWindowsTargeting` ile `net8.0-windows` çapraz hedeflemesi) ama hiç çalıştırılmadı, çünkü
-FlaUI/UIA3 yalnızca Windows'ta bulunan gerçek Windows UI Automation COM API'lerini gerektirir.
-Windows makinede çalıştırın ve ilk çalıştırmayı sadece uygulamanızın değil, bu örneğin de gerçek
-bir testi olarak değerlendirin.
+**Bu örnek her PR'da CI tarafından çalışma zamanında doğrulanır** (`ci.yml`'deki
+`Desktop App Explorer Sample`, #494): derlenen örneği Character Map (`charmap.exe`) ve Registry
+Editor (`regedit.exe`) - her `windows-latest` runner'ında hazır gelen, bu deponun kendi
+`WinFormsApp`/`WpfApp` demoları olmayan gerçek, değiştirilmemiş uygulamalar - üzerinde çalıştırır.
+Bu, `ApplicationConnector` ve `UiTreeWalker`'ın yalnızca bu deponun inşa edip kontrol ettiği
+uygulamalara karşı değil, gerçekten rastgele dış UIA uygulamalarına karşı da çalıştığını kanıtlar.
+CI'nin kapsamadığı şey: kendi işyerindeki, kendine has tuhaflıkları olan (sarmalanmış bir web
+görünümü, alışılmadık derinlikte bir ağaç, yavaş yüklenen bir ana pencere) rastgele bir üçüncü
+parti uygulama - bu doğrulama ayrıca
+[#489](https://github.com/mustafasercansak/automation-sandbox/issues/489) tarafından takip edilir
+ve biri orada çalıştırıp sonucu bildirene kadar açık kalır.
 
 ---
 
@@ -49,15 +59,17 @@ dotnet run --project samples/DesktopAppExplorerQuickstart -- --attach YourApp
 
 ## If something goes wrong / Bir şeyler ters giderse
 
-This is genuinely unverified against a real app - if it throws, that is useful information, not
-a failure to hide. Common things worth checking: the target app is a native Win32/WinForms/WPF
-app (not a wrapped web view with no real UIA tree), the process name for `--attach` matches
-exactly what Task Manager shows (no `.exe`), and the app's main window is fully loaded before the
-15-second discovery timeout.
+CI proves this sample works against two real built-in Windows apps, but your own target
+application is still untested territory - if it throws, that is useful information, not a failure
+to hide. Common things worth checking: the target app is a native Win32/WinForms/WPF app (not a
+wrapped web view with no real UIA tree), the process name for `--attach` matches exactly what
+Task Manager shows (no `.exe`), and the app's main window is fully loaded before the 15-second
+discovery timeout.
 
-Bu, gerçek bir uygulamaya karşı gerçekten doğrulanmamış durumda - hata verirse bu saklanacak bir
-başarısızlık değil, faydalı bir bilgidir. Kontrol etmeye değer yaygın noktalar: hedef uygulama
-gerçek bir Win32/WinForms/WPF uygulaması mı (gerçek bir UIA ağacı olmayan sarmalanmış bir web
-görünümü değil), `--attach` için verilen işlem adı Görev Yöneticisi'nde görünenle birebir eşleşiyor
-mu (`.exe` olmadan), ve uygulamanın ana penceresi 15 saniyelik keşif zaman aşımından önce tam
-olarak yüklendi mi.
+CI, bu örneğin dahili gelen iki gerçek Windows uygulamasına karşı çalıştığını kanıtlıyor, ama kendi
+hedef uygulamanız hâlâ test edilmemiş bir alan - hata verirse bu saklanacak bir başarısızlık değil,
+faydalı bir bilgidir. Kontrol etmeye değer yaygın noktalar: hedef uygulama gerçek bir
+Win32/WinForms/WPF uygulaması mı (gerçek bir UIA ağacı olmayan sarmalanmış bir web görünümü
+değil), `--attach` için verilen işlem adı Görev Yöneticisi'nde görünenle birebir eşleşiyor mu
+(`.exe` olmadan), ve uygulamanın ana penceresi 15 saniyelik keşif zaman aşımından önce tam olarak
+yüklendi mi.
