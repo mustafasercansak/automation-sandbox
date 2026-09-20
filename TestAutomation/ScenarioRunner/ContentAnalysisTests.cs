@@ -193,12 +193,76 @@ namespace ScenarioRunner
             Assert.Empty(issues);
         }
 
+        [Fact]
+        public void RunHeuristics_DoesNotFlagPlaceholderMarkerInsideACodeBlock()
+        {
+            // "// TODO" is a real, deliberate marker inside source code - not a leftover doc placeholder.
+            var dom = Root(CodeBlock("pre", "// TODO: replace this with your real config"));
+
+            var issues = ContentAnalyzer.RunHeuristics(dom);
+
+            Assert.Empty(issues);
+        }
+
+        [Fact]
+        public void RunHeuristics_DoesNotFlagDuplicateWordInsideACodeElement()
+        {
+            var dom = Root(CodeBlock("code", "the the value is unused"));
+
+            var issues = ContentAnalyzer.RunHeuristics(dom);
+
+            Assert.Empty(issues);
+        }
+
+        [Fact]
+        public void RunHeuristics_StillFlagsPlaceholderTextOutsideCodeBlocks_WhenACodeBlockIsAlsoPresent()
+        {
+            var dom = Root(
+                Leaf("p", "TODO: replace this hero copy before launch."),
+                CodeBlock("pre", "const answer = 42;"));
+
+            var issues = ContentAnalyzer.RunHeuristics(dom);
+
+            var issue = Assert.Single(issues);
+            Assert.Equal("Placeholder", issue.IssueType);
+            Assert.Equal("p", issue.CssSelector);
+        }
+
+        [Fact]
+        public void CountPassages_ExcludesTextInsideCodeBlocks()
+        {
+            var dom = Root(Leaf("p", "Welcome"), CodeBlock("pre", "// TODO: fill in your API key"));
+
+            Assert.Equal(1, ContentAnalyzer.CountPassages(dom));
+        }
+
         private static WebElementInfo Leaf(string cssSelector, string text)
         {
             return new WebElementInfo
             {
                 TagName = "div",
                 CssSelector = cssSelector,
+                Text = text,
+            };
+        }
+
+        private static WebElementInfo Root(params WebElementInfo[] children)
+        {
+            return new WebElementInfo
+            {
+                TagName = "body",
+                CssSelector = "body",
+                Text = "",
+                Children = children.ToList(),
+            };
+        }
+
+        private static WebElementInfo CodeBlock(string tagName, string text)
+        {
+            return new WebElementInfo
+            {
+                TagName = tagName,
+                CssSelector = tagName,
                 Text = text,
             };
         }
