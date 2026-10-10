@@ -22,6 +22,30 @@ automation-sandbox-heal --expected stale-element.json --tree live-tree.json --pr
 
 Prints a `HealResult` as JSON to stdout (nothing else goes to stdout - diagnostic logging goes to stderr, so stdout is always pure, parseable JSON). Exit code `0` means `IsConfident` (safe to accept `Matched`); `1` means not confident (do not auto-accept); `2` means an error occurred before a decision could be made (bad input, missing file).
 
+## Example: a non-.NET caller
+
+Any language works - all it needs to produce is JSON shaped like `UiTreeSerializer.ToJson`'s output. A minimal Python example, assuming your own tooling has already captured the stale element and the live tree into dicts with the same shape:
+
+```python
+import json
+import subprocess
+
+with open("expected.json", "w") as f:
+    json.dump(expected_element, f)
+with open("tree.json", "w") as f:
+    json.dump(live_tree, f)
+
+result = subprocess.run(
+    ["automation-sandbox-heal", "--expected", "expected.json", "--tree", "tree.json", "--profile", "balanced"],
+    capture_output=True, text=True,
+)
+heal_result = json.loads(result.stdout)  # stdout is always pure JSON; diagnostics go to stderr
+if result.returncode == 0:
+    print(f"Healed: use {heal_result['Matched']['AutomationId']} instead")
+else:
+    print("Not confident enough to auto-heal; falling back to manual review")
+```
+
 ## Why a CLI, not just the library
 
 The `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` packages are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled capture adapter) and wants to call the resolver in-process. This CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
