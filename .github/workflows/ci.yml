@@ -408,6 +408,26 @@ jobs:
         shell: pwsh
         run: ./samples/CalibrationCli/verify.ps1
 
+  self-healing-cli:
+    name: Self-Healing CLI
+    runs-on: ubuntu-latest
+    # The whole point of this tool is that it needs no FlaUI/Windows/Playwright .NET
+    # dependency at all - proving it on ubuntu-latest, not windows-latest, is the
+    # meaningful check here (#507).
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Pack, install, and run the packed tool against a fixture
+        shell: pwsh
+        run: ./TestAutomation/SelfHealingCli/verify.ps1
+
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest
