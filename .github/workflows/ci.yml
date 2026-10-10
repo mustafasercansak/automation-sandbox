@@ -428,6 +428,55 @@ jobs:
         shell: pwsh
         run: ./TestAutomation/SelfHealingCli/verify.ps1
 
+  heal-action:
+    name: Self-Healing GitHub Action
+    runs-on: ubuntu-latest
+    # Proves .github/actions/heal's actual logic works end to end - install, run, both
+    # outputs - not just that its YAML parses (#511). Packs the CLI locally and uses the
+    # action's own `source` input so this never depends on a live nuget.org publish,
+    # which hasn't happened yet (deliberately waiting until this action exists first).
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Pack SelfHealingCli locally for the action to install from
+        run: dotnet pack TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Release --output ./cli-nupkgs-for-action-test
+
+      - name: Run the composite action against the local build
+        id: heal
+        uses: ./.github/actions/heal
+        with:
+          expected: TestAutomation/SelfHealingCli/fixtures/expected.json
+          tree: TestAutomation/SelfHealingCli/fixtures/tree.json
+          profile: balanced
+          source: ${{ github.workspace }}/cli-nupkgs-for-action-test
+
+      # Values come through env:, not direct ${{ }} interpolation into the script body -
+      # result is multi-line JSON full of quotes, which would corrupt a naively spliced
+      # pwsh string literal.
+      - name: Assert the action's outputs
+        shell: pwsh
+        env:
+          IS_CONFIDENT: ${{ steps.heal.outputs.is-confident }}
+          RESULT_JSON: ${{ steps.heal.outputs.result }}
+        run: |
+          if ($env:IS_CONFIDENT -ne 'true') {
+            throw "Expected is-confident output 'true', got '$env:IS_CONFIDENT'."
+          }
+
+          $result = $env:RESULT_JSON | ConvertFrom-Json
+          if ($result.Matched.AutomationId -ne 'btn-submit-new') {
+            throw "Expected Matched.AutomationId 'btn-submit-new', got '$($result.Matched.AutomationId)'."
+          }
+
+          Write-Host 'Self-Healing GitHub Action verification passed.' -ForegroundColor Green
+
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest

@@ -46,6 +46,20 @@ else:
     print("Not confident enough to auto-heal; falling back to manual review")
 ```
 
+## Using it in CI without hand-writing the install/parse plumbing
+
+The repository ships a composite GitHub Action, `.github/actions/heal`, that wraps the install + run + JSON-parsing steps above into one line:
+
+```yaml
+- uses: mustafasercansak/automation-sandbox/.github/actions/heal@main
+  with:
+    expected: path/to/stale-element.json
+    tree: path/to/live-tree.json
+    profile: balanced
+```
+
+By default this step fails the job when the result is not confident - the same exit-code contract as the CLI itself, so a bare `uses:` line is already a working pass/fail gate. Add `continue-on-error: true` and read the `is-confident` / `result` outputs if you want to branch on the outcome instead of failing the build.
+
 ## Why a CLI, not just the library
 
 The `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` packages are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled capture adapter) and wants to call the resolver in-process. This CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
