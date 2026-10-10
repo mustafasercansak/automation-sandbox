@@ -62,6 +62,19 @@ namespace ScenarioRunner
                     if (match.Success)
                     {
                         var action = match.Groups["action"].Value.Trim();
+
+                        // A local action reference (e.g. ./.github/actions/heal) has no
+                        // version to drift - it is checked out at the same commit as the
+                        // workflow referencing it, which is exactly what pinning a
+                        // third-party action's major version exists to approximate.
+                        // The allowlist below is for actions/*, ruby/setup-ruby,
+                        // NuGet/login etc., not for anything this repo owns.
+                        if (action.StartsWith("./", StringComparison.Ordinal) ||
+                            action.StartsWith("../", StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
                         if (!AllowedOfficialActionVersions.Contains(action))
                         {
                             invalidUsages.Add($"{relativePath}:{i + 1} uses '{action}' (expected active modern release from whitelist)");

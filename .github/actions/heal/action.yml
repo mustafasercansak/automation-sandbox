@@ -1,0 +1,96 @@
+name: 'Automation Sandbox - Self-Healing Locator Check'
+description: >-
+  Installs and runs AutomationSandbox.Cli's automation-sandbox-heal tool against two
+  UiElementInfo JSON snapshots and surfaces the heal decision as both an action output
+  and an exit code, so any repo can gate its own CI on a locator-healing result without
+  hand-writing dotnet tool install / argument / JSON-parsing plumbing.
+author: 'Mustafa Sercan Sak'
+
+inputs:
+  expected:
+    description: 'Path to the stale/expected UiElementInfo JSON snapshot.'
+    required: true
+  tree:
+    description: 'Path to a freshly captured live UiElementInfo JSON tree snapshot.'
+    required: true
+  profile:
+    description: 'Threshold profile: balanced (default), conservative, or aggressive.'
+    required: false
+    default: 'balanced'
+  version:
+    description: >-
+      AutomationSandbox.Cli version to install. Leave empty to install the latest
+      --prerelease (the only kind published during the 0.x beta series).
+    required: false
+    default: ''
+  source:
+    description: >-
+      Optional additional NuGet source to install AutomationSandbox.Cli from, passed to
+      "dotnet tool install --add-source". Lets a consumer point at a private feed, and
+      lets this repository's own CI test this action against a locally packed build
+      without depending on a live nuget.org publish.
+    required: false
+    default: ''
+
+outputs:
+  result:
+    description: 'The full HealResult emitted by the tool, as JSON.'
+    value: ${{ steps.heal.outputs.result }}
+  is-confident:
+    description: '"true" or "false" - whether the resolver accepted a healed match (mirrors HealResult.IsConfident).'
+    value: ${{ steps.heal.outputs.is-confident }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Install automation-sandbox-heal
+      shell: bash
+      run: |
+        set -e
+        args=(tool install --global AutomationSandbox.Cli)
+        if [ -n "${{ inputs.version }}" ]; then
+          args+=(--version "${{ inputs.version }}")
+        else
+          args+=(--prerelease)
+        fi
+        if [ -n "${{ inputs.source }}" ]; then
+          args+=(--add-source "${{ inputs.source }}")
+        fi
+        dotnet "${args[@]}"
+
+    - name: Run heal check
+      id: heal
+      shell: bash
+      run: |
+        set +e
+        output=$(automation-sandbox-heal --expected "${{ inputs.expected }}" --tree "${{ inputs.tree }}" --profile "${{ inputs.profile }}")
+        exit_code=$?
+        set -e
+
+        # stdout from the tool is always pure JSON (diagnostics go to stderr - see
+        # SelfHealingCli/Program.cs), so it is safe to pass straight through here.
+        {
+          echo "result<<AUTOMATION_SANDBOX_HEAL_RESULT_EOF"
+          echo "$output"
+          echo "AUTOMATION_SANDBOX_HEAL_RESULT_EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        if [ $exit_code -eq 0 ]; then
+          is_confident=true
+        else
+          is_confident=$(echo "$output" | jq -r '.IsConfident // false' 2>/dev/null || echo false)
+        fi
+        echo "is-confident=$is_confident" >> "$GITHUB_OUTPUT"
+
+        # Pass the tool's own exit code straight through, unchanged: 0 confident, 1 not
+        # confident, 2 error (see SelfHealingCli/Program.cs) - the same meaning a direct
+        # CLI caller gets, so this step fails by default on a non-confident result (a
+        # simple pass/fail CI gate needs nothing more than this one uses: line). A
+        # caller that wants to branch instead of fail can add continue-on-error: true on
+        # this step and read the is-confident output themselves.
+        exit $exit_code
