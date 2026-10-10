@@ -13,12 +13,17 @@ on:
         default: true
         type: boolean
       dry_run:
-        description: 'Validate and pack all 7 packages without publishing GitHub Release'
+        description: 'Validate and pack all 9 packages (and the CLI tool, if publish_cli is set) without publishing GitHub Release'
         required: false
         default: false
         type: boolean
       publish_to_nuget:
-        description: 'Also push packages to nuget.org via Trusted Publishing (OIDC, no stored API key)'
+        description: 'Also push the 9 library packages to nuget.org via Trusted Publishing (OIDC, no stored API key)'
+        required: false
+        default: false
+        type: boolean
+      publish_cli:
+        description: 'Also pack and push the AutomationSandbox.Cli dotnet tool to nuget.org - independent of publish_to_nuget (#507), since the tool is not one of the 9 library packages'
         required: false
         default: false
         type: boolean
@@ -32,8 +37,9 @@ jobs:
   release:
     runs-on: windows-latest
     # Observed 2m0s-6m21s across recent runs, but a full publish_to_nuget=true run adds SBOM
-    # generation for 7 packages, a nuget.org push, and verify-published.ps1's indexing-lag
-    # retry loop - generous headroom for that slower, less commonly exercised path.
+    # generation for 9 packages, a nuget.org push, and verify-published.ps1's indexing-lag
+    # retry loop - generous headroom for that slower, less commonly exercised path. A
+    # publish_cli=true run adds its own, separate indexing-lag retry loop on top.
     timeout-minutes: 45
 
     steps:
@@ -98,6 +104,17 @@ jobs:
       - name: Pack IntentExecution
         run: dotnet pack TestAutomation/IntentExecution/IntentExecution.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      # Separate output directory from the 9 libraries above (#507): eng/Validate-NuGetPackages.ps1
+      # hardcodes a count check against exactly 9 known package IDs and a lib/<tfm>/*.dll
+      # structural check that a PackAsTool package's tools/<tfm>/any/ layout does not
+      # satisfy - packing into the shared ./nupkgs directory would fail that validation,
+      # not extend it. This tool is validated by actually installing and running it
+      # (verify-published.ps1 below), the same philosophy verify-published.ps1 already
+      # uses for the 9 libraries instead of a second static structural check.
+      - name: Pack SelfHealingCli
+        if: ${{ inputs.publish_cli }}
+        run: dotnet pack TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Release --no-build --output ./cli-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       # SBOM (#274): one CycloneDX JSON BOM per published package, generated from the
       # Release dependency graph so consumers can audit the full transitive closure
       # independent of nuget.org metadata. CycloneDX 6.x runs on the .NET 10 runtime,
@@ -146,6 +163,16 @@ jobs:
           path: |
             ./nupkgs/*.nupkg
             ./nupkgs/*.snupkg
+
+      - name: Upload CLI tool package
+        if: ${{ always() && inputs.publish_cli }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-cli-nupkgs
+          path: |
+            ./cli-nupkgs/*.nupkg
+            ./cli-nupkgs/*.snupkg
+          if-no-files-found: ignore
 
       - name: Validate and write release notes
         shell: pwsh
@@ -220,9 +247,11 @@ jobs:
           gh @args
 
       # The temporary API key nuget.org issues here is valid for 1 hour, so this login
-      # step runs immediately before the push rather than earlier in the job.
+      # step runs immediately before the push rather than earlier in the job. Either
+      # publish flag needs it - publish_cli can be set without publish_to_nuget when only
+      # the CLI tool, not the 9 libraries, needs a new version pushed.
       - name: NuGet login (OIDC -> temporary API key)
-        if: ${{ inputs.publish_to_nuget && !inputs.dry_run }}
+        if: ${{ (inputs.publish_to_nuget || inputs.publish_cli) && !inputs.dry_run }}
         uses: NuGet/login@v1
         id: nuget_login
         with:
@@ -236,6 +265,14 @@ jobs:
             dotnet nuget push $_.FullName --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
+      - name: Push CLI tool package to nuget.org
+        if: ${{ inputs.publish_cli && !inputs.dry_run }}
+        shell: pwsh
+        run: |
+          Get-ChildItem ./cli-nupkgs/*.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
       # Post-publish consumer verification (#336): restore the sample EXACTLY as an
       # external consumer would — clean package dir, nuget.org only, no cache — against
       # the version just pushed. This is the real "the published artifact works" gate;
@@ -244,6 +281,14 @@ jobs:
         if: ${{ inputs.publish_to_nuget && !inputs.dry_run }}
         shell: pwsh
         run: ./samples/HeuristicHealingQuickstart/verify-published.ps1 -Version $env:PACKAGE_VERSION
+
+      # Same philosophy as above, for the CLI tool (#507): install the exact published
+      # version from nuget.org and actually run it, rather than trusting that packing and
+      # pushing succeeding means the tool works.
+      - name: Verify the published CLI tool for a consumer
+        if: ${{ inputs.publish_cli && !inputs.dry_run }}
+        shell: pwsh
+        run: ./TestAutomation/SelfHealingCli/verify-published.ps1 -Version $env:PACKAGE_VERSION
 
       # Version bump is a workflow output, not a manual pre-req (#336): once the exact
       # version is confirmed live on nuget.org, bump the SSoT and the sample pin to it
