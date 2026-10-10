@@ -7,25 +7,32 @@ Bu .NET 8 console örneği, `Discovery` paketinin `ApplicationConnector` + `UiTr
 ---
 
 **CI runtime-verifies this sample on every PR** (`Desktop App Explorer Sample` in `ci.yml`,
-#494): it runs the built sample against Character Map (`charmap.exe`) and Registry Editor
-(`regedit.exe`) - two real, unmodified applications that ship with every `windows-latest`
-runner, not this repository's own `WinFormsApp`/`WpfApp` demos. That proves `ApplicationConnector`
-and `UiTreeWalker` genuinely work against arbitrary external UIA applications, not just against
-apps this repository built and controls. What CI does **not** cover: an arbitrary third-party
-application at your own workplace, with its own quirks (a wrapped web view, an unusually deep
-tree, a slow-loading main window) - that verification is tracked separately by
-[#489](https://github.com/mustafasercansak/automation-sandbox/issues/489) and stays open until
-someone runs it there and reports back.
+#494/#501): it runs the built sample against four genuinely external, third-party-authored
+applications, not this repository's own `WinFormsApp`/`WpfApp` demos. Two ship with every
+`windows-latest` runner, no download needed - Character Map (`charmap.exe`) and Registry Editor
+(`regedit.exe`). Two more are downloaded fresh each run from their own GitHub Releases, pinned to
+a specific version - Notepad++ and PeaZip, both real native Win32 apps with richer UI trees
+(tabbed documents, toolbars, tree/list views) than the two built-in tools. That's real evidence
+`ApplicationConnector` and `UiTreeWalker` work against arbitrary external UIA applications across
+a varied pool, not just against apps this repository built and controls. What CI still does
+**not** cover: an arbitrary third-party application at your own workplace, with its own quirks (a
+wrapped web view, an unusually deep tree, a slow-loading main window) - that verification is
+tracked separately by [#489](https://github.com/mustafasercansak/automation-sandbox/issues/489)
+and stays open until someone runs it there and reports back.
 
 **Bu örnek her PR'da CI tarafından çalışma zamanında doğrulanır** (`ci.yml`'deki
-`Desktop App Explorer Sample`, #494): derlenen örneği Character Map (`charmap.exe`) ve Registry
-Editor (`regedit.exe`) - her `windows-latest` runner'ında hazır gelen, bu deponun kendi
-`WinFormsApp`/`WpfApp` demoları olmayan gerçek, değiştirilmemiş uygulamalar - üzerinde çalıştırır.
-Bu, `ApplicationConnector` ve `UiTreeWalker`'ın yalnızca bu deponun inşa edip kontrol ettiği
-uygulamalara karşı değil, gerçekten rastgele dış UIA uygulamalarına karşı da çalıştığını kanıtlar.
-CI'nin kapsamadığı şey: kendi işyerindeki, kendine has tuhaflıkları olan (sarmalanmış bir web
-görünümü, alışılmadık derinlikte bir ağaç, yavaş yüklenen bir ana pencere) rastgele bir üçüncü
-parti uygulama - bu doğrulama ayrıca
+`Desktop App Explorer Sample`, #494/#501): derlenen örneği, bu deponun kendi
+`WinFormsApp`/`WpfApp` demoları olmayan dört gerçek, üçüncü parti uygulama üzerinde çalıştırır.
+İkisi her `windows-latest` runner'ında hazır gelir, indirme gerektirmez - Character Map
+(`charmap.exe`) ve Registry Editor (`regedit.exe`). Diğer ikisi her çalıştırmada kendi GitHub
+Releases sayfalarından, belirli bir sürüme sabitlenmiş olarak indirilir - Notepad++ ve PeaZip,
+ikisi de her iki dahili araçtan daha zengin UI ağaçlarına (sekmeli belgeler, araç çubukları,
+ağaç/liste görünümleri) sahip gerçek native Win32 uygulamaları. Bu, `ApplicationConnector` ve
+`UiTreeWalker`'ın yalnızca bu deponun inşa edip kontrol ettiği uygulamalara karşı değil, çeşitli
+bir havuzda gerçekten rastgele dış UIA uygulamalarına karşı da çalıştığını kanıtlar. CI'nin hâlâ
+kapsamadığı şey: kendi işyerindeki, kendine has tuhaflıkları olan (sarmalanmış bir web görünümü,
+alışılmadık derinlikte bir ağaç, yavaş yüklenen bir ana pencere) rastgele bir üçüncü parti
+uygulama - bu doğrulama ayrıca
 [#489](https://github.com/mustafasercansak/automation-sandbox/issues/489) tarafından takip edilir
 ve biri orada çalıştırıp sonucu bildirene kadar açık kalır.
 
