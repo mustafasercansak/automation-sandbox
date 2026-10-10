@@ -1,0 +1,43 @@
+{
+  "ControlType": "Window",
+  "Name": "",
+  "AutomationId": "MainWindow",
+  "ClassName": "",
+  "BoundingRectangle": {
+    "X": 0,
+    "Y": 0,
+    "Width": 0,
+    "Height": 0,
+    "IsUsable": false,
+    "IsEmpty": true
+  },
+  "ParentControlType": "",
+  "ParentAutomationId": "",
+  "SiblingIndex": 0,
+  "SiblingCount": 0,
+  "TestIntent": "",
+  "Children": [
+    {
+      "ControlType": "Button",
+      "Name": "Submit Order",
+      "AutomationId": "btn-submit-new",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 100,
+        "Y": 200,
+        "Width": 120,
+        "Height": 35,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Form",
+      "ParentAutomationId": "",
+      "SiblingIndex": 0,
+      "SiblingCount": 0,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    }
+  ],
+  "ChildControlTypeSignature": null
+}

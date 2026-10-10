@@ -795,6 +795,7 @@ AutomationSandbox.sln
 │   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
 │   ├── ContentAnalysis/    Content-quality checks over a captured WebElementInfo tree: heuristics + optional single-provider LLM review (netstandard2.0, net8.0, net10.0)
 │   ├── IntentExecution/    IntentWebExecutor: plans and actually executes an intent scenario against a live PlaywrightWebSession (netstandard2.0, net8.0, net10.0)
+│   ├── SelfHealingCli/     AutomationSandbox.Cli: dotnet tool wrapping SelfHealingResolver for non-.NET callers — JSON in, JSON out (net8.0; not yet wired into the release workflow, see AGENTS.md #507)
 │   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net8.0)
 │   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
 └── samples/
