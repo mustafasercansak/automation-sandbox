@@ -31,7 +31,7 @@ per run via `publish_to_nuget` rather than automatic on every release.
 | `AutomationSandbox.WebDiscovery` | Playwright DOM mapping and locator suggestions. |
 | `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic + LLM-backed planning, web and desktop candidate matching, locator recording, Playwright C#/TypeScript and FlaUI test generation, intent flow reports, and pipeline orchestration. |
 | `AutomationSandbox.PlaywrightLiveExploration` | `PlaywrightLiveExplorer`/`PlaywrightWebSession`: live browser page capture and long-lived session automation (Microsoft.Playwright .NET SDK). |
-| `AutomationSandbox.ContentAnalysis` | Content-quality checks over a captured `WebElementInfo` tree: zero-dependency heuristics plus an optional single-provider LLM review. |
+| `AutomationSandbox.ContentAnalysis` | Content-quality checks over a captured `WebElementInfo` tree: zero-dependency heuristics, a keyless offline dictionary spell checker (Hunspell), plus an optional single-provider LLM review. |
 | `AutomationSandbox.IntentExecution` | `IntentWebExecutor`: plans an `IntentAutomation` scenario and actually executes it step by step against a live `PlaywrightWebSession`, instead of only generating test source. |
 
 For the public API surface definition, semantic versioning rules, and checkable criteria required to graduate to 1.0 GA, see the [API Stability & Beta-Exit Criteria](versioning-and-stability.md) guide.

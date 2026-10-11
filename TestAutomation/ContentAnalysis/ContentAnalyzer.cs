@@ -42,6 +42,31 @@ namespace AutomationSandbox.ContentAnalysis
             return issues;
         }
 
+        /// <summary>Runs only <paramref name="spellingChecker" /> over the same passages the other checks use
+        /// (so <c>&lt;pre&gt;</c>/<c>&lt;code&gt;</c> subtrees are skipped and repeated text is checked once).
+        /// Kept separate from <see cref="AnalyzeAsync" /> so that existing callers and results are unchanged;
+        /// concatenate the results when both are wanted.</summary>
+        public static IReadOnlyList<ContentIssue> RunSpellCheck(WebElementInfo dom, SpellingChecker spellingChecker)
+        {
+            if (dom == null)
+            {
+                throw new ArgumentNullException(nameof(dom));
+            }
+
+            if (spellingChecker == null)
+            {
+                throw new ArgumentNullException(nameof(spellingChecker));
+            }
+
+            var issues = new List<ContentIssue>();
+            foreach (var passage in ExtractPassages(dom))
+            {
+                issues.AddRange(spellingChecker.Check(passage));
+            }
+
+            return issues;
+        }
+
         /// <summary>Runs the heuristic checks, then <paramref name="llmProvider" /> when supplied and
         /// available, merging both into one result.</summary>
         public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync(

@@ -98,6 +98,7 @@
     ],
     "Members": [
       "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
+      "public static IReadOnlyList<ContentIssue> RunSpellCheck(WebElementInfo dom, SpellingChecker spellingChecker)",
       "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)",
       "public static int CountPassages(WebElementInfo dom)"
     ]
@@ -132,6 +133,7 @@
       "TestAutomation/ContentAnalysis/ContentIssueSource.cs"
     ],
     "Members": [
+      "Dictionary = 2",
       "Heuristic = 0",
       "Llm = 1"
     ]
@@ -165,6 +167,21 @@
     "Members": [
       "Task<IReadOnlyList<ContentIssue>> AnalyzeAsync(IReadOnlyList<ContentPassage> passages, CancellationToken cancellationToken = default)",
       "bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "ContentAnalysis",
+    "Type": "AutomationSandbox.ContentAnalysis.SpellingChecker",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class SpellingChecker"
+    ],
+    "Files": [
+      "TestAutomation/ContentAnalysis/SpellingChecker.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<ContentIssue> Check(ContentPassage passage)",
+      "public static SpellingChecker FromDictionaryFiles( IEnumerable<string> dictionaryBasePaths, IEnumerable<string>? allowedWords = null)"
     ]
   },
   {

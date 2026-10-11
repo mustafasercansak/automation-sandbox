@@ -10,11 +10,12 @@
     <RootNamespace>AutomationSandbox.ContentAnalysis</RootNamespace>
 
     <PackageId>AutomationSandbox.ContentAnalysis</PackageId>
-    <Description>Content-quality checks over a captured WebElementInfo tree: zero-dependency heuristics (duplicate words, leftover template placeholders, malformed punctuation) plus an optional single-provider LLM review for grammar and meaning issues the heuristics can't judge.</Description>
+    <Description>Content-quality checks over a captured WebElementInfo tree: zero-dependency heuristics (duplicate words, leftover template placeholders, malformed punctuation), a keyless offline dictionary spell checker (Hunspell, any language including Turkish), plus an optional single-provider LLM review for grammar and meaning issues those can't judge.</Description>
     <PackageTags>content-analysis;web-automation;quality;dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
     <ProjectReference Include="..\UiModel\UiModel.csproj" />
     <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
   </ItemGroup>
