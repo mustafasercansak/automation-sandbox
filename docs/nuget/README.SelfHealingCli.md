@@ -48,6 +48,8 @@ else:
     print("Not confident enough to auto-heal; falling back to manual review")
 ```
 
+A real, runnable version of this - Node.js + [Playwright](https://playwright.dev/) capturing an actual page into this exact shape - lives at [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture) in the main repository.
+
 ## Using it in CI without hand-writing the install/parse plumbing
 
 The repository ships a composite GitHub Action, `.github/actions/heal`, that wraps the install + run + JSON-parsing steps above into one line:
