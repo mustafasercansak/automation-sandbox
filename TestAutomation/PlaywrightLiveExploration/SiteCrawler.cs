@@ -72,7 +72,7 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                 try
                 {
                     await session.NavigateAsync(url).ConfigureAwait(false);
-                    dom = await session.CaptureAsync().ConfigureAwait(false);
+                    dom = await session.CaptureAsync(effectiveOptions.DiscoveryOptions).ConfigureAwait(false);
                     previousAttemptFailed = false;
                 }
                 catch (Exception ex)

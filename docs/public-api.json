@@ -1473,7 +1473,7 @@
   {
     "Package": "PlaywrightLiveExploration",
     "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlOptions",
-    "PublicMutableProperties": 3,
+    "PublicMutableProperties": 4,
     "Declarations": [
       "public sealed class SiteCrawlOptions"
     ],
@@ -1481,6 +1481,7 @@
       "TestAutomation/PlaywrightLiveExploration/SiteCrawlOptions.cs"
     ],
     "Members": [
+      "public WebDiscoveryOptions? DiscoveryOptions { get; set; }",
       "public bool SameOriginOnly { get; set; }",
       "public int MaxDepth { get; set; }",
       "public int MaxPages { get; set; }"
@@ -2463,7 +2464,7 @@
   {
     "Package": "WebDiscovery",
     "Type": "AutomationSandbox.WebDiscovery.WebDiscoveryOptions",
-    "PublicMutableProperties": 3,
+    "PublicMutableProperties": 4,
     "Declarations": [
       "public sealed class WebDiscoveryOptions"
     ],
@@ -2474,6 +2475,7 @@
       "public TimeSpan Timeout { get; set; }",
       "public int MaxDepth { get; set; }",
       "public int MaxElements { get; set; }",
+      "public int MaxTextLength { get; set; }",
       "public static WebDiscoveryOptions Default { get; }"
     ]
   },

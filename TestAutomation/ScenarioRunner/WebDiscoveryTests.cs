@@ -487,6 +487,31 @@ namespace ScenarioRunner
             Assert.Equal(25, options.MaxDepth);
             Assert.Equal(5000, options.MaxElements);
             Assert.Equal(TimeSpan.FromSeconds(10), options.Timeout);
+            Assert.Equal(160, options.MaxTextLength);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_KeepsTheDefaultTextLimitOf160()
+        {
+            var script = PlaywrightDomCaptureScript.BuildJavaScript();
+
+            Assert.Contains(".slice(0, 160)", script);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_EmbedsACustomTextLimit()
+        {
+            var script = PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions { MaxTextLength = 4000 });
+
+            Assert.Contains(".slice(0, 4000)", script);
+            Assert.DoesNotContain(".slice(0, 160)", script);
+        }
+
+        [Fact]
+        public void PlaywrightDomCaptureScript_BuildJavaScript_RejectsATextLimitBelowOne()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PlaywrightDomCaptureScript.BuildJavaScript(new WebDiscoveryOptions { MaxTextLength = 0 }));
         }
 
         [Fact]

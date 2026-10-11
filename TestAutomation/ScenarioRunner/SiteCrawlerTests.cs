@@ -46,6 +46,66 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task CrawlAsync_CapturesLongTextOnlyWhenTheCrawlOptionsAskForIt()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                var longParagraph = string.Join(" ", Enumerable.Repeat("word", 120)) + " TAILMARKER";
+                WriteHtml(dir, "a.html", "<p data-testid=\"long\">" + longParagraph + "</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+
+                var defaultText = new List<string>();
+                await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", onPageCaptured: (url, dom, ct) =>
+                {
+                    defaultText.Add(TextOf(dom, "long"));
+                    return Task.CompletedTask;
+                });
+
+                var fullText = new List<string>();
+                await SiteCrawler.CrawlAsync(
+                    session,
+                    server.BaseUrl + "a.html",
+                    new SiteCrawlOptions { DiscoveryOptions = new WebDiscoveryOptions { MaxTextLength = 5000 } },
+                    onPageCaptured: (url, dom, ct) =>
+                    {
+                        fullText.Add(TextOf(dom, "long"));
+                        return Task.CompletedTask;
+                    });
+
+                Assert.Equal(160, Assert.Single(defaultText).Length);
+                Assert.DoesNotContain("TAILMARKER", defaultText[0]);
+                Assert.EndsWith("TAILMARKER", Assert.Single(fullText));
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        private static string TextOf(WebElementInfo root, string testId)
+        {
+            var queue = new Queue<WebElementInfo>();
+            queue.Enqueue(root);
+            while (queue.Count > 0)
+            {
+                var node = queue.Dequeue();
+                if (node.TestId == testId)
+                {
+                    return node.Text;
+                }
+
+                foreach (var child in node.Children)
+                {
+                    queue.Enqueue(child);
+                }
+            }
+
+            throw new InvalidOperationException("No element with test id " + testId + " was captured.");
+        }
+
+        [Fact]
         public async Task CrawlAsync_DoesNotRevisitAPageReachableByACycle()
         {
             var dir = CreateTempDir();

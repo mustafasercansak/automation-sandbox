@@ -5,6 +5,8 @@ namespace AutomationSandbox.WebDiscovery
     /// <summary>Browser-side DOM capture source used with Playwright page evaluation.</summary>
     public static class PlaywrightDomCaptureScript
     {
+        private const int DefaultMaxTextLength = 160;
+
         // Shared between the unbounded JavaScript constant below and BuildJavaScript's bounded
         // template, so the ~10 pure DOM-reading helpers (role/name/selector/visibility/frame
         // detection) have exactly one definition instead of two copies drifting apart.
@@ -305,13 +307,30 @@ namespace AutomationSandbox.WebDiscovery
                 throw new ArgumentOutOfRangeException(nameof(effective.Timeout), "Timeout must be greater than zero.");
             }
 
+            if (effective.MaxTextLength < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(effective.MaxTextLength), "MaxTextLength must be at least one.");
+            }
+
+            var helpers = HelperFunctionsJavaScript;
+            if (effective.MaxTextLength != DefaultMaxTextLength)
+            {
+                helpers = helpers.Replace(
+                    ".slice(0, " + DefaultMaxTextLength.ToString(CultureInfo.InvariantCulture) + ")",
+                    ".slice(0, " + effective.MaxTextLength.ToString(CultureInfo.InvariantCulture) + ")");
+                if (helpers == HelperFunctionsJavaScript)
+                {
+                    throw new InvalidOperationException("The text-length limit was not found in the capture script helpers.");
+                }
+            }
+
             var timeoutMs = Math.Max(1, (long)effective.Timeout.TotalMilliseconds);
             var boundedWalk = BoundedWalkTemplate
                 .Replace("__MAX_DEPTH__", effective.MaxDepth.ToString(CultureInfo.InvariantCulture))
                 .Replace("__MAX_ELEMENTS__", effective.MaxElements.ToString(CultureInfo.InvariantCulture))
                 .Replace("__TIMEOUT_MS__", timeoutMs.ToString(CultureInfo.InvariantCulture));
 
-            return "() => {" + HelperFunctionsJavaScript + boundedWalk;
+            return "() => {" + helpers + boundedWalk;
         }
     }
 }
