@@ -329,9 +329,11 @@ jobs:
     # Character Map and Registry Editor ship with every windows-latest runner - real,
     # unmodified, third-party-authored Win32 apps, not this repo's own WinFormsApp/WpfApp
     # demos - so a green run here is genuine evidence the sample works against arbitrary
-    # external UIA applications (#494). This does not close #489: that issue asks for
-    # verification against an arbitrary application at a maintainer's own workplace,
-    # which two fixed, repo-selected built-in apps cannot substitute for.
+    # external UIA applications (#494). verify.ps1 also downloads Notepad++, PeaZip, and
+    # KeePassXC (#534, a Qt app - a different UI toolkit than the others) from their own
+    # GitHub Releases. This does not close #489: that issue asks for verification against
+    # an arbitrary application at a maintainer's own workplace, which fixed, repo-selected
+    # built-in/downloaded apps cannot substitute for.
     timeout-minutes: 15
     steps:
       - name: Checkout

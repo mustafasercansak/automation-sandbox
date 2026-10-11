@@ -38,16 +38,17 @@ function Invoke-SampleAgainst {
 Invoke-SampleAgainst (Join-Path $env:WINDIR 'System32\charmap.exe')
 Invoke-SampleAgainst (Join-Path $env:WINDIR 'regedit.exe')
 
-# Two downloaded, actively-maintained, genuinely third-party Windows applications with
-# richer UI trees (tabbed documents, toolbars, tree/list views) than the two built-in
-# tools above - the best additional external-app evidence achievable without a Windows
-# machine of our own (#501; #489 - a maintainer's own workplace application - is still
-# the thing this cannot substitute for). Both ship as a no-install portable zip with no
-# EULA/first-run dialog to dismiss, downloaded directly from their own GitHub Releases
-# and pinned to a specific version so an unrelated future upstream release can't change
-# what this verifies. If a pinned asset URL ever 404s because the upstream project
-# pruned old releases, bump the version below - don't just delete the app and lose the
-# coverage silently.
+# Three downloaded, actively-maintained, genuinely third-party Windows applications with
+# richer UI trees (tabbed documents, toolbars, tree/list views) and, for KeePassXC below,
+# a different UI toolkit entirely (#534) than the two built-in tools above - the best
+# additional external-app evidence achievable without a Windows machine of our own (#501;
+# #489 - a maintainer's own workplace application - is still the thing this cannot
+# substitute for). All three ship as a no-install portable zip with no EULA/first-run
+# dialog to dismiss, downloaded directly from their own GitHub Releases and pinned to a
+# specific version so an unrelated future upstream release can't change what this
+# verifies. If a pinned asset URL ever 404s because the upstream project pruned old
+# releases, bump the version below - don't just delete the app and lose the coverage
+# silently.
 $downloadDir = Join-Path $PSScriptRoot 'external-apps'
 New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
 
@@ -64,5 +65,20 @@ $peazipDir = Join-Path $downloadDir 'peazip'
 Invoke-WebRequest -Uri "https://github.com/peazip/PeaZip/releases/download/$peazipVersion/peazip_portable-$peazipVersion.WIN64.zip" -OutFile $peazipZip
 Expand-Archive -Path $peazipZip -DestinationPath $peazipDir -Force
 Invoke-SampleAgainst (Join-Path $peazipDir "peazip_portable-$peazipVersion.WIN64\peazip.exe")
+
+# A fifth app on a genuinely different UI toolkit (#534): Notepad++/PeaZip above are both
+# native Win32 (the former direct, the latter via wxWidgets), so neither proves the sample
+# works against a Qt application - a common desktop toolkit a real workplace app could use,
+# with its own accessibility bridge to Windows UIA. KeePassXC ships a true no-install
+# portable build (a .portable marker file sits next to the exe; no EULA/first-run wizard),
+# downloaded from its own GitHub Releases and pinned to a specific version, same as the two
+# apps above. This still does not close #489: a repo-selected open-source tool, however
+# different its toolkit, is not a maintainer's own real workplace application.
+$keepassxcVersion = '2.7.12'
+$keepassxcZip = Join-Path $downloadDir 'keepassxc.zip'
+$keepassxcDir = Join-Path $downloadDir 'keepassxc'
+Invoke-WebRequest -Uri "https://github.com/keepassxreboot/keepassxc/releases/download/$keepassxcVersion/KeePassXC-$keepassxcVersion-Win64.zip" -OutFile $keepassxcZip
+Expand-Archive -Path $keepassxcZip -DestinationPath $keepassxcDir -Force
+Invoke-SampleAgainst (Join-Path $keepassxcDir "KeePassXC-$keepassxcVersion-Win64\KeePassXC.exe")
 
 Write-Host 'Desktop App Explorer Quickstart verification passed.' -ForegroundColor Green
