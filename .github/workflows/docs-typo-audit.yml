@@ -27,7 +27,9 @@ jobs:
         uses: ./.github/actions/site-audit
         with:
           url: https://mustafasercansak.github.io/automation-sandbox/
-          lang: tr,en
+          # en and en-GB together: the docs mix American and British spelling.
+          lang: tr,en,en-GB
+          allow-file: .github/docs-typo-allowlist.txt
           max-pages: '80'
           max-depth: '4'
           fail-on-findings: 'false'

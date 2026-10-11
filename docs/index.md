@@ -3,7 +3,7 @@ layout: default
 title: Documentation Hub - Automation Sandbox
 ---
 
-# 🚀 Automation Sandbox Documentation / Dökümantasyon
+# 🚀 Automation Sandbox Documentation / Dokümantasyon
 
 ![CI](https://github.com/mustafasercansak/automation-sandbox/actions/workflows/ci.yml/badge.svg)
 ![Release](https://img.shields.io/github/v/release/mustafasercansak/automation-sandbox?include_prereleases)
@@ -16,7 +16,7 @@ Welcome to **Automation Sandbox**! / **Automation Sandbox** projesine hoş geldi
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English Documentation](#-english-overview)
-> - [🇹🇷 Türkçe Dökümantasyon](#-türkçe-genel-bakış)
+> - [🇹🇷 Türkçe Dokümantasyon](#-türkçe-genel-bakış)
 
 ---
 
@@ -78,7 +78,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 
 ---
 
-### 📚 Döküman Haritası
+### 📚 Doküman Haritası
 
 | Rehber | Açıklama |
 | :--- | :--- |
