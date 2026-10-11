@@ -2,11 +2,13 @@
 Python + pywinauto -> UiElementInfo-shaped JSON for Windows desktop apps, the same role
 examples/js-playwright-capture plays for the web.
 
-Uses pywinauto's `uia` backend (pywinauto.windows.uia_element_info.UIAElementInfo),
+Uses pywinauto's `uia` backend (pywinauto.uia_element_info.UIAElementInfo),
 which wraps the same Windows UI Automation COM API FlaUI/UIA3 uses - so this produces
-genuinely equivalent data, not just a matching JSON shape. API verified against
-pywinauto's actual source before writing this (control_type/name/auto_id/class_name/
-rectangle/parent/children()), not guessed.
+genuinely equivalent data, not just a matching JSON shape. API verified against the
+actual published pywinauto==0.6.9 wheel's source, not guessed, and not pywinauto's
+unreleased master branch - the two disagree (master's WindowSpecification.find() and
+UIAElementInfo.auto_id do not exist in the 0.6.9 release; use wrapper_object() and
+automation_id there instead).
 
 Windows-only: pywinauto's uia backend needs real Windows UI Automation COM APIs, the
 same constraint Discovery/FlaUI have. See
@@ -31,7 +33,7 @@ def map_node(element_info, parent_control_type, parent_automation_id, sibling_in
     return {
         "ControlType": element_info.control_type or "",
         "Name": element_info.name or "",
-        "AutomationId": element_info.auto_id or "",
+        "AutomationId": element_info.automation_id or "",
         "ClassName": element_info.class_name or "",
         "BoundingRectangle": {
             "X": rect.left,
@@ -44,7 +46,7 @@ def map_node(element_info, parent_control_type, parent_automation_id, sibling_in
         "SiblingIndex": sibling_index,
         "SiblingCount": sibling_count,
         "Children": [
-            map_node(child, element_info.control_type or "", element_info.auto_id or "", i, len(children))
+            map_node(child, element_info.control_type or "", element_info.automation_id or "", i, len(children))
             for i, child in enumerate(children)
         ],
     }
