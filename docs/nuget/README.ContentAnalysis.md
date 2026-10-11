@@ -1,6 +1,6 @@
 # AutomationSandbox.ContentAnalysis
 
-Content-quality checks over a captured `WebElementInfo` tree. Zero-dependency heuristics (duplicate consecutive word, leftover template placeholders like `TODO`/`lorem ipsum`, 4+ repeated punctuation characters) always run; an optional single-provider Claude review (`ClaudeContentAnalysisProvider`) adds grammar/spelling/meaning judgment the heuristics can't make. The LLM layer is guarded the same way `AutomationSandbox.IntentAutomation`'s `LlmIntentPlanner` is: no dependency on `AutomationSandbox.LlmHealing`'s multi-provider consensus machinery, and it degrades to heuristic-only results on any failure or missing API key — it never throws.
+Content-quality checks over a captured `WebElementInfo` tree. Zero-dependency heuristics (duplicate consecutive word, leftover template placeholders like `TODO`/`lorem ipsum`, 4+ repeated punctuation characters) always run; `SpellingChecker` adds a keyless, offline dictionary spell check (Hunspell dictionaries you supply, so it works for Turkish, English and any language Hunspell covers); an optional single-provider Claude review (`ClaudeContentAnalysisProvider`) adds grammar/spelling/meaning judgment the heuristics can't make. The LLM layer is guarded the same way `AutomationSandbox.IntentAutomation`'s `LlmIntentPlanner` is: no dependency on `AutomationSandbox.LlmHealing`'s multi-provider consensus machinery, and it degrades to heuristic-only results on any failure or missing API key — it never throws.
 
 ## Install
 
@@ -21,6 +21,13 @@ WebElementInfo dom = await session.CaptureAsync(); // AutomationSandbox.Playwrig
 
 // Heuristics only, no dependency beyond WebDiscovery:
 IReadOnlyList<ContentIssue> issues = ContentAnalyzer.RunHeuristics(dom);
+
+// Keyless spell check: no API key, nothing leaves the machine. Dictionaries are Hunspell .dic/.aff
+// pairs you provide (not bundled); list the primary language first. Allowed words are never reported.
+var spelling = SpellingChecker.FromDictionaryFiles(
+    new[] { "dictionaries/tr", "dictionaries/en" },   // loads tr.dic + tr.aff, en.dic + en.aff
+    allowedWords: new[] { "Playwright", "Kubernetes" });
+IReadOnlyList<ContentIssue> spellingIssues = ContentAnalyzer.RunSpellCheck(dom, spelling);
 
 // Heuristics + an optional LLM review (skipped automatically without ANTHROPIC_API_KEY):
 issues = await ContentAnalyzer.AnalyzeAsync(dom, new ClaudeContentAnalysisProvider());

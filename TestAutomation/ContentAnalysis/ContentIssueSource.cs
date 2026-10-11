@@ -7,5 +7,7 @@ namespace AutomationSandbox.ContentAnalysis
         Heuristic = 0,
         /// <summary>Found by an <see cref="IContentAnalysisProvider" /> language-model review.</summary>
         Llm = 1,
+        /// <summary>Found by a <see cref="SpellingChecker" /> dictionary lookup.</summary>
+        Dictionary = 2,
     }
 }

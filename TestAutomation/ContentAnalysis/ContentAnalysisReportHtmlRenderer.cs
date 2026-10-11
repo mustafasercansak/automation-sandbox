@@ -43,6 +43,7 @@ namespace AutomationSandbox.ContentAnalysis
             html.AppendLine("    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; }");
             html.AppendLine("    .heuristic-badge { color: var(--muted); background: var(--panel); }");
             html.AppendLine("    .llm-badge { color: #1d4ed8; background: #dbeafe; }");
+            html.AppendLine("    .dictionary-badge { color: #166534; background: #dcfce7; }");
             html.AppendLine("    .empty { color: var(--ok); font-style: italic; }");
             html.AppendLine("  </style>");
             html.AppendLine("</head>");
@@ -74,7 +75,8 @@ namespace AutomationSandbox.ContentAnalysis
                 html.AppendLine("      <tbody>");
                 foreach (var issue in entry.Issues)
                 {
-                    var sourceClass = issue.Source == ContentIssueSource.Llm ? "llm-badge" : "heuristic-badge";
+                    var sourceClass = issue.Source == ContentIssueSource.Llm ? "llm-badge"
+                        : issue.Source == ContentIssueSource.Dictionary ? "dictionary-badge" : "heuristic-badge";
                     html.AppendLine("        <tr>");
                     html.Append("          <td>").Append(E(issue.IssueType)).AppendLine("</td>");
                     html.Append("          <td><code>").Append(E(issue.CssSelector)).AppendLine("</code></td>");
