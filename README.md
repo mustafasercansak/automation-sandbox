@@ -795,7 +795,7 @@ AutomationSandbox.sln
 │   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
 │   ├── ContentAnalysis/    Content-quality checks over a captured WebElementInfo tree: heuristics + optional single-provider LLM review (netstandard2.0, net8.0, net10.0)
 │   ├── IntentExecution/    IntentWebExecutor: plans and actually executes an intent scenario against a live PlaywrightWebSession (netstandard2.0, net8.0, net10.0)
-│   ├── SelfHealingCli/     AutomationSandbox.Cli: dotnet tool wrapping SelfHealingResolver for non-.NET callers — JSON in, JSON out (net8.0; publish mechanism exists via release.yml's publish_cli input, not yet dispatched — see AGENTS.md #507/#509/#511). `.github/actions/heal/` wraps it as a composite GitHub Action (one `uses:` line) for any repo's CI.
+│   ├── SelfHealingCli/     AutomationSandbox.Cli: dotnet tool wrapping SelfHealingResolver for non-.NET callers — JSON in, JSON out, live on nuget.org (`dotnet tool install -g AutomationSandbox.Cli --prerelease`) — see AGENTS.md #507/#509/#511. JSON inputs/outputs follow a published schema (`docs/schemas/ui-element-info.schema.json`, #520). `.github/actions/heal/` wraps it as a composite GitHub Action (one `uses:` line) for any repo's CI.
 │   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net8.0)
 │   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
 └── samples/
