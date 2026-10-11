@@ -46,6 +46,7 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🐧 [**Linux Desktop via AT-SPI (Research)**](linux-desktop-atspi-research.md) | Findings on an AT-SPI2 desktop discovery backend: what maps cleanly, the `AutomationId` gap, and a backend sketch. No production code. |
 | 🍎 [**macOS Desktop via AXUIElement (Research)**](macos-desktop-axuielement-research.md) | Findings on a macOS Accessibility backend: the `kAXIdentifier` situation, why a Swift helper beats P/Invoke, and why it can't run on hosted CI. No production code. |
 | 🌐 [**Web Automation**](web-automation.md) | How to test Web applications with Playwright (Shadow DOM & iframe support). |
+| 🛠️ [**CLI & CI Integration**](cli-and-ci-integration.md) | `automation-sandbox-heal`: the language-agnostic CLI, its JSON Schema, the GitHub Action, and a real JS/Playwright capture example for non-.NET callers. |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | Using `TestIntent` to explain *why* a test step is being performed. |
 | 📊 [**Healing Reports & Dashboard**](healing-reports.md) | JSON and HTML telemetry for accepted, declined, and failed locator-resolution attempts. |
 | 📈 [**DORA & Reliability Metrics**](dora-metrics.md) | Weekly DORA metrics (deployment frequency, lead time, change failure rate, MTTR) and self-healing reliability gates read directly from the engine configuration. |
@@ -90,6 +91,7 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🐧 [**AT-SPI ile Linux Masaüstü (Araştırma)**](linux-desktop-atspi-research.md) | AT-SPI2 tabanlı bir masaüstü keşif backend'i üzerine bulgular: nesi temiz eşleşiyor, `AutomationId` boşluğu ve backend taslağı. Üretim kodu yok. |
 | 🍎 [**AXUIElement ile macOS Masaüstü (Araştırma)**](macos-desktop-axuielement-research.md) | macOS Accessibility backend'i üzerine bulgular: `kAXIdentifier` durumu, Swift yardımcısının neden P/Invoke'tan iyi olduğu ve neden hosted CI'da çalışamayacağı. Üretim kodu yok. |
 | 🌐 [**Web Testleri**](web-automation.md) | Playwright ile web sitelerini test etme (Shadow DOM ve iframe dahil). |
+| 🛠️ [**CLI ve CI Entegrasyonu**](cli-and-ci-integration.md) | `automation-sandbox-heal`: dilden bağımsız CLI, JSON Şeması, GitHub Action ve .NET dışı çağıranlar için gerçek bir JS/Playwright yakalama örneği. |
 | 🎯 [**Intent-Aware Healing**](intent-aware-healing.md) | `TestIntent` ile test adımının amacını yapay zekaya anlatma. |
 | 📊 [**İyileştirme Raporları & Panel**](healing-reports.md) | Kabul edilen, reddedilen ve başarısız locator çözüm denemeleri için JSON ve HTML telemetrisi. |
 | 📈 [**DORA ve Güvenilirlik Metrikleri**](dora-metrics.md) | Haftalık DORA metrikleri (dağıtım sıklığı, değişiklik teslim süresi, değişiklik başarısızlık oranı, MTTR) ve motor yapılandırmasından doğrudan okunan self-healing güvenilirlik eşikleri. |
