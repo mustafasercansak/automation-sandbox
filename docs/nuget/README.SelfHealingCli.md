@@ -20,6 +20,8 @@ automation-sandbox-heal --expected stale-element.json --tree live-tree.json --pr
 - `--tree` - a `UiElementInfo` JSON tree: a freshly captured snapshot of the live application.
 - `--profile` - `balanced` (default), `conservative`, or `aggressive`. See `SimilarityWeights.FromProfile` in the main repository's `AGENTS.md` for what each trades off.
 
+Both JSON inputs follow a published [JSON Schema](https://mustafasercansak.github.io/automation-sandbox/schemas/ui-element-info.schema.json) - point your editor or validator at it for autocomplete and validation without reading any C# source. Add `"$schema": "https://mustafasercansak.github.io/automation-sandbox/schemas/ui-element-info.schema.json"` to your own JSON files if your tooling supports it.
+
 Prints a `HealResult` as JSON to stdout (nothing else goes to stdout - diagnostic logging goes to stderr, so stdout is always pure, parseable JSON). Exit code `0` means `IsConfident` (safe to accept `Matched`); `1` means not confident (do not auto-accept); `2` means an error occurred before a decision could be made (bad input, missing file).
 
 ## Example: a non-.NET caller

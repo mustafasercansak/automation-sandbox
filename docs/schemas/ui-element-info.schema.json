@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mustafasercansak.github.io/automation-sandbox/schemas/ui-element-info.schema.json",
+  "title": "UiElementInfo",
+  "description": "A UI tree node as consumed and produced by AutomationSandbox.Cli (automation-sandbox-heal) and AutomationSandbox.UiModel's UiTreeSerializer. A single node (no Children) describes the stale --expected locator; a node with Children describes the live --tree snapshot. The shape is identical whether the tree was captured via FlaUI (desktop) or Playwright (web) - the resolver draws no platform distinction. Required properties are the ones that materially drive SimilarityScorer's five weighted signals (ControlType, ParentControlType, SiblingPosition, Name, Position); everything else is optional metadata that improves scoring but has a safe default when omitted.",
+  "type": "object",
+  "properties": {
+    "ControlType": {
+      "type": "string",
+      "description": "UI Automation control type used for structural matching, e.g. \"Button\", \"Edit\", \"Pane\". Required: this is one of the five scored signals (weight 0.20)."
+    },
+    "Name": {
+      "type": "string",
+      "description": "Human-readable accessible name of the element. Empty string means no name was captured - this is a valid, meaningful value (scored, weight 0.20), not an error."
+    },
+    "AutomationId": {
+      "type": "string",
+      "description": "Captured automation identifier. May be empty or duplicated across sibling elements - never treated as a unique node identity by the resolver, only as diagnostic/display data."
+    },
+    "ClassName": {
+      "type": "string",
+      "description": "Captured native or DOM class name. Diagnostic only - not one of SimilarityScorer's five weighted signals."
+    },
+    "BoundingRectangle": {
+      "$ref": "#/$defs/boundingRectangle"
+    },
+    "ParentControlType": {
+      "type": "string",
+      "description": "Parent control type, denormalized onto this node so the resolver can score without walking back up the tree. One of the five scored signals (weight 0.20)."
+    },
+    "ParentAutomationId": {
+      "type": "string",
+      "description": "Parent's captured identifier, for diagnostics only - need not be unique."
+    },
+    "SiblingIndex": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-based position among the captured parent's children. Used with SiblingCount for the SiblingPosition signal (weight 0.15)."
+    },
+    "SiblingCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of siblings including this node. Zero means missing sibling metadata (the signal is then excluded from scoring, not penalized)."
+    },
+    "TestIntent": {
+      "type": "string",
+      "description": "Narrative business intent retained for prompts, generated tests, and reports. Not used by SimilarityScorer."
+    },
+    "Children": {
+      "type": "array",
+      "items": { "$ref": "#" },
+      "description": "Direct children in capture order. Omit or leave empty for a single-element --expected snapshot; populate for a --tree snapshot of the live application."
+    },
+    "ChildControlTypeSignature": {
+      "type": ["string", "null"],
+      "description": "Direct-child ControlType multiset recorded at snapshot time, e.g. \"Button:2|Edit:1\". Only meaningful when the stale --expected locator was itself a container (drives the #375 descendant gate). Null or omitted when not applicable - never required."
+    }
+  },
+  "required": ["ControlType", "Name", "AutomationId", "BoundingRectangle", "ParentControlType"],
+  "additionalProperties": true,
+  "$defs": {
+    "boundingRectangle": {
+      "type": "object",
+      "description": "Captured position and dimensions in the capture adapter's coordinate system. An all-zero rectangle represents missing geometry, not a real element at the origin.",
+      "properties": {
+        "X": { "type": "number", "description": "Horizontal origin. One of the five scored signals, via the Position component (weight 0.25)." },
+        "Y": { "type": "number", "description": "Vertical origin." },
+        "Width": { "type": "number", "description": "Captured horizontal extent." },
+        "Height": { "type": "number", "description": "Captured vertical extent." },
+        "IsUsable": {
+          "type": "boolean",
+          "description": "Computed (not required as input): true when Width or Height is non-zero. UiTreeSerializer.ToJson emits this, but UiTreeSerializer.FromJson ignores it on input - it has no [JsonConstructor] parameter. Present here only so the CLI's own output also validates against this schema."
+        },
+        "IsEmpty": {
+          "type": "boolean",
+          "description": "Computed (not required as input): true when X, Y, Width, and Height are all zero. Same ignored-on-input status as IsUsable."
+        }
+      },
+      "required": ["X", "Y", "Width", "Height"],
+      "additionalProperties": false
+    }
+  }
+}
