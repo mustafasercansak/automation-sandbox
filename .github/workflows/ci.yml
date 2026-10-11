@@ -477,6 +477,75 @@ jobs:
 
           Write-Host 'Self-Healing GitHub Action verification passed.' -ForegroundColor Green
 
+  desktop-capture-python:
+    name: Desktop Capture (Python)
+    runs-on: windows-latest
+    # pywinauto's uia backend needs real Windows UI Automation COM APIs - the same
+    # reason Desktop App Explorer Sample runs on windows-latest, not Linux. The
+    # examples/python-pywinauto-capture script (#532) was written without Windows
+    # access; this job's first run is its real test, not a formality.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install pywinauto
+        run: pip install -r examples/python-pywinauto-capture/requirements.txt
+
+      - name: Build WinFormsApp and the CLI
+        run: |
+          dotnet build WinFormsApp/WinFormsApp.csproj --configuration Debug
+          dotnet build TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Debug
+
+      - name: Capture WinFormsApp's real UI tree
+        run: python examples/python-pywinauto-capture/capture.py WinFormsApp/bin/Debug/net48/WinFormsApp.exe tree.json
+
+      # Modifying only the AutomationId of a genuinely captured node (not
+      # hand-authoring a second tree independently) makes this test robust to
+      # whatever the real pywinauto-captured structure actually looks like - both
+      # "expected" and "tree" come from the same real capture, so any real-world
+      # surprise is consistent across both sides, exactly the technique #516 used
+      # for the CLI's own desktop fixture.
+      - name: Construct a synthetic stale --expected from a real captured node
+        shell: pwsh
+        run: |
+          $tree = Get-Content tree.json -Raw | ConvertFrom-Json
+          function Find-ByAutomationId($node, $id) {
+            if ($node.AutomationId -eq $id) { return $node }
+            foreach ($child in $node.Children) {
+              $found = Find-ByAutomationId $child $id
+              if ($found) { return $found }
+            }
+            return $null
+          }
+          $real = Find-ByAutomationId $tree 'txtEmail'
+          if (-not $real) { throw "Could not find a real 'txtEmail' element in the captured tree." }
+          $expected = $real | Select-Object * -ExcludeProperty Children
+          $expected.AutomationId = 'txtEmail_stale'
+          $expected | ConvertTo-Json -Depth 10 | Set-Content expected.json
+
+      - name: Run automation-sandbox-heal against the real captured data
+        shell: pwsh
+        run: |
+          $result = dotnet run --project TestAutomation/SelfHealingCli --no-build -- --expected expected.json --tree tree.json --profile balanced | ConvertFrom-Json
+          if (-not $result.IsConfident) {
+            throw "Expected IsConfident=true, got false. Result: $($result | ConvertTo-Json -Depth 10)"
+          }
+          if ($result.Matched.AutomationId -ne 'txtEmail') {
+            throw "Expected healed AutomationId 'txtEmail', got '$($result.Matched.AutomationId)'."
+          }
+          Write-Host 'Desktop Python capture verification passed.' -ForegroundColor Green
+
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
     runs-on: ubuntu-latest
