@@ -15,6 +15,12 @@
     <!-- No GenerateDocumentationFile: the public surface is the CLI argument shape and its
          report files, not a C# API (same reasoning as SelfHealingCli). -->
 
+    <!-- NU5111: the packed tool carries the Playwright driver's own .ps1 files under tools/<tfm>/any/, and
+         NuGet warns that none is an install/uninstall/init hook. They are driver scripts, never meant to run
+         at install time, so the warning is noise (about ten per pack, repeated in every CI job and in the
+         typo-audit action's job summary). -->
+    <NoWarn>$(NoWarn);NU5111</NoWarn>
+
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>automation-sandbox-audit</ToolCommandName>
     <PackageId>AutomationSandbox.SiteAudit</PackageId>

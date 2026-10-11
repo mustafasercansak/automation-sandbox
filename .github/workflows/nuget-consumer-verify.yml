@@ -28,7 +28,7 @@ permissions:
 jobs:
   verify-published:
     name: Verify published package as a nuget.org consumer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # verify-published.ps1 polls nuget.org indexing for up to 30 attempts * 50s (~25 min)
     # before giving up; a nightly run against an already-indexed version normally resolves
     # on the first attempt (seconds), so this is headroom for the rare case nuget.org is

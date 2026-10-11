@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   calculate-dora:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed 12-31s across recent runs; the script makes repeated GitHub API calls,
     # which can be slower or rate-limited.
     timeout-minutes: 15
