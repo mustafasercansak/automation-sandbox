@@ -1,0 +1,202 @@
+name: 'Automation Sandbox - Site Typo Audit'
+description: >-
+  Crawls a website from one URL and reports spelling mistakes (Hunspell dictionaries such as
+  Turkish and English, no API key, no page text leaves the runner), duplicated words and
+  leftover placeholders. Writes a findings table to the job summary, uploads the JSON and HTML
+  report as an artifact, and can fail the job when anything is found.
+author: 'Mustafa Sercan Sak'
+
+inputs:
+  url:
+    description: 'Start page to audit. Only same-origin links are followed.'
+    required: true
+  lang:
+    description: >-
+      Comma-separated dictionary languages, primary language first, for example "tr,en". A word is
+      accepted if any listed dictionary accepts it.
+    required: false
+    default: 'en'
+  allow-words:
+    description: 'Words never to report (brand and product names), separated by commas or new lines.'
+    required: false
+    default: ''
+  allow-file:
+    description: 'Path to a text file of allowed words, one per line ("#" starts a comment).'
+    required: false
+    default: ''
+  max-pages:
+    description: 'Maximum number of pages to visit.'
+    required: false
+    default: '25'
+  max-depth:
+    description: 'Maximum link depth from the start page.'
+    required: false
+    default: '3'
+  output-dir:
+    description: 'Directory the JSON and HTML reports are written to (overwritten on each run).'
+    required: false
+    default: 'site-audit-report'
+  fail-on-findings:
+    description: >-
+      "true" (default) fails the job when findings exist. "false" only reports them; read the
+      issue-count output to branch on it. A run that could not execute always fails.
+    required: false
+    default: 'true'
+  upload-report:
+    description: '"true" (default) uploads the report directory as a workflow artifact.'
+    required: false
+    default: 'true'
+  artifact-name:
+    description: 'Artifact name for the report. Use a different one if the action runs twice in one job.'
+    required: false
+    default: 'site-audit-report'
+  version:
+    description: >-
+      AutomationSandbox.SiteAudit version to install from NuGet. Leave empty (default) to build the
+      tool from this action's own repository checkout, so the tool version is exactly the one at the
+      ref you pinned the action to. That works before the tool is published to nuget.org.
+    required: false
+    default: ''
+  source:
+    description: 'Optional extra NuGet source, used only when a version is given.'
+    required: false
+    default: ''
+
+outputs:
+  issue-count:
+    description: 'Number of findings in the report.'
+    value: ${{ steps.audit.outputs.issue-count }}
+  exit-code:
+    description: 'The tool exit code: 0 no findings, 1 findings, 2 the audit could not run.'
+    value: ${{ steps.audit.outputs.exit-code }}
+  report-dir:
+    description: 'The directory containing site-audit-report.json and site-audit-report.html.'
+    value: ${{ inputs.output-dir }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 8.0.x
+
+    # Every input reaches the shell through env: below, never spliced into the script text, so a
+    # crafted input value cannot become shell code.
+    - name: Install automation-sandbox-audit
+      shell: bash
+      env:
+        TOOL_VERSION: ${{ inputs.version }}
+        TOOL_SOURCE: ${{ inputs.source }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        if [ -n "$TOOL_VERSION" ]; then
+          args=(tool update --global AutomationSandbox.SiteAudit --version "$TOOL_VERSION")
+          if [ -n "$TOOL_SOURCE" ]; then
+            args+=(--add-source "$TOOL_SOURCE")
+          fi
+          dotnet "${args[@]}"
+        else
+          # github.action_path is inside a checkout of this whole repository at the ref the caller
+          # pinned, so the tool can be built from source even though it is not on nuget.org yet.
+          pack_dir="$RUNNER_TEMP/site-audit-pack"
+          if [ ! -d "$pack_dir" ]; then
+            dotnet pack "$ACTION_PATH/../../../TestAutomation/SiteAuditCli/SiteAuditCli.csproj" \
+              --configuration Release --output "$pack_dir"
+          fi
+          dotnet tool update --global AutomationSandbox.SiteAudit --prerelease --add-source "$pack_dir"
+        fi
+        echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+    - name: Audit the site
+      id: audit
+      shell: bash
+      env:
+        AUDIT_URL: ${{ inputs.url }}
+        AUDIT_LANG: ${{ inputs.lang }}
+        AUDIT_ALLOW_WORDS: ${{ inputs.allow-words }}
+        AUDIT_ALLOW_FILE: ${{ inputs.allow-file }}
+        AUDIT_MAX_PAGES: ${{ inputs.max-pages }}
+        AUDIT_MAX_DEPTH: ${{ inputs.max-depth }}
+        AUDIT_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        set -uo pipefail
+        args=(--url "$AUDIT_URL" --lang "$AUDIT_LANG" --max-pages "$AUDIT_MAX_PAGES" \
+          --max-depth "$AUDIT_MAX_DEPTH" --output-dir "$AUDIT_OUTPUT_DIR" --install-browser)
+        if [ -n "$AUDIT_ALLOW_FILE" ]; then
+          args+=(--allow-file "$AUDIT_ALLOW_FILE")
+        fi
+        while IFS= read -r word; do
+          word="$(printf '%s' "$word" | xargs)"
+          if [ -n "$word" ]; then
+            args+=(--allow-word "$word")
+          fi
+        done < <(printf '%s' "$AUDIT_ALLOW_WORDS" | tr ',\r' '\n\n')
+
+        # The gate is decided in the last step, after the report has been uploaded, so a run with
+        # findings still publishes its evidence. This step itself never fails on the tool's code.
+        automation-sandbox-audit "${args[@]}"
+        exit_code=$?
+
+        report="$AUDIT_OUTPUT_DIR/site-audit-report.json"
+        issue_count=0
+        pages=0
+        if [ -f "$report" ]; then
+          issue_count=$(jq -s '[.[].Issues[]?] | length' "$report")
+          pages=$(jq -s 'length' "$report")
+        fi
+
+        {
+          echo "exit-code=$exit_code"
+          echo "issue-count=$issue_count"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "## Site audit: $AUDIT_URL"
+          echo
+          echo "- Pages audited: $pages"
+          echo "- Findings: $issue_count"
+          if [ "$exit_code" = "2" ]; then
+            echo "- **The audit could not run.** See the step log."
+          fi
+          if [ "$issue_count" -gt 0 ]; then
+            echo
+            echo "| Type | Page | Message |"
+            echo "| --- | --- | --- |"
+            jq -s -r '.[] | .Url as $u | .Issues[]? | "| \(.IssueType) | \($u) | \(.Message | gsub("\\|"; "\\|")) |"' "$report" | head -n 100
+            if [ "$issue_count" -gt 100 ]; then
+              echo
+              echo "Showing the first 100 of $issue_count findings. The full list is in the uploaded report."
+            fi
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit 0
+
+    - name: Upload the report
+      if: always() && inputs.upload-report == 'true'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-dir }}
+        if-no-files-found: ignore
+
+    - name: Apply the gate
+      shell: bash
+      env:
+        EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+        ISSUE_COUNT: ${{ steps.audit.outputs.issue-count }}
+        FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+      run: |
+        # Anything other than 0 (clean) or 1 (findings) means the audit did not complete: the tool's
+        # own 2, but also a missing command (127) or an empty value from a crashed step. Treating
+        # those as a pass would turn a broken audit into a green build.
+        if [ "$EXIT_CODE" != "0" ] && [ "$EXIT_CODE" != "1" ]; then
+          echo "::error::The site audit could not run (exit code '$EXIT_CODE'). See the 'Audit the site' step log."
+          exit 2
+        fi
+        if [ "$EXIT_CODE" = "1" ] && [ "$FAIL_ON_FINDINGS" = "true" ]; then
+          echo "::error::The site audit found $ISSUE_COUNT issue(s). See the job summary and the uploaded report."
+          exit 1
+        fi
+        exit 0

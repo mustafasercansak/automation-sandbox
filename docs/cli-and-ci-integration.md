@@ -99,6 +99,34 @@ automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Pla
 - It judges single words only. Grammar and meaning are outside a dictionary's reach, and brand names, jargon and code you did not allow-list will be reported as misspellings. Text is checked up to 10,000 characters per element.
 - Not published to nuget.org yet; until it is, pack it from the repository (`dotnet pack TestAutomation/SiteAuditCli`). The `Site Audit CLI` CI job exercises the packed tool against a fixture site with the real Turkish and English dictionaries.
 
+#### Running the typo audit on GitHub
+
+A composite action wraps the install, run, summary and upload steps, so a scheduled workflow is one `uses:` line. It needs no API key, and no page text leaves the runner:
+
+```yaml
+name: Typo audit
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mustafasercansak/automation-sandbox/.github/actions/site-audit@main
+        with:
+          url: https://example.com
+          lang: tr,en
+          allow-words: |
+            Acme
+            Playwright
+```
+
+- It writes a findings table to the job summary and uploads the JSON and HTML report as an artifact (`upload-report: 'false'` to skip, `artifact-name` if the action runs twice in one job).
+- By default the job fails when anything is found. Set `fail-on-findings: 'false'` to only report, and read the `issue-count` and `exit-code` outputs to branch on them. A run that could not execute (bad URL, missing dictionary) always fails, so a broken audit never looks like a clean site.
+- Because the tool is not on nuget.org yet, the action builds it from its own repository checkout, so the tool version is exactly the one at the ref you pin the action to. Pin a tag or commit SHA rather than `@main` for a reproducible audit. That build adds about a minute. Once a version is published, `version:` installs it instead.
+- It audits the site as served, so it covers what a browser sees: run it after a deploy, or on a schedule against production. Chromium is installed by the tool; a self-hosted runner without the browser's system libraries needs them installed first.
+
 ### Why a CLI, Not Just the Library
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled adapter) and wants to call the resolver in-process. The CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
@@ -199,6 +227,34 @@ automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Pla
 - Çıkış kodu `0` bulgu yok, `1` bulgu var (CI adımı buna göre kapı olabilir), `2` tarama çalıştırılamadı (hatalı argüman, eksik sözlük, ulaşılamayan başlangıç sayfası) demektir. `--output-dir` altına bir JSON Lines günlüğü ve bir HTML rapor yazılır (her çalıştırmada üzerine yazılır).
 - Yalnızca tek tek kelimeleri değerlendirir. Dilbilgisi ve anlam bir sözlüğün erişiminin dışındadır; izin listesine eklemediğiniz marka adları, jargon ve kod yazım hatası olarak raporlanır. Metin, eleman başına 10.000 karaktere kadar denetlenir.
 - Henüz nuget.org'da yayımlanmadı; yayımlanana kadar depodan paketleyin (`dotnet pack TestAutomation/SiteAuditCli`). `Site Audit CLI` CI job'ı paketlenmiş aracı, gerçek Türkçe ve İngilizce sözlüklerle bir fixture sitesine karşı çalıştırır.
+
+#### Yazım denetimini GitHub'da çalıştırmak
+
+Bir composite action kurulum, çalıştırma, özet ve yükleme adımlarını sarar; böylece zamanlanmış bir workflow tek bir `uses:` satırıdır. API anahtarı gerektirmez ve sayfa metni runner'dan çıkmaz:
+
+```yaml
+name: Typo audit
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mustafasercansak/automation-sandbox/.github/actions/site-audit@main
+        with:
+          url: https://example.com
+          lang: tr,en
+          allow-words: |
+            Acme
+            Playwright
+```
+
+- Job özetine bir bulgu tablosu yazar ve JSON ile HTML raporunu artifact olarak yükler (atlamak için `upload-report: 'false'`, action aynı job'da iki kez çalışıyorsa `artifact-name`).
+- Varsayılan olarak bir şey bulunursa job başarısız olur. Yalnızca raporlamak için `fail-on-findings: 'false'` verin ve `issue-count` ile `exit-code` çıktılarını okuyarak dallanın. Çalıştırılamayan bir tarama (hatalı URL, eksik sözlük) her zaman başarısız olur; bozuk bir tarama hiçbir zaman temiz bir site gibi görünmez.
+- Araç henüz nuget.org'da olmadığından action onu kendi depo checkout'undan derler; yani araç sürümü, action'ı sabitlediğiniz ref'teki sürümdür. Tekrarlanabilir bir tarama için `@main` yerine bir etiket veya commit SHA'sı sabitleyin. Bu derleme yaklaşık bir dakika ekler. Bir sürüm yayımlandığında `version:` onu kurar.
+- Siteyi sunulduğu haliyle tarar, yani bir tarayıcının gördüğünü kapsar: yayına almadan sonra veya üretime karşı zamanlanmış olarak çalıştırın. Chromium'u araç kurar; tarayıcının sistem kütüphaneleri olmayan bir self-hosted runner'da önce onların kurulması gerekir.
 
 ### Neden CLI, Sadece Kütüphane Değil
 

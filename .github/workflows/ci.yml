@@ -453,6 +453,89 @@ jobs:
         shell: pwsh
         run: ./TestAutomation/SiteAuditCli/verify.ps1
 
+  site-audit-action:
+    name: Site Audit GitHub Action
+    runs-on: ubuntu-latest
+    # Proves .github/actions/site-audit end to end (#544): builds the tool from this checkout, runs
+    # it against the fixture site over HTTP, and checks the outputs and BOTH sides of the gate - a
+    # run with findings must fail by default, a clean page must pass. Values come through env:, not
+    # interpolated into script text.
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Serve the fixture site
+        shell: bash
+        run: |
+          nohup pwsh -NoProfile -File TestAutomation/SiteAuditCli/fixtures/serve.ps1 \
+            -Root "$GITHUB_WORKSPACE/TestAutomation/SiteAuditCli/fixtures/site" -Port 18765 > server.log 2>&1 &
+          for i in $(seq 1 50); do
+            if curl -sf http://localhost:18765/index.html > /dev/null; then exit 0; fi
+            sleep 0.2
+          done
+          cat server.log
+          exit 1
+
+      - name: Report findings without gating
+        id: report-only
+        uses: ./.github/actions/site-audit
+        with:
+          url: http://localhost:18765/index.html
+          lang: tr,en
+          allow-words: |
+            Playwright
+            Acme
+          fail-on-findings: 'false'
+          output-dir: audit-report-only
+          artifact-name: audit-report-only
+
+      - name: Assert the reported outputs
+        shell: bash
+        env:
+          ISSUE_COUNT: ${{ steps.report-only.outputs.issue-count }}
+          EXIT_CODE: ${{ steps.report-only.outputs.exit-code }}
+        run: |
+          test "$ISSUE_COUNT" = "5" || { echo "Expected 5 findings, got '$ISSUE_COUNT'."; exit 1; }
+          test "$EXIT_CODE" = "1" || { echo "Expected tool exit code 1, got '$EXIT_CODE'."; exit 1; }
+          test -f audit-report-only/site-audit-report.html
+          test -f audit-report-only/site-audit-report.json
+
+      - name: Default gate on a site with findings
+        id: gated
+        continue-on-error: true
+        uses: ./.github/actions/site-audit
+        with:
+          url: http://localhost:18765/index.html
+          lang: tr,en
+          allow-words: Playwright
+          upload-report: 'false'
+          output-dir: audit-gated
+
+      - name: Assert the default gate failed the step
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.gated.outcome }}
+        run: test "$OUTCOME" = "failure" || { echo "Expected the gated step to fail, outcome was '$OUTCOME'."; exit 1; }
+
+      - name: A clean page passes
+        id: clean
+        uses: ./.github/actions/site-audit
+        with:
+          url: http://localhost:18765/clean/index.html
+          lang: tr,en
+          upload-report: 'false'
+          output-dir: audit-clean
+
+      - name: Assert the clean outputs
+        shell: bash
+        env:
+          ISSUE_COUNT: ${{ steps.clean.outputs.issue-count }}
+          EXIT_CODE: ${{ steps.clean.outputs.exit-code }}
+        run: |
+          test "$ISSUE_COUNT" = "0" || { echo "Expected 0 findings, got '$ISSUE_COUNT'."; exit 1; }
+          test "$EXIT_CODE" = "0" || { echo "Expected tool exit code 0, got '$EXIT_CODE'."; exit 1; }
+
   heal-action:
     name: Self-Healing GitHub Action
     runs-on: ubuntu-latest
