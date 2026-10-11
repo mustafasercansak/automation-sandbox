@@ -26,6 +26,7 @@ Start here / Buradan başla:
 - 🔌 [Add Self-Healing to an Existing Suite](docs/integration-existing-suite.md)
 - 🔬 [Benchmark & Calibration](docs/benchmark-calibration.md) · 📝 [Can You Trust an LLM to Fix a Broken Locator?](docs/blog/llm-false-heal-study.md)
 - ⚖️ [How It Compares](docs/comparison.md)
+- 🛠️ [CLI & CI Integration](docs/cli-and-ci-integration.md) — heal from any language, no .NET required
 
 ---
 

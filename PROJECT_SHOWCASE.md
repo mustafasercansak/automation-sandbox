@@ -55,6 +55,13 @@ timeline
 * **Healing Reports & CI Artifacts:** Schema-v8 JSON and HTML reports capture every resolution attempt, including accepted, ambiguous, ownership-conflict, no-consensus, provider-error, and retry-failed outcomes, while retaining an accepted-only compatibility view.
 * **GitHub Pages Documentation:** Jekyll-based documentation site with Mermaid diagram rendering for architecture, workflow, and roadmap diagrams.
 
+### 5️⃣ Milestone 5: Language-Agnostic CLI & CI Integration
+* **`automation-sandbox-heal` CLI:** A `dotnet tool` (`AutomationSandbox.Cli`, live on nuget.org) wrapping `SelfHealingResolver.Resolve` for callers with no .NET project at all — any language produces two JSON files and shells out to one command, no C# or package reference required.
+* **Published JSON Schema:** A formal contract for the `UiElementInfo` shape the CLI reads and writes, so any editor or tool can validate and autocomplete without reading C# source.
+* **GitHub Action:** A composite action wrapping the install/run/parse steps into one `uses:` line, so any repo's CI gets a locator-healing gate with no hand-written plumbing.
+* **Real JS/Playwright Capture Example:** A working Node.js reference script proving the "any language" claim concretely — captures a page into the CLI's JSON shape, verified end-to-end against a real headless browser before shipping.
+* **Proven Platform-Agnostic:** The CLI's own test fixtures cover both a web-flavored scenario and the project's established WinForms "flagship demo" case, proving the same engine heals desktop and web trees identically.
+
 
 ---
 
@@ -264,6 +271,13 @@ timeline
 * **Birleşik Locator Uzlaştırması:** İsteğe bağlı batch çözümleme, snapshot-local kimlik kullanarak bağımsız kabul edilen locator'ların aynı canlı elementi talep etmesini engeller; tartışmasız false-heal'ler açık bir sınır olarak kalır.
 * **Onarım Raporları:** Şema-v8 JSON + HTML raporları kabul edilen, belirsiz, sahiplik çakışmalı, uzlaşmasız, sağlayıcı hatalı ve retry başarısız tüm çözüm denemelerini kaydeder; yalnızca kabul edilenler için geriye uyumlu görünümü korur.
 * **GitHub Pages Dokümanları:** Mermaid diyagramlarını render eden Jekyll tabanlı dokümantasyon sitesi.
+
+### 5️⃣ Milestone 5: Dilden Bağımsız CLI & CI Entegrasyonu
+* **`automation-sandbox-heal` CLI:** `SelfHealingResolver.Resolve`'u, hiç .NET projesi olmayan çağıranlar için sarmalayan bir `dotnet tool` (`AutomationSandbox.Cli`, nuget.org'da canlı) — herhangi bir dil iki JSON dosyası üretip tek bir komutu çağırır, C# veya paket referansı gerekmez.
+* **Yayınlanmış JSON Şema:** CLI'nin okuyup yazdığı `UiElementInfo` şekli için resmi bir sözleşme, böylece herhangi bir editör veya araç C# kaynağını okumadan doğrulama ve otomatik tamamlama yapabilir.
+* **GitHub Action:** Kurulum/çalıştırma/ayrıştırma adımlarını tek bir `uses:` satırına sarmalayan bir composite action, böylece herhangi bir repo'nun CI'si elle yazılmış bir mantık olmadan locator-healing kapısı kazanır.
+* **Gerçek JS/Playwright Yakalama Örneği:** "Her dil" iddiasını somut olarak kanıtlayan, çalışan bir Node.js referans betiği — bir sayfayı CLI'nin JSON şekline yakalar, yayınlanmadan önce gerçek bir headless tarayıcıya karşı uçtan uca doğrulanmıştır.
+* **Platform-Bağımsızlığı Kanıtlanmış:** CLI'nin kendi test fixture'ları hem web tarzı bir senaryoyu hem de projenin yerleşik WinForms "flagship demo" vakasını kapsar, aynı motorun masaüstü ve web ağaçlarını birebir iyileştirdiğini kanıtlar.
 
 ---
 
