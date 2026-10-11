@@ -74,7 +74,7 @@ def main():
     else:
         app.start(args.target)
 
-    window = app.top_window().find()
+    window = app.top_window().wrapper_object()
     root_info = window.element_info
 
     if args.name:
