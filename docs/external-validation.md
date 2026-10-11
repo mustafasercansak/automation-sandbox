@@ -35,6 +35,25 @@ For each integration publish:
 
 Keep raw reports, ground truth, commands, and feedback references beside each dataset under `docs/`. Report all outcomes with denominators and limitations. Do not retune against the evaluation cases and then present the result as unseen validation.
 
+### Pilot Quickstart for Volunteers
+
+This is the short path for someone who maintains a FlaUI desktop or Playwright web suite, is willing to try the engine, and does not want to read the whole protocol first. The engine is pre-1.0 preview software. Nothing here has been validated by an independent pilot yet, and trying it commits you to nothing.
+
+**What it will and will not do to your tests.** Both paths below are read-only. They report what the engine would pick for a broken locator, with the score breakdown. They do not edit your tests, do not make a failing test pass, and do not change your repository. Healing that retries and persists (`AutoHeal`) is deliberately not part of a first pilot.
+
+**Path A: any language, no .NET project needed.** Use the `automation-sandbox-heal` CLI on two JSON snapshots of the same element, one from the old app version and one tree from the new version.
+
+1. Install the CLI (needs the .NET 8 runtime on the machine): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
+2. Capture snapshots with a reference script, or produce the same JSON shape from your own tooling (see the [JSON Schema](schemas/ui-element-info.schema.json)):
+   - Web: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), run `npm install` and `npx playwright install chromium` once in that folder, then `node capture.mjs <url> expected.json --selector "<css>"` on the old version and `node capture.mjs <url> tree.json` on the new one.
+   - Windows desktop: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), run `pip install -r requirements.txt` once in that folder, then `python capture.py <app.exe> expected.json --name "<Name>"` on the old version and `python capture.py <app.exe> tree.json` on the new one. Add `--attach` to connect to an already running process by name instead of launching it.
+3. Run `automation-sandbox-heal --expected expected.json --tree tree.json --profile balanced`. Exit code `0` means the engine is confident, `1` means it is not, `2` means bad input. See the [CLI guide](cli-and-ci-integration.md).
+4. Compare the proposed element with the one you would pick by hand.
+
+**Path B: an existing .NET suite.** Follow the [first-week rollout](integration-existing-suite.md) and stop at its `Observe` step: wire one test that breaks often, set `SELF_HEALING_REPORT_PATH`, run the suite, and read the healing report (JSON plus an HTML dashboard, see [Healing Reports](healing-reports.md)). Your tests still fail exactly as before.
+
+**What to send back.** For each locator that actually broke between two real releases, whatever you can share of this: how many locators broke, which target the engine proposed, whether that was the right one by your own review, how many it declined or could not decide, any proposal that was wrong (a wrong proposal is the most valuable finding), roughly how long the manual repair took if you measured it, and your written impressions, including friction and whether it would be worth paying for. Post it as a comment on [#401](https://github.com/mustafasercansak/automation-sandbox/issues/401), or open an issue. Remove secrets and personal data first, and say whether the data may be published. Partial answers are fine.
+
 ### 3. Next 90 Days and Release Decision
 
 The sequence is partner identification and access, repeatable baseline capture, supervised integrations, then publication and commercial offer assessment. Timing depends on external participation; the 90-day planning window is not a release promise. Prefer improvements demonstrated necessary by pilot feedback over new feature families. Reuse #401 for the validation work; create implementation issues only for concrete findings aligned with either platform's pilot feedback.
@@ -70,6 +89,25 @@ Her entegrasyon için yayımlayın:
 | Yazılı geri bildirim | Bakımcı gözlemleri, kullanım güçlükleri, değer değerlendirmesi ve ücretli pilota ilgi; ilgi satış sayılmaz |
 
 Ham raporları, doğru hedef kayıtlarını, komutları ve geri bildirim bağlantılarını her veri setinin yanında `docs/` altında tutun. Tüm sonuçları paydaları ve sınırlamalarıyla raporlayın. Değerlendirme vakalarına göre ayar yapıp sonucu görülmemiş veri üzerindeki doğrulama olarak sunmayın.
+
+### Gönüllüler İçin Pilot Hızlı Başlangıç
+
+Bu, bir FlaUI masaüstü veya Playwright web test paketi sürdüren, motoru denemeye istekli olan ve önce protokolün tamamını okumak istemeyen kişi için kısa yoldur. Motor 1.0 öncesi önizleme yazılımıdır. Burada anlatılan hiçbir şey henüz bağımsız bir pilot tarafından doğrulanmadı ve denemek sizi hiçbir şeye bağlamaz.
+
+**Testlerinize ne yapar, ne yapmaz.** Aşağıdaki iki yol da salt okunurdur. Kırık bir locator için motorun neyi seçeceğini, skor dökümüyle birlikte raporlar. Testlerinizi düzenlemez, başarısız bir testi geçirmez ve deponuzu değiştirmez. Yeniden deneyip kalıcı kaydeden iyileştirme (`AutoHeal`) ilk bir pilotun parçası değildir.
+
+**A Yolu: herhangi bir dil, .NET projesi gerekmez.** Aynı elemanın iki JSON anlık görüntüsü üzerinde `automation-sandbox-heal` CLI'sini kullanın: biri eski uygulama sürümünden, biri yeni sürümden alınan ağaç.
+
+1. CLI'yi kurun (makinede .NET 8 runtime gerekir): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
+2. Bir referans betikle anlık görüntüleri yakalayın veya kendi araçlarınızla aynı JSON şeklini üretin ([JSON Schema](schemas/ui-element-info.schema.json)):
+   - Web: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), o klasörde bir kez `npm install` ve `npx playwright install chromium` çalıştırın, sonra eski sürümde `node capture.mjs <url> expected.json --selector "<css>"`, yeni sürümde `node capture.mjs <url> tree.json`.
+   - Windows masaüstü: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), o klasörde bir kez `pip install -r requirements.txt` çalıştırın, sonra eski sürümde `python capture.py <app.exe> expected.json --name "<Name>"`, yeni sürümde `python capture.py <app.exe> tree.json`. Uygulamayı başlatmak yerine zaten çalışan bir işleme ada göre bağlanmak için `--attach` ekleyin.
+3. `automation-sandbox-heal --expected expected.json --tree tree.json --profile balanced` komutunu çalıştırın. Çıkış kodu `0` motorun emin olduğunu, `1` emin olmadığını, `2` hatalı girdiyi gösterir. Bkz. [CLI rehberi](cli-and-ci-integration.md).
+4. Önerilen elemanı elle seçeceğiniz elemanla karşılaştırın.
+
+**B Yolu: mevcut bir .NET test paketi.** [İlk hafta geçiş planını](integration-existing-suite.md) izleyin ve `Observe` adımında durun: sık kırılan bir testi bağlayın, `SELF_HEALING_REPORT_PATH` değişkenini ayarlayın, paketi çalıştırın ve healing raporunu okuyun (JSON ve HTML panel, bkz. [Healing Raporları](healing-reports.md)). Testleriniz öncekiyle aynı şekilde başarısız olmaya devam eder.
+
+**Geri ne göndermelisiniz.** İki gerçek sürüm arasında gerçekten kırılan her locator için paylaşabildiğiniz kadarını: kaç locator kırıldı, motor hangi hedefi önerdi, kendi incelemenize göre doğru muydu, kaçını reddetti veya karar veremedi, yanlış olan bir öneri var mı (yanlış öneri en değerli bulgudur), ölçtüyseniz elle onarımın yaklaşık ne kadar sürdüğü, ve sürtünme ile ücretli kullanıma değip değmeyeceği dahil yazılı izlenimleriniz. [#401](https://github.com/mustafasercansak/automation-sandbox/issues/401) üzerine yorum olarak gönderin veya bir issue açın. Önce sırları ve kişisel verileri temizleyin ve verinin yayımlanıp yayımlanamayacağını belirtin. Kısmi yanıtlar da yeterlidir.
 
 ### 3. Gelecek 90 Gün ve Sürüm Kararı
 
