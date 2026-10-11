@@ -7,12 +7,13 @@ Bu .NET 8 console örneği, `Discovery` paketinin `ApplicationConnector` + `UiTr
 ---
 
 **CI runtime-verifies this sample on every PR** (`Desktop App Explorer Sample` in `ci.yml`,
-#494/#501): it runs the built sample against four genuinely external, third-party-authored
+#494/#501/#534): it runs the built sample against five genuinely external, third-party-authored
 applications, not this repository's own `WinFormsApp`/`WpfApp` demos. Two ship with every
 `windows-latest` runner, no download needed - Character Map (`charmap.exe`) and Registry Editor
-(`regedit.exe`). Two more are downloaded fresh each run from their own GitHub Releases, pinned to
-a specific version - Notepad++ and PeaZip, both real native Win32 apps with richer UI trees
-(tabbed documents, toolbars, tree/list views) than the two built-in tools. That's real evidence
+(`regedit.exe`). Three more are downloaded fresh each run from their own GitHub Releases, pinned
+to a specific version - Notepad++ and PeaZip, real native Win32 apps with richer UI trees
+(tabbed documents, toolbars, tree/list views) than the two built-in tools, and KeePassXC, a
+genuinely different UI toolkit (Qt) neither of the others exercises. That's real evidence
 `ApplicationConnector` and `UiTreeWalker` work against arbitrary external UIA applications across
 a varied pool, not just against apps this repository built and controls. What CI still does
 **not** cover: an arbitrary third-party application at your own workplace, with its own quirks (a
@@ -21,13 +22,14 @@ tracked separately by [#489](https://github.com/mustafasercansak/automation-sand
 and stays open until someone runs it there and reports back.
 
 **Bu örnek her PR'da CI tarafından çalışma zamanında doğrulanır** (`ci.yml`'deki
-`Desktop App Explorer Sample`, #494/#501): derlenen örneği, bu deponun kendi
-`WinFormsApp`/`WpfApp` demoları olmayan dört gerçek, üçüncü parti uygulama üzerinde çalıştırır.
+`Desktop App Explorer Sample`, #494/#501/#534): derlenen örneği, bu deponun kendi
+`WinFormsApp`/`WpfApp` demoları olmayan beş gerçek, üçüncü parti uygulama üzerinde çalıştırır.
 İkisi her `windows-latest` runner'ında hazır gelir, indirme gerektirmez - Character Map
-(`charmap.exe`) ve Registry Editor (`regedit.exe`). Diğer ikisi her çalıştırmada kendi GitHub
+(`charmap.exe`) ve Registry Editor (`regedit.exe`). Diğer üçü her çalıştırmada kendi GitHub
 Releases sayfalarından, belirli bir sürüme sabitlenmiş olarak indirilir - Notepad++ ve PeaZip,
-ikisi de her iki dahili araçtan daha zengin UI ağaçlarına (sekmeli belgeler, araç çubukları,
-ağaç/liste görünümleri) sahip gerçek native Win32 uygulamaları. Bu, `ApplicationConnector` ve
+her iki dahili araçtan daha zengin UI ağaçlarına (sekmeli belgeler, araç çubukları, ağaç/liste
+görünümleri) sahip gerçek native Win32 uygulamaları, ve diğer ikisinin hiçbirinin kullanmadığı
+gerçekten farklı bir UI toolkit'i (Qt) olan KeePassXC. Bu, `ApplicationConnector` ve
 `UiTreeWalker`'ın yalnızca bu deponun inşa edip kontrol ettiği uygulamalara karşı değil, çeşitli
 bir havuzda gerçekten rastgele dış UIA uygulamalarına karşı da çalıştığını kanıtlar. CI'nin hâlâ
 kapsamadığı şey: kendi işyerindeki, kendine has tuhaflıkları olan (sarmalanmış bir web görünümü,
