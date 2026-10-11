@@ -62,9 +62,13 @@ A composite GitHub Action wraps the install, run, and JSON-parsing steps into on
 
 By default this step fails the job when the result is not confident - the same exit-code contract as the CLI itself, so a bare `uses:` line is already a working pass/fail gate. Add `continue-on-error: true` and read the `is-confident`/`result` outputs if you want to branch on the outcome instead of failing the build. An optional `source` input lets the action install from a private feed instead of nuget.org.
 
-### Capturing JSON from Any Language: the JS/Playwright Example
+### Capturing JSON from Any Language: Web (JS/Playwright)
 
 The CLI is only useful once something produces its input. The repository ships a real, working reference for this: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), a Node.js + Playwright script that captures a web page's DOM into the exact JSON shape above - mirroring the same role/accessible-name detection and `ControlType`/`AutomationId` mapping rules `AutomationSandbox.WebDiscovery` uses on the .NET side, so a tree captured in JS scores consistently with one captured in .NET. It's deliberately minimal (regular DOM only - no Shadow DOM or iframe traversal), and ships with a bundled fixture so it runs with zero network dependency out of the box.
+
+### Capturing JSON from Any Language: Desktop (Python/pywinauto)
+
+The same idea for Windows desktop applications: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), a Python script using [pywinauto](https://github.com/pywinauto/pywinauto)'s `uia` backend - the same underlying Windows UI Automation COM API `FlaUI`/`UIA3` uses, so it produces genuinely equivalent data, not just a matching JSON shape. Unlike the JS example, this one could not be verified locally by the assistant that wrote it (no Windows/UI Automation access in that environment) - its real verification is a CI job (`Desktop Capture (Python)`) that builds this repository's own WinForms demo app, launches it, captures its real UI tree, and confirms `automation-sandbox-heal` heals a synthetic stale locator built from that real data.
 
 A minimal Python sketch, if your own tooling already produces a dict in the same shape:
 
@@ -89,7 +93,7 @@ if result.returncode == 0:
 - The published package currently only ships as a `--prerelease` version during the `0.x` beta series.
 - The JSON Schema is validated manually, not CI-enforced (this repo's own tooling stays C#/PowerShell-only) - if `UiElementInfo` gains or renames a property, nothing currently catches the schema silently drifting out of sync.
 - The JS/Playwright capture example is deliberately minimal and is not CI-wired against a live browser.
-- Desktop capture (FlaUI) from a non-.NET language has no equivalent reference script yet - only the web/Playwright side does.
+- The Python/pywinauto desktop example is CI-verified on `windows-latest`, but was never run locally by the assistant that wrote it - no Windows/UI Automation access in that environment.
 
 ---
 
@@ -144,9 +148,13 @@ Bir composite GitHub Action, kurulum, çalıştırma ve JSON ayrıştırma adım
 
 Varsayılan olarak bu adım, sonuç yeterince emin değilse job'u başarısız yapar - tıpkı CLI'nin kendi exit-code sözleşmesi gibi, yani sade bir `uses:` satırı zaten çalışan bir pass/fail kapısıdır. Build'i başarısız yapmak yerine sonuca göre dallanmak isterseniz `continue-on-error: true` ekleyin ve `is-confident`/`result` çıktılarını okuyun. İsteğe bağlı bir `source` girdisi, action'ın nuget.org yerine özel bir feed'den kurulum yapmasına izin verir.
 
-### Herhangi Bir Dilden JSON Yakalamak: JS/Playwright Örneği
+### Herhangi Bir Dilden JSON Yakalamak: Web (JS/Playwright)
 
 CLI, ancak girdisini üreten bir şey olduğunda işe yarar. Depo bunun için gerçek, çalışan bir referans sunar: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), bir web sayfasının DOM'unu yukarıdaki tam JSON şeklinde yakalayan bir Node.js + Playwright betiği - `AutomationSandbox.WebDiscovery`'nin .NET tarafında kullandığı aynı rol/erişilebilir-isim tespiti ve `ControlType`/`AutomationId` eşleme kurallarını yansıtır, böylece JS'de yakalanan bir ağaç .NET'te yakalanmış biriyle tutarlı puanlanır. Bilinçli olarak minimaldir (sadece normal DOM - Shadow DOM veya iframe gezinmesi yok), ve sıfır ağ bağımlılığıyla çalışması için birlikte gelen bir fixture içerir.
+
+### Herhangi Bir Dilden JSON Yakalamak: Masaüstü (Python/pywinauto)
+
+Windows masaüstü uygulamaları için aynı fikir: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), [pywinauto](https://github.com/pywinauto/pywinauto)'nun `uia` backend'ini kullanan bir Python betiği - `FlaUI`/`UIA3`'ün kullandığı aynı Windows UI Automation COM API'si, yani sadece eşleşen bir JSON şekli değil, gerçekten eşdeğer veri üretir. JS örneğinin aksine, bu örnek bunu yazan asistan tarafından yerel olarak doğrulanamadı (o ortamda Windows/UI Automation erişimi yok) - gerçek doğrulaması, bu deponun kendi WinForms demo uygulamasını derleyen, başlatan, gerçek UI ağacını yakalayan ve `automation-sandbox-heal`'in bu gerçek veriden oluşturulan sentetik bir eski locator'ı iyileştirdiğini doğrulayan bir CI job'udur (`Desktop Capture (Python)`).
 
 Kendi araçlarınız zaten aynı şekilde bir dict üretiyorsa, minimal bir Python taslağı:
 
@@ -171,4 +179,4 @@ if result.returncode == 0:
 - Yayınlanmış paket şu anda `0.x` beta serisi boyunca yalnızca `--prerelease` sürüm olarak gelir.
 - JSON Schema elle doğrulanır, CI tarafından zorunlu kılınmaz (bu deponun kendi araç seti C#/PowerShell ile sınırlı kalır) - `UiElementInfo` bir özellik kazanır veya yeniden adlandırılırsa, şemanın sessizce uyumsuzlaşmasını şu anda hiçbir şey yakalamaz.
 - JS/Playwright yakalama örneği bilinçli olarak minimaldir ve canlı bir tarayıcıya karşı CI'a bağlanmamıştır.
-- .NET dışı bir dilden masaüstü yakalama (FlaUI) için henüz eşdeğer bir referans betiği yok - sadece web/Playwright tarafı var.
+- Python/pywinauto masaüstü örneği `windows-latest` üzerinde CI ile doğrulanmıştır, ama bunu yazan asistan tarafından yerel olarak hiç çalıştırılmadı - o ortamda Windows/UI Automation erişimi yok.
