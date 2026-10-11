@@ -31,28 +31,13 @@ $toolExe = Join-Path $toolInstallDir 'automation-sandbox-audit'
 if ($IsWindows) { $toolExe += '.exe' }
 
 # A real HTTP origin is required: the crawler only follows http(s) links, so file:// fixtures cannot
-# exercise it. A background HttpListener keeps this script free of any Python/Node dependency.
+# exercise it. A separate pwsh process serving the fixture keeps this script free of any Python/Node
+# dependency, and a process (unlike a job) can always be ended.
 $port = 18765
-$serverJob = Start-Job -ArgumentList $siteDir, $port -ScriptBlock {
-    param($root, $port)
-    $listener = [System.Net.HttpListener]::new()
-    $listener.Prefixes.Add("http://localhost:$port/")
-    $listener.Start()
-    while ($listener.IsListening) {
-        $context = $listener.GetContext()
-        $relative = $context.Request.Url.AbsolutePath.TrimStart('/')
-        if ($relative.EndsWith('/') -or $relative -eq '') { $relative += 'index.html' }
-        $path = Join-Path $root $relative
-        if ((Test-Path -LiteralPath $path -PathType Leaf) -and ($path.StartsWith($root))) {
-            $bytes = [System.IO.File]::ReadAllBytes($path)
-            $context.Response.ContentType = 'text/html; charset=utf-8'
-            $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
-        } else {
-            $context.Response.StatusCode = 404
-        }
-        $context.Response.Close()
-    }
-}
+$siteRoot = [System.IO.Path]::GetFullPath($siteDir)
+$pwshPath = (Get-Process -Id $PID).Path
+$serverProcess = Start-Process -FilePath $pwshPath -PassThru -NoNewWindow `
+    -ArgumentList @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'fixtures/serve.ps1'), '-Root', $siteRoot, '-Port', $port)
 
 try {
     $baseUrl = "http://localhost:$port"
@@ -115,8 +100,8 @@ try {
     if ($LASTEXITCODE -ne 2) { throw "Expected exit code 2 for an unreachable URL, got $LASTEXITCODE." }
 
     Write-Host 'Site Audit CLI verification passed.' -ForegroundColor Green
+    $global:LASTEXITCODE = 0
 }
 finally {
-    Stop-Job -Job $serverJob -ErrorAction SilentlyContinue
-    Remove-Job -Job $serverJob -Force -ErrorAction SilentlyContinue
+    if ($serverProcess -and -not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }
 }
