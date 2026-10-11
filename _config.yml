@@ -32,3 +32,11 @@ exclude:
   - docs/blog/demo-storyboard.md
   - docs/blog/distribution-kit.md
   - docs/blog/gen-demo-gif.py
+  # Non-.NET reference example (#522): its README.md also carries no Jekyll front
+  # matter, for the same reason as the docs/nuget/ READMEs above - without this
+  # exclusion Jekyll would copy it out as an unstyled raw .md on the next docs
+  # deploy for any unrelated reason, since docs.yml builds the whole repo from
+  # scratch every time. docs/schemas/ui-element-info.schema.json is NOT excluded
+  # here: it's a .json file, not markdown, so Jekyll copies it as a static asset
+  # regardless of front matter, and it needs to stay fetchable at its published URL.
+  - examples/
