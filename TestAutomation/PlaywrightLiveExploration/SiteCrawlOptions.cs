@@ -1,3 +1,5 @@
+using AutomationSandbox.WebDiscovery;
+
 namespace AutomationSandbox.PlaywrightLiveExploration
 {
     /// <summary>Bounds and scope for <see cref="SiteCrawler.CrawlAsync" />, the same bounded-traversal
@@ -12,5 +14,9 @@ namespace AutomationSandbox.PlaywrightLiveExploration
         /// <summary>When true (the default), only links sharing the start URL's scheme and host are followed;
         /// off-origin links are recorded in <see cref="SiteCrawlResult.SkippedUrls" /> instead of visited.</summary>
         public bool SameOriginOnly { get; set; } = true;
+        /// <summary>Capture options applied to every crawled page, for example a larger
+        /// <see cref="WebDiscoveryOptions.MaxTextLength" /> when the crawl feeds a text check. Null uses the
+        /// capture defaults.</summary>
+        public WebDiscoveryOptions? DiscoveryOptions { get; set; }
     }
 }

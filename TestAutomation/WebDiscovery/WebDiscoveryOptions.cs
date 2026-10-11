@@ -17,6 +17,13 @@ namespace AutomationSandbox.WebDiscovery
         /// <c>Date.now()</c> against a deadline computed once up front.</summary>
         public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 
+        /// <summary>Maximum characters kept in each element's captured <see cref="WebElementInfo.Text" />.
+        /// The default (160) suits locator matching and accessible names. Raise it when the text itself is the
+        /// subject, for example a spelling or content check: anything after this many characters is not captured
+        /// and so cannot be analysed. Because an element's text includes its descendants', a large value makes
+        /// every ancestor carry its subtree's text too.</summary>
+        public int MaxTextLength { get; set; } = 160;
+
         /// <summary>Creates a fresh options instance with default traversal settings.</summary>
         public static WebDiscoveryOptions Default => new();
     }
