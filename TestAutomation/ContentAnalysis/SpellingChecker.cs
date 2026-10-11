@@ -15,6 +15,7 @@ namespace AutomationSandbox.ContentAnalysis
     {
         private const int MaxSuggestions = 3;
         private const int MinimumWordLength = 3;
+        private static readonly char[] CompoundMarkers = { ' ', '-' };
 
         private static readonly Regex NonProse = new(
             @"https?://\S+|www\.\S+|\S+@\S+\.\S+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -33,8 +34,9 @@ namespace AutomationSandbox.ContentAnalysis
         /// <summary>Loads one or more Hunspell dictionaries. Each entry is a base path without extension:
         /// <c>dir/tr</c> loads <c>dir/tr.dic</c> and <c>dir/tr.aff</c>. A word is accepted when ANY loaded
         /// dictionary accepts it, so a Turkish page that contains English terms can load both; the trade-off is
-        /// that a typo which happens to be a valid word in the other language is not reported. List the primary
-        /// language first: suggestions come from the first dictionary that has any.</summary>
+        /// that a typo which happens to be a valid word in the other language is not reported. Suggestions are
+        /// interleaved across all dictionaries, so a misspelled English word on a Turkish page still gets an
+        /// English suggestion.</summary>
         /// <param name="dictionaryBasePaths">Base paths of the dictionaries to load.</param>
         /// <param name="allowedWords">Brand names, product names and jargon to never report (case-insensitive).</param>
         /// <exception cref="ArgumentException">No dictionary was supplied.</exception>
@@ -166,18 +168,49 @@ namespace AutomationSandbox.ContentAnalysis
             return _dictionaries.Any(dictionary => dictionary.Check(token));
         }
 
+        // A bilingual page cannot tell which dictionary a misspelling "belongs" to, so suggestions are
+        // interleaved: the best one from each dictionary first, then the second best, and so on. Compound
+        // splits ("reci eve", "reci-eve") are dropped unless the original word itself had a space or hyphen:
+        // they are what an unrelated dictionary produces for a foreign word, and never a useful fix.
         private IReadOnlyList<string> Suggest(string token)
         {
-            foreach (var dictionary in _dictionaries)
+            var wordIsCompound = token.IndexOfAny(CompoundMarkers) >= 0;
+            var perDictionary = _dictionaries
+                .Select(dictionary => dictionary.Suggest(token)
+                    .Where(suggestion => wordIsCompound || suggestion.IndexOfAny(CompoundMarkers) < 0)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList())
+                .ToList();
+
+            var result = new List<string>();
+            for (var rank = 0; result.Count < MaxSuggestions; rank++)
             {
-                var suggestions = dictionary.Suggest(token).Distinct(StringComparer.Ordinal).Take(MaxSuggestions).ToList();
-                if (suggestions.Count > 0)
+                var anyAtThisRank = false;
+                foreach (var suggestions in perDictionary)
                 {
-                    return suggestions;
+                    if (rank >= suggestions.Count)
+                    {
+                        continue;
+                    }
+
+                    anyAtThisRank = true;
+                    if (!result.Contains(suggestions[rank], StringComparer.Ordinal))
+                    {
+                        result.Add(suggestions[rank]);
+                        if (result.Count == MaxSuggestions)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (!anyAtThisRank)
+                {
+                    break;
                 }
             }
 
-            return new List<string>();
+            return result;
         }
     }
 }

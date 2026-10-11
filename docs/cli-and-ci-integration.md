@@ -84,6 +84,21 @@ if result.returncode == 0:
     print(f"Healed: use {heal_result['Matched']['AutomationId']} instead")
 ```
 
+### Scanning a Website for Typos: `automation-sandbox-audit`
+
+A second tool, `AutomationSandbox.SiteAudit` (command `automation-sandbox-audit`), crawls a site from one URL and reports spelling mistakes, plus duplicated words and leftover placeholders. It needs no API key and sends no page text anywhere: spelling comes from [Hunspell](https://hunspell.github.io/) dictionaries, which handle inflected languages such as Turkish. It requires the .NET 8 runtime (or newer) and downloads Chromium for the crawl.
+
+```bash
+automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
+```
+
+- `--lang` lists dictionaries, primary language first (default `en`). A word is accepted if **any** listed dictionary accepts it, which suits a Turkish page containing English terms; the trade-off is that a typo that happens to be a valid word in the other language is not reported.
+- `--allow-word` / `--allow-file` keep brand and product names out of the report.
+- Dictionaries are downloaded once, from a pinned commit of [`wooorm/dictionaries`](https://github.com/wooorm/dictionaries) (nothing is bundled), into a per-user cache; `--no-download` forbids the download for offline use.
+- Exit code `0` means no findings, `1` means findings (so a CI step can gate on it), `2` means the audit could not run (bad arguments, missing dictionary, start page unreachable). A JSON Lines log and an HTML report are written to `--output-dir` (overwritten on each run).
+- It judges single words only. Grammar and meaning are outside a dictionary's reach, and brand names, jargon and code you did not allow-list will be reported as misspellings. Text is checked up to 10,000 characters per element.
+- Not published to nuget.org yet; until it is, pack it from the repository (`dotnet pack TestAutomation/SiteAuditCli`). The `Site Audit CLI` CI job exercises the packed tool against a fixture site with the real Turkish and English dictionaries.
+
 ### Why a CLI, Not Just the Library
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled adapter) and wants to call the resolver in-process. The CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
@@ -169,6 +184,21 @@ heal_result = json.loads(result.stdout)
 if result.returncode == 0:
     print(f"Healed: use {heal_result['Matched']['AutomationId']} instead")
 ```
+
+### Web Sitesinde Yazım Hatası Taramak: `automation-sandbox-audit`
+
+İkinci bir araç, `AutomationSandbox.SiteAudit` (komut: `automation-sandbox-audit`), tek bir URL'den başlayarak siteyi gezer ve yazım hatalarını, tekrarlanan kelimeleri ve unutulmuş yer tutucu metinleri raporlar. API anahtarı gerektirmez ve sayfa metnini hiçbir yere göndermez: yazım denetimi, Türkçe gibi ek alan dilleri de işleyebilen [Hunspell](https://hunspell.github.io/) sözlüklerinden gelir. .NET 8 runtime'ı (veya daha yenisi) gerekir ve gezme için Chromium indirir.
+
+```bash
+automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
+```
+
+- `--lang` sözlükleri listeler, ana dil önce gelir (varsayılan `en`). Listelenen sözlüklerden **herhangi biri** bir kelimeyi kabul ederse kelime doğru sayılır; bu, İngilizce terimler içeren Türkçe bir sayfaya uygundur. Bedeli: diğer dilde geçerli bir kelime olan bir yazım hatası raporlanmaz.
+- `--allow-word` / `--allow-file` marka ve ürün adlarını rapordan uzak tutar.
+- Sözlükler bir kez, [`wooorm/dictionaries`](https://github.com/wooorm/dictionaries) deposunun sabitlenmiş bir commit'inden indirilir (pakete gömülü değildir) ve kullanıcıya özel bir önbelleğe konur; `--no-download` çevrimdışı kullanım için indirmeyi yasaklar.
+- Çıkış kodu `0` bulgu yok, `1` bulgu var (CI adımı buna göre kapı olabilir), `2` tarama çalıştırılamadı (hatalı argüman, eksik sözlük, ulaşılamayan başlangıç sayfası) demektir. `--output-dir` altına bir JSON Lines günlüğü ve bir HTML rapor yazılır (her çalıştırmada üzerine yazılır).
+- Yalnızca tek tek kelimeleri değerlendirir. Dilbilgisi ve anlam bir sözlüğün erişiminin dışındadır; izin listesine eklemediğiniz marka adları, jargon ve kod yazım hatası olarak raporlanır. Metin, eleman başına 10.000 karaktere kadar denetlenir.
+- Henüz nuget.org'da yayımlanmadı; yayımlanana kadar depodan paketleyin (`dotnet pack TestAutomation/SiteAuditCli`). `Site Audit CLI` CI job'ı paketlenmiş aracı, gerçek Türkçe ve İngilizce sözlüklerle bir fixture sitesine karşı çalıştırır.
 
 ### Neden CLI, Sadece Kütüphane Değil
 

@@ -97,6 +97,7 @@
       "TestAutomation/ContentAnalysis/ContentAnalyzer.cs"
     ],
     "Members": [
+      "public static IReadOnlyList<ContentIssue> CollapseInheritedIssues(IReadOnlyList<ContentIssue> issues)",
       "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
       "public static IReadOnlyList<ContentIssue> RunSpellCheck(WebElementInfo dom, SpellingChecker spellingChecker)",
       "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)",

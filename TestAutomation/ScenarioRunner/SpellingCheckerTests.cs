@@ -165,6 +165,48 @@ namespace ScenarioRunner
             Assert.Contains(">Dictionary<", html);
         }
 
+        [Fact]
+        public void CollapseInheritedIssues_KeepsOnlyTheMostSpecificElement()
+        {
+            var inner = new ContentIssue("body > p", "Please click the the button.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+            var outer = new ContentIssue("body", "About us. Please click the the button. Bye.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+
+            var kept = ContentAnalyzer.CollapseInheritedIssues(new[] { outer, inner });
+
+            Assert.Same(inner, Assert.Single(kept));
+        }
+
+        [Fact]
+        public void CollapseInheritedIssues_RecognisesAnInheritedIssue_WhenTheAncestorTextWasCutOffMidDescendant()
+        {
+            var inner = new ContentIssue("body > p", "Please click the the button to continue.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+            var outer = new ContentIssue("body", "About us. Please click the the button to cont", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+
+            var kept = ContentAnalyzer.CollapseInheritedIssues(new[] { outer, inner });
+
+            Assert.Same(inner, Assert.Single(kept));
+        }
+
+        [Fact]
+        public void CollapseInheritedIssues_KeepsSeparateOccurrencesAndDifferentMessages()
+        {
+            var first = new ContentIssue("p:nth-of-type(1)", "Click the the button.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+            var second = new ContentIssue("p:nth-of-type(2)", "Open the the menu.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+            var otherMessage = new ContentIssue("body", "Click the the button. Open the the menu. Say a a thing.", "DuplicateWord", "Repeated word \"a\".", ContentIssueSource.Heuristic);
+
+            var kept = ContentAnalyzer.CollapseInheritedIssues(new[] { first, second, otherMessage });
+
+            Assert.Equal(3, kept.Count);
+        }
+
+        [Fact]
+        public void Check_OffersASuggestionFromTheDictionaryThatKnowsTheWord_OnAMixedLanguagePage()
+        {
+            var issue = Assert.Single(TurkishAndEnglish().Check(Passage("Your order has been shiped.")));
+
+            Assert.Contains("shipped", issue.Message);
+        }
+
         private static string ExtractWord(string message)
         {
             var start = message.IndexOf('"') + 1;

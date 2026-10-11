@@ -430,6 +430,29 @@ jobs:
         shell: pwsh
         run: ./TestAutomation/SelfHealingCli/verify.ps1
 
+  site-audit-cli:
+    name: Site Audit CLI
+    runs-on: ubuntu-latest
+    # Packs and installs the real tool, installs Chromium through the tool itself, downloads the
+    # pinned REAL Turkish and English dictionaries, and audits a local fixture site with planted
+    # typos (#540). SDK 10 is installed next to SDK 8 so the net10.0 build and a multi-targeted
+    # tool pack are exercised here, not assumed.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack, install, and run the packed tool against a fixture site
+        shell: pwsh
+        run: ./TestAutomation/SiteAuditCli/verify.ps1
+
   heal-action:
     name: Self-Healing GitHub Action
     runs-on: ubuntu-latest
