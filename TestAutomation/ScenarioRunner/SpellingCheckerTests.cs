@@ -177,6 +177,17 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public void CollapseInheritedIssues_RecognisesAnInheritedIssue_WhenTheAncestorTextWasCutOffMidDescendant()
+        {
+            var inner = new ContentIssue("body > p", "Please click the the button to continue.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+            var outer = new ContentIssue("body", "About us. Please click the the button to cont", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);
+
+            var kept = ContentAnalyzer.CollapseInheritedIssues(new[] { outer, inner });
+
+            Assert.Same(inner, Assert.Single(kept));
+        }
+
+        [Fact]
         public void CollapseInheritedIssues_KeepsSeparateOccurrencesAndDifferentMessages()
         {
             var first = new ContentIssue("p:nth-of-type(1)", "Click the the button.", "DuplicateWord", "Repeated word \"the\".", ContentIssueSource.Heuristic);

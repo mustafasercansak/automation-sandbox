@@ -1,6 +1,7 @@
 using System.Net.Http;
 using AutomationSandbox.ContentAnalysis;
 using AutomationSandbox.PlaywrightLiveExploration;
+using AutomationSandbox.WebDiscovery;
 using AutomationSandbox.SiteAuditCli;
 
 // Exit codes follow automation-sandbox-heal's convention so one CI habit covers both tools:
@@ -8,6 +9,7 @@ using AutomationSandbox.SiteAuditCli;
 internal static class Program
 {
     private const int MaxPrintedIssues = 100;
+    private const int CapturedTextLength = 10000;
 
     public static async Task<int> Main(string[] args)
     {
@@ -82,7 +84,13 @@ internal static class Program
         var result = await SiteCrawler.CrawlAsync(
             session,
             options.Url,
-            new SiteCrawlOptions { MaxPages = options.MaxPages, MaxDepth = options.MaxDepth },
+            new SiteCrawlOptions
+            {
+                MaxPages = options.MaxPages,
+                MaxDepth = options.MaxDepth,
+                // The default 160 characters would hide typos in any long paragraph (#541).
+                DiscoveryOptions = new WebDiscoveryOptions { MaxTextLength = CapturedTextLength },
+            },
             onPageCaptured: (url, dom, cancellationToken) =>
             {
                 var issues = new List<ContentIssue>();
