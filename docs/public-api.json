@@ -99,7 +99,7 @@
     "Members": [
       "public static IReadOnlyList<ContentIssue> CollapseInheritedIssues(IReadOnlyList<ContentIssue> issues)",
       "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
-      "public static IReadOnlyList<ContentIssue> RunSpellCheck(WebElementInfo dom, SpellingChecker spellingChecker)",
+      "public static IReadOnlyList<ContentIssue> RunSpellCheck( WebElementInfo dom, SpellingChecker spellingChecker, int? capturedTextLimit = null)",
       "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)",
       "public static int CountPassages(WebElementInfo dom)"
     ]
@@ -181,7 +181,7 @@
       "TestAutomation/ContentAnalysis/SpellingChecker.cs"
     ],
     "Members": [
-      "public IReadOnlyList<ContentIssue> Check(ContentPassage passage)",
+      "public IReadOnlyList<ContentIssue> Check(ContentPassage passage, bool textMayBeCutOff = false)",
       "public static SpellingChecker FromDictionaryFiles( IEnumerable<string> dictionaryBasePaths, IEnumerable<string>? allowedWords = null)"
     ]
   },

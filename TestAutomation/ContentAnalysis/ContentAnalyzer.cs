@@ -47,7 +47,15 @@ namespace AutomationSandbox.ContentAnalysis
         /// (so <c>&lt;pre&gt;</c>/<c>&lt;code&gt;</c> subtrees are skipped and repeated text is checked once).
         /// Kept separate from <see cref="AnalyzeAsync" /> so that existing callers and results are unchanged;
         /// concatenate the results when both are wanted.</summary>
-        public static IReadOnlyList<ContentIssue> RunSpellCheck(WebElementInfo dom, SpellingChecker spellingChecker)
+        /// <param name="dom">The captured page.</param>
+        /// <param name="spellingChecker">The checker to run.</param>
+        /// <param name="capturedTextLimit">The <c>WebDiscoveryOptions.MaxTextLength</c> the page was captured
+        /// with, when it is known. A passage as long as the limit was cut off, so its final, probably partial,
+        /// word is not checked.</param>
+        public static IReadOnlyList<ContentIssue> RunSpellCheck(
+            WebElementInfo dom,
+            SpellingChecker spellingChecker,
+            int? capturedTextLimit = null)
         {
             if (dom == null)
             {
@@ -62,7 +70,8 @@ namespace AutomationSandbox.ContentAnalysis
             var issues = new List<ContentIssue>();
             foreach (var passage in ExtractPassages(dom))
             {
-                issues.AddRange(spellingChecker.Check(passage));
+                var cutOff = capturedTextLimit.HasValue && passage.Text.Length >= capturedTextLimit.Value;
+                issues.AddRange(spellingChecker.Check(passage, cutOff));
             }
 
             return CollapseInheritedIssues(issues);
@@ -153,14 +162,14 @@ namespace AutomationSandbox.ContentAnalysis
                 // (and would read the same way to an LLM reviewer) but are not content-quality issues.
                 // Skipping the whole subtree - not just the pre/code node itself - keeps a syntax-highlighted
                 // child <span> from being extracted as its own passage too.
-                if (IsCodeElement(node.TagName))
+                if (IsNonProseElement(node.TagName))
                 {
                     return;
                 }
 
                 var text = node.Text;
                 var duplicatesAChild = node.Children.Exists(child => child.Text == text);
-                if (!node.IsHidden && !string.IsNullOrWhiteSpace(text) && !duplicatesAChild && seenText.Add(text))
+                if (!node.IsHidden && !HasUnreliableOwnText(node.TagName) && !string.IsNullOrWhiteSpace(text) && !duplicatesAChild && seenText.Add(text))
                 {
                     passages.Add(new ContentPassage(node.CssSelector, text));
                 }
@@ -172,10 +181,25 @@ namespace AutomationSandbox.ContentAnalysis
             }
         }
 
-        private static bool IsCodeElement(string tagName)
+        // Source code and markup that is not shown as text. style/script/template have no innerText, so the
+        // capture falls back to their raw source (CSS properties, colours, font names), which reads as
+        // hundreds of misspellings. kbd and samp hold key names and program output.
+        private static readonly HashSet<string> NonProseTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            return string.Equals(tagName, "pre", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(tagName, "code", StringComparison.OrdinalIgnoreCase);
+            "pre", "code", "style", "script", "noscript", "template", "kbd", "samp",
+        };
+
+        // SVG elements have no innerText, so the capture uses textContent, which for the root <svg> includes
+        // the source of any <style> inside it (a mermaid diagram embeds a few thousand characters of CSS). The
+        // root's own text is therefore not prose; its children (the <text> labels) are still visited.
+        private static bool HasUnreliableOwnText(string tagName)
+        {
+            return string.Equals(tagName, "svg", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsNonProseElement(string tagName)
+        {
+            return NonProseTags.Contains(tagName);
         }
     }
 }

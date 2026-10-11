@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using WeCantSpell.Hunspell;
 
@@ -19,8 +20,11 @@ namespace AutomationSandbox.ContentAnalysis
 
         private static readonly Regex NonProse = new(
             @"https?://\S+|www\.\S+|\S+@\S+\.\S+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Four apostrophe characters occur in real text: ' (typewriter), ’ (right quote), ‘ (left quote, often a
+        // typing mistake) and ʼ (modifier letter). All are read as the same apostrophe.
+        private const string Apostrophes = "'’‘ʼ";
         private static readonly Regex Word = new(
-            @"[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*", RegexOptions.Compiled);
+            @"[\p{L}\p{M}]+(?:['’‘ʼ][\p{L}\p{M}]+)*", RegexOptions.Compiled);
 
         private readonly IReadOnlyList<WordList> _dictionaries;
         private readonly HashSet<string> _allowedWords;
@@ -63,7 +67,7 @@ namespace AutomationSandbox.ContentAnalysis
                     }
                 }
 
-                dictionaries.Add(WordList.CreateFromFiles(dic, aff));
+                dictionaries.Add(Load(dic, aff));
             }
 
             if (dictionaries.Count == 0)
@@ -77,8 +81,29 @@ namespace AutomationSandbox.ContentAnalysis
             return new SpellingChecker(dictionaries, allowed);
         }
 
+        private static WordList Load(string dictionaryPath, string affixPath)
+        {
+            // Latin-1 maps every byte to one char and back, so the text can be patched without knowing the
+            // dictionary's declared encoding; the Hunspell library then decodes the patched bytes itself.
+            var latin1 = Encoding.GetEncoding(28591);
+            string affix = latin1.GetString(File.ReadAllBytes(affixPath));
+            string dictionary = latin1.GetString(File.ReadAllBytes(dictionaryPath));
+            if (!NumericFlagZeroRemap.TryRemap(affix, dictionary, out var newAffix, out var newDictionary))
+            {
+                return WordList.CreateFromFiles(dictionaryPath, affixPath);
+            }
+
+            using var dictionaryStream = new MemoryStream(latin1.GetBytes(newDictionary));
+            using var affixStream = new MemoryStream(latin1.GetBytes(newAffix));
+            return WordList.CreateFromStreams(dictionaryStream, affixStream);
+        }
+
         /// <summary>Returns one issue per distinct misspelled word in <paramref name="passage" />.</summary>
-        public IReadOnlyList<ContentIssue> Check(ContentPassage passage)
+        /// <param name="passage">The text to check.</param>
+        /// <param name="textMayBeCutOff">True when <paramref name="passage" /> may have been truncated by a
+        /// capture length limit. A final word that touches the end of the text is then probably half a word and
+        /// is ignored rather than reported.</param>
+        public IReadOnlyList<ContentIssue> Check(ContentPassage passage, bool textMayBeCutOff = false)
         {
             if (passage == null)
             {
@@ -95,7 +120,12 @@ namespace AutomationSandbox.ContentAnalysis
             var reported = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Word.Matches(text))
             {
-                var token = match.Value.Replace('’', '\'');
+                var token = NormaliseApostrophes(match.Value);
+                if (textMayBeCutOff && match.Index + match.Length == text.Length)
+                {
+                    continue;
+                }
+
                 if (ShouldSkip(text, match, token) || IsAccepted(token) || !reported.Add(token))
                 {
                     continue;
@@ -121,6 +151,13 @@ namespace AutomationSandbox.ContentAnalysis
             }
 
             if (HasDigitOrUnderscoreNeighbor(text, match))
+            {
+                return true;
+            }
+
+            // A word glued to an apostrophe that follows a number or symbol is a Turkish suffix whose stem is
+            // not a word at all ("%40+'ını", "5'ini"). Judging the bare suffix would only produce noise.
+            if (match.Index > 0 && Apostrophes.IndexOf(text[match.Index - 1]) >= 0)
             {
                 return true;
             }
@@ -163,9 +200,29 @@ namespace AutomationSandbox.ContentAnalysis
             return char.IsDigit(c) || c == '_';
         }
 
+        // Turkish writes a foreign word with its suffix after an apostrophe ("artifact'ları"). The suffix
+        // cannot be judged by an English dictionary, so when the whole token is unknown the stem decides.
         private bool IsAccepted(string token)
         {
-            return _dictionaries.Any(dictionary => dictionary.Check(token));
+            if (_dictionaries.Any(dictionary => dictionary.Check(token)))
+            {
+                return true;
+            }
+
+            var apostrophe = token.IndexOf('\'');
+            return apostrophe > 0 &&
+                apostrophe < token.Length - 1 &&
+                IsKnown(token.Substring(0, apostrophe));
+        }
+
+        private bool IsKnown(string word)
+        {
+            return _dictionaries.Any(dictionary => dictionary.Check(word));
+        }
+
+        private static string NormaliseApostrophes(string value)
+        {
+            return value.Replace('’', '\'').Replace('‘', '\'').Replace('ʼ', '\'');
         }
 
         // A bilingual page cannot tell which dictionary a misspelling "belongs" to, so suggestions are

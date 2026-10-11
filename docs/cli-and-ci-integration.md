@@ -92,11 +92,11 @@ A second tool, `AutomationSandbox.SiteAudit` (command `automation-sandbox-audit`
 automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
 ```
 
-- `--lang` lists dictionaries, primary language first (default `en`). A word is accepted if **any** listed dictionary accepts it, which suits a Turkish page containing English terms; the trade-off is that a typo that happens to be a valid word in the other language is not reported.
+- `--lang` lists dictionaries, primary language first (default `en`; regional variants such as `en-GB` work, which matters because `en` is American spelling and flags `behaviour`). A word is accepted if **any** listed dictionary accepts it, which suits a Turkish page containing English terms; the trade-off is that a typo that happens to be a valid word in the other language is not reported. Turkish suffixes on foreign words (`artifact'ları`) are judged by the stem.
 - `--allow-word` / `--allow-file` keep brand and product names out of the report.
 - Dictionaries are downloaded once, from a pinned commit of [`wooorm/dictionaries`](https://github.com/wooorm/dictionaries) (nothing is bundled), into a per-user cache; `--no-download` forbids the download for offline use.
 - Exit code `0` means no findings, `1` means findings (so a CI step can gate on it), `2` means the audit could not run (bad arguments, missing dictionary, start page unreachable). A JSON Lines log and an HTML report are written to `--output-dir` (overwritten on each run).
-- It judges single words only. Grammar and meaning are outside a dictionary's reach, and brand names, jargon and code you did not allow-list will be reported as misspellings. Text is checked up to 10,000 characters per element.
+- It judges single words only. Grammar and meaning are outside a dictionary's reach, and brand names, jargon and code you did not allow-list will be reported as misspellings. Text is checked up to 10,000 characters per element. Expect many false positives on a developer-documentation site (the project's own docs: 420 distinct flagged words across 31 pages, mostly terms such as `json` and `nuget`; the English dictionary is small and lacks plurals like `integrations`); it suits marketing and content sites far better, and an allow list takes care of the rest.
 - Not published to nuget.org yet; until it is, pack it from the repository (`dotnet pack TestAutomation/SiteAuditCli`). The `Site Audit CLI` CI job exercises the packed tool against a fixture site with the real Turkish and English dictionaries.
 
 #### Running the typo audit on GitHub
@@ -221,11 +221,11 @@ if result.returncode == 0:
 automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
 ```
 
-- `--lang` sözlükleri listeler, ana dil önce gelir (varsayılan `en`). Listelenen sözlüklerden **herhangi biri** bir kelimeyi kabul ederse kelime doğru sayılır; bu, İngilizce terimler içeren Türkçe bir sayfaya uygundur. Bedeli: diğer dilde geçerli bir kelime olan bir yazım hatası raporlanmaz.
+- `--lang` sözlükleri listeler, ana dil önce gelir (varsayılan `en`; `en-GB` gibi bölgesel varyantlar çalışır, `en` Amerikan imlasıdır ve `behaviour` kelimesini hatalı bulur). Listelenen sözlüklerden **herhangi biri** bir kelimeyi kabul ederse kelime doğru sayılır; bu, İngilizce terimler içeren Türkçe bir sayfaya uygundur. Bedeli: diğer dilde geçerli bir kelime olan bir yazım hatası raporlanmaz. Yabancı kelimelere gelen Türkçe ekler (`artifact'ları`) kök üzerinden değerlendirilir.
 - `--allow-word` / `--allow-file` marka ve ürün adlarını rapordan uzak tutar.
 - Sözlükler bir kez, [`wooorm/dictionaries`](https://github.com/wooorm/dictionaries) deposunun sabitlenmiş bir commit'inden indirilir (pakete gömülü değildir) ve kullanıcıya özel bir önbelleğe konur; `--no-download` çevrimdışı kullanım için indirmeyi yasaklar.
 - Çıkış kodu `0` bulgu yok, `1` bulgu var (CI adımı buna göre kapı olabilir), `2` tarama çalıştırılamadı (hatalı argüman, eksik sözlük, ulaşılamayan başlangıç sayfası) demektir. `--output-dir` altına bir JSON Lines günlüğü ve bir HTML rapor yazılır (her çalıştırmada üzerine yazılır).
-- Yalnızca tek tek kelimeleri değerlendirir. Dilbilgisi ve anlam bir sözlüğün erişiminin dışındadır; izin listesine eklemediğiniz marka adları, jargon ve kod yazım hatası olarak raporlanır. Metin, eleman başına 10.000 karaktere kadar denetlenir.
+- Yalnızca tek tek kelimeleri değerlendirir. Dilbilgisi ve anlam bir sözlüğün erişiminin dışındadır; izin listesine eklemediğiniz marka adları, jargon ve kod yazım hatası olarak raporlanır. Metin, eleman başına 10.000 karaktere kadar denetlenir. Geliştirici belgesi sitelerinde çok sayıda yanlış alarm bekleyin (projenin kendi belgeleri: 31 sayfada 420 farklı işaretli kelime, çoğu `json` ve `nuget` gibi terimler; İngilizce sözlük küçüktür ve `integrations` gibi çoğulları içermez); pazarlama ve içerik siteleri için çok daha uygundur, kalanını bir izin listesi halleder.
 - Henüz nuget.org'da yayımlanmadı; yayımlanana kadar depodan paketleyin (`dotnet pack TestAutomation/SiteAuditCli`). `Site Audit CLI` CI job'ı paketlenmiş aracı, gerçek Türkçe ve İngilizce sözlüklerle bir fixture sitesine karşı çalıştırır.
 
 #### Yazım denetimini GitHub'da çalıştırmak

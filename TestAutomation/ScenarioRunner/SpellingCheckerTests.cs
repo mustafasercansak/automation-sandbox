@@ -207,6 +207,133 @@ namespace ScenarioRunner
             Assert.Contains("shipped", issue.Message);
         }
 
+        private static SpellingChecker Numeric()
+        {
+            return SpellingChecker.FromDictionaryFiles(new[] { Dictionary("mini-num") });
+        }
+
+        [Fact]
+        public void Check_AcceptsAFormMadeByAnAffixRuleWhoseNumericFlagIsZero()
+        {
+            // The Turkish dictionary defines its "-de" locative with flag 0, which the Hunspell library reads as
+            // "no flag". Without the remap "evde" (in the house) is reported as a misspelling.
+            Assert.Empty(Numeric().Check(Passage("evde okulda")));
+        }
+
+        [Fact]
+        public void Check_StillFlagsAWrongFormOnANumericFlagDictionary()
+        {
+            var issue = Assert.Single(Numeric().Check(Passage("evdd okulda")));
+
+            Assert.Contains("\"evdd\"", issue.Message);
+        }
+
+        [Fact]
+        public void Check_AcceptsAKnownWordWithATurkishSuffixAfterAnApostrophe()
+        {
+            var issues = TurkishAndEnglish().Check(Passage("button'ları ve checkout'ta"));
+
+            Assert.Empty(issues);
+        }
+
+        [Fact]
+        public void Check_StillFlagsAnUnknownStemBeforeAnApostropheSuffix()
+        {
+            var issue = Assert.Single(TurkishAndEnglish().Check(Passage("buttonn'ları")));
+
+            Assert.Contains("\"buttonn'ları\"", issue.Message);
+        }
+
+        [Fact]
+        public void Check_SkipsASuffixThatFollowsAnApostropheAfterANumberOrSymbol()
+        {
+            Assert.Empty(TurkishAndEnglish().Check(Passage("merhaba %40+’ını 5'ini 3‘nin")));
+        }
+
+        [Theory]
+        [InlineData("Backend‘nin")]
+        [InlineData("Backend’nin")]
+        [InlineData("Backend'nin")]
+        [InlineData("Backendʼnin")]
+        public void Check_TreatsEveryApostropheVariantAsOneWord(string text)
+        {
+            var issue = Assert.Single(TurkishAndEnglish().Check(Passage(text)));
+
+            Assert.Contains("\"Backend'nin\"", issue.Message);
+        }
+
+        [Fact]
+        public void Check_IgnoresTheLastWord_WhenTheTextMayHaveBeenCutOff()
+        {
+            var issues = English().Check(Passage("Your order has been shiped. Please wel"), textMayBeCutOff: true);
+
+            Assert.Equal(new[] { "shiped" }, issues.Select(i => ExtractWord(i.Message)).ToArray());
+        }
+
+        [Fact]
+        public void Check_ReportsTheLastWord_WhenTheTextWasNotCutOff()
+        {
+            var issues = English().Check(Passage("Your order has been shiped. Please wel"));
+
+            Assert.Equal(new[] { "shiped", "wel" }, issues.Select(i => ExtractWord(i.Message)).ToArray());
+        }
+
+        [Fact]
+        public void Check_ReportsTheLastWord_WhenACutOffTextEndsAfterACompleteWord()
+        {
+            var issues = English().Check(Passage("Your order has been shiped. Please wel."), textMayBeCutOff: true);
+
+            Assert.Equal(new[] { "shiped", "wel" }, issues.Select(i => ExtractWord(i.Message)).ToArray());
+        }
+
+        [Fact]
+        public void RunSpellCheck_IgnoresThePartialLastWordOfAPassageThatReachedTheCaptureLimit()
+        {
+            const string text = "Welcome to the shiped order wel";
+            var dom = Root(Node("div", "p", text));
+
+            var withLimit = ContentAnalyzer.RunSpellCheck(dom, English(), capturedTextLimit: text.Length);
+            var withoutLimit = ContentAnalyzer.RunSpellCheck(dom, English());
+
+            Assert.Equal(new[] { "shiped" }, withLimit.Select(i => ExtractWord(i.Message)).ToArray());
+            Assert.Equal(new[] { "shiped", "wel" }, withoutLimit.Select(i => ExtractWord(i.Message)).ToArray());
+        }
+
+        [Theory]
+        [InlineData("style")]
+        [InlineData("script")]
+        [InlineData("noscript")]
+        [InlineData("template")]
+        [InlineData("kbd")]
+        [InlineData("samp")]
+        public void Extraction_SkipsElementsWhoseTextIsNotProse(string tagName)
+        {
+            var dom = Root(Node("div", "p", "Welcome"), Node(tagName, tagName, "rgba trebuchet dasharray wellcome"));
+
+            Assert.Equal(1, ContentAnalyzer.CountPassages(dom));
+            Assert.Empty(ContentAnalyzer.RunSpellCheck(dom, English()));
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Root(Node(tagName, tagName, "TODO the the"))));
+        }
+
+        [Fact]
+        public void Extraction_IgnoresTheTextOfAnSvgRoot_ButStillChecksItsLabels()
+        {
+            var label = Node("text", "svg > text", "Wellcome");
+            var svg = new WebElementInfo
+            {
+                TagName = "svg",
+                CssSelector = "#mermaid-1",
+                Text = "#mermaid-1{font-family:trebuchet,verdana;} Wellcome",
+                Children = { label },
+            };
+
+            var issues = ContentAnalyzer.RunSpellCheck(Root(svg), English());
+
+            var issue = Assert.Single(issues);
+            Assert.Equal("svg > text", issue.CssSelector);
+            Assert.Equal(1, ContentAnalyzer.CountPassages(Root(svg)));
+        }
+
         private static string ExtractWord(string message)
         {
             var start = message.IndexOf('"') + 1;

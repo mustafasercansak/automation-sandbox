@@ -99,7 +99,7 @@ internal static class Program
                     issues.AddRange(ContentAnalyzer.RunHeuristics(dom));
                 }
 
-                issues.AddRange(ContentAnalyzer.RunSpellCheck(dom, spelling));
+                issues.AddRange(ContentAnalyzer.RunSpellCheck(dom, spelling, CapturedTextLength));
                 issues = ContentAnalyzer.CollapseInheritedIssues(issues).ToList();
                 sink.Record(ContentAnalysisReportEntry.FromAnalysis(url, dom, issues));
                 allIssues.AddRange(issues.Select(issue => (url, issue)));
