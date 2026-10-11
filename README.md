@@ -102,10 +102,11 @@ The nine packages follow real dependency boundaries (cross-platform core vs. `ne
 | Generate **Playwright / FlaUI test skeletons from an intent** | `AutomationSandbox.IntentAutomation` | Intent planning, DOM/desktop matching, locator recording, C#/TypeScript codegen. Pulls `WebDiscovery`. |
 | Check captured page text for spelling/grammar/leftover-placeholder issues | `AutomationSandbox.ContentAnalysis` | Zero-dependency heuristics plus an optional single-provider LLM review. Pulls `WebDiscovery`. |
 | **Actually execute** a planned intent scenario against a live page, not just generate test source | `AutomationSandbox.IntentExecution` | `IntentWebExecutor`. Pulls `IntentAutomation` + `PlaywrightLiveExploration`. |
+| Heal a locator **without writing any C#** — from any language, or a CI pipeline with no .NET project | `AutomationSandbox.Cli` (`dotnet tool install -g`) | Not one of the nine packages above — a `dotnet tool`, not a library reference. JSON in, JSON out; see [CLI & CI Integration](docs/cli-and-ci-integration.md). |
 
 `AutomationSandbox.UiModel` is the shared DTO layer (`UiElementInfo` and its JSON serializer). Every package above depends on it transitively — **you never install `UiModel` directly.**
 
-New to the library? The [Published Package Quickstart](docs/consumer-quickstart.md) walks the `SelfHealing` path end to end; [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers wiring it into a suite you already have.
+New to the library? The [Published Package Quickstart](docs/consumer-quickstart.md) walks the `SelfHealing` path end to end; [Adding Self-Healing to an Existing Test Suite](docs/integration-existing-suite.md) covers wiring it into a suite you already have. Not using .NET at all? [CLI & CI Integration](docs/cli-and-ci-integration.md) is the equivalent starting point.
 
 ### What `0.2.0-beta` commits to
 
