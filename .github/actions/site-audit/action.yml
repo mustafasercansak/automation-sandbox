@@ -121,6 +121,9 @@ runs:
         AUDIT_MAX_DEPTH: ${{ inputs.max-depth }}
         AUDIT_OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
+        # GitHub runs bash steps with -e, which would end this step on the tool's exit code 1
+        # (findings) before it is captured below. +e keeps the code so the gate step can decide.
+        set +e
         set -uo pipefail
         args=(--url "$AUDIT_URL" --lang "$AUDIT_LANG" --max-pages "$AUDIT_MAX_PAGES" \
           --max-depth "$AUDIT_MAX_DEPTH" --output-dir "$AUDIT_OUTPUT_DIR" --install-browser)
