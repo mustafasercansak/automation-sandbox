@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutomationSandbox.WebDiscovery;
@@ -64,7 +65,37 @@ namespace AutomationSandbox.ContentAnalysis
                 issues.AddRange(spellingChecker.Check(passage));
             }
 
-            return issues;
+            return CollapseInheritedIssues(issues);
+        }
+
+        /// <summary>Drops an issue that an ancestor element merely inherited from a descendant. Captured text
+        /// includes descendant text, so one typo in a paragraph is also found in the paragraph's parent, its
+        /// parent's parent, and so on up to <c>body</c>. An issue is dropped when another issue has the same
+        /// type and message and was found in a passage whose text lies inside this one's, leaving the most
+        /// specific element. Two separate occurrences in unrelated elements are both kept.</summary>
+        public static IReadOnlyList<ContentIssue> CollapseInheritedIssues(IReadOnlyList<ContentIssue> issues)
+        {
+            if (issues == null)
+            {
+                throw new ArgumentNullException(nameof(issues));
+            }
+
+            var kept = new List<ContentIssue>();
+            foreach (var issue in issues)
+            {
+                var inherited = issues.Any(other =>
+                    !ReferenceEquals(other, issue) &&
+                    other.IssueType == issue.IssueType &&
+                    other.Message == issue.Message &&
+                    other.Text.Length < issue.Text.Length &&
+                    issue.Text.IndexOf(other.Text, StringComparison.Ordinal) >= 0);
+                if (!inherited)
+                {
+                    kept.Add(issue);
+                }
+            }
+
+            return kept;
         }
 
         /// <summary>Runs the heuristic checks, then <paramref name="llmProvider" /> when supplied and

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Same condition the libraries use: net10.0 is added only when an SDK 10 builds this,
+         so contributors on SDK 8 still build the solution. Whether SDK 10 can pack the
+         multi-targeted tool is verified by the CI job, not assumed. -->
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AutomationSandbox.SiteAuditCli</RootNamespace>
+
+    <!-- No GenerateDocumentationFile: the public surface is the CLI argument shape and its
+         report files, not a C# API (same reasoning as SelfHealingCli). -->
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>automation-sandbox-audit</ToolCommandName>
+    <PackageId>AutomationSandbox.SiteAudit</PackageId>
+    <Description>Crawl a website from one URL and report spelling mistakes (Hunspell dictionaries such as Turkish and English, no API key, nothing leaves your machine) plus leftover placeholders and duplicate words, as a JSON Lines log and an HTML report. Built for CI: exit code 1 when findings exist.</Description>
+    <PackageTags>spell-check;content-quality;website-audit;playwright;cli;dotnet-tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+    <ProjectReference Include="..\WebDiscovery\WebDiscovery.csproj" />
+    <ProjectReference Include="..\PlaywrightLiveExploration\PlaywrightLiveExploration.csproj" />
+    <ProjectReference Include="..\ContentAnalysis\ContentAnalysis.csproj" />
+  </ItemGroup>
+
+</Project>
