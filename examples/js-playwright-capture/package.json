@@ -1,0 +1,14 @@
+{
+  "name": "automation-sandbox-js-playwright-capture",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Reference example: capture a web page as UiElementInfo JSON for automation-sandbox-heal, from Node.js instead of .NET.",
+  "type": "module",
+  "scripts": {
+    "capture:old": "node capture.mjs fixtures/page-old.html expected-button.json",
+    "capture:new": "node capture.mjs fixtures/page-new.html tree.json"
+  },
+  "dependencies": {
+    "playwright": "^1.64.0"
+  }
+}
