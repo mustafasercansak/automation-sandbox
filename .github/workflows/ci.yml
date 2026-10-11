@@ -27,7 +27,7 @@ jobs:
             # and a real live LLM call (ANTHROPIC_API_KEY/GEMINI_API_KEY). Generous headroom
             # for a cold runner and retried LLM calls.
             timeout-minutes: 35
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             framework: net8.0
             name: Linux (Cross-Platform Core & Web Suite)
             coverage-label: Linux net8.0
@@ -61,7 +61,7 @@ jobs:
 
       # On Linux, build ScenarioRunner.csproj directly (only restores and builds cross-platform libraries).
       - name: Build Test Project (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
           dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
@@ -138,7 +138,7 @@ jobs:
             -- dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework ${{ matrix.framework }} --no-build --logger "trx;LogFileName=test-results-${{ matrix.framework }}.trx" --logger "console;verbosity=normal"
 
       - name: Run tests with Code Coverage (Linux, coverlet)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         env:
           # Optional: if these repo secrets are unset, GitHub substitutes an empty
           # string and LlmHealingEvaluationTests skips itself - no error either way.
@@ -219,7 +219,7 @@ jobs:
 
   sample-source-compat:
     name: Sample Compiles Against Source
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~37s (run 35374520400): restore + build + run the sample against repo source.
     timeout-minutes: 15
     steps:
@@ -241,7 +241,7 @@ jobs:
 
   playwright-sample:
     name: Playwright End-to-End Sample
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~54s (run 35374520400): build plus a one-time Chromium browser download,
     # which can be slow on a cold cache.
     timeout-minutes: 20
@@ -269,7 +269,7 @@ jobs:
 
   web-observation-sample:
     name: Web Observation Sample
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Same shape/cost as playwright-sample above - build plus a one-time Chromium download.
     timeout-minutes: 20
     steps:
@@ -296,7 +296,7 @@ jobs:
 
   site-content-audit-sample:
     name: Site Content Audit Sample
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Same shape/cost as web-observation-sample above - build plus a one-time Chromium download.
     timeout-minutes: 20
     steps:
@@ -350,7 +350,7 @@ jobs:
 
   nunit-fixture-tests:
     name: NUnit Test Fixture Helper
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~30s (run 35374520400).
     timeout-minutes: 10
     steps:
@@ -367,7 +367,7 @@ jobs:
 
   public-api-audit-sync:
     name: Public API Audit Stays In Sync
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~15s for restore+run of eng/PublicApiAudit against nine small projects.
     timeout-minutes: 10
     steps:
@@ -394,7 +394,7 @@ jobs:
 
   calibration-cli:
     name: Calibration CLI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~32s (run 35374520400).
     timeout-minutes: 10
     steps:
@@ -412,9 +412,9 @@ jobs:
 
   self-healing-cli:
     name: Self-Healing CLI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # The whole point of this tool is that it needs no FlaUI/Windows/Playwright .NET
-    # dependency at all - proving it on ubuntu-latest, not windows-latest, is the
+    # dependency at all - proving it on ubuntu-24.04, not windows-latest, is the
     # meaningful check here (#507).
     timeout-minutes: 10
     steps:
@@ -432,7 +432,7 @@ jobs:
 
   site-audit-cli:
     name: Site Audit CLI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Packs and installs the real tool, installs Chromium through the tool itself, downloads the
     # pinned REAL Turkish and English dictionaries, and audits a local fixture site with planted
     # typos (#540). SDK 10 is installed next to SDK 8 so the net10.0 build and a multi-targeted
@@ -455,7 +455,7 @@ jobs:
 
   site-audit-action:
     name: Site Audit GitHub Action
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Proves .github/actions/site-audit end to end (#544): builds the tool from this checkout, runs
     # it against the fixture site over HTTP, and checks the outputs and BOTH sides of the gate - a
     # run with findings must fail by default, a clean page must pass. Values come through env:, not
@@ -538,7 +538,7 @@ jobs:
 
   heal-action:
     name: Self-Healing GitHub Action
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Proves .github/actions/heal's actual logic works end to end - install, run, both
     # outputs - not just that its YAML parses (#511). Packs the CLI locally and uses the
     # action's own `source` input so this never depends on a live nuget.org publish,
@@ -656,7 +656,7 @@ jobs:
 
   docs-build-preview:
     name: Docs Build & Link Integrity Preview
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed ~24s (run 35374520400); Ruby setup + gem install can be slower on a cold cache.
     timeout-minutes: 15
     steps:
@@ -683,7 +683,7 @@ jobs:
   build-and-test:
     name: build-and-test
     needs: [test, sample-source-compat, nunit-fixture-tests, calibration-cli, docs-build-preview]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: always()
     # Trivial status-check aggregation; observed ~4s (run 35374520400).
     timeout-minutes: 5

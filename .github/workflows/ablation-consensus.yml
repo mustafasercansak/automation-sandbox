@@ -23,7 +23,7 @@ permissions:
 jobs:
   evaluate:
     name: Live consensus on ablated locators (Linux net8.0)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed 10m58s-27m25s across recent runs: 67 scenarios x configured providers with
     # deliberate pacing and Groq rate-limit backoff (inputs can push this further via
     # pacing_seconds / max_retry_after_seconds). Roughly double the highest observed run.

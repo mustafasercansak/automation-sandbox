@@ -22,7 +22,7 @@ permissions:
 jobs:
   probe:
     name: Probe configured provider endpoints
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Observed 8-11s across recent runs, but each of the ~12 sequential curl probes has its
     # own 30s cap (-m 30) - worst case (every provider timing out) is ~6 minutes.
     timeout-minutes: 15
