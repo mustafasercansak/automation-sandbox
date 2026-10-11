@@ -16,9 +16,9 @@ An open-source **locator healing** and **intent-driven test generation** engine 
 
 ---
 
-## 📚 Documentation / Dökümantasyon
+## 📚 Documentation / Dokümantasyon
 
-**➡️ [Full documentation index / Tam döküman haritası](docs/index.md)** — every guide, both languages, plus the system architecture diagram.
+**➡️ [Full documentation index / Tam doküman haritası](docs/index.md)** — every guide, both languages, plus the system architecture diagram.
 
 Start here / Buradan başla:
 

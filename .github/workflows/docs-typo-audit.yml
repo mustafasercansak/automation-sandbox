@@ -1,0 +1,35 @@
+name: Docs Typo Audit
+
+# Report-only dogfooding of .github/actions/site-audit against the project's own published
+# docs (#546). Deliberately not scheduled and not a gate: the first reports decide which findings
+# are real typos and which words belong in the allow list, and only then is a gate worth having.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/docs-typo-audit.yml'
+      - '.github/actions/site-audit/**'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit the published docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Audit mustafasercansak.github.io/automation-sandbox
+        id: audit
+        uses: ./.github/actions/site-audit
+        with:
+          url: https://mustafasercansak.github.io/automation-sandbox/
+          # en and en-GB together: the docs mix American and British spelling.
+          lang: tr,en,en-GB
+          allow-file: .github/docs-typo-allowlist.txt
+          max-pages: '80'
+          max-depth: '4'
+          fail-on-findings: 'false'
