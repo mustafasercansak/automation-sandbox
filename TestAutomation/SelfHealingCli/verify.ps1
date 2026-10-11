@@ -31,28 +31,50 @@ Invoke-DotNet @('tool', 'install', '--tool-path', $toolInstallDir, '--add-source
 $toolExe = Join-Path $toolInstallDir 'automation-sandbox-heal'
 if ($IsWindows) { $toolExe += '.exe' }
 
-# Fixture: a stale "expected" element (AutomationId renamed) against a live tree that
-# otherwise matches exactly on Name/ControlType/ParentControlType/position - the same
-# scenario TestAutomation/NUnitFixtureTests proves the library heals confidently, reused
-# here to exercise the packed tool end to end, not just the underlying library call.
-$expectedPath = Join-Path $PSScriptRoot 'fixtures/expected.json'
-$treePath = Join-Path $PSScriptRoot 'fixtures/tree.json'
+function Invoke-FixtureHeal {
+    param(
+        [Parameter(Mandatory)][string] $Description,
+        [Parameter(Mandatory)][string] $ExpectedPath,
+        [Parameter(Mandatory)][string] $TreePath,
+        [Parameter(Mandatory)][string] $ExpectedHealedAutomationId
+    )
 
-Write-Host 'Running the packed tool against the fixture...'
-$stdout = & $toolExe --expected $expectedPath --tree $treePath --profile balanced
-$exitCode = $LASTEXITCODE
+    Write-Host "Running the packed tool against the $Description fixture..."
+    $stdout = & $toolExe --expected $ExpectedPath --tree $TreePath --profile balanced
+    $exitCode = $LASTEXITCODE
 
-if ($exitCode -ne 0) {
-    throw "Expected the packed tool to confidently heal the fixture locator (exit 0), got exit code $exitCode."
+    if ($exitCode -ne 0) {
+        throw "Expected the packed tool to confidently heal the $Description fixture locator (exit 0), got exit code $exitCode."
+    }
+
+    $result = $stdout | ConvertFrom-Json
+    if (-not $result.IsConfident) {
+        throw "Expected IsConfident=true for the $Description fixture."
+    }
+
+    if ($result.Matched.AutomationId -ne $ExpectedHealedAutomationId) {
+        throw "Expected Matched.AutomationId '$ExpectedHealedAutomationId' for the $Description fixture, got '$($result.Matched.AutomationId)'."
+    }
 }
 
-$result = $stdout | ConvertFrom-Json
-if (-not $result.IsConfident) {
-    throw 'Expected IsConfident=true in the tool output.'
-}
+# Web-flavored fixture: a stale "expected" element (AutomationId renamed) against a live
+# tree that otherwise matches exactly on Name/ControlType/ParentControlType/position - the
+# same scenario TestAutomation/NUnitFixtureTests proves the library heals confidently,
+# reused here to exercise the packed tool end to end, not just the underlying library call.
+Invoke-FixtureHeal -Description 'web' `
+    -ExpectedPath (Join-Path $PSScriptRoot 'fixtures/expected.json') `
+    -TreePath (Join-Path $PSScriptRoot 'fixtures/tree.json') `
+    -ExpectedHealedAutomationId 'btn-submit-new'
 
-if ($result.Matched.AutomationId -ne 'btn-submit-new') {
-    throw "Expected Matched.AutomationId 'btn-submit-new', got '$($result.Matched.AutomationId)'."
-}
+# Desktop-flavored fixture (#516): the repo's own established WinForms "flagship demo"
+# scenario (SelfHealingResolverTests.Resolve_WinFormsDemoScenario_KeepsMarginAboveThreshold
+# / BuildCurrentMainFormTree) - txtEmail renamed to textBox1 against its real ~0.057
+# runner-up margin (sibling txtLastName) - proving the CLI is not web-only: the resolver
+# underneath draws no platform distinction, and this is the same scenario already proven
+# elsewhere in the test suite, not a newly invented one.
+Invoke-FixtureHeal -Description 'desktop (WinForms)' `
+    -ExpectedPath (Join-Path $PSScriptRoot 'fixtures/expected-desktop.json') `
+    -TreePath (Join-Path $PSScriptRoot 'fixtures/tree-desktop.json') `
+    -ExpectedHealedAutomationId 'textBox1'
 
 Write-Host 'Self-Healing CLI verification passed.' -ForegroundColor Green

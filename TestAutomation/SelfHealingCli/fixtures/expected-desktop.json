@@ -1,0 +1,21 @@
+{
+  "ControlType": "Edit",
+  "Name": "",
+  "AutomationId": "txtEmail",
+  "ClassName": "",
+  "BoundingRectangle": {
+    "X": 112,
+    "Y": 70,
+    "Width": 200,
+    "Height": 23,
+    "IsUsable": true,
+    "IsEmpty": false
+  },
+  "ParentControlType": "Window",
+  "ParentAutomationId": "MainForm",
+  "SiblingIndex": 2,
+  "SiblingCount": 7,
+  "TestIntent": "",
+  "Children": [],
+  "ChildControlTypeSignature": null
+}
