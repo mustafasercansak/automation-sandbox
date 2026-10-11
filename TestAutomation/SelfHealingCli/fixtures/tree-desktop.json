@@ -1,0 +1,169 @@
+{
+  "ControlType": "Window",
+  "Name": "Customer Registration Form",
+  "AutomationId": "MainForm",
+  "ClassName": "",
+  "BoundingRectangle": {
+    "X": 0,
+    "Y": 0,
+    "Width": 0,
+    "Height": 0,
+    "IsUsable": false,
+    "IsEmpty": true
+  },
+  "ParentControlType": "",
+  "ParentAutomationId": "",
+  "SiblingIndex": 0,
+  "SiblingCount": 0,
+  "TestIntent": "",
+  "Children": [
+    {
+      "ControlType": "Edit",
+      "Name": "",
+      "AutomationId": "txtFirstName",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 112,
+        "Y": 12,
+        "Width": 200,
+        "Height": 23,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 0,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "Edit",
+      "Name": "",
+      "AutomationId": "txtLastName",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 112,
+        "Y": 41,
+        "Width": 200,
+        "Height": 23,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 1,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "Edit",
+      "Name": "",
+      "AutomationId": "textBox1",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 112,
+        "Y": 70,
+        "Width": 200,
+        "Height": 23,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 2,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "ComboBox",
+      "Name": "",
+      "AutomationId": "cmbRecordType",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 112,
+        "Y": 99,
+        "Width": 200,
+        "Height": 23,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 3,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "Pane",
+      "Name": "",
+      "AutomationId": "panel1",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 12,
+        "Y": 131,
+        "Width": 300,
+        "Height": 34,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 4,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "Button",
+      "Name": "Save",
+      "AutomationId": "btnSave",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 112,
+        "Y": 178,
+        "Width": 100,
+        "Height": 30,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 5,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    },
+    {
+      "ControlType": "DataGrid",
+      "Name": "",
+      "AutomationId": "dgvRecords",
+      "ClassName": "",
+      "BoundingRectangle": {
+        "X": 12,
+        "Y": 220,
+        "Width": 400,
+        "Height": 150,
+        "IsUsable": true,
+        "IsEmpty": false
+      },
+      "ParentControlType": "Window",
+      "ParentAutomationId": "MainForm",
+      "SiblingIndex": 6,
+      "SiblingCount": 7,
+      "TestIntent": "",
+      "Children": [],
+      "ChildControlTypeSignature": null
+    }
+  ],
+  "ChildControlTypeSignature": null
+}

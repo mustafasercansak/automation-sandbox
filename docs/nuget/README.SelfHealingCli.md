@@ -60,6 +60,10 @@ The repository ships a composite GitHub Action, `.github/actions/heal`, that wra
 
 By default this step fails the job when the result is not confident - the same exit-code contract as the CLI itself, so a bare `uses:` line is already a working pass/fail gate. Add `continue-on-error: true` and read the `is-confident` / `result` outputs if you want to branch on the outcome instead of failing the build.
 
+## Desktop and web alike
+
+`SelfHealingResolver` draws no platform distinction - it scores whatever `UiElementInfo` tree it is handed, whether that tree came from FlaUI (Windows desktop) or Playwright (web). The CLI's own test fixtures prove this directly: one is a web-flavored element rename, the other is the repository's own established WinForms "flagship demo" scenario (`txtEmail` renamed to `textBox1`, including its documented ~0.057 runner-up margin against sibling `txtLastName`). Capture your desktop tree with any UIA-capable tool in any language, shape it the same way, and this CLI heals it exactly as it would a web locator.
+
 ## Why a CLI, not just the library
 
 The `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` packages are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled capture adapter) and wants to call the resolver in-process. This CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
