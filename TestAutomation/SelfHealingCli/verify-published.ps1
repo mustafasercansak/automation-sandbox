@@ -52,19 +52,42 @@ try {
 
     $toolExe = Join-Path $toolInstallDir 'automation-sandbox-heal'
     if ($IsWindows) { $toolExe += '.exe' }
-
-    Write-Host 'Running the installed tool against the repository fixture...'
     $fixtureDir = Join-Path $PSScriptRoot 'fixtures'
-    $stdout = & $toolExe --expected (Join-Path $fixtureDir 'expected.json') --tree (Join-Path $fixtureDir 'tree.json') --profile balanced
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) {
-        throw "Expected the published tool to confidently heal the fixture locator (exit 0), got exit code $exitCode."
+
+    function Invoke-FixtureHeal {
+        param(
+            [Parameter(Mandatory)][string] $Description,
+            [Parameter(Mandatory)][string] $ExpectedPath,
+            [Parameter(Mandatory)][string] $TreePath,
+            [Parameter(Mandatory)][string] $ExpectedHealedAutomationId
+        )
+
+        Write-Host "Running the installed tool against the $Description fixture..."
+        $stdout = & $toolExe --expected $ExpectedPath --tree $TreePath --profile balanced
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) {
+            throw "Expected the published tool to confidently heal the $Description fixture locator (exit 0), got exit code $exitCode."
+        }
+
+        $result = $stdout | ConvertFrom-Json
+        if (-not $result.IsConfident -or $result.Matched.AutomationId -ne $ExpectedHealedAutomationId) {
+            throw "Published tool output did not match the expected $Description fixture result."
+        }
     }
 
-    $result = $stdout | ConvertFrom-Json
-    if (-not $result.IsConfident -or $result.Matched.AutomationId -ne 'btn-submit-new') {
-        throw 'Published tool output did not match the expected fixture result.'
-    }
+    # Both fixtures (#516): web-flavored and the repo's own established WinForms
+    # "flagship demo" scenario, proving the published package heals desktop-shaped
+    # trees identically to web ones, not just the web case verify-published.ps1
+    # originally checked alone.
+    Invoke-FixtureHeal -Description 'web' `
+        -ExpectedPath (Join-Path $fixtureDir 'expected.json') `
+        -TreePath (Join-Path $fixtureDir 'tree.json') `
+        -ExpectedHealedAutomationId 'btn-submit-new'
+
+    Invoke-FixtureHeal -Description 'desktop (WinForms)' `
+        -ExpectedPath (Join-Path $fixtureDir 'expected-desktop.json') `
+        -TreePath (Join-Path $fixtureDir 'tree-desktop.json') `
+        -ExpectedHealedAutomationId 'textBox1'
 
     Write-Host "Published-package consumer verification passed for AutomationSandbox.Cli $Version." -ForegroundColor Green
 }
