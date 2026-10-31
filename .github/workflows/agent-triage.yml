@@ -89,9 +89,17 @@ jobs:
           set +e
           args=(triage --repo "$GITHUB_REPOSITORY" --issue "$ISSUE_NUMBER" --project-id "$PROJECT_ID")
           if [ "$POST_COMMENT" = "true" ]; then args+=(--comment); fi
-          dotnet run --project TestAutomation/AgentCli -c Release -- "${args[@]}" > report.json 2> summary.txt
+          # --framework: the runner image carries SDK 10 as well, so the tool project multi-targets net8.0 and net10.0 and
+          # "dotnet run" cannot choose (the first real run of this workflow failed exactly there).
+          dotnet run --project TestAutomation/AgentCli -c Release --framework net8.0 -- "${args[@]}" > report.json 2> summary.txt
           code=$?
           set -e
+          # An exit code of 0 or 1 is a finished run only if the agent printed its JSON report. A build or startup failure can
+          # also exit with 1; without a report that is a failure of the run, not a result.
+          if [ "$code" -le 1 ] && ! python3 -c 'import json; json.load(open("report.json"))' 2>/dev/null; then
+            echo "The agent produced no valid report (exit code $code); the run failed." >> summary.txt
+            code=2
+          fi
           # The report holds text a model wrote after reading an issue. Backticks are replaced so that text cannot close the
           # code fences around it in the job summary.
           safe() { sed "s/\`/'/g" "$1"; }
