@@ -90,6 +90,115 @@ namespace ScenarioRunner
             Assert.Contains("\"the\"", issue.Message);
         }
 
+        // The real capture collapses all whitespace to single spaces (PlaywrightDomCaptureScript.textOf), so
+        // these tests build trees whose Text looks exactly like that. The boundary between two cells has to
+        // come from the tree, not from a tab or a newline that the capture never produces.
+        private static WebElementInfo El(string tag, string css, string text, params WebElementInfo[] children)
+        {
+            var element = new WebElementInfo { TagName = tag, CssSelector = css, Text = text };
+            element.Children.AddRange(children);
+            return element;
+        }
+
+        [Fact]
+        public void RunHeuristics_DoesNotFlagTheSameWordInNeighbouringTableCells()
+        {
+            // From the docs audit (#550): a table with two "No" columns, and "Gemini | Gemini API".
+            var row = El("tr", "tr", "Observe No No Week 1",
+                El("td", "td:nth-of-type(1)", "Observe"),
+                El("td", "td:nth-of-type(2)", "No"),
+                El("td", "td:nth-of-type(3)", "No"),
+                El("td", "td:nth-of-type(4)", "Week 1"));
+            var models = El("tr", "tr:nth-of-type(2)", "Gemini Gemini API",
+                El("td", "td", "Gemini"),
+                El("td", "td", "Gemini API"));
+
+            Assert.Empty(ContentAnalyzer.RunHeuristics(El("table", "table", "Observe No No Week 1 Gemini Gemini API", row, models)));
+        }
+
+        [Fact]
+        public void RunHeuristics_DoesNotFlagTheSameWordAtTheEndOfOneBlockAndStartOfTheNext()
+        {
+            var section = El("div", "div", "Save Save the draft",
+                El("li", "li:nth-of-type(1)", "Save"),
+                El("li", "li:nth-of-type(2)", "Save the draft"));
+            var heading = El("section", "section", "risk risk is high",
+                El("h2", "h2", "risk"),
+                El("p", "p", "risk is high"));
+
+            Assert.Empty(ContentAnalyzer.RunHeuristics(section));
+            Assert.Empty(ContentAnalyzer.RunHeuristics(heading));
+        }
+
+        [Fact]
+        public void RunHeuristics_StillFlagsARepeatAcrossInlineElements()
+        {
+            // <p>Click <b>the</b> the button</p> is one sentence; the repeat is a real typo.
+            var paragraph = El("p", "p", "Click the the button", El("b", "p > b", "the"));
+
+            var issue = Assert.Single(ContentAnalyzer.RunHeuristics(paragraph), i => i.IssueType == "DuplicateWord");
+            Assert.Equal("p", issue.CssSelector);
+        }
+
+        [Fact]
+        public void RunHeuristics_StillFlagsARepeatInsideOneBlockChild()
+        {
+            var table = El("table", "table", "Name the the value",
+                El("tr", "tr", "Name the the value",
+                    El("td", "td:nth-of-type(1)", "Name"),
+                    El("td", "td:nth-of-type(2)", "the the value")));
+
+            var issue = Assert.Single(ContentAnalyzer.RunHeuristics(table));
+            Assert.Equal("td:nth-of-type(2)", issue.CssSelector);
+        }
+
+        [Fact]
+        public void RunHeuristics_StillFlagsARepeatInTheParentsOwnTextBesideABlockChild()
+        {
+            var host = El("div", "div", "Please please read this note",
+                El("p", "p", "this note"));
+
+            Assert.Single(ContentAnalyzer.RunHeuristics(host), i => i.IssueType == "DuplicateWord");
+        }
+
+        [Fact]
+        public void FlowTextOf_CutsABlockChildThatTheCaptureTruncatedInTheParent()
+        {
+            // The capture cuts a long page at a character limit: the parent ends partway into the last cell,
+            // while that cell's own text (it starts later, so it fits longer) runs on. "No No" must not be
+            // read as a repeat just because its second half is where the parent was cut off.
+            var parent = El("tr", "tr", "Observe No No",
+                El("td", "td:nth-of-type(1)", "Observe"),
+                El("td", "td:nth-of-type(2)", "No"),
+                El("td", "td:nth-of-type(3)", "No Week 1 and a long description that the parent no longer holds"));
+
+            Assert.Empty(ContentAnalyzer.RunHeuristics(parent));
+        }
+
+        [Fact]
+        public void RunHeuristics_DoesNotFlagAnAllowedRepeat_IgnoringCase_ButStillFlagsOthers()
+        {
+            // Turkish repeats a word on purpose: "adım adım" is "step by step".
+            var allowed = new[] { "adım", "tek" };
+
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Leaf("p", "Adım adım kurulum."), allowed));
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Leaf("p", "Yalnızca tek tek kelimeleri değerlendirir."), allowed));
+            Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("p", "Please click the the button"), allowed));
+            Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("p", "alan alan açıklama"), allowed));
+            Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("p", "Adım adım kurulum.")));
+        }
+
+        [Fact]
+        public void FlowTextOf_LeavesTextAloneWhenAChildCannotBeFoundOrIsHidden()
+        {
+            var hidden = new WebElementInfo { TagName = "div", CssSelector = "div > div", Text = "Save", IsHidden = true };
+            var parent = El("div", "div", "Save Save", hidden, El("p", "p", "text the capture cut off"));
+
+            Assert.Equal("Save Save", ContentAnalyzer.FlowTextOf(parent));
+            Assert.Equal("plain", ContentAnalyzer.FlowTextOf(El("div", "div", "plain")));
+            Assert.Equal("", ContentAnalyzer.FlowTextOf(El("div", "div", "")));
+        }
+
         [Fact]
         public void RunHeuristics_FlagsLeftoverPlaceholderMarker()
         {
