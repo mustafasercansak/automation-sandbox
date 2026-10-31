@@ -278,6 +278,26 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task CancellingBetweenTheStages_StopsTheRunBeforeAnyModelIsAsked()
+        {
+            // The token is cancelled while the board is being read. The run must notice it itself, on every platform,
+            // instead of relying on the HTTP stack (.NET Framework's HttpClient does not throw for a cancelled token).
+            var (registry, drafter, reviewer) = Models();
+            using var cts = new CancellationTokenSource();
+            var handler = new ProjectBoardReaderTests.StubHandler(
+                ProjectBoardReaderTests.Reply(IssueJson(true, Eligible)),
+                _ =>
+                {
+                    cts.Cancel();
+                    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Board("Ready")) };
+                });
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Run(registry, handler, token: cts.Token));
+
+            Assert.Equal(0, drafter.Calls + reviewer.Calls);
+        }
+
+        [Fact]
         public async Task ARegistryIsRequired()
         {
             await Assert.ThrowsAsync<ArgumentNullException>(() => AgentTriageRun.RunAsync("owner/repo", 7, Project, ProjectToken, null!));

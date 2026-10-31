@@ -94,12 +94,16 @@ namespace AutomationSandbox.LlmHealing
                 throw new ArgumentNullException(nameof(registry));
             }
 
+            // Cancellation is checked here, between the stages, and does not rely on the HTTP stack: .NET Framework's
+            // HttpClient does not throw for a token that is already cancelled, .NET does.
+            cancellationToken.ThrowIfCancellationRequested();
             var intake = await AgentIssueIntake.CheckAsync(repository, number, projectId, projectToken, issueToken, httpClient, cancellationToken).ConfigureAwait(false);
             if (!intake.Decision.Eligible)
             {
                 return new AgentRunReport(AgentRunStage.NotEligible, intake.Decision, intake.Error, null, new string[0], null);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             var issue = intake.Issue!;
             var kind = intake.Decision.TaskKind!;
             if (kind != TextTaskKinds.IssueTriage)

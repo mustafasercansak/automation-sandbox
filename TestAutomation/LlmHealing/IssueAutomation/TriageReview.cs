@@ -233,6 +233,7 @@ namespace AutomationSandbox.LlmHealing
                 throw new ArgumentNullException(nameof(routing));
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             if (!routing.Success)
             {
                 return Failed("Routing stopped the task: " + string.Join(" ", routing.Problems), null);
@@ -263,6 +264,8 @@ namespace AutomationSandbox.LlmHealing
             {
                 return new TriageOutcome(TriageStatus.Accepted, draft.Proposal, drafter.Name, null, new string[0], null);
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             var completion = await reviewer.CompleteAsync(
                 new TextCompletionRequest(BuildReviewPrompt(issue, draft.Proposal!), maxOutputTokens: 1024, expectJson: true), cancellationToken).ConfigureAwait(false);
