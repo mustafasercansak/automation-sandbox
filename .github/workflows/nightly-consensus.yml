@@ -1,8 +1,20 @@
 name: Nightly Multi-Provider Consensus Evaluation
 
+# Live calls to up to 11 providers cost quota (#565), so this no longer runs every night. It runs weekly,
+# because a provider can change its behaviour without any change here, and it runs when model-related
+# code lands on main. The file keeps its "nightly" name so existing references stay valid.
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'TestAutomation/LlmHealing/**'
+      - 'TestAutomation/SelfHealing/**'
+      - 'TestAutomation/UiModel/**'
+      - 'TestAutomation/ScenarioRunner/LiveConsensusGateTests.cs'
+      - 'TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs'
+      - '.github/workflows/nightly-consensus.yml'
   workflow_dispatch:
 
 permissions:
