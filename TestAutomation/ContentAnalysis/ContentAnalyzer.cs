@@ -12,7 +12,7 @@ namespace AutomationSandbox.ContentAnalysis
     /// review layer when one is supplied and available.</summary>
     public static class ContentAnalyzer
     {
-        /// <summary>Counts the text passages <see cref="RunHeuristics" />/<see cref="AnalyzeAsync" /> would
+        /// <summary>Counts the text passages <see cref="RunHeuristics(WebElementInfo)" />/<see cref="AnalyzeAsync" /> would
         /// consider for <paramref name="dom" />, without running any check. A page-scan report can record
         /// this alongside its issue count: zero passages on a page that should have visible text usually
         /// means the DOM was captured before dynamic content rendered, not that the page is clean.</summary>
@@ -29,15 +29,27 @@ namespace AutomationSandbox.ContentAnalysis
         /// <summary>Runs only the zero-dependency heuristic checks.</summary>
         public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)
         {
+            return RunHeuristics(dom, null);
+        }
+
+        /// <summary>Runs only the zero-dependency heuristic checks. A repeated word that appears in
+        /// <paramref name="allowedWords" /> (compared ignoring case) is not reported: some languages repeat a
+        /// word on purpose, for example Turkish <c>adım adım</c> ("step by step"), and the heuristic cannot know
+        /// a language.</summary>
+        public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom, IEnumerable<string>? allowedWords)
+        {
             if (dom == null)
             {
                 throw new ArgumentNullException(nameof(dom));
             }
 
+            var allowed = allowedWords == null
+                ? null
+                : new HashSet<string>(allowedWords, StringComparer.OrdinalIgnoreCase);
             var issues = new List<ContentIssue>();
             foreach (var passage in ExtractPassages(dom))
             {
-                issues.AddRange(HeuristicContentChecks.Check(passage));
+                issues.AddRange(HeuristicContentChecks.Check(passage, allowed));
             }
 
             return issues;
@@ -171,7 +183,7 @@ namespace AutomationSandbox.ContentAnalysis
                 var duplicatesAChild = node.Children.Exists(child => child.Text == text);
                 if (!node.IsHidden && !HasUnreliableOwnText(node.TagName) && !string.IsNullOrWhiteSpace(text) && !duplicatesAChild && seenText.Add(text))
                 {
-                    passages.Add(new ContentPassage(node.CssSelector, text));
+                    passages.Add(new ContentPassage(node.CssSelector, text, FlowTextOf(node)));
                 }
 
                 foreach (var child in node.Children)
@@ -192,6 +204,82 @@ namespace AutomationSandbox.ContentAnalysis
         // SVG elements have no innerText, so the capture uses textContent, which for the root <svg> includes
         // the source of any <style> inside it (a mermaid diagram embeds a few thousand characters of CSS). The
         // root's own text is therefore not prose; its children (the <text> labels) are still visited.
+        // Elements that start a new block or a new widget. The capture collapses all whitespace to single
+        // spaces, so the boundary between two table cells, two list items or a heading and the paragraph
+        // after it is invisible in the text; the tree is the only place it is still known. Inline elements
+        // (a, span, b, em ...) are deliberately absent: <p>Click <b>the</b> the button</p> is one sentence
+        // and its repeat is a real typo.
+        private static readonly HashSet<string> BlockTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "address", "article", "aside", "blockquote", "body", "button", "dd", "details", "div", "dl", "dt",
+            "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "header",
+            "label", "li", "main", "nav", "ol", "option", "p", "section", "summary", "table", "tbody", "td",
+            "tfoot", "th", "thead", "tr", "ul",
+        };
+
+        // The node's text with each visible block-level child's text replaced by a line break. A child whose
+        // text cannot be found in the parent's (the capture cut the parent shorter) is left in place.
+        internal static string FlowTextOf(WebElementInfo node)
+        {
+            var text = node.Text;
+            if (string.IsNullOrEmpty(text) || node.Children.Count == 0)
+            {
+                return text;
+            }
+
+            var flow = new System.Text.StringBuilder();
+            var position = 0;
+            foreach (var child in node.Children)
+            {
+                if (child.IsHidden || string.IsNullOrEmpty(child.Text) || !BlockTags.Contains(child.TagName))
+                {
+                    continue;
+                }
+
+                var index = text.IndexOf(child.Text, position, StringComparison.Ordinal);
+                var length = child.Text.Length;
+                if (index < 0)
+                {
+                    // The capture cuts a long page at a character limit, so the parent can end partway into this
+                    // child while the child's own text (it starts later, so it fits longer) runs on. Then the
+                    // end of the parent is the beginning of the child.
+                    index = FindTruncatedChild(text, position, child.Text);
+                    if (index < 0)
+                    {
+                        continue;
+                    }
+
+                    length = text.Length - index;
+                }
+
+                flow.Append(text, position, index - position).Append('\n');
+                position = index + length;
+            }
+
+            flow.Append(text, position, text.Length - position);
+            return flow.ToString();
+        }
+
+        // The earliest index at which the rest of the parent's text is the beginning of the child's text, or -1.
+        // A tail shorter than four characters is too weak a match to trust.
+        private static int FindTruncatedChild(string text, int position, string childText)
+        {
+            if (text.Length - position > childText.Length)
+            {
+                return -1;
+            }
+
+            for (var index = position; text.Length - index >= 4; index++)
+            {
+                if (childText.StartsWith(text.Substring(index), StringComparison.Ordinal))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
         private static bool HasUnreliableOwnText(string tagName)
         {
             return string.Equals(tagName, "svg", StringComparison.OrdinalIgnoreCase);
