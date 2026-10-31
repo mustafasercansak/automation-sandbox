@@ -1311,7 +1311,7 @@
       "protected override HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
       "protected override string ExtractText(string responseBody)",
       "protected override string UnavailableErrorMessage { get; }",
-      "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null, bool requireApiKey = true)",
       "public override bool IsAvailable { get; }"
     ]
   },

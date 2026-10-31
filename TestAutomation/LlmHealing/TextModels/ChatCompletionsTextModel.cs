@@ -16,10 +16,12 @@ namespace AutomationSandbox.LlmHealing
         private readonly string _apiKey;
         private readonly string _model;
         private readonly Uri _url;
+        private readonly bool _requireApiKey;
 
         /// <summary>Creates a model. <paramref name="endpoint" /> is either the base URL (<c>/chat/completions</c> is
         /// appended) or the full URL. Plain http is accepted only for a loopback host, so a key is never sent in
-        /// clear text across a network.</summary>
+        /// clear text across a network. <paramref name="requireApiKey" /> is true for every hosted service; only a local
+        /// daemon that has no key (Ollama) passes false, and then no <c>Authorization</c> header is sent.</summary>
         public ChatCompletionsTextModel(
             string name,
             string? apiKey,
@@ -29,7 +31,8 @@ namespace AutomationSandbox.LlmHealing
             TimeSpan? timeout = null,
             TimeSpan? totalTimeout = null,
             int maxRetries = 2,
-            Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+            Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+            bool requireApiKey = true)
             : base(name, httpClient, timeout, totalTimeout, maxRetries, delayAsync)
         {
             if (string.IsNullOrWhiteSpace(model))
@@ -38,12 +41,13 @@ namespace AutomationSandbox.LlmHealing
             }
 
             _apiKey = apiKey?.Trim() ?? "";
+            _requireApiKey = requireApiKey;
             _model = model.Trim();
             _url = BuildUrl(endpoint);
         }
 
         /// <inheritdoc />
-        public override bool IsAvailable => _apiKey.Length > 0;
+        public override bool IsAvailable => !_requireApiKey || _apiKey.Length > 0;
 
         /// <inheritdoc />
         protected override string UnavailableErrorMessage => $"{Name}: no API key is configured.";
@@ -91,7 +95,11 @@ namespace AutomationSandbox.LlmHealing
             {
                 Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
             };
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            if (_apiKey.Length > 0)
+            {
+                message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            }
+
             return message;
         }
 
