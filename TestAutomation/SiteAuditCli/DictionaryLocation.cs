@@ -14,9 +14,10 @@ namespace AutomationSandbox.SiteAuditCli
         public const string PinnedCommit = "8cfea406b505e4d7df52d5a19bce525df98c54ab";
 
         // Language codes such as "en", "tr", "en-GB", "pt-PT". The pattern has no dot, slash or backslash,
-        // so a value can never name a path outside the dictionary directory.
+        // so a value can never name a path outside the dictionary directory. Anchored with \A and \z, not ^ and $:
+        // in .NET $ also matches before a trailing newline, which would accept "en\n" (#573).
         private static readonly Regex LanguageCode = new Regex(
-            "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$", RegexOptions.Compiled);
+            @"\A[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?\z", RegexOptions.Compiled);
 
         public static bool IsValidLanguageCode(string? language)
         {

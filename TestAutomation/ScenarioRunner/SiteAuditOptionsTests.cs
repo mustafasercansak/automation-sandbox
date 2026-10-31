@@ -124,6 +124,29 @@ namespace ScenarioRunner
             Assert.Equal(expected, DictionaryLocation.IsValidLanguageCode(language));
         }
 
+        // #573: in .NET "$" also matches before a trailing newline, so an unanchored pattern accepted "en\n".
+        [Theory]
+        [InlineData("en\n")]
+        [InlineData("en\r\n")]
+        [InlineData("en-GB\n")]
+        [InlineData("en ")]
+        [InlineData(" en")]
+        [InlineData("\nen")]
+        [InlineData("en\0")]
+        public void DictionaryLocation_RejectsALanguageCodeWithWhitespaceOrAControlCharacter(string language)
+        {
+            Assert.False(DictionaryLocation.IsValidLanguageCode(language));
+            Assert.Throws<ArgumentException>(() => DictionaryLocation.RemoteUrl(language, "dic"));
+            Assert.Throws<ArgumentException>(() => DictionaryLocation.LocalBasePath("dir", language));
+        }
+
+        [Fact]
+        public void DictionaryLocation_StillAcceptsRegionalAndScriptSubtags()
+        {
+            Assert.True(DictionaryLocation.IsValidLanguageCode("zh-Hans"));
+            Assert.True(DictionaryLocation.IsValidLanguageCode("pt-BR"));
+        }
+
         [Fact]
         public void DictionaryLocation_RejectsANullLanguage()
         {
