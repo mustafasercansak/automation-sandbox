@@ -132,9 +132,12 @@ Every remaining public type is listed below. Setter counts are after the change.
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `SiteCrawlFailure` | 2 | Keep editable: one failed page `SiteCrawler.CrawlAsync` recorded; callers may adjust fields when composing a custom failure report. |
-| PlaywrightLiveExploration / `SiteCrawlOptions` | 3 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
-| PlaywrightLiveExploration / `SiteCrawlResult` | 3 | Keep editable: `SiteCrawler.CrawlAsync` accumulates visited, skipped, and failed URLs as the breadth-first walk proceeds. |
+| PlaywrightLiveExploration / `SiteCrawlOptions` | 8 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
+| PlaywrightLiveExploration / `SiteCrawlResult` | 5 | Keep editable: `SiteCrawler.CrawlAsync` accumulates visited, skipped, failed, robots-blocked and sitemap-seeded URLs as the breadth-first walk proceeds. |
+| PlaywrightLiveExploration / `SitemapDocument` | 2 | Keep editable: the page and sitemap URLs one `SitemapParser.Parse` call read; callers may filter them before queueing. |
+| PlaywrightLiveExploration / `SitemapParser` | 0 | Retain public: supported operation; no public setter to remove. |
 | PlaywrightLiveExploration / `SiteCrawler` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| PlaywrightLiveExploration / `RobotsTxt` | 0 | Retain public: an immutable parsed file; construction goes through `Parse`, no public setter to remove. |
 | PlaywrightLiveExploration / `WebConsoleMessage` | 0 | Freeze two properties: one console message observed during a live session, never mutated after capture. |
 | PlaywrightLiveExploration / `WebNetworkResponse` | 0 | Freeze two properties: one network response observed during a live session, never mutated after capture. |
 | PlaywrightLiveExploration / `WebRequestFailure` | 0 | Freeze two properties: one failed request observed during a live session, never mutated after capture. |

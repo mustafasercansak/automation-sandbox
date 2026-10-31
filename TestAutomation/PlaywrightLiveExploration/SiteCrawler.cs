@@ -52,6 +52,53 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             queue.Enqueue((startUrl, 0));
             var previousAttemptFailed = false;
 
+            var fetchText = effectiveOptions.TextFetcher ??
+                ((url, ct) => SiteCrawlTextFetcher.FetchAsync(url, effectiveOptions.RobotsUserAgent, ct));
+            var robots = RobotsTxt.AllowAll;
+            var origin = startUri.GetLeftPart(UriPartial.Authority);
+            if (effectiveOptions.RespectRobotsTxt || effectiveOptions.SeedFromSitemap)
+            {
+                robots = RobotsTxt.Parse(await fetchText(origin + "/robots.txt", cancellationToken).ConfigureAwait(false));
+            }
+
+            bool Blocked(Uri uri) => effectiveOptions.RespectRobotsTxt &&
+                !robots.IsAllowed(effectiveOptions.RobotsUserAgent, uri.PathAndQuery);
+
+            if (Blocked(startUri))
+            {
+                result.BlockedByRobotsUrls.Add(startUrl);
+                return result;
+            }
+
+            var crawlDelay = effectiveOptions.RespectRobotsTxt
+                ? robots.GetCrawlDelaySeconds(effectiveOptions.RobotsUserAgent)
+                : null;
+            if (effectiveOptions.SeedFromSitemap)
+            {
+                foreach (var seed in await ReadSitemapAsync(origin, robots, fetchText, cancellationToken).ConfigureAwait(false))
+                {
+                    if (!Uri.TryCreate(seed, UriKind.Absolute, out var seedUri) ||
+                        (effectiveOptions.SameOriginOnly && !SameOrigin(startUri, seedUri)))
+                    {
+                        continue;
+                    }
+
+                    if (Blocked(seedUri))
+                    {
+                        result.BlockedByRobotsUrls.Add(seed);
+                        continue;
+                    }
+
+                    if (queued.Add(Normalize(seedUri)))
+                    {
+                        queue.Enqueue((seed, 1));
+                        result.SitemapSeededUrls.Add(seed);
+                    }
+                }
+            }
+
+            var attempts = 0;
+
             while (queue.Count > 0 && result.VisitedUrls.Count < effectiveOptions.MaxPages)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -66,6 +113,12 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                 if (previousAttemptFailed)
                 {
                     await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (attempts++ > 0 && crawlDelay > 0)
+                {
+                    var pause = Math.Min(crawlDelay.Value, effectiveOptions.MaxCrawlDelaySeconds);
+                    await Task.Delay(TimeSpan.FromSeconds(pause), cancellationToken).ConfigureAwait(false);
                 }
 
                 WebElementInfo dom;
@@ -108,6 +161,16 @@ namespace AutomationSandbox.PlaywrightLiveExploration
                         continue;
                     }
 
+                    if (Blocked(linkUri))
+                    {
+                        if (!result.BlockedByRobotsUrls.Contains(link))
+                        {
+                            result.BlockedByRobotsUrls.Add(link);
+                        }
+
+                        continue;
+                    }
+
                     var normalized = Normalize(linkUri);
                     if (!queued.Add(normalized))
                     {
@@ -119,6 +182,48 @@ namespace AutomationSandbox.PlaywrightLiveExploration
             }
 
             return result;
+        }
+
+        private const int MaxSitemapDocuments = 10;
+        private const int MaxSitemapUrls = 1000;
+
+        // Sitemap files are untrusted: a bounded number of documents and URLs, and a file that cannot be
+        // fetched or parsed is skipped instead of failing the crawl.
+        private static async Task<List<string>> ReadSitemapAsync(
+            string origin,
+            RobotsTxt robots,
+            Func<string, CancellationToken, Task<string?>> fetchText,
+            CancellationToken cancellationToken)
+        {
+            var pending = new Queue<string>(robots.Sitemaps.Count > 0 ? robots.Sitemaps : new[] { origin + "/sitemap.xml" });
+            var fetched = new HashSet<string>(StringComparer.Ordinal);
+            var urls = new List<string>();
+            while (pending.Count > 0 && fetched.Count < MaxSitemapDocuments && urls.Count < MaxSitemapUrls)
+            {
+                var sitemapUrl = pending.Dequeue();
+                if (!fetched.Add(sitemapUrl))
+                {
+                    continue;
+                }
+
+                var document = SitemapParser.Parse(await fetchText(sitemapUrl, cancellationToken).ConfigureAwait(false));
+                foreach (var child in document.SitemapUrls)
+                {
+                    pending.Enqueue(child);
+                }
+
+                foreach (var page in document.PageUrls)
+                {
+                    if (urls.Count >= MaxSitemapUrls)
+                    {
+                        break;
+                    }
+
+                    urls.Add(page);
+                }
+            }
+
+            return urls;
         }
 
         private static bool SameOrigin(Uri a, Uri b)
