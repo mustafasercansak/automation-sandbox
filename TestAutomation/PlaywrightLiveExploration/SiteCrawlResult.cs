@@ -14,6 +14,12 @@ namespace AutomationSandbox.PlaywrightLiveExploration
         /// rather than aborting the whole run, so a site with one dead link doesn't lose every other page's
         /// findings.</summary>
         public List<SiteCrawlFailure> Failures { get; set; } = new List<SiteCrawlFailure>();
+        /// <summary>URLs the crawl found but did not visit because <c>robots.txt</c> disallows them for the
+        /// configured user agent. Always empty unless <see cref="SiteCrawlOptions.RespectRobotsTxt" /> is on.</summary>
+        public List<string> BlockedByRobotsUrls { get; set; } = new List<string>();
+        /// <summary>Page URLs read from the sitemap and queued. Always empty unless
+        /// <see cref="SiteCrawlOptions.SeedFromSitemap" /> is on.</summary>
+        public List<string> SitemapSeededUrls { get; set; } = new List<string>();
     }
 
     /// <summary>One page the crawler could not navigate to or capture.</summary>
