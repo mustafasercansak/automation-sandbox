@@ -115,10 +115,28 @@ Every remaining public type is listed below. Setter counts are after the change.
 | IntentExecution / `IntentStepExecutionResult` | 0 | Freeze four properties: records one step's execution outcome, constructed once by `IntentWebExecutor` and never mutated. |
 | IntentExecution / `IntentWebExecutionResult` | 3 | Keep editable: the executor assembles Scenario and appends each step's result as execution proceeds, then sets Success once the run completes or stops. |
 | IntentExecution / `IntentWebExecutor` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentIssueIntake` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentIssueIntakeResult` | 0 | Freeze: the outcome of one intake check, read-only. |
+| LlmHealing / `AgentIssueGate` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentLabels` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `BoardReadOutcome` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `BoardStatusResult` | 0 | Freeze: the outcome of one board read, read-only. |
+| LlmHealing / `ChatCompletionsTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `ClaudeHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ClaudeTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `GeminiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `GeminiTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `GateDecision` | 0 | Freeze: the gate's answer for one issue, read-only. |
+| LlmHealing / `GateReasons` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `GitHubIssueReader` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `GitHubIssueReadResult` | 0 | Freeze: the outcome of one read, read-only. |
 | LlmHealing / `HttpLlmHealingProvider` | 3 | Keep tunables mutable: sanitizer and batch timeout overrides are deliberate provider-instance configuration. |
+| LlmHealing / `HttpTextModel` | 1 | Keep tunable mutable: the sanitizer is deliberate model-instance configuration, like the healing providers' sanitizer. |
 | LlmHealing / `ILlmHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueTriage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueTriageResult` | 0 | Freeze: the outcome of one triage call, read-only. |
+| LlmHealing / `IssueSnapshot` | 0 | Freeze: a fixed picture of an issue the gate decides on, so a label that changes afterwards cannot change an answer already given. |
+| LlmHealing / `ITextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingEvaluator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingPrompt` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingResult` | 9 | Keep editable: custom ILlmHealingProvider implementations create proposals; the transport adds elapsed/attempt diagnostics after parsing. |
@@ -128,6 +146,21 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `LlmProviderFactory` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OllamaHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OpenAiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ReviewVerdict` | 0 | Freeze: what a reviewer said, read-only so a finding cannot be edited into an approval. |
+| LlmHealing / `ReviewVerdictParser` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ProjectBoardReader` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextCompletionRequest` | 0 | Freeze: validated in its constructor and read-only afterwards; a request is never edited after it is created. |
+| LlmHealing / `TextCompletionResult` | 6 | Keep editable: custom ITextModel implementations build results, and the shared HTTP base adds elapsed and attempt diagnostics after parsing. |
+| LlmHealing / `TextModelRegistry` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextModelRoutingConfig` | 0 | Freeze: parsed once from a file and read-only afterwards; changing the rules of a running task would defeat the label gate. |
+| LlmHealing / `TextModelRoutingResult` | 0 | Freeze: the outcome of one routing call; the drafter, reviewer and problems are never edited afterwards. |
+| LlmHealing / `TextModelRouter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextTaskDefault` | 0 | Freeze: one default read from the configuration file; read-only. |
+| LlmHealing / `TextTaskKinds` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageOutcome` | 0 | Freeze: the outcome of one triage run, read-only. |
+| LlmHealing / `TriagePipeline` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageStatus` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageProposal` | 0 | Freeze: a validated proposal for a human to read; never edited afterwards. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
