@@ -8,7 +8,14 @@ namespace AutomationSandbox.ContentAnalysis
     // on real UI copy rather than flagging legitimate text that merely looks similar.
     internal static class HeuristicContentChecks
     {
-        private static readonly Regex DuplicateWord = new(@"\b(\w+)\s+\1\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // A typo is a repeat inside one run of prose, so the two words must be separated by plain
+        // spaces only. Captured text is innerText, which puts a tab between table cells and a newline
+        // between rows, list items and blocks: "No<TAB>No" is two cells that happen to hold the same word,
+        // not a mistake. The word must start with a letter (a repeated number is never a typo) and must
+        // not run on into more word characters or a file extension ("expected expected.json").
+        private static readonly Regex DuplicateWord = new(
+            @"(?<![\p{L}\p{N}_.])(?<first>\p{L}[\p{L}\p{N}_'\u2019]*)[ \u00A0\u202F]+(?<second>\k<first>)(?![\p{L}\p{N}_'\u2019]|\.[\p{L}\p{N}])",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex PlaceholderMarker = new(
             @"\b(TODO|TBD|XXX|NaN|undefined)\b|lorem ipsum|\[object Object\]",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -22,12 +29,12 @@ namespace AutomationSandbox.ContentAnalysis
                 yield break;
             }
 
-            var duplicateMatch = DuplicateWord.Match(text);
-            if (duplicateMatch.Success)
+            var duplicate = FindDuplicateWord(text);
+            if (duplicate != null)
             {
                 yield return new ContentIssue(
                     passage.CssSelector, text, "DuplicateWord",
-                    $"Repeated word \"{duplicateMatch.Groups[1].Value}\".", ContentIssueSource.Heuristic);
+                    $"Repeated word \"{duplicate}\".", ContentIssueSource.Heuristic);
             }
 
             var placeholderMatch = PlaceholderMarker.Match(text);
@@ -45,6 +52,37 @@ namespace AutomationSandbox.ContentAnalysis
                     passage.CssSelector, text, "RepeatedPunctuation",
                     $"Repeated punctuation (\"{punctuationMatch.Value}\").", ContentIssueSource.Heuristic);
             }
+        }
+
+        // The first repeat that is not an identifier. A name with a capital inside it ("HealResult
+        // healResult", "MaxRetries maxRetries") is code written in prose, and the two spellings differ
+        // only by case, so the case-insensitive match would otherwise call it a typo.
+        private static string? FindDuplicateWord(string text)
+        {
+            foreach (Match match in DuplicateWord.Matches(text))
+            {
+                var first = match.Groups["first"].Value;
+                var second = match.Groups["second"].Value;
+                if (!HasInternalCapital(first) && !HasInternalCapital(second))
+                {
+                    return first;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasInternalCapital(string word)
+        {
+            for (var i = 1; i < word.Length; i++)
+            {
+                if (char.IsUpper(word[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

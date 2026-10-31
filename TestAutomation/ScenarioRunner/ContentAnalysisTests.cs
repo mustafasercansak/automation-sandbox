@@ -32,6 +32,64 @@ namespace ScenarioRunner
             Assert.Empty(issues);
         }
 
+        // #550: the first audit of the project's own docs produced 32 DuplicateWord findings and none was
+        // a defect. Each group below is one of those findings, taken from the real text.
+        [Theory]
+        [InlineData("No\tNo")]
+        [InlineData("Capability\tCapability\tStatus")]
+        [InlineData("Gemini\nGemini API")]
+        [InlineData("OpenAI\nOpenAI API data controls")]
+        public void RunHeuristics_DoesNotFlagTheSameWordInNeighbouringCellsOrListItems(string text)
+        {
+            // innerText separates table cells with a tab and rows, list items and blocks with a newline.
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Leaf("table", text)));
+        }
+
+        [Theory]
+        [InlineData("29 29")]
+        [InlineData("9 / 9 9 / 9")]
+        [InlineData("MaxRetries 2 2")]
+        public void RunHeuristics_DoesNotFlagARepeatedNumber(string text)
+        {
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Leaf("td", text)));
+        }
+
+        [Theory]
+        [InlineData("HealResult healResult")]
+        [InlineData("Use maxRetries MaxRetries here")]
+        [InlineData("Pass expected expected.json to the tool")]
+        public void RunHeuristics_DoesNotFlagCodeNamesThatRepeatIgnoringCase(string text)
+        {
+            Assert.Empty(ContentAnalyzer.RunHeuristics(Leaf("p", text)));
+        }
+
+        [Theory]
+        [InlineData("Please click the the button", "the")]
+        [InlineData("The the cat sat down.", "The")]
+        [InlineData("It was very very", "very")]
+        [InlineData("Click the the.", "the")]
+        [InlineData("It\u00A0was the\u00A0the end", "the")]
+        public void RunHeuristics_StillFlagsARealRepeatedWord(string text, string repeated)
+        {
+            var issue = Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("p", text)));
+            Assert.Equal("DuplicateWord", issue.IssueType);
+            Assert.Contains($"\"{repeated}\"", issue.Message);
+        }
+
+        [Fact]
+        public void RunHeuristics_FlagsARealRepeatEvenWhenAnIdentifierRepeatComesFirst()
+        {
+            var issue = Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("p", "HealResult healResult is is wrong")));
+            Assert.Contains("\"is\"", issue.Message);
+        }
+
+        [Fact]
+        public void RunHeuristics_FlagsARepeatedWordInsideOneCell_ButNotAcrossCells()
+        {
+            var issue = Assert.Single(ContentAnalyzer.RunHeuristics(Leaf("tr", "No\tclick the the button")));
+            Assert.Contains("\"the\"", issue.Message);
+        }
+
         [Fact]
         public void RunHeuristics_FlagsLeftoverPlaceholderMarker()
         {
