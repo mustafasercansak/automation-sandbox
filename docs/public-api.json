@@ -99,6 +99,7 @@
     "Members": [
       "public static IReadOnlyList<ContentIssue> CollapseInheritedIssues(IReadOnlyList<ContentIssue> issues)",
       "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom)",
+      "public static IReadOnlyList<ContentIssue> RunHeuristics(WebElementInfo dom, IEnumerable<string>? allowedWords)",
       "public static IReadOnlyList<ContentIssue> RunSpellCheck( WebElementInfo dom, SpellingChecker spellingChecker, int? capturedTextLimit = null)",
       "public static async Task<IReadOnlyList<ContentIssue>> AnalyzeAsync( WebElementInfo dom, IContentAnalysisProvider? llmProvider = null, CancellationToken cancellationToken = default)",
       "public static int CountPassages(WebElementInfo dom)"
@@ -150,8 +151,9 @@
       "TestAutomation/ContentAnalysis/ContentPassage.cs"
     ],
     "Members": [
-      "public ContentPassage(string cssSelector, string text)",
+      "public ContentPassage(string cssSelector, string text, string? flowText = null)",
       "public string CssSelector { get; }",
+      "public string FlowText { get; }",
       "public string Text { get; }"
     ]
   },
