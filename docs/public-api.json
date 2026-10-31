@@ -1458,6 +1458,24 @@
   },
   {
     "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.RobotsTxt",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class RobotsTxt"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/RobotsTxt.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Sitemaps { get; }",
+      "public bool IsAllowed(string userAgent, string pathAndQuery)",
+      "public double? GetCrawlDelaySeconds(string userAgent)",
+      "public static RobotsTxt AllowAll { get; }",
+      "public static RobotsTxt Parse(string? content)"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
     "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlFailure",
     "PublicMutableProperties": 2,
     "Declarations": [
@@ -1474,7 +1492,7 @@
   {
     "Package": "PlaywrightLiveExploration",
     "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlOptions",
-    "PublicMutableProperties": 4,
+    "PublicMutableProperties": 9,
     "Declarations": [
       "public sealed class SiteCrawlOptions"
     ],
@@ -1482,16 +1500,21 @@
       "TestAutomation/PlaywrightLiveExploration/SiteCrawlOptions.cs"
     ],
     "Members": [
+      "public Func<string, CancellationToken, Task<string?>>? TextFetcher { get; set; }",
       "public WebDiscoveryOptions? DiscoveryOptions { get; set; }",
+      "public bool RespectRobotsTxt { get; set; }",
       "public bool SameOriginOnly { get; set; }",
+      "public bool SeedFromSitemap { get; set; }",
+      "public double MaxCrawlDelaySeconds { get; set; }",
       "public int MaxDepth { get; set; }",
-      "public int MaxPages { get; set; }"
+      "public int MaxPages { get; set; }",
+      "public string RobotsUserAgent { get; set; }"
     ]
   },
   {
     "Package": "PlaywrightLiveExploration",
     "Type": "AutomationSandbox.PlaywrightLiveExploration.SiteCrawlResult",
-    "PublicMutableProperties": 3,
+    "PublicMutableProperties": 5,
     "Declarations": [
       "public sealed class SiteCrawlResult"
     ],
@@ -1500,6 +1523,8 @@
     ],
     "Members": [
       "public List<SiteCrawlFailure> Failures { get; set; }",
+      "public List<string> BlockedByRobotsUrls { get; set; }",
+      "public List<string> SitemapSeededUrls { get; set; }",
       "public List<string> SkippedUrls { get; set; }",
       "public List<string> VisitedUrls { get; set; }"
     ]
@@ -1516,6 +1541,35 @@
     ],
     "Members": [
       "public static async Task<SiteCrawlResult> CrawlAsync( PlaywrightWebSession session, string startUrl, SiteCrawlOptions? options = null, Func<string, WebElementInfo, CancellationToken, Task>? onPageCaptured = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SitemapDocument",
+    "PublicMutableProperties": 2,
+    "Declarations": [
+      "public sealed class SitemapDocument"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SitemapParser.cs"
+    ],
+    "Members": [
+      "public List<string> PageUrls { get; set; }",
+      "public List<string> SitemapUrls { get; set; }"
+    ]
+  },
+  {
+    "Package": "PlaywrightLiveExploration",
+    "Type": "AutomationSandbox.PlaywrightLiveExploration.SitemapParser",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class SitemapParser"
+    ],
+    "Files": [
+      "TestAutomation/PlaywrightLiveExploration/SitemapParser.cs"
+    ],
+    "Members": [
+      "public static SitemapDocument Parse(string? xml)"
     ]
   },
   {
