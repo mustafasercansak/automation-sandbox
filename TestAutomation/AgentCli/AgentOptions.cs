@@ -19,6 +19,7 @@ namespace AutomationSandbox.AgentCli
         public int Issue { get; private set; }
         public string? ProjectId { get; private set; }
         public string? RoutingFile { get; private set; }
+        public bool Comment { get; private set; }
         public List<string> AllowedLabels { get; } = new List<string>();
 
         public static AgentOptions Parse(string[] args)
@@ -67,6 +68,9 @@ namespace AutomationSandbox.AgentCli
                         break;
                     case "--routing-file":
                         options.RoutingFile = Value(args, ref i, arg);
+                        break;
+                    case "--comment":
+                        options.Comment = true;
                         break;
                     case "--allow-label":
                         options.AllowedLabels.Add(Value(args, ref i, arg));
