@@ -1447,7 +1447,8 @@
     ],
     "Members": [
       "public const int MaxBodyLength;",
-      "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+      "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)",
+      "public static bool IsValidRepository(string? repository)"
     ]
   },
   {
@@ -1780,7 +1781,8 @@
       "TestAutomation/LlmHealing/IssueAutomation/ProjectBoardReader.cs"
     ],
     "Members": [
-      "public static async Task<BoardStatusResult> ReadStatusAsync( string repository, int number, string projectId, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+      "public static async Task<BoardStatusResult> ReadStatusAsync( string repository, int number, string projectId, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)",
+      "public static bool IsValidProjectId(string? projectId)"
     ]
   },
   {

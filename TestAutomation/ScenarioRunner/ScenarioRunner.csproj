@@ -15,6 +15,8 @@
          net48 build); compiled in directly so its argument and path-safety rules are unit tested. -->
     <Compile Include="..\SiteAuditCli\DictionaryLocation.cs" Link="SiteAuditCli\DictionaryLocation.cs" />
     <Compile Include="..\SiteAuditCli\AuditOptions.cs" Link="SiteAuditCli\AuditOptions.cs" />
+    <Compile Include="..\AgentCli\AgentOptions.cs" Link="AgentCli\AgentOptions.cs" />
+    <Compile Include="..\AgentCli\AgentCommand.cs" Link="AgentCli\AgentCommand.cs" />
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\spelling\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

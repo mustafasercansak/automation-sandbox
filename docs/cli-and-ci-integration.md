@@ -127,6 +127,19 @@ jobs:
 - Because the tool is not on nuget.org yet, the action builds it from its own repository checkout, so the tool version is exactly the one at the ref you pin the action to. Pin a tag or commit SHA rather than `@main` for a reproducible audit. That build adds about a minute. Once a version is published, `version:` installs it instead.
 - It audits the site as served, so it covers what a browser sees: run it after a deploy, or on a schedule against production. Chromium is installed by the tool; a self-hosted runner without the browser's system libraries needs them installed first.
 
+### Triaging an Issue from the Command Line: `automation-sandbox-agent`
+
+`automation-sandbox-agent triage` (#585) runs one GitHub issue through the issue-triage agent described in the [LLM provider guide](llm-providers.md): it reads the issue and its project board card, applies the `Agent::` label gate, routes the models from the issue's `Model::<name>` and `Review::<name>` labels, drafts a triage proposal and lets a second model check it. It is read-only: it changes no label, comment or card. The report is JSON on stdout; diagnostics go to stderr.
+
+```sh
+export PROJECT_TOKEN=$(gh auth token)      # read access to the project and its issues
+export GEMINI_API_KEY=...                  # the drafting model
+export MISTRAL_API_KEY=... MISTRAL_MODEL=mistral-medium-2508   # the reviewer
+automation-sandbox-agent triage --repo owner/name --issue 7 --project-id PVT_xxxx
+```
+
+Keys and tokens are read from environment variables only, never from an argument (an argument reaches the shell history and the process list); a flag that looks like one is rejected and never echoed. The issue needs `Agent::Allowed`, one `Task::issue-triage` label and the `Ready` column of the board; the `ci-failure` and `docs` task kinds are not implemented yet and are reported as such. Exit codes: `0` the proposal was accepted, `1` the issue is not eligible, routing stopped, or the proposal was blocked or failed (the report says why), `2` the command could not run (bad arguments, no token, no model). Packing, installing and these exit codes are checked in CI; the path from an issue to a proposal is covered by unit tests with a stub GitHub and fake models. No real model has been run through it yet, so how a real model behaves on a hostile issue is not shown.
+
 ### Why a CLI, Not Just the Library
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled adapter) and wants to call the resolver in-process. The CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
@@ -255,6 +268,19 @@ jobs:
 - Varsayılan olarak bir şey bulunursa job başarısız olur. Yalnızca raporlamak için `fail-on-findings: 'false'` verin ve `issue-count` ile `exit-code` çıktılarını okuyarak dallanın. Çalıştırılamayan bir tarama (hatalı URL, eksik sözlük) her zaman başarısız olur; bozuk bir tarama hiçbir zaman temiz bir site gibi görünmez.
 - Araç henüz nuget.org'da olmadığından action onu kendi depo checkout'undan derler; yani araç sürümü, action'ı sabitlediğiniz ref'teki sürümdür. Tekrarlanabilir bir tarama için `@main` yerine bir etiket veya commit SHA'sı sabitleyin. Bu derleme yaklaşık bir dakika ekler. Bir sürüm yayımlandığında `version:` onu kurar.
 - Siteyi sunulduğu haliyle tarar, yani bir tarayıcının gördüğünü kapsar: yayına almadan sonra veya üretime karşı zamanlanmış olarak çalıştırın. Chromium'u araç kurar; tarayıcının sistem kütüphaneleri olmayan bir self-hosted runner'da önce onların kurulması gerekir.
+
+### Komut Satırından Bir Issue'yu Sınıflandırmak: `automation-sandbox-agent`
+
+`automation-sandbox-agent triage` (#585), [LLM sağlayıcı rehberinde](llm-providers.md) anlatılan issue sınıflandırma ajanından tek bir GitHub issue'sunu geçirir: issue'yu ve proje panosundaki kartını okur, `Agent::` etiket kapısını uygular, modelleri issue'nun `Model::<ad>` ve `Review::<ad>` etiketlerinden yönlendirir, bir sınıflandırma önerisi üretir ve ikinci bir modelin kontrol etmesini sağlar. Salt okunurdur: hiçbir etiketi, yorumu ya da kartı değiştirmez. Rapor stdout'ta JSON olarak verilir; tanılama iletileri stderr'e gider.
+
+```sh
+export PROJECT_TOKEN=$(gh auth token)      # projeyi ve issue'ları okuma yetkisi
+export GEMINI_API_KEY=...                  # taslağı yazan model
+export MISTRAL_API_KEY=... MISTRAL_MODEL=mistral-medium-2508   # denetçi
+automation-sandbox-agent triage --repo owner/name --issue 7 --project-id PVT_xxxx
+```
+
+Anahtarlar ve token'lar yalnızca ortam değişkenlerinden okunur, asla bir argümandan değil (argüman kabuk geçmişine ve işlem listesine düşer); buna benzeyen bir bayrak reddedilir ve asla geri yazılmaz. Issue'nun `Agent::Allowed` etiketi, bir `Task::issue-triage` etiketi ve panoda `Ready` sütununda olması gerekir; `ci-failure` ve `docs` görev türleri henüz uygulanmamıştır ve öyle raporlanır. Çıkış kodları: `0` öneri kabul edildi, `1` issue uygun değil, yönlendirme durdu ya da öneri engellendi veya başarısız oldu (rapor nedenini söyler), `2` komut çalışamadı (hatalı argüman, token yok, model yok). Paketleme, kurulum ve bu çıkış kodları CI'da denetlenir; bir issue'dan öneriye giden yol, taklit bir GitHub ve sahte modellerle birim testleriyle kapsanır. Henüz gerçek bir model bu araçtan geçirilmedi, yani gerçek bir modelin düşmanca bir issue karşısında nasıl davrandığı gösterilmiş değildir.
 
 ### Neden CLI, Sadece Kütüphane Değil
 
