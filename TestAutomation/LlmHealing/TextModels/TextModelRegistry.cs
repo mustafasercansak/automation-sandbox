@@ -42,9 +42,14 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>Builds the registry from the same environment variables <see cref="LlmProviderFactory" /> reads:
         /// <c>ANTHROPIC_API_KEY</c> (and optional <c>ANTHROPIC_MODEL</c>), <c>GEMINI_API_KEY</c> (and optional
         /// <c>GEMINI_MODEL</c>), <c>OPENAI_API_KEY</c> (and optional <c>OPENAI_MODEL</c>), and the key-plus-required-model
-        /// pairs <c>MISTRAL_API_KEY</c>/<c>MISTRAL_MODEL</c> and <c>NVIDIA_API_KEY</c>/<c>NVIDIA_MODEL</c>. A model whose
-        /// key or required model is missing is left out: a guessed model name would authenticate and then fail every
-        /// request. Cloudflare and Ollama are not included yet.</summary>
+        /// pairs <c>MISTRAL_API_KEY</c>/<c>MISTRAL_MODEL</c>, <c>NVIDIA_API_KEY</c>/<c>NVIDIA_MODEL</c> and
+        /// <c>OLLAMA_CLOUD_API_KEY</c>/<c>OLLAMA_CLOUD_MODEL</c> (<c>OllamaCloud</c>, the hosted endpoint). A local Ollama
+        /// daemon (<c>Ollama</c>) is registered when <c>OLLAMA_MODEL</c> is set; its host is <c>OLLAMA_HOST</c> (default
+        /// <c>http://localhost:11434</c>) and it needs no key. The two Ollama variable sets are separate on purpose: a cloud
+        /// model name must never be pointed at a local daemon. A model whose key or required model is missing is left
+        /// out: a guessed model name would authenticate and then fail every request; so is a local host that is not a
+        /// URL, or is plain http beyond a loopback address, because nothing is sent in clear text across a network.
+        /// Cloudflare is not included yet.</summary>
         public static TextModelRegistry CreateFromEnvironment(HttpClient? httpClient = null, Func<string, string?>? getEnv = null)
         {
             getEnv ??= Environment.GetEnvironmentVariable;
@@ -86,6 +91,26 @@ namespace AutomationSandbox.LlmHealing
             if (nvidiaKey != null && nvidiaModel != null)
             {
                 registry.Add(new ChatCompletionsTextModel("Nvidia", nvidiaKey, nvidiaModel, "https://integrate.api.nvidia.com/v1", httpClient));
+            }
+
+            var ollamaCloudKey = Env("OLLAMA_CLOUD_API_KEY");
+            var ollamaCloudModel = Env("OLLAMA_CLOUD_MODEL");
+            if (ollamaCloudKey != null && ollamaCloudModel != null)
+            {
+                registry.Add(new ChatCompletionsTextModel("OllamaCloud", ollamaCloudKey, ollamaCloudModel, "https://ollama.com/v1", httpClient));
+            }
+
+            var ollamaModel = Env("OLLAMA_MODEL");
+            if (ollamaModel != null)
+            {
+                try
+                {
+                    registry.Add(new ChatCompletionsTextModel("Ollama", null, ollamaModel, (Env("OLLAMA_HOST") ?? "http://localhost:11434").TrimEnd('/') + "/v1", httpClient, requireApiKey: false));
+                }
+                catch (ArgumentException)
+                {
+                    // An unusable host leaves the local model out.
+                }
             }
 
             return registry;

@@ -30,7 +30,8 @@ Environment (keys and tokens are never read from arguments):
   PROJECT_TOKEN            Read access to the project and its issues (required).
   GH_TOKEN / GITHUB_TOKEN  Optional for a public repository; required, with permission to write issue comments, for --comment.
   GEMINI_API_KEY [GEMINI_MODEL], ANTHROPIC_API_KEY [ANTHROPIC_MODEL], OPENAI_API_KEY [OPENAI_MODEL],
-  MISTRAL_API_KEY + MISTRAL_MODEL, NVIDIA_API_KEY + NVIDIA_MODEL: at least one model is required.
+  MISTRAL_API_KEY + MISTRAL_MODEL, NVIDIA_API_KEY + NVIDIA_MODEL, OLLAMA_CLOUD_API_KEY + OLLAMA_CLOUD_MODEL,
+  OLLAMA_MODEL [OLLAMA_HOST] (a local Ollama, no key): at least one model is required.
 
 The issue needs Agent::Allowed, one Task::issue-triage label, and the Ready column on the board. Choose the models with
 Model::<name> (drafting) and Review::<name> (independent review) labels. The report is JSON on stdout; diagnostics go to
@@ -117,7 +118,7 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             var registry = TextModelRegistry.CreateFromEnvironment(httpClient, getEnv);
             if (registry.Models.Count == 0)
             {
-                await stderr.WriteLineAsync("No model is configured. Set at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, MISTRAL_API_KEY with MISTRAL_MODEL, NVIDIA_API_KEY with NVIDIA_MODEL.").ConfigureAwait(false);
+                await stderr.WriteLineAsync("No model is configured. Set at least one of GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, MISTRAL_API_KEY with MISTRAL_MODEL, NVIDIA_API_KEY with NVIDIA_MODEL, OLLAMA_CLOUD_API_KEY with OLLAMA_CLOUD_MODEL, or OLLAMA_MODEL for a local Ollama.").ConfigureAwait(false);
                 return 2;
             }
 
