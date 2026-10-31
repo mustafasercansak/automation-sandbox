@@ -1198,6 +1198,24 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentReportComment",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentReportComment"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentReportComment.cs"
+    ],
+    "Members": [
+      "public const int MaxLength;",
+      "public const string Marker;",
+      "public static string Build(AgentRunReport report)",
+      "public static string ErrorSummary(string? error)",
+      "public static string EscapeInline(string? text)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.AgentRunReport",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1534,6 +1552,35 @@
       "Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
       "bool IsAvailable { get; }",
       "string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueCommentResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueCommentResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueCommentWriter.cs"
+    ],
+    "Members": [
+      "public bool Success { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueCommentWriter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IssueCommentWriter"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueCommentWriter.cs"
+    ],
+    "Members": [
+      "public static async Task<IssueCommentResult> PostAsync( string repository, int number, string token, string body, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
   {
