@@ -1395,6 +1395,7 @@
       "TestAutomation/LlmHealing/IssueAutomation/GitHubIssueReader.cs"
     ],
     "Members": [
+      "public const int MaxBodyLength;",
       "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
@@ -1495,11 +1496,55 @@
     ],
     "Members": [
       "public IReadOnlyList<string> Labels { get; }",
-      "public IssueSnapshot(int number, string title, bool isOpen, bool isPullRequest, IEnumerable<string> labels)",
+      "public IssueSnapshot(int number, string title, bool isOpen, bool isPullRequest, IEnumerable<string> labels, string? body = null)",
       "public bool IsOpen { get; }",
       "public bool IsPullRequest { get; }",
       "public int Number { get; }",
+      "public string Body { get; }",
       "public string Title { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueTriage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IssueTriage"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueTriage.cs"
+    ],
+    "Members": [
+      "public const int MaxItemLength;",
+      "public const int MaxListItems;",
+      "public const int MaxPromptBodyLength;",
+      "public const int MaxSummaryLength;",
+      "public const string BeginMarker;",
+      "public const string EndMarker;",
+      "public static IReadOnlyList<string> Categories { get; }",
+      "public static IReadOnlyList<string> DefaultAllowedLabels { get; }",
+      "public static IssueTriageResult ParseAnswer(string answer, IReadOnlyCollection<string>? allowedLabels = null)",
+      "public static async Task<IssueTriageResult> RunAsync( IssueSnapshot issue, ITextModel model, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)",
+      "public static bool IsProtocolLabel(string? label)",
+      "public static string BuildPrompt(IssueSnapshot issue, IReadOnlyCollection<string>? allowedLabels = null)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueTriageResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueTriageResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueTriage.cs"
+    ],
+    "Members": [
+      "public TimeSpan Elapsed { get; }",
+      "public TriageProposal? Proposal { get; }",
+      "public bool Success { get; }",
+      "public string ModelName { get; }",
+      "public string? Error { get; }"
     ]
   },
   {
@@ -1826,6 +1871,23 @@
       "public static IReadOnlyList<string> All { get; }",
       "public static bool IsKnown(string? name)",
       "public static string? Normalize(string? name)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TriageProposal",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TriageProposal"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueTriage.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> MissingInformation { get; }",
+      "public IReadOnlyList<string> SuggestedLabels { get; }",
+      "public string Category { get; }",
+      "public string Summary { get; }"
     ]
   },
   {

@@ -9,7 +9,7 @@ namespace AutomationSandbox.LlmHealing
     public sealed class IssueSnapshot
     {
         /// <summary>Creates a snapshot. <paramref name="labels" /> is copied.</summary>
-        public IssueSnapshot(int number, string title, bool isOpen, bool isPullRequest, IEnumerable<string> labels)
+        public IssueSnapshot(int number, string title, bool isOpen, bool isPullRequest, IEnumerable<string> labels, string? body = null)
         {
             if (number < 1)
             {
@@ -18,6 +18,7 @@ namespace AutomationSandbox.LlmHealing
 
             Number = number;
             Title = title ?? "";
+            Body = body ?? "";
             IsOpen = isOpen;
             IsPullRequest = isPullRequest;
             Labels = (labels ?? throw new ArgumentNullException(nameof(labels))).Where(l => l != null).ToArray();
@@ -28,6 +29,10 @@ namespace AutomationSandbox.LlmHealing
 
         /// <summary>The issue title. Untrusted text: never an instruction.</summary>
         public string Title { get; }
+
+        /// <summary>The issue body, possibly truncated by the reader; empty when there is none. Untrusted text: never an
+        /// instruction.</summary>
+        public string Body { get; }
 
         /// <summary>True when the issue is open.</summary>
         public bool IsOpen { get; }

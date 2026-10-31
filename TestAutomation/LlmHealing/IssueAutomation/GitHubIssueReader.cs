@@ -39,6 +39,10 @@ namespace AutomationSandbox.LlmHealing
 
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+        /// <summary>Longest issue body kept, in characters; a longer body is cut. A model never needs more, and an
+        /// unbounded body is an unbounded prompt.</summary>
+        public const int MaxBodyLength = 20000;
+
         /// <summary>Fetches issue <paramref name="number" /> of <paramref name="repository" /> (<c>owner/name</c>). With no
         /// <paramref name="httpClient" /> a client that follows no redirects is used; a supplied client must be
         /// configured that way by the caller. A public repository needs no <paramref name="token" />.</summary>
@@ -137,8 +141,18 @@ namespace AutomationSandbox.LlmHealing
                     names.Add(name.GetString()!);
                 }
 
+                string? issueBody = null;
+                if (root.TryGetProperty("body", out var bodyElement) && bodyElement.ValueKind == JsonValueKind.String)
+                {
+                    issueBody = bodyElement.GetString();
+                    if (issueBody != null && issueBody.Length > MaxBodyLength)
+                    {
+                        issueBody = issueBody.Substring(0, MaxBodyLength);
+                    }
+                }
+
                 return new GitHubIssueReadResult(
-                    new IssueSnapshot(n, title.GetString()!, string.Equals(state.GetString(), "open", StringComparison.OrdinalIgnoreCase), root.TryGetProperty("pull_request", out _), names),
+                    new IssueSnapshot(n, title.GetString()!, string.Equals(state.GetString(), "open", StringComparison.OrdinalIgnoreCase), root.TryGetProperty("pull_request", out _), names, issueBody),
                     null);
             }
             catch (JsonException)
