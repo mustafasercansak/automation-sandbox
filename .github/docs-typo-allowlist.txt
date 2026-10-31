@@ -221,3 +221,10 @@ registrierung
 registrierungsformular
 işğ
 işğç
+
+# Turkish repeats a word on purpose (adım adım = step by step); these words are exempt from the
+# duplicate-word check as well as the spelling check (#550).
+adım
+alan
+tek
+olsa

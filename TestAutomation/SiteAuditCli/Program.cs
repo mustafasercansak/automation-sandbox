@@ -96,7 +96,7 @@ internal static class Program
                 var issues = new List<ContentIssue>();
                 if (!options.NoHeuristics)
                 {
-                    issues.AddRange(ContentAnalyzer.RunHeuristics(dom));
+                    issues.AddRange(ContentAnalyzer.RunHeuristics(dom, options.AllowedWords));
                 }
 
                 issues.AddRange(ContentAnalyzer.RunSpellCheck(dom, spelling, CapturedTextLength));
