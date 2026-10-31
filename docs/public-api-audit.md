@@ -117,6 +117,9 @@ Every remaining public type is listed below. Setter counts are after the change.
 | IntentExecution / `IntentWebExecutor` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueIntake` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueIntakeResult` | 0 | Freeze: the outcome of one intake check, read-only. |
+| LlmHealing / `AgentRunReport` | 0 | Freeze: what one run did and why it stopped, read-only plain data. |
+| LlmHealing / `AgentRunStage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentTriageRun` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueGate` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentLabels` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `BoardReadOutcome` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |

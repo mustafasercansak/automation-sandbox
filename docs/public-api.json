@@ -1198,6 +1198,57 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentRunReport",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class AgentRunReport"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "public AgentRunStage Stage { get; }",
+      "public GateDecision? Gate { get; }",
+      "public IReadOnlyList<string> RoutingProblems { get; }",
+      "public TriageOutcome? Triage { get; }",
+      "public string Summary()",
+      "public string? ReadError { get; }",
+      "public string? TaskKind { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentRunStage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum AgentRunStage"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "Completed",
+      "NotEligible",
+      "RoutingFailed",
+      "UnsupportedTask"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentTriageRun",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentTriageRun"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "public static async Task<AgentRunReport> RunAsync( string repository, int number, string projectId, string projectToken, TextModelRegistry registry, TextModelRoutingConfig? config = null, IReadOnlyCollection<string>? allowedLabels = null, string? issueToken = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.BoardReadOutcome",
     "PublicMutableProperties": 0,
     "Declarations": [
