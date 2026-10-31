@@ -1734,6 +1734,37 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ReviewVerdict",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ReviewVerdict"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/TriageReview.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Findings { get; }",
+      "public bool Ok { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ReviewVerdictParser",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class ReviewVerdictParser"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/TriageReview.cs"
+    ],
+    "Members": [
+      "public const int MaxFindingLength;",
+      "public const int MaxFindings;",
+      "public static ReviewVerdict? Parse(string answer, out string? error)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.TextCompletionRequest",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1875,6 +1906,42 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TriageOutcome",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TriageOutcome"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/TriageReview.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Findings { get; }",
+      "public TriageProposal? Proposal { get; }",
+      "public TriageStatus Status { get; }",
+      "public string? DraftedBy { get; }",
+      "public string? Error { get; }",
+      "public string? ReviewedBy { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TriagePipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class TriagePipeline"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/TriageReview.cs"
+    ],
+    "Members": [
+      "public const string ProposalBeginMarker;",
+      "public const string ProposalEndMarker;",
+      "public static async Task<TriageOutcome> RunAsync( IssueSnapshot issue, TextModelRoutingResult routing, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)",
+      "public static string BuildReviewPrompt(IssueSnapshot issue, TriageProposal proposal)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.TriageProposal",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1888,6 +1955,22 @@
       "public IReadOnlyList<string> SuggestedLabels { get; }",
       "public string Category { get; }",
       "public string Summary { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TriageStatus",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum TriageStatus"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/TriageReview.cs"
+    ],
+    "Members": [
+      "Accepted",
+      "Blocked",
+      "Failed"
     ]
   },
   {
