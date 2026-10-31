@@ -49,7 +49,7 @@ namespace AutomationSandbox.LlmHealing
             HttpClient? httpClient = null,
             CancellationToken cancellationToken = default)
         {
-            if (repository == null || !RepositoryPattern.IsMatch(repository))
+            if (!IsValidRepository(repository))
             {
                 return Fail("The repository must look like owner/name.");
             }
@@ -103,6 +103,12 @@ namespace AutomationSandbox.LlmHealing
                     client.Dispose();
                 }
             }
+        }
+
+        /// <summary>True when <paramref name="repository" /> looks like <c>owner/name</c> and cannot change a request path.</summary>
+        internal static bool IsValidRepository(string? repository)
+        {
+            return repository != null && RepositoryPattern.IsMatch(repository);
         }
 
         private static GitHubIssueReadResult Parse(string body)

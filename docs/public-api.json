@@ -1149,6 +1149,36 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentIssueIntake",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentIssueIntake"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueIntake.cs"
+    ],
+    "Members": [
+      "public static async Task<AgentIssueIntakeResult> CheckAsync( string repository, int number, string projectId, string projectToken, string? issueToken = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentIssueIntakeResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class AgentIssueIntakeResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueIntake.cs"
+    ],
+    "Members": [
+      "public GateDecision Decision { get; }",
+      "public IssueSnapshot? Issue { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.AgentLabels",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1164,6 +1194,38 @@
       "public const string Rejected;",
       "public const string TaskPrefix;",
       "public const string Working;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.BoardReadOutcome",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum BoardReadOutcome"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/ProjectBoardReader.cs"
+    ],
+    "Members": [
+      "Failed",
+      "Found",
+      "NotOnBoard"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.BoardStatusResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class BoardStatusResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/ProjectBoardReader.cs"
+    ],
+    "Members": [
+      "public BoardReadOutcome Outcome { get; }",
+      "public string? Error { get; }",
+      "public string? Status { get; }"
     ]
   },
   {
@@ -1256,6 +1318,7 @@
       "public const string Closed;",
       "public const string Eligible;",
       "public const string InReview;",
+      "public const string IssueUnreadable;",
       "public const string NotAllowed;",
       "public const string ProjectNotReady;",
       "public const string PullRequest;",
@@ -1608,6 +1671,20 @@
       "public static readonly TimeSpan DefaultTotalTimeout;",
       "public static readonly int DefaultMaxRetries;",
       "public string ApiUrl { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ProjectBoardReader",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class ProjectBoardReader"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/ProjectBoardReader.cs"
+    ],
+    "Members": [
+      "public static async Task<BoardStatusResult> ReadStatusAsync( string repository, int number, string projectId, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
   {
