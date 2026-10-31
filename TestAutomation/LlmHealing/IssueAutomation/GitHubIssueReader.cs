@@ -110,7 +110,7 @@ namespace AutomationSandbox.LlmHealing
         }
 
         /// <summary>True when <paramref name="repository" /> looks like <c>owner/name</c> and cannot change a request path.</summary>
-        internal static bool IsValidRepository(string? repository)
+        public static bool IsValidRepository(string? repository)
         {
             return repository != null && RepositoryPattern.IsMatch(repository);
         }

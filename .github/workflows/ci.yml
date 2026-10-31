@@ -479,6 +479,29 @@ jobs:
         shell: pwsh
         run: ./TestAutomation/SiteAuditCli/verify.ps1
 
+  agent-cli:
+    name: Agent CLI
+    runs-on: ubuntu-24.04
+    # Packs and installs the real tool and checks the exit codes that need no network, no key and no token (#585).
+    # The path from an issue to a proposal is covered by the unit tests with a stub GitHub and fake models; a real
+    # run needs real keys and is not made here. SDK 10 is installed next to SDK 8 so a multi-targeted pack is
+    # exercised, as for the other tools.
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack, install, and run the packed tool
+        shell: pwsh
+        run: ./TestAutomation/AgentCli/verify.ps1
+
   site-audit-action:
     name: Site Audit GitHub Action
     runs-on: ubuntu-24.04

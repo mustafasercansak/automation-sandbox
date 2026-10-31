@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Same condition the libraries use: net10.0 is added only when an SDK 10 builds this. -->
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AutomationSandbox.AgentCli</RootNamespace>
+
+    <!-- No GenerateDocumentationFile: the public surface is the command line and its JSON report, not a C# API
+         (same reasoning as SelfHealingCli and SiteAuditCli). -->
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>automation-sandbox-agent</ToolCommandName>
+    <PackageId>AutomationSandbox.Agent</PackageId>
+    <Description>Run one GitHub issue through the issue-triage agent from the command line: read the issue and its project board card, apply the Agent label gate, route the models from the issue's labels, draft a triage proposal and let a second model check it. Read-only: it changes no label, comment or card. Keys and tokens come from environment variables only.</Description>
+    <PackageTags>github;issue-triage;llm;cli;dotnet-tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+    <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
+  </ItemGroup>
+
+</Project>
