@@ -141,6 +141,23 @@ was started with - headless or headed, with or without a saved storage state - a
 page the crawl visits, so an authenticated session (`PlaywrightWebSession.StartAsync` with
 `storageStatePath`) crawls behind login for free.
 
+**Crawling a site you do not own (#557).** Set `RespectRobotsTxt = true` and the crawl fetches
+the start origin's `robots.txt` once, never visits a URL it disallows for `RobotsUserAgent`
+(default `AutomationSandbox`), lists those URLs in `result.BlockedByRobotsUrls`, and honours a
+`Crawl-delay` up to `MaxCrawlDelaySeconds` (default 10). The longest matching rule wins and
+`Allow` wins a tie; `*` and a trailing `$` work as in RFC 9309. A missing or unreadable
+`robots.txt` allows everything. `SeedFromSitemap = true` also queues the pages listed in the
+site's sitemap (the `Sitemap:` lines of `robots.txt`, or `/sitemap.xml`), so pages no link
+reaches are visited; at most 10 sitemap files and 1,000 URLs are read, and they still obey
+`MaxPages`, `SameOriginOnly` and `RespectRobotsTxt`. Both options default to off, so existing
+crawls behave exactly as before.
+
+```csharp
+var result = await SiteCrawler.CrawlAsync(session, "https://example.com",
+    new SiteCrawlOptions { RespectRobotsTxt = true, SeedFromSitemap = true, MaxPages = 100 });
+// result.BlockedByRobotsUrls, result.SitemapSeededUrls
+```
+
 See the runnable
 [`samples/SiteContentAuditQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/SiteContentAuditQuickstart)
 sample for the full crawl-then-analyze-then-report flow against either a bundled fixture site
@@ -470,6 +487,25 @@ Gezinemediği veya yakalayamadığı bir sayfa `result.Failures`'a kaydedilir ve
 başlatıldıysa - headless/headed, kayıtlı bir storage state ile veya onsuz - taranan her
 sayfada aynen geçerli olur; yani kimlik doğrulamalı bir oturum
 (`storageStatePath` ile `PlaywrightWebSession.StartAsync`) giriş arkasını ücretsiz tarar.
+
+**Sahibi olmadığınız bir siteyi taramak (#557).** `RespectRobotsTxt = true` verirseniz tarama,
+başlangıç adresinin `robots.txt` dosyasını bir kez alır, `RobotsUserAgent` (varsayılan
+`AutomationSandbox`) için yasaklanan hiçbir adresi ziyaret etmez, bu adresleri
+`result.BlockedByRobotsUrls` içinde listeler ve `Crawl-delay` değerine `MaxCrawlDelaySeconds`
+(varsayılan 10) sınırına kadar uyar. En uzun eşleşen kural kazanır, eşitlikte `Allow` kazanır;
+`*` ve sondaki `$` RFC 9309'daki gibi çalışır. Bulunamayan veya okunamayan bir `robots.txt`
+her şeye izin verir. `SeedFromSitemap = true` ayrıca sitenin site haritasında (`robots.txt`
+içindeki `Sitemap:` satırları, yoksa `/sitemap.xml`) listelenen sayfaları sıraya alır; böylece
+hiçbir bağlantının ulaşmadığı sayfalar da ziyaret edilir. En fazla 10 site haritası dosyası ve
+1.000 adres okunur ve bu adresler yine `MaxPages`, `SameOriginOnly` ve `RespectRobotsTxt`
+kurallarına tabidir. İki seçenek de varsayılan olarak kapalıdır; mevcut taramalar eskisi
+gibi davranır.
+
+```csharp
+var result = await SiteCrawler.CrawlAsync(session, "https://example.com",
+    new SiteCrawlOptions { RespectRobotsTxt = true, SeedFromSitemap = true, MaxPages = 100 });
+// result.BlockedByRobotsUrls, result.SitemapSeededUrls
+```
 
 Tara-sonra-analiz et-sonra-raporla akışının tamamı için çalıştırılabilir
 [`samples/SiteContentAuditQuickstart`](https://github.com/mustafasercansak/automation-sandbox/tree/main/samples/SiteContentAuditQuickstart)

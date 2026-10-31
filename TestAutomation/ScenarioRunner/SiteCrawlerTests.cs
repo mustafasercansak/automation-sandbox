@@ -403,6 +403,222 @@ namespace ScenarioRunner
             }
         }
 
+        // #557: robots.txt and sitemap support. The fetcher is injected so no test needs the network; pages
+        // still come from the real loopback server and a real Chromium.
+        private static Func<string, CancellationToken, Task<string?>> Fetcher(Dictionary<string, string?> byPathEnd, List<string>? requested = null)
+        {
+            return (url, ct) =>
+            {
+                requested?.Add(url);
+                foreach (var pair in byPathEnd)
+                {
+                    if (url.EndsWith(pair.Key, StringComparison.Ordinal))
+                    {
+                        return Task.FromResult(pair.Value);
+                    }
+                }
+
+                return Task.FromResult<string?>(null);
+            };
+        }
+
+        [Fact]
+        public async Task CrawlAsync_WithRespectRobotsTxt_NeverVisitsADisallowedPage()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<a href=\"b.html\">b</a><a href=\"c.html\">c</a>");
+                WriteHtml(dir, "b.html", "<p>B</p>");
+                WriteHtml(dir, "c.html", "<p>C</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var options = new SiteCrawlOptions
+                {
+                    RespectRobotsTxt = true,
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/robots.txt"] = "User-agent: *\nDisallow: /c.html\n" }),
+                };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Equal(new[] { server.BaseUrl + "a.html", server.BaseUrl + "b.html" }, result.VisitedUrls);
+                Assert.Equal(new[] { server.BaseUrl + "c.html" }, result.BlockedByRobotsUrls);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_WithRobotsOff_BehavesAsBeforeAndNeverFetchesRobotsTxt()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<a href=\"c.html\">c</a>");
+                WriteHtml(dir, "c.html", "<p>C</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var requested = new List<string>();
+                var options = new SiteCrawlOptions
+                {
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/robots.txt"] = "User-agent: *\nDisallow: /\n" }, requested),
+                };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Equal(2, result.VisitedUrls.Count);
+                Assert.Empty(result.BlockedByRobotsUrls);
+                Assert.Empty(requested);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_WhenTheStartUrlIsDisallowed_VisitsNothing()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<p>A</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var options = new SiteCrawlOptions
+                {
+                    RespectRobotsTxt = true,
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/robots.txt"] = "User-agent: automationsandbox\nDisallow: /\n" }),
+                };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Empty(result.VisitedUrls);
+                Assert.Equal(new[] { server.BaseUrl + "a.html" }, result.BlockedByRobotsUrls);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_WhenRobotsTxtCannotBeFetched_AllowsEverything()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<a href=\"b.html\">b</a>");
+                WriteHtml(dir, "b.html", "<p>B</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var options = new SiteCrawlOptions { RespectRobotsTxt = true, TextFetcher = Fetcher(new Dictionary<string, string?>()) };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Equal(2, result.VisitedUrls.Count);
+                Assert.Empty(result.BlockedByRobotsUrls);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_WithSeedFromSitemap_VisitsPagesNoLinkReaches()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<p>no links here</p>");
+                WriteHtml(dir, "orphan.html", "<p>orphan</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var sitemap = "<urlset><url><loc>" + server.BaseUrl + "a.html</loc></url><url><loc>" + server.BaseUrl +
+                    "orphan.html</loc></url><url><loc>https://elsewhere.invalid/page</loc></url></urlset>";
+                var options = new SiteCrawlOptions
+                {
+                    SeedFromSitemap = true,
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/sitemap.xml"] = sitemap }),
+                };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Equal(new[] { server.BaseUrl + "a.html", server.BaseUrl + "orphan.html" }, result.VisitedUrls);
+                Assert.Equal(new[] { server.BaseUrl + "orphan.html" }, result.SitemapSeededUrls);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_SitemapUrlsStillObeyRobotsTxt_AndFollowSitemapIndexFiles()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<p>A</p>");
+                WriteHtml(dir, "open.html", "<p>open</p>");
+                WriteHtml(dir, "secret.html", "<p>secret</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var robots = "User-agent: *\nDisallow: /secret.html\nSitemap: " + server.BaseUrl + "index.xml\n";
+                var index = "<sitemapindex><sitemap><loc>" + server.BaseUrl + "pages.xml</loc></sitemap></sitemapindex>";
+                var pages = "<urlset><url><loc>" + server.BaseUrl + "open.html</loc></url><url><loc>" + server.BaseUrl + "secret.html</loc></url></urlset>";
+                var options = new SiteCrawlOptions
+                {
+                    RespectRobotsTxt = true,
+                    SeedFromSitemap = true,
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/robots.txt"] = robots, ["/index.xml"] = index, ["/pages.xml"] = pages }),
+                };
+
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+
+                Assert.Equal(new[] { server.BaseUrl + "a.html", server.BaseUrl + "open.html" }, result.VisitedUrls);
+                Assert.Equal(new[] { server.BaseUrl + "secret.html" }, result.BlockedByRobotsUrls);
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
+        [Fact]
+        public async Task CrawlAsync_HonoursCrawlDelay_CappedByMaxCrawlDelaySeconds()
+        {
+            var dir = CreateTempDir();
+            using var server = new DirectoryHttpServer(dir);
+            try
+            {
+                WriteHtml(dir, "a.html", "<a href=\"b.html\">b</a>");
+                WriteHtml(dir, "b.html", "<p>B</p>");
+                await using var session = await PlaywrightWebSession.StartAsync();
+                var options = new SiteCrawlOptions
+                {
+                    RespectRobotsTxt = true,
+                    MaxCrawlDelaySeconds = 0.4,
+                    TextFetcher = Fetcher(new Dictionary<string, string?> { ["/robots.txt"] = "User-agent: *\nCrawl-delay: 60\n" }),
+                };
+
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var result = await SiteCrawler.CrawlAsync(session, server.BaseUrl + "a.html", options);
+                watch.Stop();
+
+                Assert.Equal(2, result.VisitedUrls.Count);
+                Assert.True(watch.Elapsed >= TimeSpan.FromSeconds(0.35), "a pause between the two pages was expected");
+                Assert.True(watch.Elapsed < TimeSpan.FromSeconds(30), "the 60 second delay must be capped");
+            }
+            finally
+            {
+                DeleteDir(dir);
+            }
+        }
+
         private static string CreateTempDir()
         {
             var dir = Path.Combine(Path.GetTempPath(), "SiteCrawlerTests_" + Guid.NewGuid().ToString("N"));
