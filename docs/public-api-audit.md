@@ -133,6 +133,8 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `HttpLlmHealingProvider` | 3 | Keep tunables mutable: sanitizer and batch timeout overrides are deliberate provider-instance configuration. |
 | LlmHealing / `HttpTextModel` | 1 | Keep tunable mutable: the sanitizer is deliberate model-instance configuration, like the healing providers' sanitizer. |
 | LlmHealing / `ILlmHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueTriage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueTriageResult` | 0 | Freeze: the outcome of one triage call, read-only. |
 | LlmHealing / `IssueSnapshot` | 0 | Freeze: a fixed picture of an issue the gate decides on, so a label that changes afterwards cannot change an answer already given. |
 | LlmHealing / `ITextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingEvaluator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
@@ -153,6 +155,7 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `TextModelRouter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `TextTaskDefault` | 0 | Freeze: one default read from the configuration file; read-only. |
 | LlmHealing / `TextTaskKinds` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageProposal` | 0 | Freeze: a validated proposal for a human to read; never edited afterwards. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
