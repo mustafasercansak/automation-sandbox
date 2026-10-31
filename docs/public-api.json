@@ -1134,6 +1134,40 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentIssueGate",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentIssueGate"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueGate.cs"
+    ],
+    "Members": [
+      "public const string ReadyStatus;",
+      "public static GateDecision Evaluate(IssueSnapshot issue, string? boardStatus)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentLabels",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentLabels"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueGate.cs"
+    ],
+    "Members": [
+      "public const string Allowed;",
+      "public const string InReview;",
+      "public const string NeedsHuman;",
+      "public const string Rejected;",
+      "public const string TaskPrefix;",
+      "public const string Working;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.ChatCompletionsTextModel",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1192,6 +1226,47 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GateDecision",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class GateDecision"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueGate.cs"
+    ],
+    "Members": [
+      "public bool Eligible { get; }",
+      "public string Reason { get; }",
+      "public string? TaskKind { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GateReasons",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class GateReasons"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentIssueGate.cs"
+    ],
+    "Members": [
+      "public const string AlreadyWorking;",
+      "public const string BoardStatusUnknown;",
+      "public const string Closed;",
+      "public const string Eligible;",
+      "public const string InReview;",
+      "public const string NotAllowed;",
+      "public const string ProjectNotReady;",
+      "public const string PullRequest;",
+      "public const string Rejected;",
+      "public const string TaskKindAmbiguous;",
+      "public const string TaskKindMissing;",
+      "public const string TaskKindUnknown;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.GeminiHealingProvider",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1228,6 +1303,36 @@
       "public GeminiTextModel( string? apiKey, string? model = null, string name = \"Gemini\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
       "public const string DefaultModel;",
       "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GitHubIssueReadResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class GitHubIssueReadResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/GitHubIssueReader.cs"
+    ],
+    "Members": [
+      "public IssueSnapshot? Issue { get; }",
+      "public bool Success { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GitHubIssueReader",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class GitHubIssueReader"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/GitHubIssueReader.cs"
+    ],
+    "Members": [
+      "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
   {
@@ -1313,6 +1418,25 @@
       "Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
       "bool IsAvailable { get; }",
       "string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueSnapshot",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueSnapshot"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueSnapshot.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Labels { get; }",
+      "public IssueSnapshot(int number, string title, bool isOpen, bool isPullRequest, IEnumerable<string> labels)",
+      "public bool IsOpen { get; }",
+      "public bool IsPullRequest { get; }",
+      "public int Number { get; }",
+      "public string Title { get; }"
     ]
   },
   {
