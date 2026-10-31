@@ -1541,6 +1541,93 @@
     ]
   },
   {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextModelRouter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class TextModelRouter"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextModelRouting.cs"
+    ],
+    "Members": [
+      "public const string ModelLabelPrefix;",
+      "public const string ReviewLabelPrefix;",
+      "public static TextModelRoutingResult Route(string taskKind, IEnumerable<string> labels, TextModelRegistry registry, TextModelRoutingConfig config)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextModelRoutingConfig",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TextModelRoutingConfig"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextModelRouting.cs"
+    ],
+    "Members": [
+      "public TextTaskDefault? DefaultFor(string taskKind)",
+      "public bool Allows(string modelName, string taskKind)",
+      "public bool IsEmpty { get; }",
+      "public bool Lists(string modelName)",
+      "public static TextModelRoutingConfig Empty { get; }",
+      "public static TextModelRoutingConfig Parse(string json)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextModelRoutingResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TextModelRoutingResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextModelRouting.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Problems { get; }",
+      "public ITextModel? Drafter { get; }",
+      "public ITextModel? Reviewer { get; }",
+      "public bool Success { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextTaskDefault",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TextTaskDefault"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextModelRouting.cs"
+    ],
+    "Members": [
+      "public TextTaskDefault(string model, string? reviewer)",
+      "public string Model { get; }",
+      "public string? Reviewer { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextTaskKinds",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class TextTaskKinds"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextTaskKinds.cs"
+    ],
+    "Members": [
+      "public const string CiFailure;",
+      "public const string Docs;",
+      "public const string IssueTriage;",
+      "public static IReadOnlyList<string> All { get; }",
+      "public static bool IsKnown(string? name)",
+      "public static string? Normalize(string? name)"
+    ]
+  },
+  {
     "Package": "PlaywrightLiveExploration",
     "Type": "AutomationSandbox.PlaywrightLiveExploration.PlaywrightLiveExplorer",
     "PublicMutableProperties": 0,

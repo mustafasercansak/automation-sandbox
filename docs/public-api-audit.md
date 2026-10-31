@@ -136,6 +136,11 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `TextCompletionRequest` | 0 | Freeze: validated in its constructor and read-only afterwards; a request is never edited after it is created. |
 | LlmHealing / `TextCompletionResult` | 6 | Keep editable: custom ITextModel implementations build results, and the shared HTTP base adds elapsed and attempt diagnostics after parsing. |
 | LlmHealing / `TextModelRegistry` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextModelRoutingConfig` | 0 | Freeze: parsed once from a file and read-only afterwards; changing the rules of a running task would defeat the label gate. |
+| LlmHealing / `TextModelRoutingResult` | 0 | Freeze: the outcome of one routing call; the drafter, reviewer and problems are never edited afterwards. |
+| LlmHealing / `TextModelRouter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextTaskDefault` | 0 | Freeze: one default read from the configuration file; read-only. |
+| LlmHealing / `TextTaskKinds` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
