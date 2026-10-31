@@ -115,10 +115,15 @@ Every remaining public type is listed below. Setter counts are after the change.
 | IntentExecution / `IntentStepExecutionResult` | 0 | Freeze four properties: records one step's execution outcome, constructed once by `IntentWebExecutor` and never mutated. |
 | IntentExecution / `IntentWebExecutionResult` | 3 | Keep editable: the executor assembles Scenario and appends each step's result as execution proceeds, then sets Success once the run completes or stops. |
 | IntentExecution / `IntentWebExecutor` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ChatCompletionsTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `ClaudeHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ClaudeTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `GeminiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `GeminiTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `HttpLlmHealingProvider` | 3 | Keep tunables mutable: sanitizer and batch timeout overrides are deliberate provider-instance configuration. |
+| LlmHealing / `HttpTextModel` | 1 | Keep tunable mutable: the sanitizer is deliberate model-instance configuration, like the healing providers' sanitizer. |
 | LlmHealing / `ILlmHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ITextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingEvaluator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingPrompt` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingResult` | 9 | Keep editable: custom ILlmHealingProvider implementations create proposals; the transport adds elapsed/attempt diagnostics after parsing. |
@@ -128,6 +133,9 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `LlmProviderFactory` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OllamaHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OpenAiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TextCompletionRequest` | 0 | Freeze: validated in its constructor and read-only afterwards; a request is never edited after it is created. |
+| LlmHealing / `TextCompletionResult` | 6 | Keep editable: custom ITextModel implementations build results, and the shared HTTP base adds elapsed and attempt diagnostics after parsing. |
+| LlmHealing / `TextModelRegistry` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
 | PlaywrightLiveExploration / `PlaywrightWebSession` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |

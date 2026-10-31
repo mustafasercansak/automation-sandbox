@@ -1132,6 +1132,24 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ChatCompletionsTextModel",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ChatCompletionsTextModel : HttpTextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/ChatCompletionsTextModel.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.ClaudeHealingProvider",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1153,6 +1171,25 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ClaudeTextModel",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class ClaudeTextModel : HttpTextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/ClaudeTextModel.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public ClaudeTextModel( string? apiKey, string? model = null, string name = \"Claude\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public const string DefaultModel;",
+      "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.GeminiHealingProvider",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1170,6 +1207,25 @@
       "public static readonly TimeSpan DefaultTimeout;",
       "public static readonly TimeSpan DefaultTotalTimeout;",
       "public static readonly int DefaultMaxRetries;"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.GeminiTextModel",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class GeminiTextModel : HttpTextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/GeminiTextModel.cs"
+    ],
+    "Members": [
+      "protected override HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
+      "protected override string ExtractText(string responseBody)",
+      "protected override string UnavailableErrorMessage { get; }",
+      "public GeminiTextModel( string? apiKey, string? model = null, string name = \"Gemini\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public const string DefaultModel;",
+      "public override bool IsAvailable { get; }"
     ]
   },
   {
@@ -1201,6 +1257,32 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.HttpTextModel",
+    "PublicMutableProperties": 1,
+    "Declarations": [
+      "public abstract class HttpTextModel : ITextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/HttpTextModel.cs"
+    ],
+    "Members": [
+      "protected HttpTextModel( string name, HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "protected abstract HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
+      "protected abstract string ExtractText(string responseBody)",
+      "protected abstract string UnavailableErrorMessage { get; }",
+      "public Func<string, string>? TextSanitizer { get; set; }",
+      "public TimeSpan Timeout { get; }",
+      "public TimeSpan TotalTimeout { get; }",
+      "public abstract bool IsAvailable { get; }",
+      "public async Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
+      "public int MaxRetries { get; }",
+      "public static readonly TimeSpan DefaultTimeout;",
+      "public static readonly TimeSpan DefaultTotalTimeout;",
+      "public string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.ILlmHealingProvider",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1211,6 +1293,22 @@
     ],
     "Members": [
       "Task<LlmHealingResult> ResolveAsync( UiElementInfo expected, IReadOnlyList<CandidateScore> candidates, string? platform = null, CancellationToken cancellationToken = default)",
+      "bool IsAvailable { get; }",
+      "string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.ITextModel",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public interface ITextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/ITextModel.cs"
+    ],
+    "Members": [
+      "Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
       "bool IsAvailable { get; }",
       "string Name { get; }"
     ]
@@ -1384,6 +1482,60 @@
       "public static readonly TimeSpan DefaultTotalTimeout;",
       "public static readonly int DefaultMaxRetries;",
       "public string ApiUrl { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextCompletionRequest",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TextCompletionRequest"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/ITextModel.cs"
+    ],
+    "Members": [
+      "public TextCompletionRequest(string prompt, int maxOutputTokens = DefaultMaxOutputTokens, bool expectJson = false)",
+      "public bool ExpectJson { get; }",
+      "public const int DefaultMaxOutputTokens;",
+      "public int MaxOutputTokens { get; }",
+      "public string Prompt { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextCompletionResult",
+    "PublicMutableProperties": 6,
+    "Declarations": [
+      "public sealed class TextCompletionResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/ITextModel.cs"
+    ],
+    "Members": [
+      "public TimeSpan Elapsed { get; set; }",
+      "public bool Success { get; set; }",
+      "public int AttemptCount { get; set; }",
+      "public string ModelName { get; set; }",
+      "public string Text { get; set; }",
+      "public string? ErrorMessage { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.TextModelRegistry",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class TextModelRegistry"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/TextModels/TextModelRegistry.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<ITextModel> Models { get; }",
+      "public ITextModel? Find(string name)",
+      "public static TextModelRegistry CreateFromEnvironment(HttpClient? httpClient = null, Func<string, string?>? getEnv = null)",
+      "public void Add(ITextModel model)"
     ]
   },
   {

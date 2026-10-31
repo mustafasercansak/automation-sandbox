@@ -321,6 +321,12 @@ var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
 });
 ```
 
+### 📝 Text Models Beyond Locator Healing (`ITextModel`)
+
+The providers above exist to pick one candidate id for locator healing, so their requests are shaped for that (a small output limit, a forced JSON answer on OpenAI-compatible endpoints). `ITextModel` (#562) is a separate, plain contract for any other bounded text task, such as drafting a document, triaging an issue or reviewing a draft: one `CompleteAsync` takes a `TextCompletionRequest` (prompt, maximum output tokens, whether JSON is expected) and returns a `TextCompletionResult`. A failure of any kind is returned in the result, never thrown, except cancellation by the caller.
+
+`ChatCompletionsTextModel` covers any OpenAI-compatible endpoint (OpenAI, Mistral, NVIDIA NIM and others; plain http is accepted only for a loopback host so a key is never sent in clear text), `ClaudeTextModel` the Anthropic messages API and `GeminiTextModel` the Gemini Interactions API, which has no verified field for an output limit or a JSON switch, so those two request settings are not sent and the caller must validate the answer. All of them reuse the retry, backoff and deadline behaviour of `LlmHttpTransport`, and sanitise the prompt with `SensitiveDataSanitizer.Default` before it leaves the process unless you set your own `TextSanitizer`. `TextModelRegistry.CreateFromEnvironment()` builds the configured models from the same environment variables as `LlmProviderFactory` (Claude, Gemini, OpenAI, Mistral and NVIDIA so far; a model whose key or required model is missing is left out), looks a model up by name ignoring case, and rejects a duplicate name instead of replacing it.
+
 ---
 
 ## 🇹🇷 Türkçe Kılavuz
@@ -619,3 +625,9 @@ var fixture = SelfHealingTestFixture.Create(new SelfHealingTestOptions
     LlmProviders = providers
 });
 ```
+
+### 📝 Locator Onarımı Dışındaki Metin Modelleri (`ITextModel`)
+
+Yukarıdaki sağlayıcılar locator onarımı için tek bir aday kimliği seçmek üzere vardır; bu yüzden istekleri buna göre biçimlenmiştir (küçük bir çıktı sınırı, OpenAI uyumlu uç noktalarda zorunlu JSON yanıtı). `ITextModel` (#562), bir belge taslağı yazmak, bir issue'yu sınıflandırmak ya da bir taslağı gözden geçirmek gibi sınırlı her metin görevi için ayrı, sade bir sözleşmedir: tek bir `CompleteAsync`, bir `TextCompletionRequest` (istem, en fazla çıktı token'ı, JSON beklenip beklenmediği) alır ve `TextCompletionResult` döndürür. Her tür hata, çağıranın iptali dışında, fırlatılmaz; sonucun içinde döndürülür.
+
+`ChatCompletionsTextModel` OpenAI uyumlu her uç noktayı (OpenAI, Mistral, NVIDIA NIM ve diğerleri; anahtar açık metin olarak ağda gitmesin diye düz http yalnızca döngü adresi (loopback) için kabul edilir), `ClaudeTextModel` Anthropic messages API'sini, `GeminiTextModel` ise Gemini Interactions API'sini kapsar; Gemini isteğinde çıktı sınırı veya JSON anahtarı için doğrulanmış bir alan yoktur, bu yüzden bu iki ayar gönderilmez ve çağıran yanıtı kendisi doğrulamalıdır. Hepsi `LlmHttpTransport`'un yeniden deneme, geri çekilme ve süre sınırı davranışını kullanır; kendi `TextSanitizer`'ınızı vermedikçe istemi süreçten çıkmadan önce `SensitiveDataSanitizer.Default` ile temizler. `TextModelRegistry.CreateFromEnvironment()`, yapılandırılmış modelleri `LlmProviderFactory` ile aynı ortam değişkenlerinden kurar (şimdilik Claude, Gemini, OpenAI, Mistral ve NVIDIA; anahtarı ya da zorunlu modeli eksik olan model dışarıda bırakılır), bir modeli büyük/küçük harfe bakmadan ada göre bulur ve aynı adı değiştirmek yerine reddeder.
