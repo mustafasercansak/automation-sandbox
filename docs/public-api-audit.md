@@ -146,6 +146,8 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `LlmProviderFactory` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OllamaHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `OpenAiHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `ReviewVerdict` | 0 | Freeze: what a reviewer said, read-only so a finding cannot be edited into an approval. |
+| LlmHealing / `ReviewVerdictParser` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `ProjectBoardReader` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `TextCompletionRequest` | 0 | Freeze: validated in its constructor and read-only afterwards; a request is never edited after it is created. |
 | LlmHealing / `TextCompletionResult` | 6 | Keep editable: custom ITextModel implementations build results, and the shared HTTP base adds elapsed and attempt diagnostics after parsing. |
@@ -155,6 +157,9 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `TextModelRouter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `TextTaskDefault` | 0 | Freeze: one default read from the configuration file; read-only. |
 | LlmHealing / `TextTaskKinds` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageOutcome` | 0 | Freeze: the outcome of one triage run, read-only. |
+| LlmHealing / `TriagePipeline` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `TriageStatus` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `TriageProposal` | 0 | Freeze: a validated proposal for a human to read; never edited afterwards. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorer` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | PlaywrightLiveExploration / `PlaywrightLiveExplorerOptions` | 2 | Keep mutable: caller-authored configuration or planning input, validated by its consuming operation. |
