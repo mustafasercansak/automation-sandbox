@@ -36,6 +36,10 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>The issue is eligible.</summary>
         public const string Eligible = "eligible";
 
+        /// <summary>The issue could not be read from GitHub. Reported only by <see cref="AgentIssueIntake" />, never by
+        /// the gate itself.</summary>
+        public const string IssueUnreadable = "issue-unreadable";
+
         /// <summary>The issue carries <see cref="AgentLabels.Rejected" />; this is reported before every other reason.</summary>
         public const string Rejected = "rejected";
 
