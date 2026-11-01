@@ -9,6 +9,8 @@
 
 An open-source **locator healing** and **intent-driven test generation** engine for Windows desktop and web.
 
+📚 **Documentation (English and Türkçe):** https://mustafasercansak.github.io/automation-sandbox/
+
 **Automation Sandbox** is an open alternative to the black-box locator recovery in commercial tools, centered on a **pure-heuristic structural similarity engine** (~23ms for 3,000 controls on developer hardware, 0 cost; see `SyntheticTreeBenchmarkTests`), supplemented by an **explainable component scorer**, an opt-in **multi-provider LLM fallback with an independent-agreement quorum**, and an **intent-driven test generation pipeline**. Desktop support is built on [FlaUI](https://github.com/FlaUI/FlaUI) (Microsoft UI Automation); web support on the Microsoft.Playwright .NET SDK.
 
 - **Deterministic-first.** A pure C# structural scorer decides on its own — zero tokens, zero API cost, sub-50ms on a 3,000-control tree. Most healing never touches a model.
