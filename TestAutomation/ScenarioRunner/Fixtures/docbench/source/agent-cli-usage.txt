@@ -1,0 +1,12 @@
+automation-sandbox-agent: run one GitHub issue through the issue-triage agent (read-only).
+Install: dotnet tool install --global AutomationSandbox.Agent --prerelease
+Usage: automation-sandbox-agent triage --repo <owner/name> --issue <number> [options]
+--repo <owner/name>      The repository (required).
+--issue <number>         The issue number (required).
+--project-id <PVT_...>   The Projects (v2) board node id; or set PROJECT_ID.
+--routing-file <path>    JSON: which task kinds each model may serve, and defaults.
+--docs-root <dir>        A git checkout the docs task reads its source files from.
+--allow-label <name>     A label the model may suggest (repeatable).
+--comment                After the run, post the report as one comment on the issue. Off by default.
+--label-needs-human      Add the label Agent::Needs-Human when the review blocks or the run fails. Off by default.
+Exit codes: 0 the proposal was accepted; 1 not eligible, routing stopped, or blocked or failed; 2 the command could not run.

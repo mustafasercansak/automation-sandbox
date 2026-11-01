@@ -1,0 +1,7 @@
+DocsSourceCollector.MaxFiles = 8
+DocsSourceCollector.MaxFileBytes = 20000
+DocsSourceCollector.MaxTotalCharacters = 60000
+McpProtocol.MaxMessageLength = 1000000
+McpProtocol.MaxToolOutputLength = 60000
+CiLogClassifier.MaxEvidenceLines = 5
+CiLogClassifier.MaxLogLength = 200000
