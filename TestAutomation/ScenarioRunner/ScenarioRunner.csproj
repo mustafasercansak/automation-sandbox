@@ -23,6 +23,7 @@
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\spelling\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\docbench\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures\lessons-replay\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

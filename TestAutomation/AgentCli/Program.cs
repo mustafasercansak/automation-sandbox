@@ -17,7 +17,8 @@ return await AgentCommand.RunAsync(
     Console.Error,
     null,
     cancellation.Token,
-    ListTrackedFiles);
+    ListTrackedFiles,
+    File.WriteAllText);
 
 // The files git tracks under a checkout, as repository-relative paths. Run without a shell, with the directory as the
 // working directory; the docs task accepts a path from an issue only if it is exactly one of these.

@@ -1980,6 +1980,197 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonIndex",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonIndex"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonIndex.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<LessonRecord> Records { get; }",
+      "public LessonIndex(string repository, IEnumerable<LessonRecord> records)",
+      "public const int CurrentVersion;",
+      "public const int MaxFileLength;",
+      "public const int MaxRecords;",
+      "public static LessonIndex Parse(string json)",
+      "public string Repository { get; }",
+      "public string ToJson()"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonIndexBuildOptions",
+    "PublicMutableProperties": 4,
+    "Declarations": [
+      "public sealed class LessonIndexBuildOptions"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonIndexBuilder.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset? ClosedBefore { get; set; }",
+      "public int MaxPages { get; set; }",
+      "public int MaxPullRequestDetails { get; set; }",
+      "public int MaxRecords { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonIndexBuildResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonIndexBuildResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonIndexBuilder.cs"
+    ],
+    "Members": [
+      "public LessonIndex? Index { get; }",
+      "public bool Success { get; }",
+      "public bool Truncated { get; }",
+      "public int DetailFailures { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonIndexBuilder",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LessonIndexBuilder"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonIndexBuilder.cs"
+    ],
+    "Members": [
+      "public static async Task<LessonIndexBuildResult> BuildAsync( string repository, string? token = null, LessonIndexBuildOptions? options = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonMatch",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonMatch"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public LessonRecord Record { get; }",
+      "public bool FileMatch { get; }",
+      "public double Score { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonOptions",
+    "PublicMutableProperties": 5,
+    "Declarations": [
+      "public sealed class LessonOptions"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public double FileMatchBoost { get; set; }",
+      "public double MinScore { get; set; }",
+      "public int MaxCharactersPerRecord { get; set; }",
+      "public int MaxRecords { get; set; }",
+      "public int MaxTotalCharacters { get; set; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonRecord",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonRecord"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonIndex.cs"
+    ],
+    "Members": [
+      "public DateTimeOffset? ClosedAt { get; }",
+      "public IReadOnlyList<string> Files { get; }",
+      "public IReadOnlyList<string> Labels { get; }",
+      "public LessonRecord(string kind, int number, string title, string body, IEnumerable<string> labels, IEnumerable<string> files, string reviewComments, DateTimeOffset? closedAt = null)",
+      "public const string IssueKind;",
+      "public const string PullRequestKind;",
+      "public int Number { get; }",
+      "public string Body { get; }",
+      "public string Kind { get; }",
+      "public string ReviewComments { get; }",
+      "public string Title { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonRetrievalEntry",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonRetrievalEntry"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<LessonMatch> Matches { get; }",
+      "public string Model { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonRetrievalLog",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonRetrievalLog"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<LessonRetrievalEntry> Entries { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonRetriever",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class LessonRetriever"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public const string BeginMarker;",
+      "public const string EndMarker;",
+      "public static IReadOnlyList<LessonMatch> Retrieve(LessonIndex index, string query, IEnumerable<string>? files = null, LessonOptions? options = null)",
+      "public static string BuildSection(IReadOnlyList<LessonMatch> matches, LessonOptions? options = null)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.LessonTextModel",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class LessonTextModel : ITextModel"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/LessonRetrieval.cs"
+    ],
+    "Members": [
+      "public LessonTextModel(ITextModel inner, LessonIndex index, LessonOptions? options = null, LessonRetrievalLog? log = null)",
+      "public Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
+      "public bool IsAvailable { get; }",
+      "public string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.LlmHealingEvaluator",
     "PublicMutableProperties": 0,
     "Declarations": [

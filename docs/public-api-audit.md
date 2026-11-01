@@ -145,6 +145,17 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `IssueTriageResult` | 0 | Freeze: the outcome of one triage call, read-only. |
 | LlmHealing / `IssueSnapshot` | 0 | Freeze: a fixed picture of an issue the gate decides on, so a label that changes afterwards cannot change an answer already given. |
 | LlmHealing / `ITextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `LessonIndex` | 0 | Freeze: a parsed index is read-only so a retrieval cannot edit the history it quotes. |
+| LlmHealing / `LessonIndexBuildOptions` | 4 | Keep editable: plain limits a caller sets before one build (record, page and detail caps, and the closed-before date for a replay). |
+| LlmHealing / `LessonIndexBuildResult` | 0 | Freeze: the outcome of one index build, read-only. |
+| LlmHealing / `LessonIndexBuilder` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `LessonMatch` | 0 | Freeze: one retrieved record with its score, read-only. |
+| LlmHealing / `LessonOptions` | 5 | Keep editable: plain retrieval limits and weights a caller sets before a run; the defaults are untuned estimates. |
+| LlmHealing / `LessonRecord` | 0 | Freeze: one past issue or pull request, read-only. |
+| LlmHealing / `LessonRetrievalEntry` | 0 | Freeze: the lessons added to one prompt, read-only. |
+| LlmHealing / `LessonRetrievalLog` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `LessonRetriever` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `LessonTextModel` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingEvaluator` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingPrompt` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `LlmHealingResult` | 9 | Keep editable: custom ILlmHealingProvider implementations create proposals; the transport adds elapsed/attempt diagnostics after parsing. |
