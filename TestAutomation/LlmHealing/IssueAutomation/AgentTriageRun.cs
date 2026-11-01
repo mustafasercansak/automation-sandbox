@@ -18,14 +18,14 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>Routing could not honour the labels; no model was asked.</summary>
         RoutingFailed,
 
-        /// <summary>The triage ran; <see cref="AgentRunReport.Triage" /> says whether it was accepted, blocked or failed.</summary>
+        /// <summary>The task ran; <see cref="AgentRunReport.Triage" /> or <see cref="AgentRunReport.CiFailure" /> says whether it was accepted, blocked or failed.</summary>
         Completed,
     }
 
     /// <summary>What one run did and why it stopped. Plain data: it holds no token and no raw model answer.</summary>
     public sealed class AgentRunReport
     {
-        internal AgentRunReport(AgentRunStage stage, GateDecision? gate, string? readError, string? taskKind, IReadOnlyList<string> routingProblems, TriageOutcome? triage)
+        internal AgentRunReport(AgentRunStage stage, GateDecision? gate, string? readError, string? taskKind, IReadOnlyList<string> routingProblems, TriageOutcome? triage, CiFailureOutcome? ciFailure = null)
         {
             Stage = stage;
             Gate = gate;
@@ -33,6 +33,7 @@ namespace AutomationSandbox.LlmHealing
             TaskKind = taskKind;
             RoutingProblems = routingProblems;
             Triage = triage;
+            CiFailure = ciFailure;
         }
 
         /// <summary>How far the run got.</summary>
@@ -53,6 +54,12 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>The triage outcome when <see cref="Stage" /> is <see cref="AgentRunStage.Completed" />.</summary>
         public TriageOutcome? Triage { get; }
 
+        /// <summary>The outcome when the task kind was <c>ci-failure</c> and <see cref="Stage" /> is <see cref="AgentRunStage.Completed" />.</summary>
+        public CiFailureOutcome? CiFailure { get; }
+
+        /// <summary>True when the run completed and its proposal was accepted (valid, and not blocked by the reviewer).</summary>
+        public bool IsAccepted => Stage == AgentRunStage.Completed && (Triage?.Status ?? CiFailure?.Status) == TriageStatus.Accepted;
+
         /// <summary>One line that says how the run ended.</summary>
         public string Summary()
         {
@@ -65,6 +72,11 @@ namespace AutomationSandbox.LlmHealing
                 case AgentRunStage.RoutingFailed:
                     return "Routing stopped the task: " + string.Join(" ", RoutingProblems);
                 default:
+                    if (CiFailure != null)
+                    {
+                        return $"CI failure {CiFailure.Status}" + (CiFailure.Error == null ? "" : ": " + CiFailure.Error);
+                    }
+
                     return $"Triage {Triage!.Status}" + (Triage.Error == null ? "" : ": " + Triage.Error);
             }
         }
@@ -106,7 +118,7 @@ namespace AutomationSandbox.LlmHealing
             cancellationToken.ThrowIfCancellationRequested();
             var issue = intake.Issue!;
             var kind = intake.Decision.TaskKind!;
-            if (kind != TextTaskKinds.IssueTriage)
+            if (kind != TextTaskKinds.IssueTriage && kind != TextTaskKinds.CiFailure)
             {
                 return new AgentRunReport(AgentRunStage.UnsupportedTask, intake.Decision, intake.Error, kind, new string[0], null);
             }
@@ -115,6 +127,12 @@ namespace AutomationSandbox.LlmHealing
             if (!routing.Success)
             {
                 return new AgentRunReport(AgentRunStage.RoutingFailed, intake.Decision, intake.Error, kind, routing.Problems, null);
+            }
+
+            if (kind == TextTaskKinds.CiFailure)
+            {
+                var ci = await CiFailurePipeline.RunAsync(issue, routing, allowedLabels, cancellationToken).ConfigureAwait(false);
+                return new AgentRunReport(AgentRunStage.Completed, intake.Decision, intake.Error, kind, new string[0], null, ci);
             }
 
             var triage = await TriagePipeline.RunAsync(issue, routing, allowedLabels, cancellationToken).ConfigureAwait(false);

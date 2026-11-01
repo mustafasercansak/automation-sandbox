@@ -106,6 +106,33 @@ namespace AutomationSandbox.LlmHealing
                 }
             }
 
+            var ci = report.CiFailure;
+            if (ci != null)
+            {
+                lines.Add("- Failure category: " + Md(ci.Classification.Category) + (ci.Classification.Retryable ? " (a plain re-run may fix it)" : ""));
+                lines.Add("- Drafted by: " + Md(ci.DraftedBy ?? "nobody"));
+                lines.Add("- Reviewed by: " + (ci.ReviewedBy == null ? "nobody (not reviewed)" : Md(ci.ReviewedBy)));
+                lines.Add("- Result: " + Md(ci.Status.ToString()) + (string.IsNullOrEmpty(ci.Error) ? "" : " - " + Md(ErrorSummary(ci.Error))));
+                foreach (var finding in ci.Findings)
+                {
+                    lines.Add("- Reviewer finding: " + Md(finding));
+                }
+
+                foreach (var line in ci.Classification.Evidence)
+                {
+                    lines.Add("- Evidence: " + Md(line));
+                }
+
+                if (ci.Proposal != null)
+                {
+                    lines.Add("");
+                    lines.Add("Proposed issue" + (ci.Status == TriageStatus.Blocked ? " (blocked by the reviewer, shown only for reading)" : "") + ":");
+                    lines.Add("- Title: " + Md(ci.Proposal.Title));
+                    lines.Add("- Body: " + Md(ci.Proposal.Body));
+                    lines.Add("- Suggested labels: " + (ci.Proposal.SuggestedLabels.Count == 0 ? "none" : string.Join(", ", ci.Proposal.SuggestedLabels.Select(Md))));
+                }
+            }
+
             var comment = string.Join("\n", lines);
             return comment.Length <= MaxLength ? comment : comment.Substring(0, MaxLength - 20) + "\n[comment cut]";
         }

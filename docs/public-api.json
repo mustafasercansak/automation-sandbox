@@ -1226,9 +1226,11 @@
     ],
     "Members": [
       "public AgentRunStage Stage { get; }",
+      "public CiFailureOutcome? CiFailure { get; }",
       "public GateDecision? Gate { get; }",
       "public IReadOnlyList<string> RoutingProblems { get; }",
       "public TriageOutcome? Triage { get; }",
+      "public bool IsAccepted { get; }",
       "public string Summary()",
       "public string? ReadError { get; }",
       "public string? TaskKind { get; }"
@@ -1313,6 +1315,133 @@
       "protected override string UnavailableErrorMessage { get; }",
       "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null, bool requireApiKey = true)",
       "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureOutcome",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureOutcome"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public CiFailureProposal? Proposal { get; }",
+      "public CiLogClassification Classification { get; }",
+      "public IReadOnlyList<string> Findings { get; }",
+      "public TriageStatus Status { get; }",
+      "public string? DraftedBy { get; }",
+      "public string? Error { get; }",
+      "public string? ReviewedBy { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailurePipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiFailurePipeline"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public static async Task<CiFailureOutcome> RunAsync( IssueSnapshot issue, TextModelRoutingResult routing, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureProposal",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureProposal"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> SuggestedLabels { get; }",
+      "public string Body { get; }",
+      "public string Title { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public CiFailureProposal? Proposal { get; }",
+      "public bool Success { get; }",
+      "public string ModelName { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureTask",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiFailureTask"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public const int MaxBodyLength;",
+      "public const int MaxTitleLength;",
+      "public const string BeginMarker;",
+      "public const string EndMarker;",
+      "public static CiFailureResult ParseAnswer(string answer, IReadOnlyCollection<string>? allowedLabels = null)",
+      "public static IReadOnlyList<string> DefaultAllowedLabels { get; }",
+      "public static async Task<CiFailureResult> RunAsync( string title, CiLogClassification classification, ITextModel model, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)",
+      "public static string BuildPrompt(string title, CiLogClassification classification, IReadOnlyCollection<string>? allowedLabels = null)",
+      "public static string BuildReviewPrompt(string title, CiLogClassification classification, CiFailureProposal proposal)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiLogClassification",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiLogClassification"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiLogClassifier.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Evidence { get; }",
+      "public IReadOnlyList<string> MatchedCategories { get; }",
+      "public bool Retryable { get; }",
+      "public bool Truncated { get; }",
+      "public string Category { get; }",
+      "public string Excerpt { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiLogClassifier",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiLogClassifier"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiLogClassifier.cs"
+    ],
+    "Members": [
+      "public const int MaxEvidenceLength;",
+      "public const int MaxEvidenceLines;",
+      "public const int MaxExcerptLength;",
+      "public const int MaxLogLength;",
+      "public const string Unknown;",
+      "public static CiLogClassification Classify(string? log)"
     ]
   },
   {

@@ -166,7 +166,7 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                 }
             }
 
-            return report.Stage == AgentRunStage.Completed && report.Triage!.Status == TriageStatus.Accepted ? 0 : 1;
+            return report.IsAccepted ? 0 : 1;
         }
 
         // An explicit shape: the JSON report is the tool's contract, so nothing is serialised by accident.
@@ -174,6 +174,7 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
         {
             var triage = report.Triage;
             var proposal = triage?.Proposal;
+            var ci = report.CiFailure;
             return JsonSerializer.Serialize(new
             {
                 stage = report.Stage.ToString(),
@@ -194,6 +195,23 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                         summary = proposal.Summary,
                         missingInformation = proposal.MissingInformation,
                         suggestedLabels = proposal.SuggestedLabels,
+                    },
+                },
+                ciFailure = ci == null ? null : new
+                {
+                    status = ci.Status.ToString(),
+                    category = ci.Classification.Category,
+                    matchedCategories = ci.Classification.MatchedCategories,
+                    retryable = ci.Classification.Retryable,
+                    draftedBy = ci.DraftedBy,
+                    reviewedBy = ci.ReviewedBy,
+                    findings = ci.Findings,
+                    error = Reduce(ci.Error),
+                    proposal = ci.Proposal == null ? null : new
+                    {
+                        title = ci.Proposal.Title,
+                        body = ci.Proposal.Body,
+                        suggestedLabels = ci.Proposal.SuggestedLabels,
                     },
                 },
                 summary = AgentReportComment.ErrorSummary(report.Summary()),
