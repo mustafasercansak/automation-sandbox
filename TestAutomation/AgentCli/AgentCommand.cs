@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -15,6 +16,7 @@ namespace AutomationSandbox.AgentCli
 
 Usage:
   automation-sandbox-agent triage --repo <owner/name> --issue <number> [options]
+  automation-sandbox-agent lessons build --repo <owner/name> --out <file> [--max-records <n>] [--before <yyyy-MM-dd>]
 
 Options:
   --repo <owner/name>      The repository (required).
@@ -24,6 +26,9 @@ Options:
   --docs-root <dir>        A git checkout the docs task reads its source files from (only files git tracks, named by
                            ""Source: path"" lines in the issue). Without it a Task::docs issue fails before any model is asked.
   --allow-label <name>     A label the model may suggest (repeatable); default bug, enhancement, documentation, question.
+  --lessons-file <path>    A lesson index (see ""lessons build""): the prompts of the drafting and reviewing models then also hold
+                           the few past issues and pull requests that match the issue, quoted as data and named by number. Off
+                           unless given; without it the prompts are exactly the same as before.
   --comment                After the run, post the report as one comment on the issue (needs GH_TOKEN or GITHUB_TOKEN
                            with permission to write issue comments). Off by default.
   --label-needs-human      When a task ran and the review blocked the proposal or the run failed, add the label
@@ -42,6 +47,10 @@ The issue needs Agent::Allowed, one Task::issue-triage, Task::ci-failure or Task
 Model::<name> (drafting) and Review::<name> (independent review) labels. The report is JSON on stdout; diagnostics go to
 stderr. It changes no card, adds a label only with --label-needs-human, and posts a comment only with --comment.
 
+lessons build reads the closed issues and pull requests of a repository from the GitHub API (read only; GH_TOKEN or GITHUB_TOKEN
+is optional but an anonymous run is rate limited hard) and writes a plain JSON index file. --before keeps only items closed before
+that date, for replaying a past defect without history the reviewer could not have had then.
+
 Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing stopped, or the proposal was blocked or failed
 (the report says why); 2 the command could not run (bad arguments, no token, no model, or the comment could not be posted).";
 
@@ -55,7 +64,8 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             TextWriter stderr,
             HttpClient? httpClient,
             CancellationToken cancellationToken,
-            Func<string, IReadOnlyCollection<string>>? listTrackedFiles = null)
+            Func<string, IReadOnlyCollection<string>>? listTrackedFiles = null,
+            Action<string, string>? writeFile = null)
         {
             AgentOptions options;
             try
@@ -79,6 +89,11 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             {
                 var value = getEnv(key);
                 return string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
+            }
+
+            if (options.Command == "lessons-build")
+            {
+                return await BuildLessonsAsync(options, Env("GH_TOKEN") ?? Env("GITHUB_TOKEN"), writeFile, stdout, stderr, httpClient, cancellationToken).ConfigureAwait(false);
             }
 
             var projectId = options.ProjectId ?? Env("PROJECT_ID");
@@ -134,6 +149,35 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                 return 2;
             }
 
+            LessonRetrievalLog? lessonLog = null;
+            if (options.LessonsFile != null)
+            {
+                LessonIndex index;
+                try
+                {
+                    index = LessonIndex.Parse(readFile(options.LessonsFile));
+                }
+                catch (FormatException ex)
+                {
+                    await stderr.WriteLineAsync("The lesson index is invalid: " + ex.Message).ConfigureAwait(false);
+                    return 2;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    await stderr.WriteLineAsync("The lesson index could not be read.").ConfigureAwait(false);
+                    return 2;
+                }
+
+                lessonLog = new LessonRetrievalLog();
+                var wrapped = new TextModelRegistry();
+                foreach (var model in registry.Models)
+                {
+                    wrapped.Add(new LessonTextModel(model, index, null, lessonLog));
+                }
+
+                registry = wrapped;
+            }
+
             // Listing the tracked files runs git, so it is deferred until a docs issue needs it.
             DocsSourceContext? docsSources = null;
             if (options.DocsRoot != null && listTrackedFiles != null)
@@ -162,8 +206,13 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                 return 2;
             }
 
-            await stdout.WriteLineAsync(ToJson(report)).ConfigureAwait(false);
+            await stdout.WriteLineAsync(ToJson(report, lessonLog)).ConfigureAwait(false);
             await stderr.WriteLineAsync(AgentReportComment.ErrorSummary(report.Summary())).ConfigureAwait(false);
+            if (lessonLog != null)
+            {
+                var used = lessonLog.Entries.SelectMany(e => e.Matches).Select(m => m.Record.Number).Distinct().OrderBy(n => n).ToList();
+                await stderr.WriteLineAsync(used.Count == 0 ? "No past issue or pull request matched; the prompts were not changed." : "Lessons used: " + string.Join(", ", used.Select(n => "#" + n)) + ".").ConfigureAwait(false);
+            }
 
             // Only when the issue was read: an unreadable issue has nothing to comment on.
             if (options.Comment && report.Gate!.Reason != GateReasons.IssueUnreadable)
@@ -209,8 +258,58 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             return report.IsAccepted ? 0 : 1;
         }
 
+        private static async Task<int> BuildLessonsAsync(AgentOptions options, string? token, Action<string, string>? writeFile, TextWriter stdout, TextWriter stderr, HttpClient? httpClient, CancellationToken cancellationToken)
+        {
+            LessonIndexBuildResult result;
+            try
+            {
+                result = await LessonIndexBuilder.BuildAsync(
+                    options.Repository, token,
+                    new LessonIndexBuildOptions { MaxRecords = options.MaxRecords, ClosedBefore = options.Before },
+                    httpClient, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                await stderr.WriteLineAsync("Cancelled.").ConfigureAwait(false);
+                return 2;
+            }
+
+            if (!result.Success)
+            {
+                await stderr.WriteLineAsync("The lesson index could not be built: " + result.Error).ConfigureAwait(false);
+                return 2;
+            }
+
+            try
+            {
+                (writeFile ?? File.WriteAllText)(options.Output!, result.Index!.ToJson());
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await stderr.WriteLineAsync("The lesson index could not be written.").ConfigureAwait(false);
+                return 2;
+            }
+
+            var index = result.Index!;
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                repository = index.Repository,
+                records = index.Records.Count,
+                issues = index.Records.Count(r => r.Kind == LessonRecord.IssueKind),
+                pullRequests = index.Records.Count(r => r.Kind == LessonRecord.PullRequestKind),
+                detailFailures = result.DetailFailures,
+                truncated = result.Truncated,
+            }, JsonOptions)).ConfigureAwait(false);
+            if (result.DetailFailures > 0 || result.Truncated)
+            {
+                await stderr.WriteLineAsync((result.Truncated ? "The build stopped at a limit, so older history is missing. " : "") + (result.DetailFailures > 0 ? result.DetailFailures + " pull request(s) are indexed without their files or review comments. " : "")).ConfigureAwait(false);
+            }
+
+            return 0;
+        }
+
         // An explicit shape: the JSON report is the tool's contract, so nothing is serialised by accident.
-        internal static string ToJson(AgentRunReport report)
+        internal static string ToJson(AgentRunReport report, LessonRetrievalLog? lessons = null)
         {
             var triage = report.Triage;
             var proposal = triage?.Proposal;
@@ -270,6 +369,11 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                         sourcesUsed = docs.Proposal.SourcesUsed,
                     },
                 },
+                lessons = lessons == null ? null : lessons.Entries.Select(e => new
+                {
+                    model = e.Model,
+                    records = e.Matches.Select(m => new { kind = m.Record.Kind, number = m.Record.Number, score = Math.Round(m.Score, 3), fileMatch = m.FileMatch }).ToList(),
+                }).ToList(),
                 summary = AgentReportComment.ErrorSummary(report.Summary()),
             }, JsonOptions);
         }

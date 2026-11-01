@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "note": "The three diffs are the lines each real fix commit removed: what the pull request contained before the Windows net48 / netstandard2.0 leg failed. Frozen before any model ran; do not edit or filter after seeing a result.",
+  "cases": [
+    {
+      "id": "valuetask-completedtask",
+      "fixCommit": "127969f",
+      "asOf": "2026-08-29",
+      "files": [
+        "TestAutomation/ScenarioRunner/PlaywrightLiveExplorerDisposalTests.cs"
+      ],
+      "flagTerms": [
+        "completedtask",
+        "net48",
+        "valuetask.completedtask",
+        "default(valuetask)"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/PlaywrightLiveExplorerDisposalTests.cs\n+++ b/TestAutomation/ScenarioRunner/PlaywrightLiveExplorerDisposalTests.cs\n@@ -81,5 +81,5 @@ public Task UnbindAsync() => throw new NotImplementedException();\n+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;\n"
+    },
+    {
+      "id": "process-api-net48",
+      "fixCommit": "fec29eb",
+      "asOf": "2026-09-19",
+      "files": [
+        "TestAutomation/ScenarioRunner/PublicApiAuditTests.cs"
+      ],
+      "flagTerms": [
+        "argumentlist",
+        "waitforexit",
+        "net48",
+        "timespan"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/PublicApiAuditTests.cs\n+++ b/TestAutomation/ScenarioRunner/PublicApiAuditTests.cs\n@@ -59,23 +59,12 @@ private static JsonElement[] RunAudit(string package, params (string FileName, string Source)[] files)\n+                var psi = new ProcessStartInfo(\"dotnet\")\n+                {\n+                    RedirectStandardOutput = true,\n+                    RedirectStandardError = true,\n+                    UseShellExecute = false,\n+                };\n+                psi.ArgumentList.Add(\"run\");\n+                psi.ArgumentList.Add(\"--project\");\n+                psi.ArgumentList.Add(Path.Combine(repoRoot, \"eng\", \"PublicApiAudit\"));\n+                psi.ArgumentList.Add(\"--\");\n+                psi.ArgumentList.Add(fixtureRoot);\n+                psi.ArgumentList.Add(outputPath);\n+\n+                using var process = Process.Start(psi)!;\n+                var stdout = process.StandardOutput.ReadToEnd();\n+                var stderr = process.StandardError.ReadToEnd();\n+                Assert.True(process.WaitForExit(TimeSpan.FromSeconds(60)), \"PublicApiAudit did not exit within 60s.\");\n"
+    },
+    {
+      "id": "nullable-flow-netstandard",
+      "fixCommit": "5a913af",
+      "asOf": "2026-08-29",
+      "files": [
+        "TestAutomation/SelfHealing/HealingReportFileSink.cs"
+      ],
+      "flagTerms": [
+        "cs8604",
+        "nullable",
+        "isnullorwhitespace",
+        "netstandard"
+      ],
+      "diff": "--- a/TestAutomation/SelfHealing/HealingReportFileSink.cs\n+++ b/TestAutomation/SelfHealing/HealingReportFileSink.cs\n@@ -140,9 +140,9 @@\n+            if (!string.IsNullOrWhiteSpace(HtmlFilePath))\n             {\n+                var htmlDirectory = Path.GetDirectoryName(HtmlFilePath);\n"
+    }
+  ]
+}

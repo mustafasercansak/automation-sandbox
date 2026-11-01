@@ -93,7 +93,7 @@ namespace AutomationSandbox.LlmHealing
 
         private static readonly string[] ProtocolPrefixes = { "Agent::", "Model::", "Review::", "Task::" };
 
-        private static readonly Regex Markers = new Regex("BEGIN_ISSUE_DATA|END_ISSUE_DATA|BEGIN_PROPOSAL_DATA|END_PROPOSAL_DATA|BEGIN_LOG_DATA|END_LOG_DATA|BEGIN_SOURCE_DATA|END_SOURCE_DATA|BEGIN_DOCUMENT_DATA|END_DOCUMENT_DATA", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        private static readonly Regex Markers = new Regex("BEGIN_ISSUE_DATA|END_ISSUE_DATA|BEGIN_PROPOSAL_DATA|END_PROPOSAL_DATA|BEGIN_LOG_DATA|END_LOG_DATA|BEGIN_SOURCE_DATA|END_SOURCE_DATA|BEGIN_DOCUMENT_DATA|END_DOCUMENT_DATA|BEGIN_LESSON_DATA|END_LESSON_DATA", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
         private static readonly Regex Fence = new Regex(@"\A```(?:json)?\s*(?<body>.*?)\s*```\z", RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 

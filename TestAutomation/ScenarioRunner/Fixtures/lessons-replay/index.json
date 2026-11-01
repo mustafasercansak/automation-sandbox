@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "repository": "fixture/synthetic",
+  "records": [
+    {
+      "kind": "pull-request",
+      "number": 9001,
+      "title": "[fixture] Windows leg failed: member missing on net48",
+      "body": "Fixture text written for the replay test, not real history. ValueTask.CompletedTask is .NET 5+ and does not exist on net48; use default(ValueTask).",
+      "labels": [
+        "ci"
+      ],
+      "files": [
+        "TestAutomation/ScenarioRunner/SomeFakeBrowserTests.cs"
+      ],
+      "reviewComments": "net48 leg red, CS0117",
+      "closedAt": "2026-08-01T00:00:00+00:00"
+    },
+    {
+      "kind": "issue",
+      "number": 9002,
+      "title": "[fixture] Process APIs only on .NET Core break net48",
+      "body": "Fixture text, not real history. ProcessStartInfo.ArgumentList and WaitForExit(TimeSpan) do not exist on net48.",
+      "labels": [
+        "ci"
+      ],
+      "files": [],
+      "reviewComments": "",
+      "closedAt": "2026-08-02T00:00:00+00:00"
+    },
+    {
+      "kind": "issue",
+      "number": 9003,
+      "title": "[fixture] Nightly schedule too expensive",
+      "body": "Fixture text, not real history. Cut the schedule to weekly.",
+      "labels": [
+        "ci"
+      ],
+      "files": [],
+      "reviewComments": "",
+      "closedAt": "2026-08-03T00:00:00+00:00"
+    }
+  ]
+}
