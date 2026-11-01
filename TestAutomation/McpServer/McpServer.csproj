@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Same condition the libraries use: net10.0 is added only when an SDK 10 builds this. -->
+    <TargetFrameworks Condition="$([System.Version]::Parse('$(NETCoreSdkVersion)').Major) >= 10">net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AutomationSandbox.Mcp</RootNamespace>
+
+    <!-- No GenerateDocumentationFile: the public surface is the MCP tool list and its JSON, not a C# API
+         (same reasoning as the other command-line tools). -->
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>automation-sandbox-mcp</ToolCommandName>
+    <PackageId>AutomationSandbox.Mcp</PackageId>
+    <Description>A Model Context Protocol server over stdio, written in C# (no Node.js), that lets a model call the Automation Sandbox engine with read-only tools: heal a locator from two UI-tree JSON documents, classify a CI log, check whether an issue is eligible for the agent, and run a triage dry run. No tool writes anything or takes a credential as an argument.</Description>
+    <PackageTags>mcp;model-context-protocol;self-healing;llm;dotnet-tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The agent command's report shape is reused for the triage tool, as in the ScenarioRunner build. -->
+    <Compile Include="..\AgentCli\AgentOptions.cs" Link="AgentCli\AgentOptions.cs" />
+    <Compile Include="..\AgentCli\AgentCommand.cs" Link="AgentCli\AgentCommand.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UiModel\UiModel.csproj" />
+    <ProjectReference Include="..\SelfHealing\SelfHealing.csproj" />
+    <ProjectReference Include="..\LlmHealing\LlmHealing.csproj" />
+  </ItemGroup>
+
+</Project>
