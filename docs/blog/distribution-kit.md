@@ -220,7 +220,7 @@ The healing engine is the thing to pitch — not the intent pipeline — so ever
   > component by component. The LLM fallback is opt-in and requires independent multi-provider agreement — the
   > design is backed by a measured study of where that agreement fails
   > (https://mustafasercansak.github.io/automation-sandbox/docs/blog/llm-false-heal-study.html).
-  > Seven packages on nuget.org, benchmarked against real applications (HandBrake, ShareX), actively maintained.
+  > Nine packages on nuget.org, benchmarked against real applications (HandBrake, ShareX), actively maintained.
 
 ---
 

@@ -52,7 +52,7 @@ Dependency direction: `UiModel` ← `LlmHealing` ← `SelfHealing` ← `Scenario
   - `Discovery`: `net48;net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting` — Windows-only; FlaUI UIA3 needs Windows UIA COM APIs regardless of TFM.
   - `ScenarioRunner`, `WinFormsApp`: `net48` (Windows-only; FlaUI UIA3 needs Windows UIA COM APIs).
   - `WpfApp`: `net8.0-windows` (+ `net10.0-windows` conditionally), with `EnableWindowsTargeting`.
-- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 10.0.12, xunit 2.9.3, Microsoft.NET.Test.Sdk 18.10.1, coverlet.collector 10.1.0, Microsoft.CodeAnalysis.CSharp 5.9.0, xunit.runner.visualstudio 4.0.1.
+- Key packages: FlaUI.Core/FlaUI.UIA3 5.0.0, System.Text.Json 10.0.14, xunit 2.9.3, Microsoft.NET.Test.Sdk 18.11.0, coverlet.collector 10.1.0, Microsoft.CodeAnalysis.CSharp 5.9.0, xunit.runner.visualstudio 4.0.1.
 - **Modern Package & Security Standard:** AI agents and contributors MUST NEVER introduce ancient, end-of-life, or vulnerable package versions. Always target the latest stable, LTS-compatible releases for the project's supported target frameworks (`netstandard2.0;net8.0`), audit dependencies on every build, and keep transitive dependencies CVE-free.
 - `Directory.Build.props` carries shared NuGet pack metadata (Authors, MIT license expression, authoritative `<Version>`, `Deterministic` builds). Packable by default; demo apps, the sample, and the test project opt out with `IsPackable=false`. Bumping `<Version>` here updates all packaging workflows automatically (enforced by `PackageVersionDriftTests`). Every package embeds a shared `icon.png` and a per-package README: `docs/nuget/README.<ProjectName>.md` is packed as the package's `README.md` when present, with the root `README.md` as fallback (#338).
 
@@ -80,7 +80,7 @@ dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration 
 # Code coverage (writes coverage.cobertura.xml under TestResults/)
 dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --collect:"XPlat Code Coverage"
 
-# Pack the four libraries (artifacts only; no publish feed is configured)
+# Pack one library (artifacts only; no publish feed is configured)
 dotnet pack TestAutomation/<Project>/<Project>.csproj --configuration Release
 ```
 
@@ -230,6 +230,7 @@ Three rules that follow from the same principle:
 - `.github/workflows/nightly-consensus.yml` — weekly (Monday 02:00 UTC), on pushes to `main` that touch model-related paths, and manual multi-provider consensus evaluation (the file keeps its old "nightly" name so references stay valid; #565 cut the schedule from nightly because live calls to up to 11 providers cost quota) on Linux/`net8.0` (#47). Its first live step is a **gating** pool assertion on `Desktop_AmbiguousSiblingTabs` (#84, redesigned 2-of-N in #388): the whole configured provider pool is exercised, and at least `MinimumConsensusVotes` (2) providers must return shortlist-valid votes agreeing on the ground-truth candidate and appear in `AgreedProviders`, with the outcome written to `$GITHUB_STEP_SUMMARY`. A provider down with HTTP 429/timeout contributes no vote and does not fail the gate by itself; fewer than 2 usable votes is a hard failure because quorum is then not demonstrable. No credentials means a clean opt-in skip; fewer than two configured providers is a hard failure proving quorum is real. The broader `CONSENSUS_EVALUATION=1` run follows as non-gating data collection, includes optional Cloudflare Workers AI when its token/account/model triplet is configured, writes the full JSON artifact and Markdown table, and may record provider rate limits/failures without failing on its aggregate metrics. These flags are set only by this workflow so `ci.yml` does not consume live quota on each PR. `GITHUB_TOKEN` is deliberately **not** exported: `OpenAiHealingProvider` could otherwise send it to the wrong endpoint. The live gate is nightly-only, not a release gate, because third-party availability must not block a manual package release.
 - `.github/workflows/ablation-consensus.yml` — runs real-tree multi-signal locator ablation sweeps across perturbation tiers.
 - `.github/workflows/provider-diagnostics.yml` — diagnostic connectivity, response parsing, and schema validation workflow for configured LLM provider backends.
+- `.github/workflows/docs-typo-audit.yml` (#546) — manual (`workflow_dispatch`) and on pull requests that touch itself or `.github/actions/site-audit/**`: report-only dogfooding of the `site-audit` action against the project's own published docs (`en` and `en-GB` dictionaries together). Deliberately not scheduled and not a gate: its findings decide which words belong in the allow list before a gate is worth having.
 - `.github/workflows/windows-app-survey.yml` — FlaUI desktop survey workflow executing discovery and telemetry extraction across Windows desktop applications.
 - `.github/workflows/open-source-app-survey.yml` — surveys open-source Windows applications for locator stability benchmarking.
 - `.github/workflows/docs.yml` — publishes `docs/` to GitHub Pages.
