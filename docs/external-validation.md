@@ -111,6 +111,6 @@ Bu, bir FlaUI masaüstü veya Playwright web test paketi sürdüren, motoru dene
 
 ### 3. Gelecek 90 Gün ve Sürüm Kararı
 
-Sıralama, pilot ortaklarının belirlenmesi ve erişim, tekrarlanabilir başlangıç ölçümü, gözetimli entegrasyonlar, ardından yayımlama ve ticari teklif değerlendirmesidir. Zamanlama dış katılıma bağlıdır; 90 günlük planlama dönemi sürüm taahhüdü değildir. Pilot geri bildiriminin gerekli gösterdiği iyileştirmelere öncelik verin. Doğrulama için #401'i kullanın; yalnızca masaüstü odağıyla uyumlu somut bulgular için uygulama issue'ları açın.
+Sıralama, pilot ortaklarının belirlenmesi ve erişim, tekrarlanabilir başlangıç ölçümü, gözetimli entegrasyonlar, ardından yayımlama ve ticari teklif değerlendirmesidir. Zamanlama dış katılıma bağlıdır; 90 günlük planlama dönemi sürüm taahhüdü değildir. Pilot geri bildiriminin gerekli gösterdiği iyileştirmelere öncelik verin. Doğrulama için #401'i kullanın; yalnızca iki platformdan birinin pilot geri bildirimiyle uyumlu somut bulgular için uygulama issue'ları açın.
 
 1.0 öncesinde yazılı geri bildirimli üç bağımsız entegrasyonu ve ölçülmüş sonuçları olan iki doğal değişim veri setini doğrulayın. Kanıtları #401 ve sürüm notlarından bağlayın, ardından tüm [beta çıkış kriterlerini](versioning-and-stability.md) yeniden kontrol edin. O zamana kadar #401 açık kalır; ürün önizleme olarak tanımlanır ve ticari uygulanabilirliği doğrulanmış sayılmaz.
