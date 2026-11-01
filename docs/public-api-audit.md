@@ -117,6 +117,10 @@ Every remaining public type is listed below. Setter counts are after the change.
 | IntentExecution / `IntentWebExecutor` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueIntake` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueIntakeResult` | 0 | Freeze: the outcome of one intake check, read-only. |
+| LlmHealing / `AgentReportComment` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentRunReport` | 0 | Freeze: what one run did and why it stopped, read-only plain data. |
+| LlmHealing / `AgentRunStage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `AgentTriageRun` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentIssueGate` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `AgentLabels` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `BoardReadOutcome` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
@@ -133,6 +137,10 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `HttpLlmHealingProvider` | 3 | Keep tunables mutable: sanitizer and batch timeout overrides are deliberate provider-instance configuration. |
 | LlmHealing / `HttpTextModel` | 1 | Keep tunable mutable: the sanitizer is deliberate model-instance configuration, like the healing providers' sanitizer. |
 | LlmHealing / `ILlmHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueCommentResult` | 0 | Freeze: the outcome of one comment post, read-only. |
+| LlmHealing / `IssueCommentWriter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueLabelResult` | 0 | Freeze: the outcome of one label write, read-only. |
+| LlmHealing / `IssueLabelWriter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `IssueTriage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `IssueTriageResult` | 0 | Freeze: the outcome of one triage call, read-only. |
 | LlmHealing / `IssueSnapshot` | 0 | Freeze: a fixed picture of an issue the gate decides on, so a label that changes afterwards cannot change an answer already given. |

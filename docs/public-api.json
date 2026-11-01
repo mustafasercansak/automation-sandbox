@@ -1198,6 +1198,79 @@
   },
   {
     "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentReportComment",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentReportComment"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentReportComment.cs"
+    ],
+    "Members": [
+      "public const int MaxLength;",
+      "public const string Marker;",
+      "public static string Build(AgentRunReport report)",
+      "public static string ErrorSummary(string? error)",
+      "public static string EscapeInline(string? text)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentRunReport",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class AgentRunReport"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "public AgentRunStage Stage { get; }",
+      "public CiFailureOutcome? CiFailure { get; }",
+      "public DocsOutcome? Docs { get; }",
+      "public GateDecision? Gate { get; }",
+      "public IReadOnlyList<string> RoutingProblems { get; }",
+      "public TriageOutcome? Triage { get; }",
+      "public bool IsAccepted { get; }",
+      "public bool NeedsHuman { get; }",
+      "public string Summary()",
+      "public string? ReadError { get; }",
+      "public string? TaskKind { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentRunStage",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public enum AgentRunStage"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "Completed",
+      "NotEligible",
+      "RoutingFailed",
+      "UnsupportedTask"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.AgentTriageRun",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class AgentTriageRun"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/AgentTriageRun.cs"
+    ],
+    "Members": [
+      "public static async Task<AgentRunReport> RunAsync( string repository, int number, string projectId, string projectToken, TextModelRegistry registry, TextModelRoutingConfig? config = null, IReadOnlyCollection<string>? allowedLabels = null, string? issueToken = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default, DocsSourceContext? docsSources = null)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
     "Type": "AutomationSandbox.LlmHealing.BoardReadOutcome",
     "PublicMutableProperties": 0,
     "Declarations": [
@@ -1242,8 +1315,135 @@
       "protected override HttpRequestMessage CreateRequest(string sanitizedPrompt, TextCompletionRequest request)",
       "protected override string ExtractText(string responseBody)",
       "protected override string UnavailableErrorMessage { get; }",
-      "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
+      "public ChatCompletionsTextModel( string name, string? apiKey, string model, string endpoint = \"https://api.openai.com/v1\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null, bool requireApiKey = true)",
       "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureOutcome",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureOutcome"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public CiFailureProposal? Proposal { get; }",
+      "public CiLogClassification Classification { get; }",
+      "public IReadOnlyList<string> Findings { get; }",
+      "public TriageStatus Status { get; }",
+      "public string? DraftedBy { get; }",
+      "public string? Error { get; }",
+      "public string? ReviewedBy { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailurePipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiFailurePipeline"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public static async Task<CiFailureOutcome> RunAsync( IssueSnapshot issue, TextModelRoutingResult routing, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureProposal",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureProposal"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> SuggestedLabels { get; }",
+      "public string Body { get; }",
+      "public string Title { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiFailureResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public CiFailureProposal? Proposal { get; }",
+      "public bool Success { get; }",
+      "public string ModelName { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiFailureTask",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiFailureTask"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiFailureTask.cs"
+    ],
+    "Members": [
+      "public const int MaxBodyLength;",
+      "public const int MaxTitleLength;",
+      "public const string BeginMarker;",
+      "public const string EndMarker;",
+      "public static CiFailureResult ParseAnswer(string answer, IReadOnlyCollection<string>? allowedLabels = null)",
+      "public static IReadOnlyList<string> DefaultAllowedLabels { get; }",
+      "public static async Task<CiFailureResult> RunAsync( string title, CiLogClassification classification, ITextModel model, IReadOnlyCollection<string>? allowedLabels = null, CancellationToken cancellationToken = default)",
+      "public static string BuildPrompt(string title, CiLogClassification classification, IReadOnlyCollection<string>? allowedLabels = null)",
+      "public static string BuildReviewPrompt(string title, CiLogClassification classification, CiFailureProposal proposal)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiLogClassification",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class CiLogClassification"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiLogClassifier.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Evidence { get; }",
+      "public IReadOnlyList<string> MatchedCategories { get; }",
+      "public bool Retryable { get; }",
+      "public bool Truncated { get; }",
+      "public string Category { get; }",
+      "public string Excerpt { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.CiLogClassifier",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class CiLogClassifier"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/CiLogClassifier.cs"
+    ],
+    "Members": [
+      "public const int MaxEvidenceLength;",
+      "public const int MaxEvidenceLines;",
+      "public const int MaxExcerptLength;",
+      "public const int MaxLogLength;",
+      "public const string Unknown;",
+      "public static CiLogClassification Classify(string? log)"
     ]
   },
   {
@@ -1284,6 +1484,178 @@
       "public ClaudeTextModel( string? apiKey, string? model = null, string name = \"Claude\", HttpClient? httpClient = null, TimeSpan? timeout = null, TimeSpan? totalTimeout = null, int maxRetries = 2, Func<TimeSpan, CancellationToken, Task>? delayAsync = null)",
       "public const string DefaultModel;",
       "public override bool IsAvailable { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocSource",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocSource"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsSources.cs"
+    ],
+    "Members": [
+      "public string Content { get; }",
+      "public string Path { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsOutcome",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsOutcome"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsTask.cs"
+    ],
+    "Members": [
+      "public DocsProposal? Proposal { get; }",
+      "public IReadOnlyList<string> Findings { get; }",
+      "public IReadOnlyList<string> SourcePaths { get; }",
+      "public TriageStatus Status { get; }",
+      "public string? DraftedBy { get; }",
+      "public string? Error { get; }",
+      "public string? ReviewedBy { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsPipeline",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class DocsPipeline"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsTask.cs"
+    ],
+    "Members": [
+      "public static async Task<DocsOutcome> RunAsync( IssueSnapshot issue, TextModelRoutingResult routing, DocsSourceContext? context, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsProposal",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsProposal"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsTask.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> SourcesUsed { get; }",
+      "public string Document { get; }",
+      "public string Title { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsRequest",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsRequest"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsSources.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<string> Problems { get; }",
+      "public IReadOnlyList<string> RequestedPaths { get; }",
+      "public static DocsRequest Parse(string? body)",
+      "public string Instruction { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsTask.cs"
+    ],
+    "Members": [
+      "public DocsProposal? Proposal { get; }",
+      "public bool Success { get; }",
+      "public string ModelName { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsSourceCollector",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class DocsSourceCollector"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsSources.cs"
+    ],
+    "Members": [
+      "public const int MaxFileBytes;",
+      "public const int MaxFiles;",
+      "public const int MaxTotalCharacters;",
+      "public static DocsSourceResult Collect(string rootDirectory, IReadOnlyCollection<string> trackedPaths, IReadOnlyList<string> requestedPaths)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsSourceContext",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsSourceContext"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsSources.cs"
+    ],
+    "Members": [
+      "public DocsSourceContext(string rootDirectory, Func<IReadOnlyCollection<string>> listTrackedPaths)",
+      "public Func<IReadOnlyCollection<string>> ListTrackedPaths { get; }",
+      "public string RootDirectory { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsSourceResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class DocsSourceResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsSources.cs"
+    ],
+    "Members": [
+      "public IReadOnlyList<DocSource> Sources { get; }",
+      "public IReadOnlyList<string> Problems { get; }",
+      "public bool Success { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.DocsTask",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class DocsTask"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/DocsTask.cs"
+    ],
+    "Members": [
+      "public const int MaxDocumentLength;",
+      "public const int MaxTitleLength;",
+      "public const string DocumentBeginMarker;",
+      "public const string DocumentEndMarker;",
+      "public const string SourceBeginMarker;",
+      "public const string SourceEndMarker;",
+      "public static DocsResult ParseAnswer(string answer, IReadOnlyCollection<string> suppliedPaths)",
+      "public static async Task<DocsResult> RunAsync( IssueSnapshot issue, string instruction, IReadOnlyList<DocSource> sources, ITextModel model, CancellationToken cancellationToken = default)",
+      "public static string BuildPrompt(IssueSnapshot issue, string instruction, IReadOnlyList<DocSource> sources)",
+      "public static string BuildReviewPrompt(IssueSnapshot issue, string instruction, IReadOnlyList<DocSource> sources, DocsProposal proposal)",
+      "public static string? ValidateDocument(string document, IReadOnlyCollection<string> suppliedPaths)"
     ]
   },
   {
@@ -1396,7 +1768,8 @@
     ],
     "Members": [
       "public const int MaxBodyLength;",
-      "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+      "public static async Task<GitHubIssueReadResult> ReadAsync( string repository, int number, string? token = null, HttpClient? httpClient = null, CancellationToken cancellationToken = default)",
+      "public static bool IsValidRepository(string? repository)"
     ]
   },
   {
@@ -1482,6 +1855,64 @@
       "Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)",
       "bool IsAvailable { get; }",
       "string Name { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueCommentResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueCommentResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueCommentWriter.cs"
+    ],
+    "Members": [
+      "public bool Success { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueCommentWriter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IssueCommentWriter"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueCommentWriter.cs"
+    ],
+    "Members": [
+      "public static async Task<IssueCommentResult> PostAsync( string repository, int number, string token, string body, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueLabelResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueLabelResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueLabelWriter.cs"
+    ],
+    "Members": [
+      "public bool Success { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueLabelWriter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IssueLabelWriter"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueLabelWriter.cs"
+    ],
+    "Members": [
+      "public static async Task<IssueLabelResult> AddNeedsHumanAsync( string repository, int number, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
   {
@@ -1729,7 +2160,8 @@
       "TestAutomation/LlmHealing/IssueAutomation/ProjectBoardReader.cs"
     ],
     "Members": [
-      "public static async Task<BoardStatusResult> ReadStatusAsync( string repository, int number, string projectId, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+      "public static async Task<BoardStatusResult> ReadStatusAsync( string repository, int number, string projectId, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)",
+      "public static bool IsValidProjectId(string? projectId)"
     ]
   },
   {

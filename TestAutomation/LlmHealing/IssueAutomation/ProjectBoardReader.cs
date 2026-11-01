@@ -65,6 +65,12 @@ namespace AutomationSandbox.LlmHealing
   } }
 }";
 
+        /// <summary>True when <paramref name="projectId" /> looks like a GitHub Projects node id (<c>PVT_...</c>).</summary>
+        public static bool IsValidProjectId(string? projectId)
+        {
+            return projectId != null && ProjectIdPattern.IsMatch(projectId);
+        }
+
         /// <summary>Reads the Status of issue <paramref name="number" /> of <paramref name="repository" /> in the board
         /// <paramref name="projectId" /> (a <c>PVT_...</c> node id). The token needs read access to the project and to
         /// the issues on it. With no <paramref name="httpClient" /> a client that follows no redirects is used.</summary>
@@ -86,7 +92,7 @@ namespace AutomationSandbox.LlmHealing
                 return Fail("The issue number must be positive.");
             }
 
-            if (projectId == null || !ProjectIdPattern.IsMatch(projectId))
+            if (!IsValidProjectId(projectId))
             {
                 return Fail("The project id must be a GitHub Projects node id (PVT_...).");
             }

@@ -1,0 +1,96 @@
+name: Agent triage (manual)
+
+# Runs the read-only issue-triage agent (#585) on one issue, on demand (#589). It is started by hand and by nothing else:
+# no issue event, no label event and no pull request can start it, so a stranger cannot spend model quota or reach the
+# secrets below. Only a person who may run workflows in this repository can dispatch it.
+#
+# The agent reads the issue and its board card, applies the Agent label gate, routes the models from the issue's own
+# Model:: and Review:: labels and drafts a triage proposal that a second model checks. It changes no card, and adds a label only
+# with label_needs_human (the one label Agent::Needs-Human, when the review blocks or the run fails, #601).
+# With post_comment it also posts the report as one comment on the issue, using the workflow's own token (issues: write),
+# so no separate token is needed for that. Reading the user-owned project board needs PROJECT_TOKEN (a classic token with
+# read:project only), because the workflow's token cannot read it.
+#
+# Everything a person supplies reaches the shell through env:, never interpolated into the script text. The run itself is
+# .github/scripts/run-agent-triage.sh, shared with the label-triggered workflow (agent-triage-label.yml).
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Number of the issue to triage
+        required: true
+        type: string
+      post_comment:
+        description: Post the report as a comment on the issue
+        required: false
+        default: false
+        type: boolean
+      label_needs_human:
+        description: Add the label Agent::Needs-Human when the review blocks the proposal or the run fails
+        required: false
+        default: false
+        type: boolean
+      nvidia_model:
+        description: NVIDIA model id (only needed to use Model::Nvidia or Review::Nvidia)
+        required: false
+        default: ''
+        type: string
+      ollama_cloud_model:
+        description: Ollama Cloud model name (only needed to use Model::OllamaCloud or Review::OllamaCloud)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  # Used only when post_comment or label_needs_human is true: the workflow's token may then write the one comment or add the one label.
+  issues: write
+
+concurrency:
+  group: agent-triage-${{ inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: Triage one issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate the inputs
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
+          OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+        run: |
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]{0,8}$ ]] || { echo "issue_number must be a positive whole number"; exit 2; }
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT"; do
+            [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
+          done
+
+      - name: Run the triage agent (read-only)
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          POST_COMMENT: ${{ inputs.post_comment }}
+          LABEL_NEEDS_HUMAN: ${{ inputs.label_needs_human }}
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROJECT_ID: PVT_kwHOAr3aNM4BgUrT
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
+        run: .github/scripts/run-agent-triage.sh

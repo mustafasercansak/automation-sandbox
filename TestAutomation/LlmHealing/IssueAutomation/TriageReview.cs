@@ -233,9 +233,59 @@ namespace AutomationSandbox.LlmHealing
                 throw new ArgumentNullException(nameof(routing));
             }
 
+            var run = await DraftAndReviewAsync(
+                routing,
+                async model =>
+                {
+                    var draft = await IssueTriage.RunAsync(issue, model, allowedLabels, cancellationToken).ConfigureAwait(false);
+                    return (draft.Proposal, draft.Error);
+                },
+                proposal => BuildReviewPrompt(issue, proposal),
+                cancellationToken).ConfigureAwait(false);
+            return new TriageOutcome(run.Status, run.Proposal, run.DraftedBy, run.ReviewedBy, run.Findings, run.Error);
+        }
+
+        /// <summary>The result of <see cref="DraftAndReviewAsync{T}" />.</summary>
+        internal sealed class DraftReview<T> where T : class
+        {
+            public DraftReview(TriageStatus status, T? proposal, string? draftedBy, string? reviewedBy, IReadOnlyList<string> findings, string? error)
+            {
+                Status = status;
+                Proposal = proposal;
+                DraftedBy = draftedBy;
+                ReviewedBy = reviewedBy;
+                Findings = findings;
+                Error = error;
+            }
+
+            public TriageStatus Status { get; }
+
+            public T? Proposal { get; }
+
+            public string? DraftedBy { get; }
+
+            public string? ReviewedBy { get; }
+
+            public IReadOnlyList<string> Findings { get; }
+
+            public string? Error { get; }
+        }
+
+        // The rules every reviewed task shares: the drafter and reviewer must be different, available models; each is called at
+        // most once; the reviewer is asked only after a valid proposal; it can only block; a review that cannot be completed
+        // is a failure, never approval.
+        internal static async Task<DraftReview<T>> DraftAndReviewAsync<T>(
+            TextModelRoutingResult routing,
+            Func<ITextModel, Task<(T? Proposal, string? Error)>> draftAsync,
+            Func<T, string> buildReviewPrompt,
+            CancellationToken cancellationToken) where T : class
+        {
+            DraftReview<T> Stop(string error, string? draftedBy) => new DraftReview<T>(TriageStatus.Failed, null, draftedBy, null, new string[0], error);
+
+            cancellationToken.ThrowIfCancellationRequested();
             if (!routing.Success)
             {
-                return Failed("Routing stopped the task: " + string.Join(" ", routing.Problems), null);
+                return Stop("Routing stopped the task: " + string.Join(" ", routing.Problems), null);
             }
 
             var drafter = routing.Drafter!;
@@ -244,45 +294,44 @@ namespace AutomationSandbox.LlmHealing
             {
                 if (string.Equals(drafter.Name, reviewer.Name, StringComparison.OrdinalIgnoreCase))
                 {
-                    return Failed($"\"{drafter.Name}\" is both drafting model and reviewer; an independent review needs a different model.", null);
+                    return Stop($"\"{drafter.Name}\" is both drafting model and reviewer; an independent review needs a different model.", null);
                 }
 
                 if (!reviewer.IsAvailable)
                 {
-                    return Failed($"The reviewer \"{reviewer.Name}\" is not available (no API key); no model was asked.", null);
+                    return Stop($"The reviewer \"{reviewer.Name}\" is not available (no API key); no model was asked.", null);
                 }
             }
 
-            var draft = await IssueTriage.RunAsync(issue, drafter, allowedLabels, cancellationToken).ConfigureAwait(false);
-            if (!draft.Success)
+            var draft = await draftAsync(drafter).ConfigureAwait(false);
+            if (draft.Proposal == null)
             {
-                return Failed(draft.Error!, drafter.Name);
+                return Stop(draft.Error ?? "The drafting model gave no proposal.", drafter.Name);
             }
 
             if (reviewer == null)
             {
-                return new TriageOutcome(TriageStatus.Accepted, draft.Proposal, drafter.Name, null, new string[0], null);
+                return new DraftReview<T>(TriageStatus.Accepted, draft.Proposal, drafter.Name, null, new string[0], null);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             var completion = await reviewer.CompleteAsync(
-                new TextCompletionRequest(BuildReviewPrompt(issue, draft.Proposal!), maxOutputTokens: 1024, expectJson: true), cancellationToken).ConfigureAwait(false);
+                new TextCompletionRequest(buildReviewPrompt(draft.Proposal), maxOutputTokens: 1024, expectJson: true), cancellationToken).ConfigureAwait(false);
             if (!completion.Success)
             {
-                return Failed($"The reviewer \"{reviewer.Name}\" failed: {completion.ErrorMessage}", drafter.Name);
+                return Stop($"The reviewer \"{reviewer.Name}\" failed: {completion.ErrorMessage}", drafter.Name);
             }
 
             var verdict = ReviewVerdictParser.Parse(completion.Text, out var error);
             if (verdict == null)
             {
-                return Failed($"The reviewer \"{reviewer.Name}\" gave no valid verdict: {error}", drafter.Name);
+                return Stop($"The reviewer \"{reviewer.Name}\" gave no valid verdict: {error}", drafter.Name);
             }
 
             return verdict.Ok
-                ? new TriageOutcome(TriageStatus.Accepted, draft.Proposal, drafter.Name, reviewer.Name, new string[0], null)
-                : new TriageOutcome(TriageStatus.Blocked, draft.Proposal, drafter.Name, reviewer.Name, verdict.Findings, null);
+                ? new DraftReview<T>(TriageStatus.Accepted, draft.Proposal, drafter.Name, reviewer.Name, new string[0], null)
+                : new DraftReview<T>(TriageStatus.Blocked, draft.Proposal, drafter.Name, reviewer.Name, verdict.Findings, null);
         }
-
-        private static TriageOutcome Failed(string error, string? draftedBy) =>
-            new TriageOutcome(TriageStatus.Failed, null, draftedBy, null, new string[0], error);
     }
 }
