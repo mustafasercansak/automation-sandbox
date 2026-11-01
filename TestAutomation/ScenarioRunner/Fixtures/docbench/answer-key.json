@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "note": "Frozen before any model was run. Do not edit or filter after seeing a result (see #143).",
+  "files": [
+    {
+      "id": "agent-overview",
+      "path": "agent-overview.md",
+      "clean": false
+    },
+    {
+      "id": "docs-task",
+      "path": "docs-task.md",
+      "clean": false
+    },
+    {
+      "id": "install",
+      "path": "install.md",
+      "clean": false
+    },
+    {
+      "id": "label-gate",
+      "path": "label-gate.md",
+      "clean": true
+    },
+    {
+      "id": "mcp-limits",
+      "path": "mcp-limits.md",
+      "clean": true
+    },
+    {
+      "id": "ci-classifier",
+      "path": "ci-classifier.md",
+      "clean": true
+    }
+  ],
+  "defects": [
+    {
+      "id": "stale-option",
+      "kind": "stale-option-name",
+      "file": "agent-overview.md",
+      "line": 8,
+      "bad": "--post-comment",
+      "source": {
+        "file": "agent-cli-usage.txt",
+        "line": 10,
+        "expect": "--comment"
+      }
+    },
+    {
+      "id": "renamed-api",
+      "kind": "renamed-api",
+      "file": "agent-overview.md",
+      "line": 9,
+      "bad": "IssueNoteWriter",
+      "source": {
+        "file": "api-names.txt",
+        "line": 3,
+        "expect": "IssueCommentWriter"
+      }
+    },
+    {
+      "id": "wrong-number",
+      "kind": "wrong-number",
+      "file": "docs-task.md",
+      "line": 4,
+      "bad": "At most 12 files",
+      "source": {
+        "file": "limits.txt",
+        "line": 1,
+        "expect": "= 8"
+      }
+    },
+    {
+      "id": "broken-link",
+      "kind": "broken-link",
+      "file": "docs-task.md",
+      "line": 7,
+      "bad": "routing-guide.md",
+      "source": {
+        "file": "docs-index.txt",
+        "line": 7,
+        "expect": "routing.md"
+      }
+    },
+    {
+      "id": "wrong-command",
+      "kind": "wrong-command",
+      "file": "install.md",
+      "line": 5,
+      "bad": "AutomationSandbox.Agnt",
+      "source": {
+        "file": "agent-cli-usage.txt",
+        "line": 2,
+        "expect": "AutomationSandbox.Agent"
+      }
+    }
+  ]
+}
