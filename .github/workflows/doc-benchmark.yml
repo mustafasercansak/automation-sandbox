@@ -1,0 +1,101 @@
+name: Doc-defect benchmark (manual)
+
+# Runs the documentation-defect benchmark (#560) against every model the repository's secrets configure, and publishes the
+# per-model report (Markdown and raw per-finding JSON) as an artifact and in the job summary.
+#
+# Manual only (workflow_dispatch): it asks real models, so it spends quota, and nothing an outsider can do may start it. The
+# corpus is frozen (TestAutomation/ScenarioRunner/Fixtures/docbench); do not edit or filter it after seeing a result.
+# Nothing here gates a release or a pull request. Five planted defects in six files is a small sample: read every figure with
+# the sample size printed beside it, and do not call a result a ranking.
+#
+# Keys are passed as secrets through env: only, never interpolated into a script. The workflow has read access to the contents
+# and nothing else.
+on:
+  workflow_dispatch:
+    inputs:
+      nvidia_model:
+        description: NVIDIA model id (only needed to include the NVIDIA model)
+        required: false
+        default: ''
+        type: string
+      ollama_cloud_model:
+        description: Ollama Cloud model name (only needed to include the Ollama Cloud model)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doc-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Run the doc-defect benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate the inputs
+        shell: bash
+        env:
+          NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
+          OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+        run: |
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT"; do
+            [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
+          done
+
+      - name: Run the benchmark
+        shell: bash
+        env:
+          DOC_BENCHMARK: '1'
+          DOC_BENCHMARK_OUT: ${{ github.workspace }}/doc-benchmark-out
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
+        run: |
+          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net8.0 -c Debug \
+            --filter "FullyQualifiedName~DocBenchmarkTests.RunDocBenchmark_LiveAgainstConfiguredModels" \
+            --logger "console;verbosity=normal"
+
+      - name: Write the reports to the job summary
+        if: always()
+        shell: bash
+        run: |
+          # A report holds text a model wrote. Backticks are replaced so that text cannot close the code fences around it.
+          safe() { sed "s/\`/'/g" "$1"; }
+          {
+            echo "## Doc-defect benchmark"
+            echo
+            if compgen -G "doc-benchmark-out/*.md" > /dev/null; then
+              for report in doc-benchmark-out/*.md; do
+                safe "$report"
+                echo
+              done
+            else
+              echo "No report was written: no model was configured, or the run failed before writing one."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: doc-benchmark-reports
+          path: doc-benchmark-out/
+          if-no-files-found: warn
