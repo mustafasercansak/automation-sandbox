@@ -34,4 +34,6 @@ Start here / Buradan başla:
 
 - **Repository:** <https://github.com/mustafasercansak/automation-sandbox>
 - **Releases & packages:** <https://github.com/mustafasercansak/automation-sandbox/releases>
+- **Documentation site (EN/TR):** <https://mustafasercansak.github.io/automation-sandbox/>
+- **Maintainer:** [Mustafa Sercan Sak on LinkedIn](https://www.linkedin.com/in/mustafa-sercan-sak)
 - **Showcase (EN/TR):** [PROJECT_SHOWCASE.md](https://github.com/mustafasercansak/automation-sandbox/blob/main/PROJECT_SHOWCASE.md)
