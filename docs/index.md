@@ -63,6 +63,8 @@ Imagine you write an automated test that clicks a button called `"Submit"`. One 
 | 🔍 [**Public API Audit**](public-api-audit.md) | Source API inventory, package boundaries, and deliberate mutability decisions behind the API-stability tiers (#400). |
 | 🛡️ [**API Stability & Beta-Exit Criteria**](versioning-and-stability.md) | Public API contracts, semantic versioning policy, and concrete checkable beta-exit criteria for 1.0. |
 
+**Maintainer:** Mustafa Sercan Sak ([LinkedIn](https://www.linkedin.com/in/mustafa-sercan-sak)). To try the engine on your own application and share what happened, see the [external validation protocol](external-validation.md).
+
 ---
 
 ## 🇹🇷 Türkçe Genel Bakış
@@ -107,6 +109,8 @@ Yazılım testinizde `"Kaydet"` adlı bir butona tıklayan otomatik bir test yaz
 | 🧪 [**Dış Doğrulama**](external-validation.md) | 1.0 sürümünü engelleyen #401 kapısı için pilot kanıt protokolü: bağımsız FlaUI entegrasyonları, doğal versiyon-drift veri setleri ve neyin kanıt sayıldığı. |
 | 🔍 [**Genel API Denetimi**](public-api-audit.md) | Kaynak API envanteri, paket sınırları ve API-kararlılık kademelerinin arkasındaki bilinçli mutability kararları (#400). |
 | 🛡️ [**API Kararlılığı & Beta Çıkış Kriterleri**](versioning-and-stability.md) | Genel API sözleşmeleri, semantik sürümleme politikası ve 1.0 için somut kontrol listesi. |
+
+**Bakımcı:** Mustafa Sercan Sak ([LinkedIn](https://www.linkedin.com/in/mustafa-sercan-sak)). Motoru kendi uygulamanızda denemek ve sonucu paylaşmak için [dış doğrulama protokolüne](external-validation.md) bakın.
 
 ---
 
