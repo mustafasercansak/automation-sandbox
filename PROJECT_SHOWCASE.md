@@ -437,4 +437,4 @@ graph LR
 </details>
 
 ---
-*Created with ❤️ by **Mustafa Sercan SAK** & **Antigravity AI Pair Programmer***
+*Created with ❤️ by **[Mustafa Sercan SAK](https://www.linkedin.com/in/mustafa-sercan-sak)** & **Antigravity AI Pair Programmer***
