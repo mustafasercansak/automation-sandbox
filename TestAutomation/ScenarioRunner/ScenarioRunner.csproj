@@ -17,6 +17,9 @@
     <Compile Include="..\SiteAuditCli\AuditOptions.cs" Link="SiteAuditCli\AuditOptions.cs" />
     <Compile Include="..\AgentCli\AgentOptions.cs" Link="AgentCli\AgentOptions.cs" />
     <Compile Include="..\AgentCli\AgentCommand.cs" Link="AgentCli\AgentCommand.cs" />
+    <!-- The MCP server (#586) is a net8.0-only tool too; its protocol loop and tools are compiled in for the same reason. -->
+    <Compile Include="..\McpServer\McpProtocol.cs" Link="McpServer\McpProtocol.cs" />
+    <Compile Include="..\McpServer\McpTools.cs" Link="McpServer\McpTools.cs" />
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\spelling\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\docbench\**\*" CopyToOutputDirectory="PreserveNewest" />
