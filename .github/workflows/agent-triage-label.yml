@@ -1,0 +1,57 @@
+name: Agent triage (on label)
+
+# Runs the read-only issue-triage agent (#585) when a maintainer adds the Agent::Allowed label to an issue (#589).
+#
+# Only people with triage access or more can add a label, so the label is itself the permission check; the workflow adds
+# three more: it is OFF unless the repository variable AGENT_TRIAGE_ON_LABEL is "true", it reacts only to the label
+# Agent::Allowed, and it runs the code on the default branch (an issues event never checks out the issue author's code).
+# It cannot be started by a pull request, a comment or a push. It is read-only: the report goes to the job summary, and
+# no label, comment or card is written (that stays with the manual workflow, agent-triage.yml, and its post_comment input).
+#
+# Everything the event supplies reaches the shell through env:, never interpolated into the script text. The run itself is
+# .github/scripts/run-agent-triage.sh, shared with the manual workflow.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  triage:
+    name: Triage the labelled issue
+    if: ${{ vars.AGENT_TRIAGE_ON_LABEL == 'true' && github.event.label.name == 'Agent::Allowed' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Per issue, and shared with the manual workflow, so a repeated label event or a manual run does not triage the same
+    # issue twice at once. At job level on purpose: an unrelated label event is skipped by the condition above before it
+    # can queue behind, or replace, a pending run.
+    concurrency:
+      group: agent-triage-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run the triage agent (read-only)
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROJECT_ID: PVT_kwHOAr3aNM4BgUrT
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          OLLAMA_CLOUD_MODEL: ${{ vars.OLLAMA_CLOUD_MODEL }}
+        run: .github/scripts/run-agent-triage.sh
