@@ -154,13 +154,28 @@ namespace ScenarioRunner
                 .ToString();
         }
 
-        public static async Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, LessonIndex index, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default)
+        public static Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, LessonIndex index, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            return RunAsync(model, cases, _ => index, live, options, cancellationToken);
+        }
+
+        /// <summary>Keeps only the records closed before <paramref name="asOf" /> (a <c>yyyy-MM-dd</c> date, UTC midnight). A record
+        /// with no closing time is dropped too: when in doubt, history that might come from after the defect is left out. What this
+        /// cannot remove is the pull request that introduced the defect itself, which was closed before its fix; it says nothing about the fix.</summary>
+        public static LessonIndex IndexAsOf(LessonIndex index, string asOf)
+        {
+            var cutoff = DateTimeOffset.ParseExact(asOf, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
+            return new LessonIndex(index.Repository, index.Records.Where(r => r.ClosedAt.HasValue && r.ClosedAt.Value < cutoff));
+        }
+
+        /// <summary>As above, with the index chosen per case, so a live replay can give each defect only the history that existed before it.</summary>
+        public static async Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, Func<LessonReplayCase, LessonIndex> indexFor, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default)
         {
             var rows = new List<LessonReplayRow>();
             foreach (var c in cases)
             {
                 var plain = BuildReviewPrompt(c);
-                var matches = LessonRetriever.Retrieve(index, c.Diff, c.Files, options);
+                var matches = LessonRetriever.Retrieve(indexFor(c), c.Diff, c.Files, options);
                 var section = LessonRetriever.BuildSection(matches, options);
                 var enriched = section.Length == 0 ? plain : plain.TrimEnd() + "\n\n" + section;
                 var without = await AskAsync(model, plain, c, cancellationToken).ConfigureAwait(false);

@@ -1,0 +1,117 @@
+name: Lesson replay (manual)
+
+# Replays three real defects (#561): every configured model reviews the same diff twice, once with and once without the lessons
+# retrieved from this repository's own closed issues and pull requests, and the report says which answers flagged the defect.
+#
+# Manual only (workflow_dispatch): it builds an index through the GitHub API (read only, about 600 requests) and asks real
+# models, so it spends API quota and model quota, and nothing an outsider can do may start it. The three cases are frozen
+# (TestAutomation/ScenarioRunner/Fixtures/lessons-replay/cases.json); do not edit or filter them after seeing a result.
+# The index is built once, before the latest case date, and each case is then given only the records closed before its own date.
+# Nothing here gates a release or a pull request. Three defects is a tiny sample: no figure without its count, no claim that
+# lessons help unless the with-column beats the without-column on far more cases than this.
+#
+# Keys are passed as secrets through env: only, never interpolated into a script. The workflow can read contents, issues and
+# pull requests and write nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      nvidia_model:
+        description: NVIDIA model id (only needed to include the NVIDIA model)
+        required: false
+        default: ''
+        type: string
+      ollama_cloud_model:
+        description: Ollama Cloud model name (only needed to include the Ollama Cloud model)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: lesson-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: Replay the defects with and without lessons
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate the inputs
+        shell: bash
+        env:
+          NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
+          OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+        run: |
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT"; do
+            [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
+          done
+
+      - name: Build the lesson index (read only)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # One index, closed before the latest case date; the test then cuts it again per case.
+          asof=$(python3 -c 'import json; print(max(c["asOf"] for c in json.load(open("TestAutomation/ScenarioRunner/Fixtures/lessons-replay/cases.json"))["cases"]))')
+          [[ "$asof" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "the latest case date is not a date"; exit 2; }
+          dotnet run --project TestAutomation/AgentCli -c Release --framework net8.0 -- \
+            lessons build --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/lessons-index.json" --before "$asof"
+
+      - name: Run the replay
+        shell: bash
+        env:
+          LESSON_REPLAY: '1'
+          LESSON_REPLAY_INDEX: ${{ runner.temp }}/lessons-index.json
+          LESSON_REPLAY_OUT: ${{ github.workspace }}/lesson-replay-out
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
+        run: |
+          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net8.0 -c Debug \
+            --filter "FullyQualifiedName~LessonReplayTests.RunLessonReplay_LiveAgainstConfiguredModels" \
+            --logger "console;verbosity=normal"
+
+      - name: Write the reports to the job summary
+        if: always()
+        shell: bash
+        run: |
+          # A report holds text derived from model answers. Backticks are replaced so that text cannot close the code fences around it.
+          safe() { sed "s/\`/'/g" "$1"; }
+          {
+            echo "## Lesson replay"
+            echo
+            if compgen -G "lesson-replay-out/*.md" > /dev/null; then
+              for report in lesson-replay-out/*.md; do
+                safe "$report"
+                echo
+              done
+            else
+              echo "No report was written: no model was configured, the index could not be built, or the run failed before writing one."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lesson-replay-reports
+          path: lesson-replay-out/
+          if-no-files-found: warn
