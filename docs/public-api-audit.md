@@ -139,6 +139,8 @@ Every remaining public type is listed below. Setter counts are after the change.
 | LlmHealing / `ILlmHealingProvider` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `IssueCommentResult` | 0 | Freeze: the outcome of one comment post, read-only. |
 | LlmHealing / `IssueCommentWriter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
+| LlmHealing / `IssueLabelResult` | 0 | Freeze: the outcome of one label write, read-only. |
+| LlmHealing / `IssueLabelWriter` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `IssueTriage` | 0 | Retain public: supported operation, extension contract, enum, or existing read-only value; no public setter to remove. |
 | LlmHealing / `IssueTriageResult` | 0 | Freeze: the outcome of one triage call, read-only. |
 | LlmHealing / `IssueSnapshot` | 0 | Freeze: a fixed picture of an issue the gate decides on, so a label that changes afterwards cannot change an answer already given. |

@@ -64,6 +64,10 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>True when the run completed and its proposal was accepted (valid, and not blocked by the reviewer).</summary>
         public bool IsAccepted => Stage == AgentRunStage.Completed && (Triage?.Status ?? CiFailure?.Status ?? Docs?.Status) == TriageStatus.Accepted;
 
+        /// <summary>True when a task ran and ended blocked by the reviewer or failed, so a human has to decide. An ineligible issue,
+        /// a routing problem or an unreadable issue is not this: nothing was drafted, and the report already says what to fix.</summary>
+        public bool NeedsHuman => Stage == AgentRunStage.Completed && (Triage?.Status ?? CiFailure?.Status ?? Docs?.Status) is TriageStatus status && status != TriageStatus.Accepted;
+
         /// <summary>One line that says how the run ended.</summary>
         public string Summary()
         {

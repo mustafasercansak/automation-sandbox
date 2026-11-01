@@ -26,6 +26,9 @@ Options:
   --allow-label <name>     A label the model may suggest (repeatable); default bug, enhancement, documentation, question.
   --comment                After the run, post the report as one comment on the issue (needs GH_TOKEN or GITHUB_TOKEN
                            with permission to write issue comments). Off by default.
+  --label-needs-human      When a task ran and the review blocked the proposal or the run failed, add the label
+                           Agent::Needs-Human to the issue (needs GH_TOKEN or GITHUB_TOKEN with permission to write issues). It
+                           adds that one label and nothing else, never removes one, and does nothing for an accepted run. Off by default.
   -h, --help               Show this help.
 
 Environment (keys and tokens are never read from arguments):
@@ -37,7 +40,7 @@ Environment (keys and tokens are never read from arguments):
 
 The issue needs Agent::Allowed, one Task::issue-triage, Task::ci-failure or Task::docs label, and the Ready column on the board. Choose the models with
 Model::<name> (drafting) and Review::<name> (independent review) labels. The report is JSON on stdout; diagnostics go to
-stderr. It changes no label or card, and posts a comment only with --comment.
+stderr. It changes no card, adds a label only with --label-needs-human, and posts a comment only with --comment.
 
 Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing stopped, or the proposal was blocked or failed
 (the report says why); 2 the command could not run (bad arguments, no token, no model, or the comment could not be posted).";
@@ -118,6 +121,12 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                 return 2;
             }
 
+            if (options.LabelNeedsHuman && issueToken == null)
+            {
+                await stderr.WriteLineAsync("--label-needs-human needs GH_TOKEN or GITHUB_TOKEN with permission to write issues (for a public repository, the public_repo scope).").ConfigureAwait(false);
+                return 2;
+            }
+
             var registry = TextModelRegistry.CreateFromEnvironment(httpClient, getEnv);
             if (registry.Models.Count == 0)
             {
@@ -169,6 +178,26 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                     }
 
                     await stderr.WriteLineAsync("Posted the report as a comment on the issue.").ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    await stderr.WriteLineAsync("Cancelled.").ConfigureAwait(false);
+                    return 2;
+                }
+            }
+
+            if (options.LabelNeedsHuman && report.NeedsHuman)
+            {
+                try
+                {
+                    var labelled = await IssueLabelWriter.AddNeedsHumanAsync(options.Repository, options.Issue, issueToken!, httpClient, cancellationToken).ConfigureAwait(false);
+                    if (!labelled.Success)
+                    {
+                        await stderr.WriteLineAsync("Could not add the label: " + labelled.Error).ConfigureAwait(false);
+                        return 2;
+                    }
+
+                    await stderr.WriteLineAsync("Added the label " + AgentLabels.NeedsHuman + " to the issue.").ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {

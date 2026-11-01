@@ -5,7 +5,8 @@ name: Agent triage (manual)
 # secrets below. Only a person who may run workflows in this repository can dispatch it.
 #
 # The agent reads the issue and its board card, applies the Agent label gate, routes the models from the issue's own
-# Model:: and Review:: labels and drafts a triage proposal that a second model checks. It changes no label and no card.
+# Model:: and Review:: labels and drafts a triage proposal that a second model checks. It changes no card, and adds a label only
+# with label_needs_human (the one label Agent::Needs-Human, when the review blocks or the run fails, #601).
 # With post_comment it also posts the report as one comment on the issue, using the workflow's own token (issues: write),
 # so no separate token is needed for that. Reading the user-owned project board needs PROJECT_TOKEN (a classic token with
 # read:project only), because the workflow's token cannot read it.
@@ -24,6 +25,11 @@ on:
         required: false
         default: false
         type: boolean
+      label_needs_human:
+        description: Add the label Agent::Needs-Human when the review blocks the proposal or the run fails
+        required: false
+        default: false
+        type: boolean
       nvidia_model:
         description: NVIDIA model id (only needed to use Model::Nvidia or Review::Nvidia)
         required: false
@@ -37,7 +43,7 @@ on:
 
 permissions:
   contents: read
-  # Used only when post_comment is true: the workflow's token may then write the one comment.
+  # Used only when post_comment or label_needs_human is true: the workflow's token may then write the one comment or add the one label.
   issues: write
 
 concurrency:
@@ -75,6 +81,7 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           POST_COMMENT: ${{ inputs.post_comment }}
+          LABEL_NEEDS_HUMAN: ${{ inputs.label_needs_human }}
           GH_TOKEN: ${{ github.token }}
           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           PROJECT_ID: PVT_kwHOAr3aNM4BgUrT
