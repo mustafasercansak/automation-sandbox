@@ -934,3 +934,7 @@ dotnet list package --outdated
 ## 📄 License
 
 This project is licensed under the **MIT License**.
+
+## 👤 Maintainer
+
+Maintained by Mustafa Sercan Sak ([LinkedIn](https://www.linkedin.com/in/mustafa-sercan-sak)). If you want to try the engine on your own application and tell us what happened, see the [external validation protocol](https://mustafasercansak.github.io/automation-sandbox/docs/external-validation); feedback of any kind is welcome.
