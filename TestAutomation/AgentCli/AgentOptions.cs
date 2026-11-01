@@ -21,6 +21,7 @@ namespace AutomationSandbox.AgentCli
         public string? RoutingFile { get; private set; }
         public string? DocsRoot { get; private set; }
         public bool Comment { get; private set; }
+        public bool LabelNeedsHuman { get; private set; }
         public List<string> AllowedLabels { get; } = new List<string>();
 
         public static AgentOptions Parse(string[] args)
@@ -75,6 +76,9 @@ namespace AutomationSandbox.AgentCli
                         break;
                     case "--comment":
                         options.Comment = true;
+                        break;
+                    case "--label-needs-human":
+                        options.LabelNeedsHuman = true;
                         break;
                     case "--allow-label":
                         options.AllowedLabels.Add(Value(args, ref i, arg));

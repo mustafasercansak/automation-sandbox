@@ -190,6 +190,8 @@ namespace ScenarioRunner
             Assert.DoesNotContain("write-all", text);
             Assert.DoesNotContain("POST_COMMENT", text);
             Assert.DoesNotContain("--comment", text);
+            Assert.DoesNotContain("LABEL_NEEDS_HUMAN", text);
+            Assert.DoesNotContain("--label-needs-human", text);
         }
 
         [Fact]

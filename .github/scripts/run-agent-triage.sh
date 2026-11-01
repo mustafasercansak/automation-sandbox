@@ -5,6 +5,8 @@
 # Inputs arrive only as environment variables, never as arguments built from workflow expressions:
 #   ISSUE_NUMBER   required, a positive whole number
 #   POST_COMMENT   optional, "true" posts the report as one comment (needs issues: write; the label workflow never sets it)
+#   LABEL_NEEDS_HUMAN  optional, "true" adds Agent::Needs-Human when the review blocks or the run fails (#601; needs issues: write;
+#                  the label workflow never sets it)
 #   PROJECT_ID     required, the project board id
 # The model keys and tokens are read by the agent itself from the environment.
 set -u
@@ -16,6 +18,7 @@ set +e
 # --docs-root: the checkout this script runs in, where the docs task reads the source files an issue names (only files git tracks).
 args=(triage --repo "$GITHUB_REPOSITORY" --issue "$ISSUE_NUMBER" --project-id "$PROJECT_ID" --docs-root "$PWD")
 if [ "${POST_COMMENT:-}" = "true" ]; then args+=(--comment); fi
+if [ "${LABEL_NEEDS_HUMAN:-}" = "true" ]; then args+=(--label-needs-human); fi
 # --framework: the runner image carries SDK 10 as well, so the tool project multi-targets net8.0 and net10.0 and
 # "dotnet run" cannot choose (the first real run of this workflow failed exactly there).
 dotnet run --project TestAutomation/AgentCli -c Release --framework net8.0 -- "${args[@]}" > report.json 2> summary.txt

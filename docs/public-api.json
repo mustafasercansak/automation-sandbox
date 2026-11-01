@@ -1232,6 +1232,7 @@
       "public IReadOnlyList<string> RoutingProblems { get; }",
       "public TriageOutcome? Triage { get; }",
       "public bool IsAccepted { get; }",
+      "public bool NeedsHuman { get; }",
       "public string Summary()",
       "public string? ReadError { get; }",
       "public string? TaskKind { get; }"
@@ -1883,6 +1884,35 @@
     ],
     "Members": [
       "public static async Task<IssueCommentResult> PostAsync( string repository, int number, string token, string body, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueLabelResult",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public sealed class IssueLabelResult"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueLabelWriter.cs"
+    ],
+    "Members": [
+      "public bool Success { get; }",
+      "public string? Error { get; }"
+    ]
+  },
+  {
+    "Package": "LlmHealing",
+    "Type": "AutomationSandbox.LlmHealing.IssueLabelWriter",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class IssueLabelWriter"
+    ],
+    "Files": [
+      "TestAutomation/LlmHealing/IssueAutomation/IssueLabelWriter.cs"
+    ],
+    "Members": [
+      "public static async Task<IssueLabelResult> AddNeedsHumanAsync( string repository, int number, string token, HttpClient? httpClient = null, CancellationToken cancellationToken = default)"
     ]
   },
   {
