@@ -133,6 +133,29 @@ namespace AutomationSandbox.LlmHealing
                 }
             }
 
+            var docs = report.Docs;
+            if (docs != null)
+            {
+                lines.Add("- Source files: " + (docs.SourcePaths.Count == 0 ? "none" : string.Join(", ", docs.SourcePaths.Select(Md))));
+                lines.Add("- Drafted by: " + Md(docs.DraftedBy ?? "nobody"));
+                lines.Add("- Reviewed by: " + (docs.ReviewedBy == null ? "nobody (not reviewed)" : Md(docs.ReviewedBy)));
+                lines.Add("- Result: " + Md(docs.Status.ToString()) + (string.IsNullOrEmpty(docs.Error) ? "" : " - " + Md(ErrorSummary(docs.Error))));
+                foreach (var finding in docs.Findings)
+                {
+                    lines.Add("- Reviewer finding: " + Md(finding));
+                }
+
+                if (docs.Proposal != null)
+                {
+                    // The draft itself is long model text: it stays in the JSON report and is not copied into a public comment.
+                    lines.Add("");
+                    lines.Add("Draft document" + (docs.Status == TriageStatus.Blocked ? " (blocked by the reviewer, shown only for reading)" : "") + ":");
+                    lines.Add("- Title: " + Md(docs.Proposal.Title));
+                    lines.Add("- Length: " + docs.Proposal.Document.Length + " characters (in the JSON report, not repeated here)");
+                    lines.Add("- Sources used: " + (docs.Proposal.SourcesUsed.Count == 0 ? "none" : string.Join(", ", docs.Proposal.SourcesUsed.Select(Md))));
+                }
+            }
+
             var comment = string.Join("\n", lines);
             return comment.Length <= MaxLength ? comment : comment.Substring(0, MaxLength - 20) + "\n[comment cut]";
         }
