@@ -21,6 +21,8 @@ Options:
   --issue <number>         The issue number (required).
   --project-id <PVT_...>   The Projects (v2) board node id; or set PROJECT_ID.
   --routing-file <path>    JSON: which task kinds each model may serve, and defaults.
+  --docs-root <dir>        A git checkout the docs task reads its source files from (only files git tracks, named by
+                           ""Source: path"" lines in the issue). Without it a Task::docs issue fails before any model is asked.
   --allow-label <name>     A label the model may suggest (repeatable); default bug, enhancement, documentation, question.
   --comment                After the run, post the report as one comment on the issue (needs GH_TOKEN or GITHUB_TOKEN
                            with permission to write issue comments). Off by default.
@@ -33,7 +35,7 @@ Environment (keys and tokens are never read from arguments):
   MISTRAL_API_KEY + MISTRAL_MODEL, NVIDIA_API_KEY + NVIDIA_MODEL, OLLAMA_CLOUD_API_KEY + OLLAMA_CLOUD_MODEL,
   OLLAMA_MODEL [OLLAMA_HOST] (a local Ollama, no key): at least one model is required.
 
-The issue needs Agent::Allowed, one Task::issue-triage label, and the Ready column on the board. Choose the models with
+The issue needs Agent::Allowed, one Task::issue-triage, Task::ci-failure or Task::docs label, and the Ready column on the board. Choose the models with
 Model::<name> (drafting) and Review::<name> (independent review) labels. The report is JSON on stdout; diagnostics go to
 stderr. It changes no label or card, and posts a comment only with --comment.
 
@@ -49,7 +51,8 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             TextWriter stdout,
             TextWriter stderr,
             HttpClient? httpClient,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Func<string, IReadOnlyCollection<string>>? listTrackedFiles = null)
         {
             AgentOptions options;
             try
@@ -122,13 +125,21 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                 return 2;
             }
 
+            // Listing the tracked files runs git, so it is deferred until a docs issue needs it.
+            DocsSourceContext? docsSources = null;
+            if (options.DocsRoot != null && listTrackedFiles != null)
+            {
+                var root = options.DocsRoot;
+                docsSources = new DocsSourceContext(root, () => listTrackedFiles(root));
+            }
+
             AgentRunReport report;
             try
             {
                 report = await AgentTriageRun.RunAsync(
                     options.Repository, options.Issue, projectId, projectToken, registry, config,
                     options.AllowedLabels.Count == 0 ? null : options.AllowedLabels,
-                    issueToken, httpClient, cancellationToken).ConfigureAwait(false);
+                    issueToken, httpClient, cancellationToken, docsSources).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -175,6 +186,7 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
             var triage = report.Triage;
             var proposal = triage?.Proposal;
             var ci = report.CiFailure;
+            var docs = report.Docs;
             return JsonSerializer.Serialize(new
             {
                 stage = report.Stage.ToString(),
@@ -212,6 +224,21 @@ Exit codes: 0 the proposal was accepted; 1 the issue is not eligible, routing st
                         title = ci.Proposal.Title,
                         body = ci.Proposal.Body,
                         suggestedLabels = ci.Proposal.SuggestedLabels,
+                    },
+                },
+                docs = docs == null ? null : new
+                {
+                    status = docs.Status.ToString(),
+                    sources = docs.SourcePaths,
+                    draftedBy = docs.DraftedBy,
+                    reviewedBy = docs.ReviewedBy,
+                    findings = docs.Findings,
+                    error = Reduce(docs.Error),
+                    proposal = docs.Proposal == null ? null : new
+                    {
+                        title = docs.Proposal.Title,
+                        document = docs.Proposal.Document,
+                        sourcesUsed = docs.Proposal.SourcesUsed,
                     },
                 },
                 summary = AgentReportComment.ErrorSummary(report.Summary()),

@@ -166,17 +166,38 @@ namespace AutomationSandbox.LlmHealing
                 }
 
                 line = builder.ToString();
-                foreach (var shape in CredentialShapes)
-                {
-                    line = shape.Replace(line, "[masked]");
-                }
-
-                line = KeyedSecret.Replace(line, m => m.Groups["key"].Value + "[masked]");
-                return line.Trim();
+                return MaskCredentials(line).Trim();
             }
             catch (RegexMatchTimeoutException)
             {
                 return "";
+            }
+        }
+
+        /// <summary>Replaces common credential shapes (GitHub, AWS, Google and Slack tokens, bearer tokens, <c>key=value</c> secrets)
+        /// with <c>[masked]</c>. A match that times out throws <see cref="RegexMatchTimeoutException" />, so a caller that must not
+        /// leak drops the text instead.</summary>
+        internal static string MaskCredentials(string text)
+        {
+            foreach (var shape in CredentialShapes)
+            {
+                text = shape.Replace(text, "[masked]");
+            }
+
+            return KeyedSecret.Replace(text, m => m.Groups["key"].Value + "[masked]");
+        }
+
+        /// <summary>True when <paramref name="text" /> contains a credential shape. A timeout counts as true: when in doubt, it is not
+        /// safe.</summary>
+        internal static bool ContainsCredential(string text)
+        {
+            try
+            {
+                return CredentialShapes.Any(shape => shape.IsMatch(text)) || KeyedSecret.IsMatch(text);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return true;
             }
         }
 

@@ -484,14 +484,5 @@ namespace ScenarioRunner
             Assert.True(comment.IndexOf("Build broken \\*now\\*", StringComparison.Ordinal) >= 0);
             Assert.False(comment.IndexOf("@everyone", StringComparison.Ordinal) >= 0);
         }
-
-        [Fact]
-        public async Task ADocsIssue_IsStillReportedAsNotImplemented()
-        {
-            var (report, _) = await RunAsync("Agent::Allowed", "Task::docs", "Model::Drafter");
-
-            Assert.Equal(AgentRunStage.UnsupportedTask, report.Stage);
-            Assert.False(report.IsAccepted);
-        }
     }
 }

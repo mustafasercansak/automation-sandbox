@@ -135,11 +135,11 @@ namespace ScenarioRunner
         private static readonly string[] Labels = { "Agent::Allowed", "Task::issue-triage", "Model::Mistral", "Review::Nvidia" };
 
         private static async Task<(int Code, string Out, string Err, ProjectBoardReaderTests.StubHandler Handler)> Run(
-            string[] args, ProjectBoardReaderTests.StubHandler handler, Dictionary<string, string?>? env = null, Func<string, string>? readFile = null, CancellationToken token = default)
+            string[] args, ProjectBoardReaderTests.StubHandler handler, Dictionary<string, string?>? env = null, Func<string, string>? readFile = null, CancellationToken token = default, Func<string, IReadOnlyCollection<string>>? listTrackedFiles = null)
         {
             var stdout = new StringWriter();
             var stderr = new StringWriter();
-            var code = await AgentCommand.RunAsync(args, Env(env), readFile ?? (_ => throw new IOException("no file")), stdout, stderr, new HttpClient(handler), token);
+            var code = await AgentCommand.RunAsync(args, Env(env), readFile ?? (_ => throw new IOException("no file")), stdout, stderr, new HttpClient(handler), token, listTrackedFiles);
             return (code, stdout.ToString(), stderr.ToString(), handler);
         }
 
@@ -167,6 +167,62 @@ namespace ScenarioRunner
             Assert.Equal("Which version?", triage.GetProperty("proposal").GetProperty("missingInformation")[0].GetString());
             Assert.Contains("Triage Accepted", result.Err);
             Assert.Equal(4, handler.Requests.Count);
+        }
+
+        [Fact]
+        public async Task ADocsIssue_ReadsItsSourcesFromTheDocsRoot_ListsTrackedFilesOnce_AndReportsTheDraft()
+        {
+            using var checkout = new TempCheckout();
+            checkout.Write("docs/guide.md", "# Guide\nRun it.");
+            var docsIssue = "{\"number\":7,\"title\":\"Docs\",\"state\":\"open\",\"body\":\"Write a guide.\\nSource: docs/guide.md\",\"labels\":[" +
+                string.Join(",", new[] { "Agent::Allowed", "Task::docs", "Model::Mistral", "Review::Nvidia" }.Select(l => "{\"name\":\"" + l + "\"}")) + "]}";
+            var draft = "{\"title\":\"Guide\",\"document\":\"# Guide\\nRun it.\",\"sources_used\":[\"docs/guide.md\"]}";
+            var handler = Handler(docsIssue, Board("Ready"), ChatAnswer(draft), ChatAnswer("{\"verdict\":\"ok\",\"issues\":[]}"));
+            var listedRoots = new List<string>();
+
+            var result = await Run(Triage("--docs-root", checkout.Root), handler, listTrackedFiles: root =>
+            {
+                listedRoots.Add(root);
+                return new[] { "docs/guide.md" };
+            });
+
+            Assert.Equal(0, result.Code);
+            Assert.Equal(new[] { checkout.Root }, listedRoots);
+            using var json = JsonDocument.Parse(result.Out);
+            var docs = json.RootElement.GetProperty("docs");
+            Assert.Equal("Accepted", docs.GetProperty("status").GetString());
+            Assert.Equal("docs/guide.md", docs.GetProperty("sources")[0].GetString());
+            Assert.Contains("Docs Accepted", result.Err);
+        }
+
+        [Fact]
+        public async Task ATriageIssue_NeverListsTheTrackedFiles_EvenWithADocsRoot()
+        {
+            var handler = Handler(IssueJson(true, Labels), Board("Ready"), ChatAnswer(Good), ChatAnswer("{\"verdict\":\"ok\",\"issues\":[]}"));
+            var listed = 0;
+
+            var result = await Run(Triage("--docs-root", "/some/checkout"), handler, listTrackedFiles: _ =>
+            {
+                listed++;
+                return new string[0];
+            });
+
+            Assert.Equal(0, result.Code);
+            Assert.Equal(0, listed);
+        }
+
+        [Fact]
+        public async Task ADocsIssueWithoutADocsRoot_IsAFailedRunThatSaysWhat_ExitOne_AndNoModelIsAsked()
+        {
+            var docsIssue = "{\"number\":7,\"title\":\"Docs\",\"state\":\"open\",\"body\":\"Source: docs/guide.md\",\"labels\":[" +
+                string.Join(",", new[] { "Agent::Allowed", "Task::docs", "Model::Mistral" }.Select(l => "{\"name\":\"" + l + "\"}")) + "]}";
+            var handler = Handler(docsIssue, Board("Ready"));
+
+            var result = await Run(Triage(), handler);
+
+            Assert.Equal(1, result.Code);
+            Assert.Contains("--docs-root", result.Err);
+            Assert.Equal(2, handler.Requests.Count);
         }
 
         [Fact]

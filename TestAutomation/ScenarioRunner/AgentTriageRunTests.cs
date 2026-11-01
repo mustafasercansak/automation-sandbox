@@ -184,21 +184,6 @@ namespace ScenarioRunner
             Assert.Single(handler.Requests);
         }
 
-        [Fact]
-        public async Task ATaskKindWithNoImplementationYet_IsReportedAndNoModelIsAsked()
-        {
-            var (registry, drafter, reviewer) = Models();
-            var handler = new ProjectBoardReaderTests.StubHandler(
-                ProjectBoardReaderTests.Reply(IssueJson(true, "Agent::Allowed", "Task::docs", "Model::Drafter")), ProjectBoardReaderTests.Reply(Board("Ready")));
-
-            var report = await Run(registry, handler);
-
-            Assert.Equal(AgentRunStage.UnsupportedTask, report.Stage);
-            Assert.Equal("docs", report.TaskKind);
-            Assert.Contains("not implemented yet", report.Summary());
-            Assert.Equal(0, drafter.Calls + reviewer.Calls);
-        }
-
         [Theory]
         [InlineData("Model::Nobody", "not a configured model")]
         [InlineData("Review::Drafter", "different model")]

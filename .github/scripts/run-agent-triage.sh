@@ -13,7 +13,8 @@ set -u
 : "${PROJECT_ID:?PROJECT_ID is required}"
 
 set +e
-args=(triage --repo "$GITHUB_REPOSITORY" --issue "$ISSUE_NUMBER" --project-id "$PROJECT_ID")
+# --docs-root: the checkout this script runs in, where the docs task reads the source files an issue names (only files git tracks).
+args=(triage --repo "$GITHUB_REPOSITORY" --issue "$ISSUE_NUMBER" --project-id "$PROJECT_ID" --docs-root "$PWD")
 if [ "${POST_COMMENT:-}" = "true" ]; then args+=(--comment); fi
 # --framework: the runner image carries SDK 10 as well, so the tool project multi-targets net8.0 and net10.0 and
 # "dotnet run" cannot choose (the first real run of this workflow failed exactly there).

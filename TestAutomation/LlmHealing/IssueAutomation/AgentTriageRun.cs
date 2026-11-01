@@ -12,20 +12,20 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>The gate stopped the issue (or it could not be read); no model was asked.</summary>
         NotEligible,
 
-        /// <summary>The issue passed the gate but its task kind has no implementation yet; no model was asked.</summary>
+        /// <summary>The issue passed the gate but its task kind has no implementation yet; no model was asked. Every kind in <see cref="TextTaskKinds" /> is implemented now, so no run ends here today; it is kept for a kind added to the list before it is built.</summary>
         UnsupportedTask,
 
         /// <summary>Routing could not honour the labels; no model was asked.</summary>
         RoutingFailed,
 
-        /// <summary>The task ran; <see cref="AgentRunReport.Triage" /> or <see cref="AgentRunReport.CiFailure" /> says whether it was accepted, blocked or failed.</summary>
+        /// <summary>The task ran; <see cref="AgentRunReport.Triage" />, <see cref="AgentRunReport.CiFailure" /> or <see cref="AgentRunReport.Docs" /> says whether it was accepted, blocked or failed.</summary>
         Completed,
     }
 
     /// <summary>What one run did and why it stopped. Plain data: it holds no token and no raw model answer.</summary>
     public sealed class AgentRunReport
     {
-        internal AgentRunReport(AgentRunStage stage, GateDecision? gate, string? readError, string? taskKind, IReadOnlyList<string> routingProblems, TriageOutcome? triage, CiFailureOutcome? ciFailure = null)
+        internal AgentRunReport(AgentRunStage stage, GateDecision? gate, string? readError, string? taskKind, IReadOnlyList<string> routingProblems, TriageOutcome? triage, CiFailureOutcome? ciFailure = null, DocsOutcome? docs = null)
         {
             Stage = stage;
             Gate = gate;
@@ -34,6 +34,7 @@ namespace AutomationSandbox.LlmHealing
             RoutingProblems = routingProblems;
             Triage = triage;
             CiFailure = ciFailure;
+            Docs = docs;
         }
 
         /// <summary>How far the run got.</summary>
@@ -57,8 +58,11 @@ namespace AutomationSandbox.LlmHealing
         /// <summary>The outcome when the task kind was <c>ci-failure</c> and <see cref="Stage" /> is <see cref="AgentRunStage.Completed" />.</summary>
         public CiFailureOutcome? CiFailure { get; }
 
+        /// <summary>The outcome when the task kind was <c>docs</c> and <see cref="Stage" /> is <see cref="AgentRunStage.Completed" />.</summary>
+        public DocsOutcome? Docs { get; }
+
         /// <summary>True when the run completed and its proposal was accepted (valid, and not blocked by the reviewer).</summary>
-        public bool IsAccepted => Stage == AgentRunStage.Completed && (Triage?.Status ?? CiFailure?.Status) == TriageStatus.Accepted;
+        public bool IsAccepted => Stage == AgentRunStage.Completed && (Triage?.Status ?? CiFailure?.Status ?? Docs?.Status) == TriageStatus.Accepted;
 
         /// <summary>One line that says how the run ended.</summary>
         public string Summary()
@@ -75,6 +79,11 @@ namespace AutomationSandbox.LlmHealing
                     if (CiFailure != null)
                     {
                         return $"CI failure {CiFailure.Status}" + (CiFailure.Error == null ? "" : ": " + CiFailure.Error);
+                    }
+
+                    if (Docs != null)
+                    {
+                        return $"Docs {Docs.Status}" + (Docs.Error == null ? "" : ": " + Docs.Error);
                     }
 
                     return $"Triage {Triage!.Status}" + (Triage.Error == null ? "" : ": " + Triage.Error);
@@ -99,7 +108,8 @@ namespace AutomationSandbox.LlmHealing
             IReadOnlyCollection<string>? allowedLabels = null,
             string? issueToken = null,
             HttpClient? httpClient = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            DocsSourceContext? docsSources = null)
         {
             if (registry == null)
             {
@@ -118,7 +128,7 @@ namespace AutomationSandbox.LlmHealing
             cancellationToken.ThrowIfCancellationRequested();
             var issue = intake.Issue!;
             var kind = intake.Decision.TaskKind!;
-            if (kind != TextTaskKinds.IssueTriage && kind != TextTaskKinds.CiFailure)
+            if (kind != TextTaskKinds.IssueTriage && kind != TextTaskKinds.CiFailure && kind != TextTaskKinds.Docs)
             {
                 return new AgentRunReport(AgentRunStage.UnsupportedTask, intake.Decision, intake.Error, kind, new string[0], null);
             }
@@ -133,6 +143,12 @@ namespace AutomationSandbox.LlmHealing
             {
                 var ci = await CiFailurePipeline.RunAsync(issue, routing, allowedLabels, cancellationToken).ConfigureAwait(false);
                 return new AgentRunReport(AgentRunStage.Completed, intake.Decision, intake.Error, kind, new string[0], null, ci);
+            }
+
+            if (kind == TextTaskKinds.Docs)
+            {
+                var docs = await DocsPipeline.RunAsync(issue, routing, docsSources, cancellationToken).ConfigureAwait(false);
+                return new AgentRunReport(AgentRunStage.Completed, intake.Decision, intake.Error, kind, new string[0], null, null, docs);
             }
 
             var triage = await TriagePipeline.RunAsync(issue, routing, allowedLabels, cancellationToken).ConfigureAwait(false);
