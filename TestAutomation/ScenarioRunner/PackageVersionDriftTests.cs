@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -202,6 +204,87 @@ namespace ScenarioRunner
                 var indexText = File.ReadAllText(indexPath);
                 Assert.False(indexText.Contains(currentVersion), $"index.md contains hardcoded package version '{currentVersion}'. Use dynamic live badges and SSoT references instead.");
             }
+        }
+
+        // Dependabot updates the csproj files but nothing updates the sentence in AGENTS.md that quotes them, so the
+        // documented versions drift. A documented version must be one the repository really references.
+        [Fact]
+        public void AgentsKeyPackagesLine_NamesOnlyVersionsTheRepositoryReferences()
+        {
+            var repoRoot = FindRepoRoot();
+            var line = File.ReadAllLines(Path.Combine(repoRoot, "AGENTS.md"))
+                .FirstOrDefault(l => l.StartsWith("- Key packages:", StringComparison.Ordinal));
+            Assert.False(line == null, "AGENTS.md has no '- Key packages:' line; update this test if the line was renamed.");
+
+            var referenced = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var projectFiles = Directory.GetFiles(repoRoot, "*.csproj", SearchOption.AllDirectories)
+                .Concat(Directory.GetFiles(repoRoot, "*.props", SearchOption.AllDirectories))
+                .Where(f => f.IndexOf(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar, StringComparison.Ordinal) < 0);
+            foreach (var file in projectFiles)
+            {
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), "<PackageReference\\s+Include=\"(?<id>[^\"]+)\"[^>]*?Version=\"(?<v>[^\"]+)\""))
+                {
+                    if (!referenced.TryGetValue(m.Groups["id"].Value, out var versions))
+                    {
+                        versions = new HashSet<string>(StringComparer.Ordinal);
+                        referenced[m.Groups["id"].Value] = versions;
+                    }
+
+                    versions.Add(m.Groups["v"].Value);
+                }
+            }
+
+            // "FlaUI.Core/FlaUI.UIA3 5.0.0" names two packages that share one version.
+            var entries = Regex.Matches(line, @"(?<ids>[A-Za-z][\w.]*(?:/[A-Za-z][\w.]*)*) (?<v>\d+\.\d+\.\d+)");
+            Assert.True(entries.Count >= 5, "Expected to read at least five 'Package version' entries from the Key packages line.");
+            foreach (Match entry in entries)
+            {
+                foreach (var id in entry.Groups["ids"].Value.Split('/'))
+                {
+                    Assert.True(referenced.ContainsKey(id), $"AGENTS.md names '{id}' but no project references it.");
+                    var versions = referenced[id];
+                    Assert.True(versions.Contains(entry.Groups["v"].Value),
+                        $"AGENTS.md says {id} {entry.Groups["v"].Value}, but the repository references {string.Join(", ", versions)}.");
+                }
+            }
+        }
+
+        // "nine packages" is a current-state claim; when a library is added or removed the sentence has to change with it.
+        // Sentences about the past ("closed", "baseline", "other eight") are skipped on purpose.
+        [Fact]
+        public void DocumentedLibraryPackageCount_MatchesThePackableLibraryProjects()
+        {
+            var repoRoot = FindRepoRoot();
+            var libraries = Directory.GetFiles(Path.Combine(repoRoot, "TestAutomation"), "*.csproj", SearchOption.AllDirectories)
+                .Select(File.ReadAllText)
+                .Count(text => !text.Contains("<IsPackable>false</IsPackable>") && !text.Contains("<PackAsTool>true</PackAsTool>"));
+
+            var words = new[] { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen" };
+            Assert.True(libraries < words.Length, "Add the new count to the number words in this test.");
+            var expected = words[libraries];
+
+            var pattern = new Regex(@"\b(?<n>" + string.Join("|", words) + @")\s+(?:validated\s+|library\s+)?(?:`AutomationSandbox\.\*`\s+)?(?:packages|libraries|library project files)\b", RegexOptions.IgnoreCase);
+            var files = new[] { "README.md", "AGENTS.md", "docs/nuget-packaging.md", "docs/public-api-audit.md", "docs/versioning-and-stability.md" };
+            var checkedClaims = 0;
+            foreach (var relative in files)
+            {
+                foreach (var docLine in File.ReadAllLines(Path.Combine(repoRoot, relative)))
+                {
+                    if (Regex.IsMatch(docLine, @"closed|baseline|other (?:eight|seven)|directories", RegexOptions.IgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    foreach (Match m in pattern.Matches(docLine))
+                    {
+                        checkedClaims++;
+                        Assert.True(string.Equals(m.Groups["n"].Value, expected, StringComparison.OrdinalIgnoreCase),
+                            $"{relative} says '{m.Value}', but the repository has {libraries} packable libraries ('{expected}'). Line: {docLine.Trim()}");
+                    }
+                }
+            }
+
+            Assert.True(checkedClaims >= 5, "Expected to find at least five current-state package-count claims; the test may no longer match the docs' wording.");
         }
     }
 }
