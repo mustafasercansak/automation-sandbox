@@ -77,4 +77,22 @@ Invoke-FixtureHeal -Description 'desktop (WinForms)' `
     -TreePath (Join-Path $PSScriptRoot 'fixtures/tree-desktop.json') `
     -ExpectedHealedAutomationId 'textBox1'
 
+# Selector mode (#616): no snapshot, only the locator string a broken test still carries.
+# The partial evidence must be stated in the output and the derived element must carry
+# exactly the signals the selector gave. Exit code is not asserted: with this little
+# evidence the gate may legitimately refuse (that is the documented behavior).
+Write-Host 'Running the packed tool in --selector mode...'
+$selectorOut = & $toolExe --selector "getByRole('button', { name: 'Submit' })" --tree (Join-Path $PSScriptRoot 'fixtures/tree.json')
+$selectorResult = $selectorOut | ConvertFrom-Json
+if (-not $selectorResult.PartialEvidence) { throw 'Expected PartialEvidence=true in --selector output.' }
+if ($selectorResult.DerivedExpected.ControlType -ne 'Button' -or $selectorResult.DerivedExpected.Name -ne 'Submit') {
+    throw "Expected DerivedExpected Button/Submit, got '$($selectorResult.DerivedExpected.ControlType)'/'$($selectorResult.DerivedExpected.Name)'."
+}
+if ($selectorResult.Result.Matched.AutomationId -ne 'btn-submit-new') {
+    throw "Expected --selector mode to find 'btn-submit-new', got '$($selectorResult.Result.Matched.AutomationId)'."
+}
+
+& $toolExe --selector "page.locator('#x')" --tree (Join-Path $PSScriptRoot 'fixtures/tree.json') 2>$null | Out-Null
+if ($LASTEXITCODE -ne 2) { throw "Expected exit code 2 for an unsupported selector, got $LASTEXITCODE." }
+
 Write-Host 'Self-Healing CLI verification passed.' -ForegroundColor Green
