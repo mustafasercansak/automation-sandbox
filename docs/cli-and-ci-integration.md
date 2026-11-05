@@ -187,6 +187,10 @@ What it will not do: no tool writes a label, a card, a file or an issue, and no 
 
 No (#619). `automation-sandbox-heal` is deterministic only: it scores candidates with the heuristic resolver and never contacts an LLM, so the LLM independent-agreement quorum (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) is available from the .NET API but not from the CLI. A non-.NET team gets the evidence gate, the per-component name/descendant gates and the margin rule, not the consensus layer. The CLI also reads no LLM environment variable, so an internal OpenAI-compatible gateway cannot be configured through it. For the scheme policy of custom endpoints in the .NET API, see [LLM Providers](llm-providers.md).
 
+### Telling Apart Identical Rows (`RowContext`)
+
+A list whose rows each hold an identical button (`Connect` in every row) is `AMBIGUOUS` when only the row differs. A capture can record `RowContext` (#617): the text of the other elements in the row or list item the element sits in. `capture.mjs` and the .NET web capture (`WebElementMapper`) fill it; on a `--expected` snapshot it is compared with each candidate's `RowContext` as an extra scoring signal (word overlap, weight `RowContextWeight` 0.10). It counts only when the stale locator recorded one, so snapshots without it score exactly as before. For a tree built by hand or by another capture, call `UiRowContext.Annotate(root)` (.NET) before taking the snapshot. Row labels that differ only slightly (`demo-a` / `demo-b`) separate cleanly because the comparison is by word, not by edit distance.
+
 ### Known Limitations
 
 - The published package currently only ships as a `--prerelease` version during the `0.x` beta series.
@@ -371,6 +375,10 @@ Yapmadıkları: hiçbir araç etiket, kart, dosya ya da issue yazmaz; hiçbir ar
 ### CLI Bir Model Çağırır mı?
 
 Hayır (#619). `automation-sandbox-heal` yalnızca deterministiktir: adayları sezgisel çözümleyici ile puanlar ve hiçbir LLM'e bağlanmaz; bu yüzden LLM bağımsız-uzlaşma kurulu (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) .NET API'sinden kullanılabilir ama CLI'dan kullanılamaz. .NET dışı bir ekip kanıt eşiğini, bileşen başına ad/alt-eleman eşiklerini ve fark kuralını alır, uzlaşma katmanını almaz. CLI ayrıca hiçbir LLM ortam değişkenini okumaz; bu yüzden OpenAI uyumlu bir dahili geçit CLI üzerinden yapılandırılamaz. .NET API'sindeki özel uç noktaların şema politikası için [LLM Sağlayıcıları](llm-providers.md) sayfasına bakın.
+
+### Özdeş Satırları Ayırmak (`RowContext`)
+
+Her satırında özdeş bir düğme (`Connect`) bulunan bir liste, yalnızca satır farklı olduğunda `AMBIGUOUS` çıkar. Bir yakalama `RowContext` kaydedebilir (#617): elementin içinde bulunduğu satırdaki veya liste öğesindeki diğer elementlerin metni. `capture.mjs` ve .NET web yakalaması (`WebElementMapper`) bunu doldurur; bir `--expected` anlık görüntüsünde her adayın `RowContext`'i ile ek bir skor sinyali olarak karşılaştırılır (kelime örtüşmesi, ağırlık `RowContextWeight` 0,10). Yalnızca eski locator bir tane kaydetmişse devreye girer; bu yüzden onsuz anlık görüntüler eskisi gibi puanlanır. Elle ya da başka bir yakalamayla kurulmuş bir ağaç için anlık görüntüyü almadan önce `UiRowContext.Annotate(root)` (.NET) çağırın. Birbirinden yalnızca küçük farkla ayrılan satır etiketleri (`demo-a` / `demo-b`) temiz ayrılır, çünkü karşılaştırma düzenleme mesafesiyle değil kelimeyle yapılır.
 
 ### Bilinen Sınırlamalar
 

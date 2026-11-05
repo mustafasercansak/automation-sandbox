@@ -28,19 +28,24 @@ namespace AutomationSandbox.UiModel
         /// <summary>Position similarity from zero to one, or null when usable geometry is unavailable.</summary>
         public double? PositionScore { get; }
 
+        /// <summary>Similarity of the row context (#617) from zero to one, or null when the stale locator recorded no row context.</summary>
+        public double? RowContextScore { get; }
+
         /// <summary>Captures fixed per-signal evidence; omitted signals stay null and are excluded from weighted scoring.</summary>
         public ScoreComponents(
             double? controlTypeScore = null,
             double? parentControlTypeScore = null,
             double? siblingPositionScore = null,
             double? nameScore = null,
-            double? positionScore = null)
+            double? positionScore = null,
+            double? rowContextScore = null)
         {
             ControlTypeScore = controlTypeScore;
             ParentControlTypeScore = parentControlTypeScore;
             SiblingPositionScore = siblingPositionScore;
             NameScore = nameScore;
             PositionScore = positionScore;
+            RowContextScore = rowContextScore;
         }
     }
 }

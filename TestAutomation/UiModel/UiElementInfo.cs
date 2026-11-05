@@ -25,6 +25,8 @@ namespace AutomationSandbox.UiModel
         public int SiblingIndex { get; set; }
         /// <summary>Number of siblings including this node; zero indicates missing sibling metadata.</summary>
         public int SiblingCount { get; set; }
+        /// <summary>Text of the other elements in the row or list item this element sits in, for telling apart elements that are identical except for the row they belong to (#617); empty when the element is not inside a row or when the capture did not record it. Computed by <see cref="UiRowContext.Annotate"/>.</summary>
+        public string RowContext { get; set; } = "";
         /// <summary>Narrative business intent retained for prompts, generated tests, and reports.</summary>
         public string TestIntent { get; set; } = "";
         /// <summary>Editable direct children in capture order; populate before resolving against the tree.</summary>

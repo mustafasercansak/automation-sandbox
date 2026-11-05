@@ -3253,7 +3253,7 @@
   {
     "Package": "SelfHealing",
     "Type": "AutomationSandbox.SelfHealing.SimilarityWeights",
-    "PublicMutableProperties": 14,
+    "PublicMutableProperties": 15,
     "Declarations": [
       "public sealed class SimilarityWeights"
     ],
@@ -3272,6 +3272,7 @@
       "public double ParentControlTypeWeight { get; set; }",
       "public double PositionToleranceRadius { get; set; }",
       "public double PositionWeight { get; set; }",
+      "public double RowContextWeight { get; set; }",
       "public double SiblingPositionWeight { get; set; }",
       "public int MaxCandidatesForLlm { get; set; }",
       "public int MinimumConsensusVotes { get; set; }",
@@ -3566,11 +3567,12 @@
       "TestAutomation/UiModel/ScoreComponents.cs"
     ],
     "Members": [
-      "public ScoreComponents( double? controlTypeScore = null, double? parentControlTypeScore = null, double? siblingPositionScore = null, double? nameScore = null, double? positionScore = null)",
+      "public ScoreComponents( double? controlTypeScore = null, double? parentControlTypeScore = null, double? siblingPositionScore = null, double? nameScore = null, double? positionScore = null, double? rowContextScore = null)",
       "public double? ControlTypeScore { get; }",
       "public double? NameScore { get; }",
       "public double? ParentControlTypeScore { get; }",
       "public double? PositionScore { get; }",
+      "public double? RowContextScore { get; }",
       "public double? SiblingPositionScore { get; }"
     ]
   },
@@ -3593,7 +3595,7 @@
   {
     "Package": "UiModel",
     "Type": "AutomationSandbox.UiModel.UiElementInfo",
-    "PublicMutableProperties": 12,
+    "PublicMutableProperties": 13,
     "Declarations": [
       "public sealed class UiElementInfo"
     ],
@@ -3611,6 +3613,7 @@
       "public string Name { get; set; }",
       "public string ParentAutomationId { get; set; }",
       "public string ParentControlType { get; set; }",
+      "public string RowContext { get; set; }",
       "public string TestIntent { get; set; }",
       "public string? ChildControlTypeSignature { get; set; }"
     ]
@@ -3648,6 +3651,20 @@
     ],
     "Members": [
       "public static IEnumerable<UiElementInfo> Flatten(this UiElementInfo root)"
+    ]
+  },
+  {
+    "Package": "UiModel",
+    "Type": "AutomationSandbox.UiModel.UiRowContext",
+    "PublicMutableProperties": 0,
+    "Declarations": [
+      "public static class UiRowContext"
+    ],
+    "Files": [
+      "TestAutomation/UiModel/UiRowContext.cs"
+    ],
+    "Members": [
+      "public static void Annotate(UiElementInfo root)"
     ]
   },
   {

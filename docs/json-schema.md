@@ -82,7 +82,7 @@ This guide explains the `.locator.json` repository file structure used to store 
   - **`LlmProviderName`**: The provider that produced the LLM pick (`null` for heuristic heals).
   - **`PreviousSnapshot`**: The stored snapshot before the heal (`null` if not recorded).
   - **`AcceptedSnapshot`**: The newly accepted snapshot after the heal (`null` if not recorded).
-  - **`ScoreBreakdown`**: The per-signal `ScoreComponents` of the accepted candidate (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`; each is `null` when that signal was missing on both sides).
+  - **`ScoreBreakdown`**: The per-signal `ScoreComponents` of the accepted candidate (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`, `RowContextScore`; each is `null` when that signal was missing on both sides).
   - **`DivergedFromHeuristic`**: `true` when an LLM heal picked a different element than the heuristic top candidate, `false` when it agreed. `null` for heuristic heals (the comparison only applies to LLM picks) and for entries saved before this field existed ("unknown / not recorded").
 
 ---
@@ -156,5 +156,5 @@ This guide explains the `.locator.json` repository file structure used to store 
   - **`LlmProviderName`**: LLM seçimini üreten sağlayıcı (sezgisel iyileştirmelerde `null`).
   - **`PreviousSnapshot`**: İyileştirmeden önceki kayıtlı snapshot (kaydedilmediyse `null`).
   - **`AcceptedSnapshot`**: İyileştirmeden sonra kabul edilen yeni snapshot (kaydedilmediyse `null`).
-  - **`ScoreBreakdown`**: Kabul edilen adayın sinyal bazlı `ScoreComponents` dökümü (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`; ilgili sinyal her iki tarafta da eksikse değer `null` olur).
+  - **`ScoreBreakdown`**: Kabul edilen adayın sinyal bazlı `ScoreComponents` dökümü (`ControlTypeScore`, `ParentControlTypeScore`, `SiblingPositionScore`, `NameScore`, `PositionScore`, `RowContextScore`; ilgili sinyal her iki tarafta da eksikse değer `null` olur).
   - **`DivergedFromHeuristic`**: LLM iyileştirmesi sezgisel en iyi adaydan farklı bir eleman seçtiyse `true`, aynı fikirdeyse `false`. Sezgisel iyileştirmelerde `null` (bu karşılaştırma yalnızca LLM seçimleri için anlamlıdır); ayrıca bu alan eklenmeden önce kaydedilmiş girdilerde de `null` ("bilinmiyor / kaydedilmedi").
