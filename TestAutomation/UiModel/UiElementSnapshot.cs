@@ -20,6 +20,7 @@ namespace AutomationSandbox.UiModel
             SiblingIndex = node.SiblingIndex,
             SiblingCount = node.SiblingCount,
             TestIntent = node.TestIntent,
+            RowContext = node.RowContext,
             ChildControlTypeSignature = ComputeChildControlTypeSignature(node),
         };
 

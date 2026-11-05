@@ -83,6 +83,24 @@ function captureTree(selector) {
       || '').trim();
   }
 
+  // Text of the rest of the row or list item the element sits in (#617), so identical buttons in
+  // different rows can be told apart. Text nodes inside the element itself are skipped: its own
+  // label must not stand in for its row. Mirrors UiRowContext.Annotate on the .NET side.
+  const rowSelector = 'tr, li, [role="row"], [role="listitem"]';
+  function rowContextOf(element) {
+    const row = element.parentElement ? element.parentElement.closest(rowSelector) : null;
+    if (!row) return '';
+    const parts = [];
+    const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode;
+      if (element.contains(textNode)) continue;
+      const text = textNode.nodeValue.trim().replace(/\s+/g, ' ');
+      if (text) parts.push(text);
+    }
+    return parts.join(' ').slice(0, 160);
+  }
+
   function controlTypeOf(element) {
     const role = roleOf(element);
     if (role) {
@@ -127,6 +145,7 @@ function captureTree(selector) {
       ParentAutomationId: parentAutomationId,
       SiblingIndex: siblingIndex,
       SiblingCount: siblingCount,
+      RowContext: rowContextOf(element),
       Children: [],
     };
 

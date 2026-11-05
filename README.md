@@ -274,6 +274,7 @@ $$\text{TotalScore} = \frac{\sum (S_i \cdot W_i)}{\sum W_i} \quad \text{where } 
 | **`SiblingPositionScore`** | `0.15` | Proportional index distance: $1.0 - \frac{|idx_{exp} - idx_{cand}|}{\max(cnt_{exp}, cnt_{cand})}$. |
 | **`NameScore`** | `0.20` | Levenshtein distance similarity on `Name` property: $1.0 - \frac{\text{Levenshtein}(a,b)}{\max(\text{len}_a, \text{len}_b)}$. |
 | **`PositionScore`** | `0.25` | Euclidean center-point distance score within `PositionToleranceRadius` (300px). |
+| **`RowContextScore`** | `0.10` | Word overlap (Jaccard) between `RowContext` values, the text of the other elements in the row or list item (#617). Counted **only when the stale locator recorded a `RowContext`**; otherwise the signal and its weight are left out, so snapshots without it score exactly as before. Tells apart identical elements that differ only by their row. |
 
 > [!NOTE]
 > **Missing Signal Handling:** Every signal is nullable. When *both* sides lack a signal (empty `Name`, empty `ParentControlType`, zero sibling metadata, or an unusable bounding box), that signal scores `null` — it is excluded from the weighted average entirely, never treated as a perfect 1.0 match. Two elements sharing only `ControlType` can still reach `TotalScore = 1.0`, but with `EvidenceCoverage` of only 0.20.

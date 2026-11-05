@@ -51,6 +51,10 @@
       "items": { "$ref": "#" },
       "description": "Direct children in capture order. Omit or leave empty for a single-element --expected snapshot; populate for a --tree snapshot of the live application."
     },
+    "RowContext": {
+      "type": "string",
+      "description": "Text of the other elements in the row or list item this element sits in (at most 160 characters), so identical elements in different rows can be told apart (#617). Empty or omitted when the element is not inside a row or the capture did not record it - never required. When the stale --expected locator carries it, it is compared with each candidate's RowContext as an extra scoring signal; when it does not, scoring is unchanged."
+    },
     "ChildControlTypeSignature": {
       "type": ["string", "null"],
       "description": "Direct-child ControlType multiset recorded at snapshot time, e.g. \"Button:2|Edit:1\". Only meaningful when the stale --expected locator was itself a container (drives the #375 descendant gate). Null or omitted when not applicable - never required."

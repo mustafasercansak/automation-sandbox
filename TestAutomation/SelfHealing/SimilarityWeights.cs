@@ -17,6 +17,8 @@ namespace AutomationSandbox.SelfHealing
         public double NameWeight { get; set; } = 0.20;
         /// <summary>Relative weight assigned to available geometry evidence.</summary>
         public double PositionWeight { get; set; } = 0.25;
+        /// <summary>Relative weight assigned to row-context evidence (#617). It counts only when the stale locator recorded a <see cref="AutomationSandbox.UiModel.UiElementInfo.RowContext"/>; otherwise it is left out of the score and of the evidence coverage, so snapshots without row context score exactly as before.</summary>
+        public double RowContextWeight { get; set; } = 0.10;
         /// <summary>Distance scale in capture coordinates used to reduce position similarity as elements move.</summary>
         public double PositionToleranceRadius { get; set; } = 300.0;
         /// <summary>Minimum weighted structural score for heuristic acceptance.</summary>
@@ -151,6 +153,7 @@ namespace AutomationSandbox.SelfHealing
             ValidateNonNegative(SiblingPositionWeight, nameof(SiblingPositionWeight));
             ValidateNonNegative(NameWeight, nameof(NameWeight));
             ValidateNonNegative(PositionWeight, nameof(PositionWeight));
+            ValidateNonNegative(RowContextWeight, nameof(RowContextWeight));
             ValidateNonNegative(PositionToleranceRadius, nameof(PositionToleranceRadius));
             ValidateRange(MinimumConfidence, nameof(MinimumConfidence), 0.0, 1.0);
             ValidateRange(MinimumEvidenceWeight, nameof(MinimumEvidenceWeight), 0.0, 1.0);

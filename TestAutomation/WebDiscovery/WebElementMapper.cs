@@ -13,7 +13,9 @@ namespace AutomationSandbox.WebDiscovery
                 throw new ArgumentNullException(nameof(root));
             }
 
-            return Map(root, parentControlType: "", parentAutomationId: "", siblingIndex: 0, siblingCount: 1);
+            var tree = Map(root, parentControlType: "", parentAutomationId: "", siblingIndex: 0, siblingCount: 1);
+            UiRowContext.Annotate(tree);
+            return tree;
         }
 
         // Framework-generated DOM markup (component-per-wrapper-div frameworks especially)

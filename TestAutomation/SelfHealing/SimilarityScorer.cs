@@ -19,6 +19,7 @@ namespace AutomationSandbox.SelfHealing
             var siblingScore = SiblingPositionScore(expected, candidate);
             var nameScore = NameSimilarity(expected.Name, candidate.Name);
             var positionScore = PositionSimilarity(expected.BoundingRectangle, candidate.BoundingRectangle, w.PositionToleranceRadius);
+            var rowContextScore = RowContextSimilarity(expected.RowContext, candidate.RowContext);
 
             // Only non-null signals participate: a missing signal neither rewards nor
             // penalizes, its weight simply drops out of the weighted average. EvidenceCoverage
@@ -29,6 +30,15 @@ namespace AutomationSandbox.SelfHealing
                             + w.SiblingPositionWeight
                             + w.NameWeight
                             + w.PositionWeight;
+
+            // The row-context weight only exists when the stale locator recorded a row context.
+            // Adding it unconditionally would lower EvidenceCoverage for every snapshot taken
+            // without one and could flip the coverage gate on results that never had the signal.
+            if (rowContextScore.HasValue)
+            {
+                totalWeight += w.RowContextWeight;
+            }
+
             var weightedScore = 0.0;
             var activeWeight = 0.0;
             Accumulate(controlTypeScore, w.ControlTypeWeight, ref weightedScore, ref activeWeight);
@@ -36,6 +46,7 @@ namespace AutomationSandbox.SelfHealing
             Accumulate(siblingScore, w.SiblingPositionWeight, ref weightedScore, ref activeWeight);
             Accumulate(nameScore, w.NameWeight, ref weightedScore, ref activeWeight);
             Accumulate(positionScore, w.PositionWeight, ref weightedScore, ref activeWeight);
+            Accumulate(rowContextScore, w.RowContextWeight, ref weightedScore, ref activeWeight);
 
             var totalScore = activeWeight <= 0.0 ? 0.0 : weightedScore / activeWeight;
             return new CandidateScore
@@ -48,7 +59,8 @@ namespace AutomationSandbox.SelfHealing
                     parentControlTypeScore: parentScore,
                     siblingPositionScore: siblingScore,
                     nameScore: nameScore,
-                    positionScore: positionScore),
+                    positionScore: positionScore,
+                    rowContextScore: rowContextScore),
             };
         }
 
@@ -107,6 +119,50 @@ namespace AutomationSandbox.SelfHealing
             var maxLength = Math.Max(expected.Length, candidate.Length);
             return Math.Max(0.0, 1.0 - (double)distance / maxLength);
         }
+
+        // Null when the stale locator recorded no row context: nothing to compare, so the
+        // signal drops out. When it did, a candidate with no row context scores 0 - it is not
+        // known to sit in the same row.
+        //
+        // Word overlap (Jaccard) rather than the edit distance NameSimilarity uses: row labels
+        // that tell rows apart are usually one character apart ("demo-a" / "demo-b", "row 1" /
+        // "row 2"), which an edit distance rates as 0.83 and so cannot separate. A row that
+        // shares words with the recorded one but not all of them (an edited cell) still earns
+        // partial credit.
+        private static double? RowContextSimilarity(string expected, string candidate)
+        {
+            if (string.IsNullOrEmpty(expected))
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(candidate))
+            {
+                return 0.0;
+            }
+
+            var expectedWords = Words(expected);
+            var candidateWords = Words(candidate);
+            if (expectedWords.Count == 0)
+            {
+                return null;
+            }
+
+            var shared = 0;
+            foreach (var word in expectedWords)
+            {
+                if (candidateWords.Contains(word))
+                {
+                    shared++;
+                }
+            }
+
+            var union = expectedWords.Count + candidateWords.Count - shared;
+            return union == 0 ? 0.0 : (double)shared / union;
+        }
+
+        private static HashSet<string> Words(string text) =>
+            new(text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
 
         private static double? PositionSimilarity(BoundingRectangle expected, BoundingRectangle candidate, double positionToleranceRadius)
         {
