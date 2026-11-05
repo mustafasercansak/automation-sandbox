@@ -172,6 +172,10 @@ What it will not do: no tool writes a label, a card, a file or an issue, and no 
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled adapter) and wants to call the resolver in-process. The CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
 
+### Does the CLI Call a Model?
+
+No (#619). `automation-sandbox-heal` is deterministic only: it scores candidates with the heuristic resolver and never contacts an LLM, so the LLM independent-agreement quorum (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) is available from the .NET API but not from the CLI. A non-.NET team gets the evidence gate, the per-component name/descendant gates and the margin rule, not the consensus layer. The CLI also reads no LLM environment variable, so an internal OpenAI-compatible gateway cannot be configured through it. For the scheme policy of custom endpoints in the .NET API, see [LLM Providers](llm-providers.md).
+
 ### Known Limitations
 
 - The published package currently only ships as a `--prerelease` version during the `0.x` beta series.
@@ -341,6 +345,10 @@ Yapmadıkları: hiçbir araç etiket, kart, dosya ya da issue yazmaz; hiçbir ar
 ### Neden CLI, Sadece Kütüphane Değil
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel`, kendi `UiElementInfo` ağaçlarını zaten yakalayan (`Discovery`, `WebDiscovery`, veya elle yazılmış bir adaptör ile) ve resolver'ı süreç içinde çağırmak isteyen bir .NET projesi için doğru seçimdir. CLI, geri kalan her şey içindir: .NET dışı bir test paketi, bir CI pipeline'ındaki bir shell script, veya bir JSON ağacı üretebilen ama sadece bir healing kararı almak için .NET bağımlılığı almasına gerek olmayan herhangi bir araç.
+
+### CLI Bir Model Çağırır mı?
+
+Hayır (#619). `automation-sandbox-heal` yalnızca deterministiktir: adayları sezgisel çözümleyici ile puanlar ve hiçbir LLM'e bağlanmaz; bu yüzden LLM bağımsız-uzlaşma kurulu (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) .NET API'sinden kullanılabilir ama CLI'dan kullanılamaz. .NET dışı bir ekip kanıt eşiğini, bileşen başına ad/alt-eleman eşiklerini ve fark kuralını alır, uzlaşma katmanını almaz. CLI ayrıca hiçbir LLM ortam değişkenini okumaz; bu yüzden OpenAI uyumlu bir dahili geçit CLI üzerinden yapılandırılamaz. .NET API'sindeki özel uç noktaların şema politikası için [LLM Sağlayıcıları](llm-providers.md) sayfasına bakın.
 
 ### Bilinen Sınırlamalar
 
