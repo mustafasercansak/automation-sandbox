@@ -77,6 +77,19 @@ Invoke-FixtureHeal -Description 'desktop (WinForms)' `
     -TreePath (Join-Path $PSScriptRoot 'fixtures/tree-desktop.json') `
     -ExpectedHealedAutomationId 'textBox1'
 
+# --compact (#620): same decision and exit code, a smaller result with at most 5 candidates and no subtrees.
+Write-Host 'Running the packed tool with --compact...'
+$fullOut = & $toolExe --expected (Join-Path $PSScriptRoot 'fixtures/expected-desktop.json') --tree (Join-Path $PSScriptRoot 'fixtures/tree-desktop.json')
+$fullExit = $LASTEXITCODE
+$compactOut = & $toolExe --expected (Join-Path $PSScriptRoot 'fixtures/expected-desktop.json') --tree (Join-Path $PSScriptRoot 'fixtures/tree-desktop.json') --compact
+if ($LASTEXITCODE -ne $fullExit) { throw "Expected --compact to keep exit code $fullExit, got $LASTEXITCODE." }
+$full = $fullOut | ConvertFrom-Json
+$compact = $compactOut | ConvertFrom-Json
+if ($compact.Matched.AutomationId -ne $full.Matched.AutomationId -or $compact.Score -ne $full.Score) { throw '--compact changed the decision.' }
+if ($compact.CandidateCount -ne $full.CandidateCount) { throw '--compact must still report the full CandidateCount.' }
+if (@($compact.Candidates).Count -gt 5) { throw "Expected at most 5 candidates with --compact, got $(@($compact.Candidates).Count)." }
+if (($compactOut | Measure-Object -Character).Characters -ge ($fullOut | Measure-Object -Character).Characters) { throw '--compact output was not smaller.' }
+
 # Selector mode (#616): no snapshot, only the locator string a broken test still carries.
 # The partial evidence must be stated in the output and the derived element must carry
 # exactly the signals the selector gave. Exit code is not asserted: with this little
