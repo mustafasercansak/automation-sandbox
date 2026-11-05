@@ -94,5 +94,7 @@ if ($selectorResult.Result.Matched.AutomationId -ne 'btn-submit-new') {
 
 & $toolExe --selector "page.locator('#x')" --tree (Join-Path $PSScriptRoot 'fixtures/tree.json') 2>$null | Out-Null
 if ($LASTEXITCODE -ne 2) { throw "Expected exit code 2 for an unsupported selector, got $LASTEXITCODE." }
+# The expected non-zero exit above would otherwise become this script's own exit code.
+$global:LASTEXITCODE = 0
 
 Write-Host 'Self-Healing CLI verification passed.' -ForegroundColor Green
