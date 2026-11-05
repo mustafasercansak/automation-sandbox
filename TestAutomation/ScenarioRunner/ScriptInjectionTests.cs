@@ -7,17 +7,13 @@ using System.Text.RegularExpressions;
 namespace ScenarioRunner
 {
     // A value written as ${{ ... }} inside a run: script is expanded by GitHub before the shell parses the script, so a value that holds a
-    // quote or $(...) runs as shell. Everything a person or an event supplies has to reach a script through env: and be used as a quoted
-    // variable. This guards every composite action (published for other repositories to call, so their callers' values flow in) and,
-    // as a ratchet, every workflow: the workflows that still do it are listed by name and the list may only shrink.
+    // quote or $(...) runs as shell. Everything a person, an event, a step output or a secret supplies has to reach a script through env:
+    // and be used as a quoted variable. This guards every composite action (published for other repositories to call, so their callers'
+    // values flow in) and every workflow (#636, #637).
     public class ScriptInjectionTests
     {
-        // Expressions a caller, a dispatching user or an event controls. steps.*.outputs and secrets are covered by their own tests.
-        private static readonly Regex Hostile = new Regex(@"\$\{\{\s*(inputs\.|github\.event\.|github\.head_ref)", RegexOptions.CultureInvariant);
-
-        // Workflows still to be moved onto env: (#637, which found these three when this test was first run). Remove a name when its file is
-        // fixed; never add one.
-        private static readonly string[] KnownWorkflowOffenders = { "nuget-consumer-verify.yml", "pack.yml", "release.yml" };
+        // Expressions a caller, a dispatching user, an event, an earlier step or the secret store controls.
+        private static readonly Regex Hostile = new Regex(@"\$\{\{\s*(inputs\.|github\.event\.|github\.head_ref|steps\.[A-Za-z0-9_-]+\.outputs\.|secrets\.)", RegexOptions.CultureInvariant);
 
         private static IEnumerable<string> ActionFiles()
         {
@@ -77,22 +73,36 @@ namespace ScenarioRunner
         }
 
         [Fact]
-        public void OnlyTheKnownWorkflowsStillWriteAnInputOrEventValueIntoAScript()
+        public void NoWorkflowWritesAnExpressionThatSomeoneElseControlsIntoAScript()
         {
-            var offenders = WorkflowFiles().Where(f => Offences(f).Count > 0).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal).ToList();
+            var offences = WorkflowFiles().OrderBy(f => f, StringComparer.Ordinal).SelectMany(Offences).ToList();
 
-            Assert.True(offenders.All(o => KnownWorkflowOffenders.Contains(o)),
-                "These workflows write an input or event value into a script and are not on the known list: " + string.Join(", ", offenders.Where(o => !KnownWorkflowOffenders.Contains(o))));
+            Assert.True(offences.Count == 0, "Pass these through env: and use them as quoted variables:\n" + string.Join("\n", offences));
         }
 
         [Fact]
-        public void TheKnownList_HoldsOnlyWorkflowsThatStillNeedIt()
+        public void TheWorkflowsThatTurnAVersionIntoATagOrAnEnvironmentVariable_CheckItsShapeFirst()
         {
-            var stillOffending = new HashSet<string>(WorkflowFiles().Where(f => Offences(f).Count > 0).Select(Path.GetFileName)!, StringComparer.Ordinal);
+            // The version goes into GITHUB_ENV and a tag name: a line break in it would add environment variables.
+            foreach (var file in new[] { "release.yml", "pack.yml", "nuget-consumer-verify.yml" })
+            {
+                var text = string.Join("\n", AgentTriageWorkflowTests.ReadRepoFile(".github", "workflows", file));
 
-            var fixedAlready = KnownWorkflowOffenders.Where(n => !stillOffending.Contains(n)).ToList();
+                Assert.Contains("VERSION_INPUT: ${{ inputs.version }}", text, StringComparison.Ordinal);
+                Assert.Contains("-notmatch '^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.+-]+)?$'", text, StringComparison.Ordinal);
+            }
+        }
 
-            Assert.True(fixedAlready.Count == 0, "Remove these from KnownWorkflowOffenders, they are clean now: " + string.Join(", ", fixedAlready));
+        [Fact]
+        public void TheNuGetApiKey_ReachesThePushOnlyThroughTheEnvironment()
+        {
+            var lines = AgentTriageWorkflowTests.ReadRepoFile(".github", "workflows", "release.yml");
+
+            var pushes = lines.Where(l => l.Contains("dotnet nuget push", StringComparison.Ordinal)).ToList();
+
+            Assert.Equal(2, pushes.Count);
+            Assert.All(pushes, p => Assert.Contains("--api-key $env:NUGET_API_KEY", p, StringComparison.Ordinal));
+            Assert.Equal(2, lines.Count(l => l.Trim() == "NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}"));
         }
 
         [Fact]
