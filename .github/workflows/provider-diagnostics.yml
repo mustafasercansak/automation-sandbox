@@ -144,3 +144,34 @@ jobs:
             echo "\`401\`/\`403\` is an authentication problem, not a model problem."
             echo "For Kimi, one region returning \`200\` while the other returns \`401\` means the key is fine and \`KIMI_ENDPOINT\` needs to point at the region that answered."
           } | tee -a "$SUMMARY"
+
+      # The models endpoint answers 200 for a valid key whatever the plan, so it cannot explain a 429 on real calls. One tiny chat
+      # completion per model shows the status and the rate limit headers the provider sends. A limit of 0 requests per minute means
+      # the plan has no allowance for that model at all (pacing the calls cannot help); a positive limit with a 429 means wait. The
+      # configured model is tried first, then a few common ones, so the summary names a model the account can use. Only a status
+      # code, a handful of named headers and the error's type and code are written; the key is never echoed and no body is printed.
+      - name: Probe Mistral chat completions
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+        run: |
+          set +e
+          if [ -z "${MISTRAL_API_KEY:-}" ]; then echo "Mistral is not configured; nothing to probe."; exit 0; fi
+          {
+            echo "## Mistral chat completion probe"
+            echo
+            echo "| Model | HTTP status | Requests per minute allowed | Error |"
+            echo "| :--- | :--- | :--- | :--- |"
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          for model in "${MISTRAL_MODEL:-}" mistral-small-latest open-mistral-nemo ministral-8b-latest mistral-medium-latest codestral-latest; do
+            [ -z "$model" ] && continue
+            [[ "$model" =~ ^[A-Za-z0-9._:/@-]{1,100}$ ]] || { echo "| (skipped) | | | name has characters that are not allowed |"; continue; }
+            headers=$(mktemp); body=$(mktemp)
+            payload=$(printf '{"model":"%s","max_tokens":5,"messages":[{"role":"user","content":"Say ok."}]}' "$model")
+            code=$(curl -sS -m 30 -o "$body" -D "$headers" -w '%{http_code}' -H "Authorization: Bearer $MISTRAL_API_KEY" -H 'Content-Type: application/json' -d "$payload" https://api.mistral.ai/v1/chat/completions)
+            limit=$(grep -i '^x-ratelimit-limit-req-minute:' "$headers" | tr -d '\r' | sed 's/^[^:]*: *//')
+            error=$(jq -r '(if (.error|type)=="object" then .error else . end) | "\(.type) \(.code)"' "$body" 2>/dev/null)
+            [ "$code" = "200" ] && error=""
+            echo "| \`$model\` | $code | ${limit:-unknown} | ${error:-none} |" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+            sleep 2
+          done

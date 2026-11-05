@@ -65,18 +65,38 @@ namespace ScenarioRunner
     internal sealed class LessonReplayRow
     {
         public LessonReplayRow(LessonReplayCase source, LessonReplayOutcome without, LessonReplayOutcome with, IReadOnlyList<int> lessonNumbers)
+            : this(source, new[] { without }, new[] { with }, lessonNumbers, new string[0])
+        {
+        }
+
+        public LessonReplayRow(LessonReplayCase source, IReadOnlyList<LessonReplayOutcome> withoutRuns, IReadOnlyList<LessonReplayOutcome> withRuns, IReadOnlyList<int> lessonNumbers, IReadOnlyList<string> errors)
         {
             Case = source;
-            Without = without;
-            With = with;
+            WithoutRuns = withoutRuns;
+            WithRuns = withRuns;
             LessonNumbers = lessonNumbers;
+            Errors = errors;
         }
 
         public LessonReplayCase Case { get; }
 
-        public LessonReplayOutcome Without { get; }
+        /// <summary>Every answer to the plain prompt, in the order asked. One entry unless the replay was repeated.</summary>
+        public IReadOnlyList<LessonReplayOutcome> WithoutRuns { get; }
 
-        public LessonReplayOutcome With { get; }
+        /// <summary>Every answer to the prompt with lessons added, in the order asked.</summary>
+        public IReadOnlyList<LessonReplayOutcome> WithRuns { get; }
+
+        /// <summary>The first answer to the plain prompt.</summary>
+        public LessonReplayOutcome Without => WithoutRuns[0];
+
+        /// <summary>The first answer to the prompt with lessons.</summary>
+        public LessonReplayOutcome With => WithRuns[0];
+
+        /// <summary>Why cells failed, already reduced to a status code and a short reason; empty when none did.</summary>
+        public IReadOnlyList<string> Errors { get; }
+
+        /// <summary>How many times each prompt was asked.</summary>
+        public int Runs => WithoutRuns.Count;
 
         /// <summary>The records added to the with-prompt; empty means retrieval found nothing and both prompts were identical.</summary>
         public IReadOnlyList<int> LessonNumbers { get; }
@@ -99,33 +119,65 @@ namespace ScenarioRunner
 
         public int Replayed => Rows.Count;
 
-        public int FlaggedWithout => Rows.Count(r => r.Without == LessonReplayOutcome.Flagged);
+        /// <summary>Answers asked per prompt for each defect; 1 unless the replay was repeated.</summary>
+        public int Runs => Rows.Count == 0 ? 1 : Rows[0].Runs;
 
-        public int FlaggedWith => Rows.Count(r => r.With == LessonReplayOutcome.Flagged);
+        /// <summary>The number of answers per column: defects times runs.</summary>
+        public int Cells => Rows.Sum(r => r.Runs);
 
-        public int Failed => Rows.Count(r => r.Without == LessonReplayOutcome.Failed || r.With == LessonReplayOutcome.Failed);
+        public int FlaggedWithout => Rows.Sum(r => r.WithoutRuns.Count(o => o == LessonReplayOutcome.Flagged));
+
+        public int FlaggedWith => Rows.Sum(r => r.WithRuns.Count(o => o == LessonReplayOutcome.Flagged));
+
+        /// <summary>Defects for which at least one answer, in either column, never arrived.</summary>
+        public int Failed => Rows.Count(r => r.WithoutRuns.Any(o => o == LessonReplayOutcome.Failed) || r.WithRuns.Any(o => o == LessonReplayOutcome.Failed));
 
         public string ToMarkdown()
         {
             var sb = new StringBuilder();
             sb.AppendLine("# Lesson replay: " + Model);
             sb.AppendLine();
+            var perCell = Runs == 1 ? "one answer per cell" : Runs.ToString(CultureInfo.InvariantCulture) + " answers per cell";
             sb.AppendLine(Live
-                ? "Source: a live run against the real model, one answer per cell. With so few defects this is an observation, not a result."
+                ? "Source: a live run against the real model, " + perCell + ". With so few defects this is an observation, not a result."
                 : "Source: an OFFLINE run with scripted answers. It tests the harness and says nothing about retrieval or any model.");
             sb.AppendLine();
-            sb.AppendLine("Defects replayed: " + Replayed.ToString(CultureInfo.InvariantCulture) + ". Flagged without lessons: " + FlaggedWithout + " of " + Replayed + ". Flagged with lessons: " + FlaggedWith + " of " + Replayed + ". Cells that failed: " + Failed + ".");
+            sb.AppendLine("Defects replayed: " + Replayed.ToString(CultureInfo.InvariantCulture) + ". Answers per column: " + Cells.ToString(CultureInfo.InvariantCulture) + ". Flagged without lessons: " + FlaggedWithout + " of " + Cells + ". Flagged with lessons: " + FlaggedWith + " of " + Cells + ". Defects with a failed answer: " + Failed + ".");
             sb.AppendLine();
             sb.AppendLine("| Defect (fix commit) | Without lessons | With lessons | Lessons added |");
             sb.AppendLine("| :--- | :--- | :--- | :--- |");
             foreach (var row in Rows)
             {
-                sb.AppendLine("| " + row.Case.Id + " (" + row.Case.FixCommit + ") | " + row.Without + " | " + row.With + " | " + (row.LessonNumbers.Count == 0 ? "none found" : string.Join(", ", row.LessonNumbers.Select(n => "#" + n.ToString(CultureInfo.InvariantCulture)))) + " |");
+                sb.AppendLine("| " + row.Case.Id + " (" + row.Case.FixCommit + ") | " + Describe(row.WithoutRuns) + " | " + Describe(row.WithRuns) + " | " + (row.LessonNumbers.Count == 0 ? "none found" : string.Join(", ", row.LessonNumbers.Select(n => "#" + n.ToString(CultureInfo.InvariantCulture)))) + " |");
+            }
+
+            var errors = Rows.SelectMany(r => r.Errors).Distinct(StringComparer.Ordinal).ToList();
+            if (errors.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Why answers failed:");
+                foreach (var error in errors)
+                {
+                    sb.AppendLine("- " + error);
+                }
             }
 
             sb.AppendLine();
             sb.AppendLine("\"Flagged\" is a keyword match on the answer against terms frozen with each case. Retrieval has not been shown to help unless the with-column beats the without-column over enough defects; this table is not that claim.");
             return sb.ToString();
+        }
+
+        // One run keeps the plain word of the original table; several runs show how many answers flagged the defect.
+        private static string Describe(IReadOnlyList<LessonReplayOutcome> runs)
+        {
+            if (runs.Count == 1)
+            {
+                return runs[0].ToString();
+            }
+
+            var flagged = runs.Count(o => o == LessonReplayOutcome.Flagged);
+            var failed = runs.Count(o => o == LessonReplayOutcome.Failed);
+            return flagged.ToString(CultureInfo.InvariantCulture) + " of " + runs.Count.ToString(CultureInfo.InvariantCulture) + " flagged" + (failed > 0 ? ", " + failed.ToString(CultureInfo.InvariantCulture) + " failed" : "");
         }
 
         public string ToJson() => JsonSerializer.Serialize(new
@@ -136,7 +188,9 @@ namespace ScenarioRunner
             flaggedWithout = FlaggedWithout,
             flaggedWith = FlaggedWith,
             failed = Failed,
-            rows = Rows.Select(r => new { id = r.Case.Id, fixCommit = r.Case.FixCommit, asOf = r.Case.AsOf, without = r.Without.ToString(), with = r.With.ToString(), lessons = r.LessonNumbers }).ToList(),
+            runs = Runs,
+            cells = Cells,
+            rows = Rows.Select(r => new { id = r.Case.Id, fixCommit = r.Case.FixCommit, asOf = r.Case.AsOf, without = r.Without.ToString(), with = r.With.ToString(), withoutRuns = r.WithoutRuns.Select(o => o.ToString()).ToList(), withRuns = r.WithRuns.Select(o => o.ToString()).ToList(), lessons = r.LessonNumbers, errors = r.Errors }).ToList(),
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
@@ -154,9 +208,9 @@ namespace ScenarioRunner
                 .ToString();
         }
 
-        public static Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, LessonIndex index, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default)
+        public static Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, LessonIndex index, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default, int runsPerCell = 1)
         {
-            return RunAsync(model, cases, _ => index, live, options, cancellationToken);
+            return RunAsync(model, cases, _ => index, live, options, cancellationToken, runsPerCell);
         }
 
         /// <summary>Keeps only the records closed before <paramref name="asOf" /> (a <c>yyyy-MM-dd</c> date, UTC midnight). A record
@@ -168,9 +222,16 @@ namespace ScenarioRunner
             return new LessonIndex(index.Repository, index.Records.Where(r => r.ClosedAt.HasValue && r.ClosedAt.Value < cutoff));
         }
 
-        /// <summary>As above, with the index chosen per case, so a live replay can give each defect only the history that existed before it.</summary>
-        public static async Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, Func<LessonReplayCase, LessonIndex> indexFor, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default)
+        /// <summary>As above, with the index chosen per case, so a live replay can give each defect only the history that existed before it.
+        /// Each prompt is asked <paramref name="runsPerCell" /> times, so the report can show how much a model's answer varies between
+        /// identical requests.</summary>
+        public static async Task<LessonReplayReport> RunAsync(ITextModel model, IReadOnlyList<LessonReplayCase> cases, Func<LessonReplayCase, LessonIndex> indexFor, bool live, LessonOptions? options = null, CancellationToken cancellationToken = default, int runsPerCell = 1)
         {
+            if (runsPerCell < 1 || runsPerCell > 10)
+            {
+                throw new ArgumentOutOfRangeException(nameof(runsPerCell), "Runs per cell must be between 1 and 10.");
+            }
+
             var rows = new List<LessonReplayRow>();
             foreach (var c in cases)
             {
@@ -178,19 +239,30 @@ namespace ScenarioRunner
                 var matches = LessonRetriever.Retrieve(indexFor(c), c.Diff, c.Files, options);
                 var section = LessonRetriever.BuildSection(matches, options);
                 var enriched = section.Length == 0 ? plain : plain.TrimEnd() + "\n\n" + section;
-                var without = await AskAsync(model, plain, c, cancellationToken).ConfigureAwait(false);
-                var with = section.Length == 0 ? without : await AskAsync(model, enriched, c, cancellationToken).ConfigureAwait(false);
-                rows.Add(new LessonReplayRow(c, without, with, section.Length == 0 ? new int[0] : matches.Select(m => m.Record.Number).ToArray()));
+                var errors = new List<string>();
+                var without = new List<LessonReplayOutcome>();
+                var with = new List<LessonReplayOutcome>();
+                for (var run = 0; run < runsPerCell; run++)
+                {
+                    var plainAnswer = await AskAsync(model, plain, c, errors, cancellationToken).ConfigureAwait(false);
+                    without.Add(plainAnswer);
+                    // With nothing retrieved the two prompts are identical, so the one answer is shared and the model is not asked twice.
+                    with.Add(section.Length == 0 ? plainAnswer : await AskAsync(model, enriched, c, errors, cancellationToken).ConfigureAwait(false));
+                }
+
+                rows.Add(new LessonReplayRow(c, without, with, section.Length == 0 ? new int[0] : matches.Select(m => m.Record.Number).ToArray(), errors.Distinct(StringComparer.Ordinal).ToList()));
             }
 
             return new LessonReplayReport(model.Name, live, rows);
         }
 
-        private static async Task<LessonReplayOutcome> AskAsync(ITextModel model, string prompt, LessonReplayCase c, CancellationToken cancellationToken)
+        private static async Task<LessonReplayOutcome> AskAsync(ITextModel model, string prompt, LessonReplayCase c, List<string> errors, CancellationToken cancellationToken)
         {
             var answer = await model.CompleteAsync(new TextCompletionRequest(prompt, 1024, false), cancellationToken).ConfigureAwait(false);
             if (!answer.Success)
             {
+                // Reduced to a status code and a short reason: a provider's error body can carry account identifiers.
+                errors.Add(AgentReportComment.ErrorSummary(answer.ErrorMessage ?? "The model call failed."));
                 return LessonReplayOutcome.Failed;
             }
 

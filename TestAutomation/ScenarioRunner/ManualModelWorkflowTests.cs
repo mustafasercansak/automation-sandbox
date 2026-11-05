@@ -111,6 +111,20 @@ namespace ScenarioRunner
             Assert.Contains("[A-Za-z0-9._:/@-]{0,100}", Text(file));
         }
 
+        // A free plan can allow some Mistral models and not others (medium and small answered HTTP 429 with a limit of 0 requests
+        // per minute, nemo and ministral were allowed), so the model can be chosen per run without changing a repository variable.
+        // Like the other model inputs it reaches the shell through env, is validated first and overrides the variable only when set.
+        [Theory]
+        [MemberData(nameof(Workflows))]
+        public void TheMistralModelCanBeChosenPerRun_ThroughValidatedEnv(string file)
+        {
+            var text = Text(file);
+
+            Assert.Contains("MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}", text);
+            Assert.Contains("\"$MISTRAL_MODEL_INPUT\"", text);
+            Assert.Contains("MISTRAL_MODEL: ${{ inputs.mistral_model || vars.MISTRAL_MODEL }}", text);
+        }
+
         [Fact]
         public void TheDocBenchmark_RunsOnlyTheLiveBenchmarkTest_WithTheOptInSwitchAndAnOutputDirectory_AndNeedsNoMoreThanContents()
         {
@@ -136,6 +150,19 @@ namespace ScenarioRunner
             Assert.Matches(@"(?m)^permissions:\n  contents: read\n  issues: read\n  pull-requests: read\n\nconcurrency:", text);
             Assert.DoesNotContain("--comment", text);
             Assert.DoesNotContain("--label-needs-human", text);
+        }
+
+        [Fact]
+        public void TheLessonReplayRunCount_IsCheckedAsOneToTenInTheShell_BeforeAnythingIsSpent_AndReachesTheTestOnlyThroughEnv()
+        {
+            var text = Text("lesson-replay.yml");
+
+            // The number reaches the shell through env, is validated first, and only then handed to the test through env.
+            Assert.Contains("RUNS_INPUT: ${{ inputs.runs }}", text);
+            Assert.Contains("[[ \"$RUNS_INPUT\" =~ ^([1-9]|10)$ ]]", text);
+            Assert.Contains("LESSON_REPLAY_RUNS: ${{ inputs.runs }}", text);
+            Assert.True(text.IndexOf("RUNS_INPUT", StringComparison.Ordinal) < text.IndexOf("lessons build", StringComparison.Ordinal),
+                "The run count must be validated before the index is built or any model is asked.");
         }
     }
 }

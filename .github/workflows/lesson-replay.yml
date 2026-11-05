@@ -1,13 +1,13 @@
 name: Lesson replay (manual)
 
-# Replays three real defects (#561): every configured model reviews the same diff twice, once with and once without the lessons
+# Replays ten real defects (#561, #615): every configured model reviews the same diff twice, once with and once without the lessons
 # retrieved from this repository's own closed issues and pull requests, and the report says which answers flagged the defect.
 #
 # Manual only (workflow_dispatch): it builds an index through the GitHub API (read only, about 600 requests) and asks real
-# models, so it spends API quota and model quota, and nothing an outsider can do may start it. The three cases are frozen
+# models, so it spends API quota and model quota, and nothing an outsider can do may start it. The ten cases are frozen
 # (TestAutomation/ScenarioRunner/Fixtures/lessons-replay/cases.json); do not edit or filter them after seeing a result.
 # The index is built once, before the latest case date, and each case is then given only the records closed before its own date.
-# Nothing here gates a release or a pull request. Three defects is a tiny sample: no figure without its count, no claim that
+# Nothing here gates a release or a pull request. Ten defects is a small sample: no figure without its count, no claim that
 # lessons help unless the with-column beats the without-column on far more cases than this.
 #
 # Keys are passed as secrets through env: only, never interpolated into a script. The workflow can read contents, issues and
@@ -24,6 +24,16 @@ on:
         description: Ollama Cloud model name (only needed to include the Ollama Cloud model)
         required: false
         default: ''
+        type: string
+      mistral_model:
+        description: Mistral model name; overrides the MISTRAL_MODEL variable (a free plan may allow only some models, see the provider diagnostics)
+        required: false
+        default: ''
+        type: string
+      runs:
+        description: How many times each prompt is asked per defect, 1 to 10 (repeats show how much an answer varies; each one spends model quota)
+        required: false
+        default: '1'
         type: string
 
 permissions:
@@ -54,8 +64,11 @@ jobs:
         env:
           NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
           OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+          MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}
+          RUNS_INPUT: ${{ inputs.runs }}
         run: |
-          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT"; do
+          [[ "$RUNS_INPUT" =~ ^([1-9]|10)$ ]] || { echo "runs must be a whole number from 1 to 10"; exit 2; }
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT" "$MISTRAL_MODEL_INPUT"; do
             [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
           done
 
@@ -76,10 +89,11 @@ jobs:
           LESSON_REPLAY: '1'
           LESSON_REPLAY_INDEX: ${{ runner.temp }}/lessons-index.json
           LESSON_REPLAY_OUT: ${{ github.workspace }}/lesson-replay-out
+          LESSON_REPLAY_RUNS: ${{ inputs.runs }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          MISTRAL_MODEL: ${{ inputs.mistral_model || vars.MISTRAL_MODEL }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -42,18 +43,32 @@ namespace ScenarioRunner
         private static TextCompletionResult Ok(string text) => new TextCompletionResult { Success = true, Text = text };
 
         [Fact]
-        public void TheCases_AreTheRealPreFixLines_OfThreeFixCommits()
+        public void TheCases_AreTheRealPreFixLines_OfTenFixCommits()
         {
             var cases = Cases();
 
-            Assert.Equal(new[] { "valuetask-completedtask", "process-api-net48", "nullable-flow-netstandard" }, cases.Select(c => c.Id));
-            Assert.Equal(new[] { "127969f", "fec29eb", "5a913af" }, cases.Select(c => c.FixCommit));
+            Assert.Equal(new[]
+            {
+                "valuetask-completedtask", "process-api-net48", "nullable-flow-netstandard", "record-primary-constructor-net48", "keyvaluepair-deconstruction-net48",
+                "dictionary-copy-constructor-net48", "nullable-key-netstandard", "stream-writeasync-net48", "isnullorempty-postcondition-net48", "nullable-contains-argument",
+            }, cases.Select(c => c.Id));
+            Assert.Equal(new[] { "127969f", "fec29eb", "5a913af", "02609ff", "0e01513", "c1fbed9", "4059650", "2d32728", "8d4718e", "229abb5" }, cases.Select(c => c.FixCommit));
+            Assert.Equal(cases.Count, cases.Select(c => c.Id).Distinct().Count());
             Assert.Contains("ValueTask.CompletedTask", cases[0].Diff);
             Assert.Contains("psi.ArgumentList.Add", cases[1].Diff);
             Assert.Contains("process.WaitForExit(TimeSpan.FromSeconds(60))", cases[1].Diff);
             Assert.Contains("!string.IsNullOrWhiteSpace(HtmlFilePath)", cases[2].Diff);
+            Assert.Contains("public record EvaluationScenario(", cases[3].Diff);
+            Assert.Contains("foreach (var (providerName, attempts) in healResult.ProviderAttempts)", cases[4].Diff);
+            Assert.Contains("new Dictionary<string, int>(healResult.ProviderAttempts)", cases[5].Diff);
+            Assert.Contains("_byKey[key] = recording;", cases[6].Diff);
+            Assert.Contains("OutputStream.WriteAsync(bytes)", cases[7].Diff);
+            Assert.Contains("string.IsNullOrEmpty(result.MatchedAutomationId)", cases[8].Diff);
+            Assert.Contains("shortlistIds.Contains(result.MatchedCandidateId)", cases[9].Diff);
             Assert.All(cases, c => Assert.NotEmpty(c.FlagTerms));
             Assert.All(cases, c => Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", c.AsOf));
+            // Only the removed lines of the fix are shown to the model: nothing the fix added may be in the diff.
+            Assert.All(cases, c => Assert.DoesNotContain("\n-", c.Diff));
         }
 
         [Fact]
@@ -70,7 +85,7 @@ namespace ScenarioRunner
         {
             var model = new Scripted(prompt => Ok(prompt.Contains("BEGIN_LESSON_DATA") ? "This uses ValueTask.CompletedTask and ArgumentList, which do not exist on net48." : "Looks fine to me."));
 
-            var report = await LessonReplay.RunAsync(model, Cases(), Index(), live: false);
+            var report = await LessonReplay.RunAsync(model, Cases().Take(3).ToList(), Index(), live: false);
 
             Assert.Equal(3, report.Replayed);
             Assert.Equal(0, report.FlaggedWithout);
@@ -87,7 +102,7 @@ namespace ScenarioRunner
         {
             var model = new Scripted(_ => Ok("Looks fine to me."));
 
-            var report = await LessonReplay.RunAsync(model, Cases(), new LessonIndex("o/r", new LessonRecord[0]), live: false);
+            var report = await LessonReplay.RunAsync(model, Cases().Take(3).ToList(), new LessonIndex("o/r", new LessonRecord[0]), live: false);
 
             Assert.Equal(3, model.Prompts.Count);
             Assert.All(report.Rows, r => Assert.Equal(r.Without, r.With));
@@ -122,6 +137,71 @@ namespace ScenarioRunner
             Assert.Equal(LessonReplayOutcome.Failed, report.Rows[0].Without);
             Assert.Equal(LessonReplayOutcome.Flagged, report.Rows[0].With);
             Assert.Equal(1, report.Failed);
+        }
+
+        [Fact]
+        public async Task EachPromptIsAskedOncePerRun_AndTheReportShowsHowManyAnswersFlaggedTheDefect()
+        {
+            var withCalls = 0;
+            var model = new Scripted(prompt =>
+            {
+                if (!prompt.Contains("BEGIN_LESSON_DATA"))
+                {
+                    return Ok("fine");
+                }
+
+                // The model flags the defect in the first and third answer to the same prompt.
+                return Ok(++withCalls % 2 == 1 ? "net48 CompletedTask" : "fine");
+            });
+
+            var report = await LessonReplay.RunAsync(model, Cases().Take(1).ToList(), Index(), live: true, runsPerCell: 3);
+
+            Assert.Equal(3, report.Runs);
+            Assert.Equal(3, report.Cells);
+            Assert.Equal(6, model.Prompts.Count);
+            Assert.Equal(0, report.FlaggedWithout);
+            Assert.Equal(2, report.FlaggedWith);
+            var markdown = report.ToMarkdown();
+            Assert.Contains("2 of 3 flagged", markdown, StringComparison.Ordinal);
+            Assert.Contains("0 of 3 flagged", markdown, StringComparison.Ordinal);
+            Assert.Contains("3 answers per cell", markdown, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task WhenNothingIsRetrieved_EveryRunIsStillAskedOnlyOnce()
+        {
+            var model = new Scripted(_ => Ok("x"));
+
+            var report = await LessonReplay.RunAsync(model, Cases().Take(1).ToList(), new LessonIndex("owner/repo", new LessonRecord[0]), live: false, runsPerCell: 3);
+
+            Assert.Equal(3, model.Prompts.Count);
+            Assert.Equal(report.Rows[0].WithoutRuns, report.Rows[0].WithRuns);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(11)]
+        public async Task ARunCountOutsideOneToTen_IsRejectedBeforeAnyModelCall(int runs)
+        {
+            var model = new Scripted(_ => Ok("x"));
+
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => LessonReplay.RunAsync(model, Cases(), Index(), live: false, runsPerCell: runs));
+
+            Assert.Empty(model.Prompts);
+        }
+
+        [Fact]
+        public async Task AFailedCell_ShowsItsReason_ReducedToAStatusCode_NeverTheProviderBody()
+        {
+            var model = new Scripted(_ => new TextCompletionResult { Success = false, ErrorMessage = "HTTP 429 TooManyRequests: {\"account\":\"org-secret-1234\",\"message\":\"rate limit\"}" });
+
+            var report = await LessonReplay.RunAsync(model, Cases().Take(1).ToList(), Index(), live: true);
+
+            var markdown = report.ToMarkdown();
+            Assert.Contains("Why answers failed", markdown, StringComparison.Ordinal);
+            Assert.Contains("429", markdown, StringComparison.Ordinal);
+            Assert.DoesNotContain("org-secret-1234", markdown, StringComparison.Ordinal);
+            Assert.DoesNotContain("org-secret-1234", report.ToJson(), StringComparison.Ordinal);
         }
 
         [Fact]
@@ -161,14 +241,15 @@ namespace ScenarioRunner
         public async Task TheReport_StatesCountsAndLimits_AndMakesNoImprovementClaim()
         {
             var model = new Scripted(prompt => Ok(prompt.Contains("BEGIN_LESSON_DATA") ? "net48 CompletedTask ArgumentList" : "fine"));
-            var offline = await LessonReplay.RunAsync(model, Cases(), Index(), live: false);
-            var live = await LessonReplay.RunAsync(model, Cases(), Index(), live: true);
+            var offline = await LessonReplay.RunAsync(model, Cases().Take(3).ToList(), Index(), live: false);
+            var live = await LessonReplay.RunAsync(model, Cases().Take(3).ToList(), Index(), live: true);
 
             var markdown = offline.ToMarkdown();
             Assert.Contains("OFFLINE run", markdown);
             Assert.Contains("says nothing about retrieval or any model", markdown);
             Assert.Contains("Defects replayed: 3", markdown);
             Assert.Contains("Flagged without lessons: 0 of 3", markdown);
+            Assert.Contains("Answers per column: 3", markdown);
             Assert.Contains("Flagged with lessons: 2 of 3", markdown);
             Assert.Contains("none found", markdown);
             Assert.Contains("this table is not that claim", markdown);
@@ -202,13 +283,20 @@ namespace ScenarioRunner
                 directory = Path.Combine(Path.GetTempPath(), "lesson-replay-" + Guid.NewGuid().ToString("N"));
             }
 
+            var runs = 1;
+            var runsText = Environment.GetEnvironmentVariable("LESSON_REPLAY_RUNS");
+            if (!string.IsNullOrWhiteSpace(runsText) && !int.TryParse(runsText, NumberStyles.None, CultureInfo.InvariantCulture, out runs))
+            {
+                throw new InvalidOperationException("LESSON_REPLAY_RUNS must be a whole number from 1 to 10.");
+            }
+
             Directory.CreateDirectory(directory);
             foreach (var model in registry.Models.Where(m => m.IsAvailable))
             {
-                var report = await LessonReplay.RunAsync(model, Cases(), c => LessonReplay.IndexAsOf(index, c.AsOf), live: true);
+                var report = await LessonReplay.RunAsync(model, Cases(), c => LessonReplay.IndexAsOf(index, c.AsOf), live: true, runsPerCell: runs);
                 File.WriteAllText(Path.Combine(directory, "lesson-replay-" + model.Name + ".md"), report.ToMarkdown());
                 File.WriteAllText(Path.Combine(directory, "lesson-replay-" + model.Name + ".json"), report.ToJson());
-                Console.WriteLine("[LessonReplay] " + model.Name + ": flagged without lessons " + report.FlaggedWithout + " of " + report.Replayed + ", with lessons " + report.FlaggedWith + " of " + report.Replayed + ", failed cells " + report.Failed + ". Written to " + directory);
+                Console.WriteLine("[LessonReplay] " + model.Name + ": flagged without lessons " + report.FlaggedWithout + " of " + report.Cells + ", with lessons " + report.FlaggedWith + " of " + report.Cells + ", defects with a failed answer " + report.Failed + ". Written to " + directory);
             }
         }
     }
