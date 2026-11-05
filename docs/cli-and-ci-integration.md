@@ -52,6 +52,8 @@ Both JSON inputs, and the tool's own output, follow a published [JSON Schema](sc
 
 Only the fields behind `SimilarityScorer`'s five weighted signals (`ControlType`, `Name`, `AutomationId`, `BoundingRectangle`, `ParentControlType`) are required; everything else is optional, matching the C# defaults the engine falls back to when a property is absent.
 
+A tree may nest at most 256 elements deep (each element costs two JSON levels, the object and its `Children` array, so the reader's limit is 528). Deeper input is refused with `Error: The tree is nested more than 256 elements deep` and exit code `2`, never with a crash. Until #638 the limit was 31 elements and the error said "possible object cycle"; the .NET capture stops at depth 25 by default and `capture.mjs` at 100, so both stay inside it.
+
 ### Using It in CI: the GitHub Action
 
 A composite GitHub Action wraps the install, run, and JSON-parsing steps into one line:
@@ -63,6 +65,8 @@ A composite GitHub Action wraps the install, run, and JSON-parsing steps into on
     tree: path/to/live-tree.json
     profile: balanced
 ```
+
+The inputs are checked before anything runs, and a bad one stops the step with exit code `2` (the CLI's "could not run"): `profile` must be `balanced`, `conservative` or `aggressive`, `version` must look like `1.2.3` or `1.2.3-beta.4`, `source` may only hold letters, digits and `. _ ~ : / @ % + = , -` (and a backslash), and `expected` and `tree` must be existing files. Values are passed to the script as environment variables, never spliced into it, so a value from a pull request (a branch name, say) cannot run as shell (#636).
 
 By default this step fails the job when the result is not confident - the same exit-code contract as the CLI itself, so a bare `uses:` line is already a working pass/fail gate. Add `continue-on-error: true` and read the `is-confident`/`result` outputs if you want to branch on the outcome instead of failing the build. An optional `source` input lets the action install from a private feed instead of nuget.org.
 
@@ -241,6 +245,8 @@ Her iki JSON girdisi de, aracın kendi çıktısı da yayınlanmış bir [JSON S
 
 Yalnızca `SimilarityScorer`'ın beş ağırlıklı sinyalinin (`ControlType`, `Name`, `AutomationId`, `BoundingRectangle`, `ParentControlType`) arkasındaki alanlar zorunludur; geri kalan her şey isteğe bağlıdır, bu da motorun bir özellik girdi JSON'unda yoksa başvurduğu C# varsayılanlarıyla eşleşir.
 
+Bir ağaç en fazla 256 eleman derinliğinde olabilir (her eleman iki JSON seviyesi harcar: nesne ve `Children` dizisi; bu yüzden okuyucunun sınırı 528'dir). Daha derin girdi, çökme olmadan `Error: The tree is nested more than 256 elements deep` hatasıyla ve `2` çıkış koduyla reddedilir. #638'e kadar sınır 31 elemandı ve hata "possible object cycle" diyordu; .NET yakalaması varsayılan olarak 25'te, `capture.mjs` ise 100'de durur, yani ikisi de sınırın içinde kalır.
+
 ### CI'da Kullanım: GitHub Action
 
 Bir composite GitHub Action, kurulum, çalıştırma ve JSON ayrıştırma adımlarını tek bir satıra sarmalar:
@@ -252,6 +258,8 @@ Bir composite GitHub Action, kurulum, çalıştırma ve JSON ayrıştırma adım
     tree: path/to/live-tree.json
     profile: balanced
 ```
+
+Girdiler hiçbir şey çalışmadan önce denetlenir ve hatalı biri adımı `2` çıkış koduyla (CLI'nin "çalıştırılamadı"sı) durdurur: `profile` `balanced`, `conservative` ya da `aggressive` olmalı, `version` `1.2.3` ya da `1.2.3-beta.4` gibi görünmeli, `source` yalnızca harf, rakam ve `. _ ~ : / @ % + = , -` (ve ters eğik çizgi) içerebilir, `expected` ile `tree` var olan dosyalar olmalı. Değerler betiğe ortam değişkeni olarak geçirilir, asla içine yapıştırılmaz; bu yüzden bir pull request'ten gelen bir değer (örneğin bir dal adı) kabuk komutu olarak çalışamaz (#636).
 
 Varsayılan olarak bu adım, sonuç yeterince emin değilse job'u başarısız yapar - tıpkı CLI'nin kendi exit-code sözleşmesi gibi, yani sade bir `uses:` satırı zaten çalışan bir pass/fail kapısıdır. Build'i başarısız yapmak yerine sonuca göre dallanmak isterseniz `continue-on-error: true` ekleyin ve `is-confident`/`result` çıktılarını okuyun. İsteğe bağlı bir `source` girdisi, action'ın nuget.org yerine özel bir feed'den kurulum yapmasına izin verir.
 

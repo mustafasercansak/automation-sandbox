@@ -3678,6 +3678,8 @@
       "TestAutomation/UiModel/UiTreeSerializer.cs"
     ],
     "Members": [
+      "public const int MaxElementDepth;",
+      "public const int MaxJsonDepth;",
       "public static UiElementInfo FromJson(string json)",
       "public static string ToJson(UiElementInfo root)"
     ]

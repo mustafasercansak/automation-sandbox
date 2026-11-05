@@ -59,8 +59,10 @@ jobs:
           gem install jekyll kramdown jekyll-relative-links
 
       - name: Build site with Jekyll
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
-          jekyll build --baseurl "${{ steps.pages.outputs.base_path }}" --source . --destination ./_site
+          jekyll build --baseurl "$BASE_PATH" --source . --destination ./_site
           if [ ! -f "./_site/index.html" ]; then
             echo "::error::FATAL: ./_site/index.html was not generated!"
             exit 1

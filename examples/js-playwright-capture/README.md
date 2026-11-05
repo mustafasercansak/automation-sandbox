@@ -6,9 +6,9 @@ Gerçek bir Node.js + [Playwright](https://playwright.dev/) betiği, bir web say
 
 ---
 
-**Deliberately minimal - not a port of `AutomationSandbox.WebDiscovery`.** Covers the regular DOM only: no open Shadow DOM traversal, no same-origin iframe traversal, no `MaxDepth`/`MaxElements` bounding. For those, capture from .NET instead.
+**Deliberately minimal - not a port of `AutomationSandbox.WebDiscovery`.** Covers the regular DOM only: no open Shadow DOM traversal, no same-origin iframe traversal, no `MaxElements` bounding, and a fixed depth bound of 100 nested elements (a deeper page is cut there with a warning, so the file stays within the 256 levels `automation-sandbox-heal` reads, #638). For those, capture from .NET instead.
 
-**Bilinçli olarak minimal - `AutomationSandbox.WebDiscovery`'nin bir portu değil.** Sadece normal DOM'u kapsar: açık Shadow DOM gezinmesi yok, aynı-kaynaklı iframe gezinmesi yok, `MaxDepth`/`MaxElements` sınırlaması yok. Bunlar için .NET tarafından yakalayın.
+**Bilinçli olarak minimal - `AutomationSandbox.WebDiscovery`'nin bir portu değil.** Sadece normal DOM'u kapsar: açık Shadow DOM gezinmesi yok, aynı-kaynaklı iframe gezinmesi yok, `MaxElements` sınırlaması yok ve 100 iç içe elemanlık sabit bir derinlik sınırı var (daha derin bir sayfa uyarıyla orada kesilir, böylece dosya `automation-sandbox-heal`'in okuduğu 256 seviyenin içinde kalır, #638). Bunlar için .NET tarafından yakalayın.
 
 ---
 

@@ -10,6 +10,8 @@ namespace AutomationSandbox.WebDiscovery
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            // A page can nest deeper than the default JSON limit of 64 allows (two levels per element); read it with the same bound as every tree.
+            MaxDepth = UiTreeSerializer.MaxJsonDepth,
         };
 
         /// <summary>Deserializes the DOM capture payload into an editable web element tree.</summary>
