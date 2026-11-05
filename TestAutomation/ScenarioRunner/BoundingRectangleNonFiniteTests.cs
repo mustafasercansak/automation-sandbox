@@ -40,13 +40,24 @@ namespace ScenarioRunner
             Assert.Equal(0.25, rectangle.Height);
         }
 
+        // What a JSON reader does with 1e400 depends on the runtime: System.Text.Json on .NET 8 reads it as an infinity, the package on .NET
+        // Framework 4.8 refuses it with a FormatException (wrapped in a JsonException). Either is fine; what must never happen is that a
+        // non-finite number is stored and later cannot be written.
         [Fact]
-        public void AFileWithAnOutOfRangeNumber_IsReadAsNoGeometry_AndTheTreeCanBeWrittenAgain()
+        public void AFileWithAnOutOfRangeNumber_IsEitherRefusedOrReadAsNoGeometry_NeverStoredAsAnInfinity()
         {
-            // 1e400 is read by System.Text.Json as an infinity.
             var json = "{\"ControlType\":\"Button\",\"Name\":\"n\",\"AutomationId\":\"a\",\"ParentControlType\":\"Pane\",\"BoundingRectangle\":{\"X\":1e400,\"Y\":0,\"Width\":-5,\"Height\":1e400}}";
 
-            var tree = UiTreeSerializer.FromJson(json);
+            UiElementInfo tree;
+            try
+            {
+                tree = UiTreeSerializer.FromJson(json);
+            }
+            catch (JsonException)
+            {
+                return;
+            }
+
             var written = UiTreeSerializer.ToJson(tree);
 
             Assert.Equal(BoundingRectangle.Empty, tree.BoundingRectangle);
