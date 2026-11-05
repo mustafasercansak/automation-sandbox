@@ -12,6 +12,11 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
+        // The resolver log lines on stderr quote element names verbatim. A Windows console
+        // writes stderr in the OEM code page, so "Bağlan" would print as "Ba?lan" (#621);
+        // write UTF-8 without a BOM instead. stdout is JSON, which escapes non-ASCII itself.
+        Console.SetError(new StreamWriter(Console.OpenStandardError(), new System.Text.UTF8Encoding(false)) { AutoFlush = true });
+
         if (args.Length == 0 || args[0] is "-h" or "--help")
         {
             PrintUsage();

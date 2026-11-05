@@ -157,20 +157,33 @@ function captureTree(selector) {
 }
 
 async function main() {
-  const [, , target, outputPath, selectorFlag, selectorValue] = process.argv;
+  const [, , target, outputPath, ...flags] = process.argv;
   if (!target || !outputPath) {
-    console.error('Usage: node capture.mjs <url-or-local-html-path> <output.json> [--selector CSS]');
+    console.error('Usage: node capture.mjs <url-or-local-html-path> <output.json> [--selector CSS] [--executable-path PATH | --channel NAME]');
     process.exit(1);
   }
-  if (selectorFlag && selectorFlag !== '--selector') {
-    console.error(`Unrecognized argument: ${selectorFlag}`);
+
+  // --executable-path / --channel pick a browser that is already installed (e.g. a Chromium
+  // of another revision, or Chrome/Edge) instead of the one `playwright install` downloads.
+  const options = {};
+  const flagNames = { '--selector': 'selector', '--executable-path': 'executablePath', '--channel': 'channel' };
+  for (let i = 0; i < flags.length; i += 2) {
+    const name = flagNames[flags[i]];
+    if (!name) {
+      console.error(`Unrecognized argument: ${flags[i]}`);
+      process.exit(1);
+    }
+    if (!flags[i + 1]) {
+      console.error(`${flags[i]} requires a value.`);
+      process.exit(1);
+    }
+    options[name] = flags[i + 1];
+  }
+  if (options.executablePath && options.channel) {
+    console.error('--executable-path and --channel cannot be combined.');
     process.exit(1);
   }
-  const selector = selectorFlag === '--selector' ? selectorValue : undefined;
-  if (selectorFlag === '--selector' && !selector) {
-    console.error('--selector requires a CSS selector value.');
-    process.exit(1);
-  }
+  const { selector, executablePath, channel } = options;
 
   // A bare local path (e.g. fixtures/page-old.html) works on every OS without the
   // caller having to construct a file:// URL by hand - resolve() + pathToFileURL()
@@ -180,7 +193,7 @@ async function main() {
     ? target
     : pathToFileURL(resolve(target)).href;
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath, channel });
   try {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle' });
