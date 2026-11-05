@@ -17,56 +17,27 @@ internal static class Program
         // write UTF-8 without a BOM instead. stdout is JSON, which escapes non-ASCII itself.
         Console.SetError(new StreamWriter(Console.OpenStandardError(), new System.Text.UTF8Encoding(false)) { AutoFlush = true });
 
-        if (args.Length == 0 || args[0] is "-h" or "--help")
+        // A command-line mistake is exit code 2, "could not run". Exit code 1 means "not confident", which a CI gate sends to review, so
+        // a typo in a flag must never look like that (#646). The usage goes to stderr then: stdout is for JSON only.
+        var options = HealCliOptions.Parse(args);
+        if (options.ShowHelp)
         {
-            PrintUsage();
-            return args.Length == 0 ? 1 : 0;
+            PrintUsage(Console.Out);
+            return 0;
         }
 
-        string? expectedPath = null;
-        string? selector = null;
-        var compact = false;
-        string? treePath = null;
-        var profile = ThresholdProfile.Balanced;
-
-        for (var i = 0; i < args.Length; i++)
+        if (options.Error is not null)
         {
-            switch (args[i])
-            {
-                case "--expected" when i + 1 < args.Length:
-                    expectedPath = args[++i];
-                    break;
-                case "--selector" when i + 1 < args.Length:
-                    selector = args[++i];
-                    break;
-                case "--compact":
-                    compact = true;
-                    break;
-                case "--tree" when i + 1 < args.Length:
-                    treePath = args[++i];
-                    break;
-                case "--profile" when i + 1 < args.Length:
-                    i++;
-                    if (!Enum.TryParse(args[i], ignoreCase: true, out profile))
-                    {
-                        Console.Error.WriteLine($"Unknown profile '{args[i]}'. Use balanced, conservative, or aggressive.");
-                        return 1;
-                    }
-
-                    break;
-                default:
-                    Console.Error.WriteLine($"Unrecognized or incomplete argument: {args[i]}");
-                    PrintUsage();
-                    return 1;
-            }
+            Console.Error.WriteLine(options.Error);
+            PrintUsage(Console.Error);
+            return 2;
         }
 
-        if (treePath is null || (expectedPath is null) == (selector is null))
-        {
-            Console.Error.WriteLine("--tree and exactly one of --expected or --selector are required.");
-            PrintUsage();
-            return 1;
-        }
+        var expectedPath = options.ExpectedPath;
+        var selector = options.Selector;
+        var compact = options.Compact;
+        var treePath = options.TreePath!;
+        var profile = options.Profile;
 
         try
         {
@@ -171,31 +142,31 @@ internal static class Program
                 ChildControlTypeSignature = element.ChildControlTypeSignature,
             };
 
-    private static void PrintUsage()
+    private static void PrintUsage(TextWriter output)
     {
-        Console.WriteLine("================================================================================");
-        Console.WriteLine("  Automation Sandbox - Self-Healing CLI");
-        Console.WriteLine("  (language/platform-agnostic locator healing: JSON in, JSON out)");
-        Console.WriteLine("================================================================================");
-        Console.WriteLine();
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  automation-sandbox-heal --expected <stale-element.json> --tree <live-tree.json> [--profile balanced|conservative|aggressive] [--compact]");
-        Console.WriteLine("  automation-sandbox-heal --selector \"<playwright locator>\" --tree <live-tree.json> [--profile ...]");
-        Console.WriteLine();
-        Console.WriteLine("--expected   A single UiElementInfo JSON object: the stale/broken locator's last known snapshot.");
-        Console.WriteLine("--selector   Instead of --expected, for a suite with no recorded snapshot: a Playwright locator such as");
-        Console.WriteLine("             getByTestId('x') or getByRole('button', { name: 'Save' }). Only the signals it states are used,");
-        Console.WriteLine("             the output is wrapped as { PartialEvidence, DerivedExpected, Result }, and the same gate applies.");
-        Console.WriteLine("--tree       A UiElementInfo JSON tree: a freshly captured snapshot of the live application.");
-        Console.WriteLine("--compact    Print a smaller result: elements without their child subtree and only the best 5 candidates");
-        Console.WriteLine("             (CandidateCount still reports the full number). The decision and exit code are unchanged.");
-        Console.WriteLine("--profile    Threshold profile (default: balanced). See SimilarityWeights.FromProfile.");
-        Console.WriteLine();
-        Console.WriteLine("Both JSON inputs must be shaped like UiTreeSerializer.ToJson's output - produce this");
-        Console.WriteLine("from any language or tool; no C# or FlaUI/Playwright .NET dependency is needed to call this.");
-        Console.WriteLine();
-        Console.WriteLine("Prints a HealResult as JSON to stdout. Exit code 0 means IsConfident (safe to accept");
-        Console.WriteLine("Matched); non-zero (1) means not confident - do not auto-accept Matched; 2 means an error");
-        Console.WriteLine("(bad input, missing file) occurred before a decision could be made.");
+        output.WriteLine("================================================================================");
+        output.WriteLine("  Automation Sandbox - Self-Healing CLI");
+        output.WriteLine("  (language/platform-agnostic locator healing: JSON in, JSON out)");
+        output.WriteLine("================================================================================");
+        output.WriteLine();
+        output.WriteLine("Usage:");
+        output.WriteLine("  automation-sandbox-heal --expected <stale-element.json> --tree <live-tree.json> [--profile balanced|conservative|aggressive] [--compact]");
+        output.WriteLine("  automation-sandbox-heal --selector \"<playwright locator>\" --tree <live-tree.json> [--profile ...]");
+        output.WriteLine();
+        output.WriteLine("--expected   A single UiElementInfo JSON object: the stale/broken locator's last known snapshot.");
+        output.WriteLine("--selector   Instead of --expected, for a suite with no recorded snapshot: a Playwright locator such as");
+        output.WriteLine("             getByTestId('x') or getByRole('button', { name: 'Save' }). Only the signals it states are used,");
+        output.WriteLine("             the output is wrapped as { PartialEvidence, DerivedExpected, Result }, and the same gate applies.");
+        output.WriteLine("--tree       A UiElementInfo JSON tree: a freshly captured snapshot of the live application.");
+        output.WriteLine("--compact    Print a smaller result: elements without their child subtree and only the best 5 candidates");
+        output.WriteLine("             (CandidateCount still reports the full number). The decision and exit code are unchanged.");
+        output.WriteLine("--profile    Threshold profile (default: balanced). See SimilarityWeights.FromProfile.");
+        output.WriteLine();
+        output.WriteLine("Both JSON inputs must be shaped like UiTreeSerializer.ToJson's output - produce this");
+        output.WriteLine("from any language or tool; no C# or FlaUI/Playwright .NET dependency is needed to call this.");
+        output.WriteLine();
+        output.WriteLine("Prints a HealResult as JSON to stdout. Exit code 0 means IsConfident (safe to accept");
+        output.WriteLine("Matched); non-zero (1) means not confident - do not auto-accept Matched; 2 means an error");
+        output.WriteLine("(bad input, missing file) occurred before a decision could be made.");
     }
 }
