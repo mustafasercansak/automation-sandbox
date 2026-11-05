@@ -20,6 +20,7 @@ internal static class Program
 
         string? expectedPath = null;
         string? selector = null;
+        var compact = false;
         string? treePath = null;
         var profile = ThresholdProfile.Balanced;
 
@@ -32,6 +33,9 @@ internal static class Program
                     break;
                 case "--selector" when i + 1 < args.Length:
                     selector = args[++i];
+                    break;
+                case "--compact":
+                    compact = true;
                     break;
                 case "--tree" when i + 1 < args.Length:
                     treePath = args[++i];
@@ -83,6 +87,13 @@ internal static class Program
             // stdout stays pure JSON - the one promise this tool makes to any caller.
             var result = SelfHealingResolver.Resolve(expected, currentTreeRoot, weights, log: Console.Error.WriteLine);
 
+            // Decide on the full result first: the exit code must not depend on how much of it is printed.
+            var isConfident = result.IsConfident;
+            if (compact)
+            {
+                CompactResult(result);
+            }
+
             var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
             if (selector is null)
             {
@@ -101,7 +112,7 @@ internal static class Program
             // everywhere else in this repo - a caller piping this into a CI gate gets the
             // identical evidence/margin/per-component rules the .NET API enforces, not a
             // separate, looser CLI-only notion of "good enough".
-            return result.IsConfident ? 0 : 1;
+            return isConfident ? 0 : 1;
         }
         catch (Exception ex)
         {
@@ -109,6 +120,50 @@ internal static class Program
             return 2;
         }
     }
+
+    // Keeps the decision and its evidence, drops what makes the output many times larger than its
+    // input (#620): every element carries its whole subtree, and every scored node is a candidate.
+    // Elements are shallow-copied so the live tree handed to the resolver is not modified.
+    private const int CompactCandidateLimit = 5;
+
+    private static void CompactResult(HealResult result)
+    {
+        result.Matched = WithoutChildren(result.Matched);
+        result.HeuristicMatched = WithoutChildren(result.HeuristicMatched);
+        if (result.Candidates is not null)
+        {
+            result.Candidates = result.Candidates
+                .OrderByDescending(candidate => candidate.TotalScore)
+                .Take(CompactCandidateLimit)
+                .Select(candidate => new CandidateScore
+                {
+                    Candidate = WithoutChildren(candidate.Candidate)!,
+                    TotalScore = candidate.TotalScore,
+                    Components = candidate.Components,
+                    EvidenceCoverage = candidate.EvidenceCoverage,
+                    CandidateId = candidate.CandidateId,
+                })
+                .ToList();
+        }
+    }
+
+    private static UiElementInfo? WithoutChildren(UiElementInfo? element) =>
+        element is null
+            ? null
+            : new UiElementInfo
+            {
+                ControlType = element.ControlType,
+                Name = element.Name,
+                AutomationId = element.AutomationId,
+                ClassName = element.ClassName,
+                BoundingRectangle = element.BoundingRectangle,
+                ParentControlType = element.ParentControlType,
+                ParentAutomationId = element.ParentAutomationId,
+                SiblingIndex = element.SiblingIndex,
+                SiblingCount = element.SiblingCount,
+                TestIntent = element.TestIntent,
+                ChildControlTypeSignature = element.ChildControlTypeSignature,
+            };
 
     private static void PrintUsage()
     {
@@ -118,7 +173,7 @@ internal static class Program
         Console.WriteLine("================================================================================");
         Console.WriteLine();
         Console.WriteLine("Usage:");
-        Console.WriteLine("  automation-sandbox-heal --expected <stale-element.json> --tree <live-tree.json> [--profile balanced|conservative|aggressive]");
+        Console.WriteLine("  automation-sandbox-heal --expected <stale-element.json> --tree <live-tree.json> [--profile balanced|conservative|aggressive] [--compact]");
         Console.WriteLine("  automation-sandbox-heal --selector \"<playwright locator>\" --tree <live-tree.json> [--profile ...]");
         Console.WriteLine();
         Console.WriteLine("--expected   A single UiElementInfo JSON object: the stale/broken locator's last known snapshot.");
@@ -126,6 +181,8 @@ internal static class Program
         Console.WriteLine("             getByTestId('x') or getByRole('button', { name: 'Save' }). Only the signals it states are used,");
         Console.WriteLine("             the output is wrapped as { PartialEvidence, DerivedExpected, Result }, and the same gate applies.");
         Console.WriteLine("--tree       A UiElementInfo JSON tree: a freshly captured snapshot of the live application.");
+        Console.WriteLine("--compact    Print a smaller result: elements without their child subtree and only the best 5 candidates");
+        Console.WriteLine("             (CandidateCount still reports the full number). The decision and exit code are unchanged.");
         Console.WriteLine("--profile    Threshold profile (default: balanced). See SimilarityWeights.FromProfile.");
         Console.WriteLine();
         Console.WriteLine("Both JSON inputs must be shaped like UiTreeSerializer.ToJson's output - produce this");
