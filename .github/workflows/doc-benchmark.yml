@@ -23,6 +23,11 @@ on:
         required: false
         default: ''
         type: string
+      mistral_model:
+        description: Mistral model name; overrides the MISTRAL_MODEL variable (a free plan may allow only some models, see the provider diagnostics)
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -50,8 +55,9 @@ jobs:
         env:
           NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
           OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+          MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}
         run: |
-          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT"; do
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT" "$MISTRAL_MODEL_INPUT"; do
             [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
           done
 
@@ -63,7 +69,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
+          MISTRAL_MODEL: ${{ inputs.mistral_model || vars.MISTRAL_MODEL }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
