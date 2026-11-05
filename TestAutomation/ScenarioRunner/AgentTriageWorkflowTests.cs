@@ -12,7 +12,7 @@ namespace ScenarioRunner
     // nothing a person supplies is interpolated into a script.
     public class AgentTriageWorkflowTests
     {
-        internal static string[] ReadRepoFile(params string[] parts)
+        internal static string RepoRoot()
         {
             var directory = new DirectoryInfo(AppContext.BaseDirectory);
             while (directory != null && !File.Exists(Path.Combine(directory.FullName, "AutomationSandbox.sln")))
@@ -21,7 +21,12 @@ namespace ScenarioRunner
             }
 
             Assert.NotNull(directory);
-            return File.ReadAllLines(Path.Combine(new[] { directory!.FullName }.Concat(parts).ToArray()));
+            return directory!.FullName;
+        }
+
+        internal static string[] ReadRepoFile(params string[] parts)
+        {
+            return File.ReadAllLines(Path.Combine(new[] { RepoRoot() }.Concat(parts).ToArray()));
         }
 
         private static string[] Lines() => ReadRepoFile(".github", "workflows", "agent-triage.yml");

@@ -64,6 +64,8 @@ A composite GitHub Action wraps the install, run, and JSON-parsing steps into on
     profile: balanced
 ```
 
+The inputs are checked before anything runs, and a bad one stops the step with exit code `2` (the CLI's "could not run"): `profile` must be `balanced`, `conservative` or `aggressive`, `version` must look like `1.2.3` or `1.2.3-beta.4`, `source` may only hold letters, digits and `. _ ~ : / @ % + = , -` (and a backslash), and `expected` and `tree` must be existing files. Values are passed to the script as environment variables, never spliced into it, so a value from a pull request (a branch name, say) cannot run as shell (#636).
+
 By default this step fails the job when the result is not confident - the same exit-code contract as the CLI itself, so a bare `uses:` line is already a working pass/fail gate. Add `continue-on-error: true` and read the `is-confident`/`result` outputs if you want to branch on the outcome instead of failing the build. An optional `source` input lets the action install from a private feed instead of nuget.org.
 
 ### Capturing JSON from Any Language: Web (JS/Playwright)
@@ -252,6 +254,8 @@ Bir composite GitHub Action, kurulum, çalıştırma ve JSON ayrıştırma adım
     tree: path/to/live-tree.json
     profile: balanced
 ```
+
+Girdiler hiçbir şey çalışmadan önce denetlenir ve hatalı biri adımı `2` çıkış koduyla (CLI'nin "çalıştırılamadı"sı) durdurur: `profile` `balanced`, `conservative` ya da `aggressive` olmalı, `version` `1.2.3` ya da `1.2.3-beta.4` gibi görünmeli, `source` yalnızca harf, rakam ve `. _ ~ : / @ % + = , -` (ve ters eğik çizgi) içerebilir, `expected` ile `tree` var olan dosyalar olmalı. Değerler betiğe ortam değişkeni olarak geçirilir, asla içine yapıştırılmaz; bu yüzden bir pull request'ten gelen bir değer (örneğin bir dal adı) kabuk komutu olarak çalışamaz (#636).
 
 Varsayılan olarak bu adım, sonuç yeterince emin değilse job'u başarısız yapar - tıpkı CLI'nin kendi exit-code sözleşmesi gibi, yani sade bir `uses:` satırı zaten çalışan bir pass/fail kapısıdır. Build'i başarısız yapmak yerine sonuca göre dallanmak isterseniz `continue-on-error: true` ekleyin ve `is-confident`/`result` çıktılarını okuyun. İsteğe bağlı bir `source` girdisi, action'ın nuget.org yerine özel bir feed'den kurulum yapmasına izin verir.
 
