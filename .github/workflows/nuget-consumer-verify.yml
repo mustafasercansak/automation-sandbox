@@ -46,5 +46,12 @@ jobs:
             8.0.x
 
       - name: Verify the published package for a consumer
-        run: ./samples/HeuristicHealingQuickstart/verify-published.ps1 -Version '${{ inputs.version }}'
         shell: pwsh
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          # An empty input means the version Directory.Build.props holds, which the script resolves itself when it is given none.
+          if ($env:VERSION_INPUT -and $env:VERSION_INPUT -notmatch '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$') {
+            throw "version must look like 1.2.3 or 1.2.3-beta.4, not '$env:VERSION_INPUT'."
+          }
+          ./samples/HeuristicHealingQuickstart/verify-published.ps1 -Version $env:VERSION_INPUT
