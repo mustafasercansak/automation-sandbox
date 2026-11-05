@@ -52,6 +52,8 @@ Both JSON inputs, and the tool's own output, follow a published [JSON Schema](sc
 
 Only the fields behind `SimilarityScorer`'s five weighted signals (`ControlType`, `Name`, `AutomationId`, `BoundingRectangle`, `ParentControlType`) are required; everything else is optional, matching the C# defaults the engine falls back to when a property is absent.
 
+A tree may nest at most 256 elements deep (each element costs two JSON levels, the object and its `Children` array, so the reader's limit is 528). Deeper input is refused with `Error: The tree is nested more than 256 elements deep` and exit code `2`, never with a crash. Until #638 the limit was 31 elements and the error said "possible object cycle"; the .NET capture stops at depth 25 by default and `capture.mjs` at 100, so both stay inside it.
+
 ### Using It in CI: the GitHub Action
 
 A composite GitHub Action wraps the install, run, and JSON-parsing steps into one line:
@@ -240,6 +242,8 @@ Her iki JSON girdisi de, aracın kendi çıktısı da yayınlanmış bir [JSON S
 ```
 
 Yalnızca `SimilarityScorer`'ın beş ağırlıklı sinyalinin (`ControlType`, `Name`, `AutomationId`, `BoundingRectangle`, `ParentControlType`) arkasındaki alanlar zorunludur; geri kalan her şey isteğe bağlıdır, bu da motorun bir özellik girdi JSON'unda yoksa başvurduğu C# varsayılanlarıyla eşleşir.
+
+Bir ağaç en fazla 256 eleman derinliğinde olabilir (her eleman iki JSON seviyesi harcar: nesne ve `Children` dizisi; bu yüzden okuyucunun sınırı 528'dir). Daha derin girdi, çökme olmadan `Error: The tree is nested more than 256 elements deep` hatasıyla ve `2` çıkış koduyla reddedilir. #638'e kadar sınır 31 elemandı ve hata "possible object cycle" diyordu; .NET yakalaması varsayılan olarak 25'te, `capture.mjs` ise 100'de durur, yani ikisi de sınırın içinde kalır.
 
 ### CI'da Kullanım: GitHub Action
 
