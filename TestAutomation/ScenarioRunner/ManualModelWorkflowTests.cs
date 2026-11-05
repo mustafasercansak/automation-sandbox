@@ -137,5 +137,18 @@ namespace ScenarioRunner
             Assert.DoesNotContain("--comment", text);
             Assert.DoesNotContain("--label-needs-human", text);
         }
+
+        [Fact]
+        public void TheLessonReplayRunCount_IsCheckedAsOneToTenInTheShell_BeforeAnythingIsSpent_AndReachesTheTestOnlyThroughEnv()
+        {
+            var text = Text("lesson-replay.yml");
+
+            // The number reaches the shell through env, is validated first, and only then handed to the test through env.
+            Assert.Contains("RUNS_INPUT: ${{ inputs.runs }}", text);
+            Assert.Contains("[[ \"$RUNS_INPUT\" =~ ^([1-9]|10)$ ]]", text);
+            Assert.Contains("LESSON_REPLAY_RUNS: ${{ inputs.runs }}", text);
+            Assert.True(text.IndexOf("RUNS_INPUT", StringComparison.Ordinal) < text.IndexOf("lessons build", StringComparison.Ordinal),
+                "The run count must be validated before the index is built or any model is asked.");
+        }
     }
 }
