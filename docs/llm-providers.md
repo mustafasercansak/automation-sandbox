@@ -80,6 +80,11 @@ Automation Sandbox includes built-in AI providers and an environment-driven fact
   JSON skips the custom array without discarding already discovered built-in providers.
   If the array itself is valid but one entry has the wrong JSON shape, only that entry
   is skipped and valid custom siblings are still constructed.
+  **Scheme policy (#619):** a custom entry is served by `OpenAiHealingProvider`, which does
+  not check the endpoint scheme or host: it accepts plain `http` to any address and sends the
+  API key in clear text over it. Use an `https` endpoint, or `http` only on a network you
+  trust. This differs from `ChatCompletionsTextModel` (the issue-automation text models),
+  which accepts plain `http` only for a loopback host.
   Diagnostics never echo the JSON or API key. They go to standard error by default, or
   can be routed to the application's logger:
 
@@ -405,6 +410,12 @@ kimlik bilgisinin yanlışlıkla OpenAI'a gönderilmemesi ve mutabakata yanlış
 oy eklenmemesi için yalnızca ilgili giriş atlanır. JSON bütünüyle bozuksa daha önce
 keşfedilmiş yerleşik sağlayıcılar korunur. Dizinin kendisi geçerli olup bir elemanın JSON
 şekli bozuksa yalnızca o eleman atlanır ve geçerli özel sağlayıcı kardeşleri yine oluşturulur.
+**Şema politikası (#619):** özel bir giriş `OpenAiHealingProvider` tarafından sunulur; bu
+sınıf uç noktanın şemasını ya da ana makinesini denetlemez: herhangi bir adrese düz `http`
+kabul eder ve API anahtarını bu bağlantıda açık metin olarak gönderir. `https` uç noktası
+kullanın ya da `http`'yi yalnızca güvendiğiniz bir ağda kullanın. Bu, düz `http`'yi yalnızca
+döngü adresi (loopback) için kabul eden `ChatCompletionsTextModel`'den (issue otomasyonu
+metin modelleri) farklıdır.
 Tanı mesajları ham JSON'u ve API anahtarını içermez; varsayılan olarak standart hataya
 yazılır veya uygulamanın logger'ına yönlendirilebilir:
 

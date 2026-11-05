@@ -34,6 +34,15 @@ Capture a single element (for `--expected`) with a CSS selector / Bir CSS seçic
 node capture.mjs https://example.com expected.json --selector "#submit-button"
 ```
 
+Use a browser that is already installed instead of the one `playwright install` downloads (a Chromium of another revision, Chrome, Edge) / `playwright install` ile indirilen yerine zaten kurulu bir tarayıcı kullanın (başka bir revizyonun Chromium'u, Chrome, Edge):
+
+```bash
+node capture.mjs https://example.com tree.json --channel chrome
+node capture.mjs https://example.com tree.json --executable-path "C:\Program Files\Chromium\chrome.exe"
+```
+
+`--executable-path` and `--channel` cannot be combined / `--executable-path` ve `--channel` birlikte kullanılamaz.
+
 A local HTML file path works too, no need to construct a `file://` URL by hand / Yerel bir HTML dosya yolu da çalışır, elle `file://` URL'i oluşturmaya gerek yok:
 
 ```bash
