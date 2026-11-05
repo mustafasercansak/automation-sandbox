@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "The three diffs are the lines each real fix commit removed: what the pull request contained before the Windows net48 / netstandard2.0 leg failed. Frozen before any model ran; do not edit or filter after seeing a result.",
+  "note": "The diffs are the lines each real fix commit removed: what the pull request contained before the Windows net48 / netstandard2.0 leg failed. Frozen before any model ran; do not edit or filter after seeing a result. The first three cases were frozen on 2026-11-01; the seven after them were added on 2026-11-05, before the second batch of runs, with their flag terms chosen from the fix and not from any model answer.",
   "cases": [
     {
       "id": "valuetask-completedtask",
@@ -46,6 +46,118 @@
         "netstandard"
       ],
       "diff": "--- a/TestAutomation/SelfHealing/HealingReportFileSink.cs\n+++ b/TestAutomation/SelfHealing/HealingReportFileSink.cs\n@@ -140,9 +140,9 @@\n+            if (!string.IsNullOrWhiteSpace(HtmlFilePath))\n             {\n+                var htmlDirectory = Path.GetDirectoryName(HtmlFilePath);\n"
+    },
+    {
+      "id": "record-primary-constructor-net48",
+      "fixCommit": "02609ff",
+      "asOf": "2026-08-15",
+      "files": [
+        "TestAutomation/ScenarioRunner/EvaluationScenarios.cs"
+      ],
+      "flagTerms": [
+        "record",
+        "isexternalinit",
+        "cs0518",
+        "net48",
+        "init"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/EvaluationScenarios.cs\n+++ b/TestAutomation/ScenarioRunner/EvaluationScenarios.cs\n@@ -6,7 +6,31 @@ namespace ScenarioRunner\n+    public record EvaluationScenario(\n+        string Name,\n+        string Platform,\n+        UiElementInfo Expected,\n+        UiElementInfo CurrentTreeRoot,\n+        string GroundTruthAutomationId,\n+        string Description);\n"
+    },
+    {
+      "id": "keyvaluepair-deconstruction-net48",
+      "fixCommit": "0e01513",
+      "asOf": "2026-08-15",
+      "files": [
+        "TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs"
+      ],
+      "flagTerms": [
+        "deconstruct",
+        "keyvaluepair",
+        "net48",
+        "tuple"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs\n+++ b/TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs\n@@ -249 +249,4 @@ namespace ScenarioRunner\n+                    foreach (var (providerName, attempts) in healResult.ProviderAttempts)\n"
+    },
+    {
+      "id": "dictionary-copy-constructor-net48",
+      "fixCommit": "c1fbed9",
+      "asOf": "2026-08-15",
+      "files": [
+        "TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs"
+      ],
+      "flagTerms": [
+        "todictionary",
+        "overload",
+        "net48",
+        "ireadonlydictionary",
+        "cs1503",
+        "capacity"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs\n+++ b/TestAutomation/ScenarioRunner/ConsensusEvaluationTests.cs\n@@ -285 +289 @@ namespace ScenarioRunner\n+                        ? new Dictionary<string, int>(healResult.ProviderAttempts)\n@@ -420 +428 @@ namespace ScenarioRunner\n+                        ? new Dictionary<string, int>(healResult.ProviderAttempts)\n"
+    },
+    {
+      "id": "nullable-key-netstandard",
+      "fixCommit": "4059650",
+      "asOf": "2026-08-23",
+      "files": [
+        "TestAutomation/IntentAutomation/IntentRecordingLookupTable.cs"
+      ],
+      "flagTerms": [
+        "cs8604",
+        "nullable",
+        "possible null",
+        "netstandard",
+        "null-forgiving"
+      ],
+      "diff": "--- a/TestAutomation/IntentAutomation/IntentRecordingLookupTable.cs\n+++ b/TestAutomation/IntentAutomation/IntentRecordingLookupTable.cs\n@@ -48 +48 @@ namespace IntentAutomation\n+                if (!string.IsNullOrWhiteSpace(key) && !_byKey.ContainsKey(key))\n@@ -50 +50 @@ namespace IntentAutomation\n+                    _byKey[key] = recording;\n"
+    },
+    {
+      "id": "stream-writeasync-net48",
+      "fixCommit": "2d32728",
+      "asOf": "2026-09-19",
+      "files": [
+        "TestAutomation/ScenarioRunner/PlaywrightWebSessionTests.cs"
+      ],
+      "flagTerms": [
+        "writeasync",
+        "overload",
+        "net48",
+        "offset",
+        "byte[]"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/PlaywrightWebSessionTests.cs\n+++ b/TestAutomation/ScenarioRunner/PlaywrightWebSessionTests.cs\n@@ -263 +263,2 @@ namespace ScenarioRunner\n+                    await context.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);\n"
+    },
+    {
+      "id": "isnullorempty-postcondition-net48",
+      "fixCommit": "8d4718e",
+      "asOf": "2026-08-21",
+      "files": [
+        "TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs"
+      ],
+      "flagTerms": [
+        "isnullorempty",
+        "nullable",
+        "net48",
+        "notnullwhen",
+        "possible null"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs\n+++ b/TestAutomation/ScenarioRunner/JointAssignmentGeneralizationTests.cs\n@@ -358,6 +376,15 @@ namespace ScenarioRunner\n+        private static string DisplayCandidate(AblationScenarioResult result) =>\n+            !result.EngineAccepted\n+                ? \"<declined>\"\n+                : string.IsNullOrEmpty(result.MatchedAutomationId)\n+                    ? \"<empty AutomationId>\"\n+                    : result.MatchedAutomationId;\n"
+    },
+    {
+      "id": "nullable-contains-argument",
+      "fixCommit": "229abb5",
+      "asOf": "2026-09-12",
+      "files": [
+        "TestAutomation/ScenarioRunner/LiveConsensusGateTests.cs"
+      ],
+      "flagTerms": [
+        "nullable",
+        "cs8604",
+        "possible null",
+        "matchedcandidateid",
+        "net48"
+      ],
+      "diff": "--- a/TestAutomation/ScenarioRunner/LiveConsensusGateTests.cs\n+++ b/TestAutomation/ScenarioRunner/LiveConsensusGateTests.cs\n@@ -284 +284 @@ namespace ScenarioRunner\n+            return shortlistIds.Contains(result.MatchedCandidateId) ? result.MatchedCandidateId : null;\n"
     }
   ]
 }
