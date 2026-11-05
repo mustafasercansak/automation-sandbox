@@ -23,9 +23,13 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// How many nested elements a capture keeps. automation-sandbox-heal reads trees up to 256 elements deep (#638); this stops well
+// short of that, so a deep page still produces a file the tool accepts, and so a very deep DOM cannot overflow the page's call stack.
+export const CAPTURE_MAX_DEPTH = 100;
+
 // Exported so heal-helper.mjs can run the same capture inside a test (#618); it is serialized
-// into the page by page.evaluate, so it must stay self-contained.
-export function captureTree(selector) {
+// into the page by page.evaluate, so it must stay self-contained (hence the maxDepth default repeats CAPTURE_MAX_DEPTH).
+export function captureTree(selector, maxDepth = 100) {
   const roleMap = {
     A: 'link', BUTTON: 'button', FORM: 'form', MAIN: 'main',
     SELECT: 'combobox', TABLE: 'table', TEXTAREA: 'textbox',
@@ -136,7 +140,7 @@ export function captureTree(selector) {
     return !(hiddenByAttribute || hiddenByStyle || rect.width <= 0 || rect.height <= 0);
   }
 
-  function mapNode(element, parentControlType, parentAutomationId, siblingIndex, siblingCount) {
+  function mapNode(element, parentControlType, parentAutomationId, siblingIndex, siblingCount, depth = 1) {
     const visible = isVisible(element);
     const node = {
       ControlType: controlTypeOf(element),
@@ -152,8 +156,9 @@ export function captureTree(selector) {
       Children: [],
     };
 
-    const children = Array.from(element.children);
-    node.Children = children.map((child, i) => mapNode(child, node.ControlType, node.AutomationId, i, children.length));
+    // Past the depth bound the subtree is left out; the node itself is kept, so the cut is at a real element, not mid-structure.
+    const children = depth >= maxDepth ? [] : Array.from(element.children);
+    node.Children = children.map((child, i) => mapNode(child, node.ControlType, node.AutomationId, i, children.length, depth + 1));
     return node;
   }
 
@@ -219,12 +224,38 @@ async function main() {
   try {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle' });
-    const tree = await page.evaluate(captureTree, selector);
+    const tree = await captureTreeFromPage(page, selector);
+    if (treeDepth(tree) >= CAPTURE_MAX_DEPTH) {
+      console.warn(`Warning: the page nests ${CAPTURE_MAX_DEPTH} or more elements deep; anything below that level was left out.`);
+    }
     await writeFile(outputPath, JSON.stringify(tree, null, 2));
     console.log(`Captured tree written to ${outputPath}`);
   } finally {
     await browser.close();
   }
+}
+
+// Runs captureTree in the page and brings the tree back as TEXT, then parses it here. Returning the object itself fails on a deep
+// page: Playwright refuses a result whose reference chain is too long ("object reference chain is too long"), which is about 50 nested
+// elements, far below what real pages reach. The .NET capture does the same (JSON.stringify in the page). The script is passed as an
+// expression, not built with new Function, so a page's Content-Security-Policy cannot block it.
+export async function captureTreeFromPage(page, selector) {
+  const json = await page.evaluate(`JSON.stringify((${captureTree.toString()})(${JSON.stringify(selector ?? null)}))`);
+  return JSON.parse(json);
+}
+
+// Iterative, like the CLI's own depth check: a deep tree must not overflow the stack here either.
+export function treeDepth(root) {
+  let deepest = 0;
+  const pending = [[root, 1]];
+  while (pending.length > 0) {
+    const [node, depth] = pending.pop();
+    deepest = Math.max(deepest, depth);
+    for (const child of node.Children || []) {
+      pending.push([child, depth + 1]);
+    }
+  }
+  return deepest;
 }
 
 // Run as a script, not when heal-helper.mjs imports captureTree.

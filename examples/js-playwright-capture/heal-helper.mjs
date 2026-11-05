@@ -12,7 +12,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { captureTree } from './capture.mjs';
+import { captureTreeFromPage } from './capture.mjs';
 
 // The locator Playwright was waiting for, or undefined when the message names none
 // (a CSS or XPath `locator(...)` is returned too; the CLI reports it as unsupported).
@@ -30,7 +30,7 @@ export async function suggestHeal(page, locator, { cli = process.env.HEAL_CLI ??
   const dir = mkdtempSync(join(tmpdir(), 'heal-'));
   try {
     const treePath = join(dir, 'tree.json');
-    writeFileSync(treePath, JSON.stringify(await page.evaluate(captureTree, undefined)));
+    writeFileSync(treePath, JSON.stringify(await captureTreeFromPage(page)));
 
     // --compact keeps the result small; without it the output can exceed the default
     // spawnSync buffer on a real page and the call comes back with status null.

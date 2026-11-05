@@ -99,7 +99,8 @@ internal static class Program
                 CompactResult(result);
             }
 
-            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+            // The matched element can carry its subtree, so the result is written with the same depth bound the trees are read with.
+            var jsonOptions = new JsonSerializerOptions { WriteIndented = true, MaxDepth = UiTreeSerializer.MaxJsonDepth };
             if (selector is null)
             {
                 Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
