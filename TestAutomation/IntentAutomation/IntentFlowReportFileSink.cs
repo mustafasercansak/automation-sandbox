@@ -35,7 +35,7 @@ namespace AutomationSandbox.IntentAutomation
         /// <summary>Optional destination of the HTML report rendered alongside JSON.</summary>
         public string? HtmlFilePath { get; }
 
-        /// <summary>Writes the supplied flow report and refreshes the optional HTML output.</summary>
+        /// <summary>Writes the supplied flow report and refreshes the optional HTML output. Each file is written to a temporary file next to it and moved into place, so a crash or a concurrent reader never sees a half-written report, like the other report sinks (#310, #640). The document is written as it is: it already carries the time it was generated, and saving it does not change it.</summary>
         public void Write(IntentFlowReportDocument document)
         {
             if (document == null)
@@ -43,23 +43,43 @@ namespace AutomationSandbox.IntentAutomation
                 throw new ArgumentNullException(nameof(document));
             }
 
-            document.GeneratedAt = DateTimeOffset.UtcNow;
-            var directory = Path.GetDirectoryName(FilePath);
+            WriteAtomically(FilePath, JsonSerializer.Serialize(document, Options));
+            if (!string.IsNullOrWhiteSpace(HtmlFilePath))
+            {
+                WriteAtomically(HtmlFilePath!, IntentFlowReportHtmlRenderer.Render(document));
+            }
+        }
+
+        private static void WriteAtomically(string path, string content)
+        {
+            var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(document, Options));
-            if (!string.IsNullOrWhiteSpace(HtmlFilePath))
+            // The temporary file sits next to the destination, so the move stays on one volume and commits as one filesystem operation.
+            var tempPath = Path.Combine(
+                string.IsNullOrEmpty(directory) ? "." : directory,
+                $"{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            try
             {
-                var htmlDirectory = Path.GetDirectoryName(HtmlFilePath);
-                if (!string.IsNullOrEmpty(htmlDirectory))
+                File.WriteAllText(tempPath, content);
+                if (File.Exists(path))
                 {
-                    Directory.CreateDirectory(htmlDirectory);
+                    File.Replace(tempPath, path, destinationBackupFileName: null);
                 }
-
-                File.WriteAllText(HtmlFilePath, IntentFlowReportHtmlRenderer.Render(document));
+                else
+                {
+                    File.Move(tempPath, path);
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
             }
         }
     }

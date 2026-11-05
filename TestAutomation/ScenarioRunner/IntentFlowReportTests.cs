@@ -107,6 +107,61 @@ namespace ScenarioRunner
             Assert.Contains("Playwright TypeScript", html);
         }
 
+        // The other report sinks write to a temporary file and move it into place (#310); this one wrote straight onto the final path,
+        // so an interrupted write left a truncated report, and it overwrote the document's own GeneratedAt (#640).
+        [Fact]
+        public void FileSink_LeavesNoTemporaryFileBehind_AndReplacesAnExistingReportWhole()
+        {
+            var document = IntentFlowReportDocument.FromPipelineResult(BuildPipelineResult());
+            var jsonPath = Path.Combine(_directory, "replace.json");
+            var htmlPath = Path.Combine(_directory, "replace.html");
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(jsonPath, new string('x', 100000));
+            File.WriteAllText(htmlPath, new string('y', 100000));
+
+            new IntentFlowReportFileSink(jsonPath, htmlPath).Write(document);
+
+            Assert.Empty(Directory.GetFiles(_directory, "*.tmp"));
+            var json = File.ReadAllText(jsonPath);
+            Assert.DoesNotContain("xxxxxxxxxx", json, StringComparison.Ordinal);
+            Assert.StartsWith("{", json.TrimStart(), StringComparison.Ordinal);
+            Assert.DoesNotContain("yyyyyyyyyy", File.ReadAllText(htmlPath), StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void FileSink_WhenTheHtmlCannotBeWritten_FailsLoudly_LeavesNoTemporaryFile_AndKeepsTheJsonIntact()
+        {
+            var document = IntentFlowReportDocument.FromPipelineResult(BuildPipelineResult());
+            var jsonPath = Path.Combine(_directory, "keep.json");
+            var htmlPath = Path.Combine(_directory, "keep.html");
+            new IntentFlowReportFileSink(jsonPath, htmlPath).Write(document);
+            var before = File.ReadAllText(jsonPath);
+
+            // A directory where the HTML file should go makes the HTML write fail after the JSON was already replaced; the JSON must still be
+            // the whole report and no temporary file may be left behind.
+            Directory.CreateDirectory(Path.Combine(_directory, "blocked.html"));
+            var failing = new IntentFlowReportFileSink(jsonPath, Path.Combine(_directory, "blocked.html"));
+
+            Assert.ThrowsAny<Exception>(() => failing.Write(document));
+
+            Assert.Equal(before, File.ReadAllText(jsonPath));
+            Assert.Empty(Directory.GetFiles(_directory, "*.tmp"));
+        }
+
+        [Fact]
+        public void FileSink_DoesNotChangeTheDocumentItIsGiven()
+        {
+            var document = IntentFlowReportDocument.FromPipelineResult(BuildPipelineResult());
+            var generatedAt = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+            document.GeneratedAt = generatedAt;
+            var jsonPath = Path.Combine(_directory, "stamp.json");
+
+            new IntentFlowReportFileSink(jsonPath, htmlFilePath: null).Write(document);
+
+            Assert.Equal(generatedAt, document.GeneratedAt);
+            Assert.Contains("2020-01-02T03:04:05", File.ReadAllText(jsonPath), StringComparison.Ordinal);
+        }
+
         public void Dispose()
         {
             if (Directory.Exists(_directory))
