@@ -21,8 +21,11 @@ import { writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-function captureTree(selector) {
+// Exported so heal-helper.mjs can run the same capture inside a test (#618); it is serialized
+// into the page by page.evaluate, so it must stay self-contained.
+export function captureTree(selector) {
   const roleMap = {
     A: 'link', BUTTON: 'button', FORM: 'form', MAIN: 'main',
     SELECT: 'combobox', TABLE: 'table', TEXTAREA: 'textbox',
@@ -205,4 +208,7 @@ async function main() {
   }
 }
 
-main();
+// Run as a script, not when heal-helper.mjs imports captureTree.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

@@ -70,6 +70,16 @@ By default this step fails the job when the result is not confident - the same e
 
 The CLI is only useful once something produces its input. The repository ships a real, working reference for this: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), a Node.js + Playwright script that captures a web page's DOM into the exact JSON shape above - mirroring the same role/accessible-name detection and `ControlType`/`AutomationId` mapping rules `AutomationSandbox.WebDiscovery` uses on the .NET side, so a tree captured in JS scores consistently with one captured in .NET. It's deliberately minimal (regular DOM only - no Shadow DOM or iframe traversal), and ships with a bundled fixture so it runs with zero network dependency out of the box.
 
+### Wiring It Into a TypeScript Playwright Suite (`@playwright/test`)
+
+A suite that already fails has no snapshot recorded while it was green, so use `--selector` (see above). The same example directory ships the pieces (#618), plain ES modules so they work from a TypeScript suite without a build step:
+
+- `heal-helper.mjs` - `suggestHeal(page, locator)` captures the live page with the same `captureTree`, runs `automation-sandbox-heal --selector <locator> --tree ... --compact` and returns a printable suggestion. It never throws for a CLI problem, so it cannot mask the original test failure. `locatorFromError(message)` pulls the locator out of a Playwright timeout message (`waiting for getByTestId('...')`).
+- `heal-fixture.mjs` - a `@playwright/test` fixture: `import { test, expect } from './heal-fixture.mjs'` instead of the stock `test`. When a test fails waiting for a locator it prints the suggestion and attaches it to the test as `heal-suggestion`. It needs `@playwright/test` as a dev dependency of the suite.
+- `npm run heal:demo` - the same helper without a test runner, against the bundled fixture pages.
+
+Set `HEAL_CLI` if `automation-sandbox-heal` is not on the `PATH`. The suggestion is a **review aid, not an auto-fix**: it is built from the selector alone, so it is labelled partial evidence. A locator with a role and a name (`getByRole('button', { name: 'Settings' })`) gives the engine much more to match than a test id alone, which often ends `not confident` with an unrelated best candidate; read the score before trusting it.
+
 ### Capturing JSON from Any Language: Desktop (Python/pywinauto)
 
 The same idea for Windows desktop applications: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), a Python script using [pywinauto](https://github.com/pywinauto/pywinauto)'s `uia` backend - the same underlying Windows UI Automation COM API `FlaUI`/`UIA3` uses, so it produces genuinely equivalent data, not just a matching JSON shape. Unlike the JS example, this one could not be verified locally by the assistant that wrote it (no Windows/UI Automation access in that environment) - its real verification is a CI job (`Desktop Capture (Python)`) that builds this repository's own WinForms demo app, launches it, captures its real UI tree, and confirms `automation-sandbox-heal` heals a synthetic stale locator built from that real data.
@@ -244,6 +254,16 @@ Varsayılan olarak bu adım, sonuç yeterince emin değilse job'u başarısız y
 ### Herhangi Bir Dilden JSON Yakalamak: Web (JS/Playwright)
 
 CLI, ancak girdisini üreten bir şey olduğunda işe yarar. Depo bunun için gerçek, çalışan bir referans sunar: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), bir web sayfasının DOM'unu yukarıdaki tam JSON şeklinde yakalayan bir Node.js + Playwright betiği - `AutomationSandbox.WebDiscovery`'nin .NET tarafında kullandığı aynı rol/erişilebilir-isim tespiti ve `ControlType`/`AutomationId` eşleme kurallarını yansıtır, böylece JS'de yakalanan bir ağaç .NET'te yakalanmış biriyle tutarlı puanlanır. Bilinçli olarak minimaldir (sadece normal DOM - Shadow DOM veya iframe gezinmesi yok), ve sıfır ağ bağımlılığıyla çalışması için birlikte gelen bir fixture içerir.
+
+### TypeScript Playwright Suite'ine Bağlamak (`@playwright/test`)
+
+Zaten düşen bir suite'in yeşilken kaydedilmiş anlık görüntüsü yoktur; bu yüzden `--selector` kullanın (yukarıya bakın). Aynı örnek dizini gerekli parçaları sunar (#618); derleme adımı olmadan bir TypeScript suite'inden kullanılabilsin diye düz ES modülleridir:
+
+- `heal-helper.mjs` - `suggestHeal(page, locator)` canlı sayfayı aynı `captureTree` ile yakalar, `automation-sandbox-heal --selector <locator> --tree ... --compact` çalıştırır ve yazdırılabilir bir öneri döndürür. CLI sorunlarında hata fırlatmaz, bu yüzden asıl test hatasını gizleyemez. `locatorFromError(message)` locator'ı bir Playwright zaman aşımı mesajından (`waiting for getByTestId('...')`) çıkarır.
+- `heal-fixture.mjs` - bir `@playwright/test` fixture'ı: hazır `test` yerine `import { test, expect } from './heal-fixture.mjs'`. Bir test locator beklerken düşerse öneriyi yazdırır ve teste `heal-suggestion` adıyla ekler. Suite'in geliştirme bağımlılığı olarak `@playwright/test` gerekir.
+- `npm run heal:demo` - aynı yardımcı, test çalıştırıcısı olmadan, birlikte gelen fixture sayfalarına karşı.
+
+`automation-sandbox-heal` `PATH` üzerinde değilse `HEAL_CLI` ayarlayın. Öneri **bir inceleme yardımcısıdır, otomatik düzeltme değildir**: yalnızca seçiciden üretildiği için kısmi kanıt olarak etiketlenir. Rol ve ad içeren bir locator (`getByRole('button', { name: 'Settings' })`) motora tek başına bir test id'den çok daha fazla eşleştirme malzemesi verir; test id tek başına çoğu zaman `not confident` ve ilgisiz bir en iyi adayla biter, güvenmeden önce skora bakın.
 
 ### Herhangi Bir Dilden JSON Yakalamak: Masaüstü (Python/pywinauto)
 
