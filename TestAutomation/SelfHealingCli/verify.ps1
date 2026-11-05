@@ -110,4 +110,27 @@ if ($LASTEXITCODE -ne 2) { throw "Expected exit code 2 for an unsupported select
 # The expected non-zero exit above would otherwise become this script's own exit code.
 $global:LASTEXITCODE = 0
 
+# A mistake on the command line is exit 2 ("could not run"), never 1 ("not confident"), and nothing goes to stdout (#646): a CI gate that
+# sends 1 to review must not read a typo in a flag as an ordinary result.
+$treeFixture = Join-Path $PSScriptRoot 'fixtures/tree.json'
+$expectedFixture = Join-Path $PSScriptRoot 'fixtures/expected.json'
+$badCommandLines = @(
+    @{ Name = 'no arguments'; Args = @() },
+    @{ Name = 'an unknown flag'; Args = @('--bogus') },
+    @{ Name = 'a misspelled flag'; Args = @('--expected', $expectedFixture, '--tree', $treeFixture, '--profil', 'balanced') },
+    @{ Name = 'a flag with no value'; Args = @('--expected', $expectedFixture, '--tree') },
+    @{ Name = 'a missing --tree'; Args = @('--expected', $expectedFixture) },
+    @{ Name = 'an unknown profile'; Args = @('--expected', $expectedFixture, '--tree', $treeFixture, '--profile', 'nope') }
+)
+foreach ($case in $badCommandLines) {
+    Write-Host "Running the packed tool with $($case.Name)..."
+    $badOut = & $toolExe @($case.Args) 2>$null
+    if ($LASTEXITCODE -ne 2) { throw "Expected exit code 2 for $($case.Name), got $LASTEXITCODE." }
+    if ($badOut) { throw "Expected nothing on stdout for $($case.Name), got: $badOut" }
+}
+
+& $toolExe --help | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Expected exit code 0 for --help, got $LASTEXITCODE." }
+$global:LASTEXITCODE = 0
+
 Write-Host 'Self-Healing CLI verification passed.' -ForegroundColor Green
