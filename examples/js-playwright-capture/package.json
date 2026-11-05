@@ -6,9 +6,13 @@
   "type": "module",
   "scripts": {
     "capture:old": "node capture.mjs fixtures/page-old.html expected-button.json",
-    "capture:new": "node capture.mjs fixtures/page-new.html tree.json"
+    "capture:new": "node capture.mjs fixtures/page-new.html tree.json",
+    "heal:demo": "node heal-demo.mjs"
   },
   "dependencies": {
     "playwright": "^1.64.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0"
   }
 }
