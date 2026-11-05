@@ -111,6 +111,20 @@ namespace ScenarioRunner
             Assert.Contains("[A-Za-z0-9._:/@-]{0,100}", Text(file));
         }
 
+        // A free plan can allow some Mistral models and not others (medium and small answered HTTP 429 with a limit of 0 requests
+        // per minute, nemo and ministral were allowed), so the model can be chosen per run without changing a repository variable.
+        // Like the other model inputs it reaches the shell through env, is validated first and overrides the variable only when set.
+        [Theory]
+        [MemberData(nameof(Workflows))]
+        public void TheMistralModelCanBeChosenPerRun_ThroughValidatedEnv(string file)
+        {
+            var text = Text(file);
+
+            Assert.Contains("MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}", text);
+            Assert.Contains("\"$MISTRAL_MODEL_INPUT\"", text);
+            Assert.Contains("MISTRAL_MODEL: ${{ inputs.mistral_model || vars.MISTRAL_MODEL }}", text);
+        }
+
         [Fact]
         public void TheDocBenchmark_RunsOnlyTheLiveBenchmarkTest_WithTheOptInSwitchAndAnOutputDirectory_AndNeedsNoMoreThanContents()
         {
