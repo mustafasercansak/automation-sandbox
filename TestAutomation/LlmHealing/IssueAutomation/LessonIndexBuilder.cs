@@ -64,6 +64,8 @@ namespace AutomationSandbox.LlmHealing
     {
         private const int MaxBodyLength = 1500;
         private const int MaxReviewLength = 1500;
+        private const int MaxCommitTextLength = 1500;
+        private const int MaxCommitsPerPullRequest = 50;
         private const int MaxFilesPerPullRequest = 100;
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
@@ -146,7 +148,10 @@ namespace AutomationSandbox.LlmHealing
                                 details++;
                                 var fileResult = await GetAsync(client, $"https://api.github.com/repos/{repository}/pulls/{number}/files?per_page={MaxFilesPerPullRequest}", token, cancellationToken).ConfigureAwait(false);
                                 var commentResult = await GetAsync(client, $"https://api.github.com/repos/{repository}/pulls/{number}/comments?per_page=30", token, cancellationToken).ConfigureAwait(false);
-                                if (fileResult.Error != null || commentResult.Error != null)
+                                // The commits of a pull request carry what review and CI found while it was open ("use the net48-compatible
+                                // overload"), which usually never became an issue and is gone from the final diff.
+                                var commitResult = await GetAsync(client, $"https://api.github.com/repos/{repository}/pulls/{number}/commits?per_page={MaxCommitsPerPullRequest}", token, cancellationToken).ConfigureAwait(false);
+                                if (fileResult.Error != null || commentResult.Error != null || commitResult.Error != null)
                                 {
                                     detailFailures++;
                                 }
@@ -159,6 +164,18 @@ namespace AutomationSandbox.LlmHealing
                                 if (commentResult.Error == null)
                                 {
                                     review = Clean(string.Join(" | ", Strings(commentResult.Body!, "body")), MaxReviewLength);
+                                }
+
+                                if (commitResult.Error == null)
+                                {
+                                    var commits = Clean(string.Join(" | ", CommitMessages(commitResult.Body!).Take(MaxCommitsPerPullRequest)), MaxCommitTextLength);
+                                    if (commits.Length > 0)
+                                    {
+                                        // Stored with the review text, so the index file keeps its shape. A commit belongs to a pull request that
+                                        // closed no earlier than the commit, so cutting the index by closing time (ClosedBefore, IndexAsOf) keeps
+                                        // a commit message from ever reaching a defect that predates it.
+                                        review = (review.Length == 0 ? "" : review + " | ") + "Commits: " + commits;
+                                    }
                                 }
                             }
 
@@ -222,6 +239,37 @@ namespace AutomationSandbox.LlmHealing
             }
 
             return true;
+        }
+
+        // The first line and the body of each commit: [{"commit":{"message":"..."}}].
+        private static IEnumerable<string> CommitMessages(string json)
+        {
+            JsonDocument document;
+            try
+            {
+                document = JsonDocument.Parse(json);
+            }
+            catch (JsonException)
+            {
+                return new string[0];
+            }
+
+            using (document)
+            {
+                if (document.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    return new string[0];
+                }
+
+                return document.RootElement.EnumerateArray()
+                    .Where(e => e.ValueKind == JsonValueKind.Object
+                        && e.TryGetProperty("commit", out var commit)
+                        && commit.ValueKind == JsonValueKind.Object
+                        && commit.TryGetProperty("message", out var message)
+                        && message.ValueKind == JsonValueKind.String)
+                    .Select(e => e.GetProperty("commit").GetProperty("message").GetString()!)
+                    .ToList();
+            }
         }
 
         private static IEnumerable<string> Strings(string json, string property)

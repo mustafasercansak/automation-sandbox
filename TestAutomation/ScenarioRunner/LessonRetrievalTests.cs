@@ -321,7 +321,8 @@ namespace ScenarioRunner
             var handler = new ProjectBoardReaderTests.StubHandler(
                 ProjectBoardReaderTests.Reply(listing),
                 ProjectBoardReaderTests.Reply("[{\"filename\":\"src/A.cs\"},{\"filename\":\"src/B.cs\"}]"),
-                ProjectBoardReaderTests.Reply("[{\"body\":\"please use default(ValueTask)\"}]"));
+                ProjectBoardReaderTests.Reply("[{\"body\":\"please use default(ValueTask)\"}]"),
+                ProjectBoardReaderTests.Reply("[{\"commit\":{\"message\":\"fix: use the net48-compatible Stream.WriteAsync overload\\n\\nbody line\"}},{\"commit\":{\"message\":\"test: second commit\"}}]"));
 
             var result = await Build(handler);
 
@@ -335,7 +336,10 @@ namespace ScenarioRunner
             Assert.Equal("pull-request", records[1].Kind);
             Assert.Equal(new[] { "src/A.cs", "src/B.cs" }, records[1].Files);
             Assert.Contains("default(ValueTask)", records[1].ReviewComments);
-            Assert.Equal(3, handler.Requests.Count);
+            // The commit messages of the pull request are kept after the review text, one line each, body and all.
+            Assert.Contains("Commits: fix: use the net48-compatible Stream.WriteAsync overload body line | test: second commit", records[1].ReviewComments);
+            Assert.Equal(4, handler.Requests.Count);
+            Assert.Contains("/pulls/6/commits", handler.Requests[3].Url);
             Assert.All(handler.Requests, r =>
             {
                 Assert.StartsWith("https://api.github.com/repos/owner/repo/", r.Url);
@@ -383,11 +387,60 @@ namespace ScenarioRunner
         }
 
         [Fact]
+        public async Task ACommitMessage_IsCutAndMasked_LikeEveryOtherStoredText()
+        {
+            var secret = "ghp_" + new string('a', 24);
+            var long_ = new string('x', 5000);
+            var handler = new ProjectBoardReaderTests.StubHandler(
+                ProjectBoardReaderTests.Reply("[" + Item(6, "pr", true, "2026-01-03T00:00:00Z") + "]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("[{\"commit\":{\"message\":\"fix: a token " + secret + " leaked\"}},{\"commit\":{\"message\":\"" + long_ + "\"}}]"));
+
+            var result = await Build(handler);
+
+            var review = result.Index!.Records[0].ReviewComments;
+            Assert.DoesNotContain(secret, review, StringComparison.Ordinal);
+            Assert.Contains("[masked]", review, StringComparison.Ordinal);
+            Assert.True(review.Length <= "Commits: ".Length + 1500, "Commit text must be cut.");
+        }
+
+        [Fact]
+        public async Task AMalformedCommitList_AddsNoText_AndIsNotACrash()
+        {
+            var handler = new ProjectBoardReaderTests.StubHandler(
+                ProjectBoardReaderTests.Reply("[" + Item(6, "pr", true, "2026-01-03T00:00:00Z") + "]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("{\"not\":\"a list\"}"));
+
+            var result = await Build(handler);
+
+            Assert.True(result.Success);
+            Assert.Equal("", result.Index!.Records[0].ReviewComments);
+        }
+
+        [Fact]
+        public async Task AFailedCommitRequest_IsCountedAsADetailFailure()
+        {
+            var handler = new ProjectBoardReaderTests.StubHandler(
+                ProjectBoardReaderTests.Reply("[" + Item(6, "pr", true, "2026-01-03T00:00:00Z") + "]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("[]"),
+                ProjectBoardReaderTests.Reply("{}", HttpStatusCode.Forbidden));
+
+            var result = await Build(handler);
+
+            Assert.Equal(1, result.DetailFailures);
+        }
+
+        [Fact]
         public async Task AFailedDetailRequest_IsCounted_NotSilentlyIgnored()
         {
             var handler = new ProjectBoardReaderTests.StubHandler(
                 ProjectBoardReaderTests.Reply("[" + Item(6, "pr", true, "2026-01-03T00:00:00Z") + "]"),
                 ProjectBoardReaderTests.Reply("{}", HttpStatusCode.Forbidden),
+                ProjectBoardReaderTests.Reply("[]"),
                 ProjectBoardReaderTests.Reply("[]"));
 
             var result = await Build(handler);
