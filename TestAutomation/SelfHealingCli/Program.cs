@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AutomationSandbox.SelfHealing;
+using AutomationSandbox.SelfHealingCli;
 using AutomationSandbox.UiModel;
 
 // The point of this tool: SelfHealingResolver.Resolve operates purely on the
@@ -18,6 +19,7 @@ internal static class Program
         }
 
         string? expectedPath = null;
+        string? selector = null;
         string? treePath = null;
         var profile = ThresholdProfile.Balanced;
 
@@ -27,6 +29,9 @@ internal static class Program
             {
                 case "--expected" when i + 1 < args.Length:
                     expectedPath = args[++i];
+                    break;
+                case "--selector" when i + 1 < args.Length:
+                    selector = args[++i];
                     break;
                 case "--tree" when i + 1 < args.Length:
                     treePath = args[++i];
@@ -47,16 +52,29 @@ internal static class Program
             }
         }
 
-        if (expectedPath is null || treePath is null)
+        if (treePath is null || (expectedPath is null) == (selector is null))
         {
-            Console.Error.WriteLine("Both --expected and --tree are required.");
+            Console.Error.WriteLine("--tree and exactly one of --expected or --selector are required.");
             PrintUsage();
             return 1;
         }
 
         try
         {
-            var expected = UiTreeSerializer.FromJson(File.ReadAllText(expectedPath));
+            UiElementInfo expected;
+            if (selector is not null)
+            {
+                if (!PlaywrightSelectorParser.TryParse(selector, out expected, out var selectorError))
+                {
+                    Console.Error.WriteLine($"Error: {selectorError}");
+                    return 2;
+                }
+            }
+            else
+            {
+                expected = UiTreeSerializer.FromJson(File.ReadAllText(expectedPath!));
+            }
+
             var currentTreeRoot = UiTreeSerializer.FromJson(File.ReadAllText(treePath));
             var weights = SimilarityWeights.FromProfile(profile);
 
@@ -65,7 +83,19 @@ internal static class Program
             // stdout stays pure JSON - the one promise this tool makes to any caller.
             var result = SelfHealingResolver.Resolve(expected, currentTreeRoot, weights, log: Console.Error.WriteLine);
 
-            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+            if (selector is null)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
+            }
+            else
+            {
+                // A selector states only part of what a recorded snapshot would, so say so in
+                // the output and show exactly what the engine was given to match against.
+                Console.WriteLine(JsonSerializer.Serialize(
+                    new { PartialEvidence = true, DerivedExpected = expected, Result = result },
+                    jsonOptions));
+            }
 
             // IsConfident is the same acceptance gate SelfHealingResolver/HealResult use
             // everywhere else in this repo - a caller piping this into a CI gate gets the
@@ -89,8 +119,12 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine("Usage:");
         Console.WriteLine("  automation-sandbox-heal --expected <stale-element.json> --tree <live-tree.json> [--profile balanced|conservative|aggressive]");
+        Console.WriteLine("  automation-sandbox-heal --selector \"<playwright locator>\" --tree <live-tree.json> [--profile ...]");
         Console.WriteLine();
         Console.WriteLine("--expected   A single UiElementInfo JSON object: the stale/broken locator's last known snapshot.");
+        Console.WriteLine("--selector   Instead of --expected, for a suite with no recorded snapshot: a Playwright locator such as");
+        Console.WriteLine("             getByTestId('x') or getByRole('button', { name: 'Save' }). Only the signals it states are used,");
+        Console.WriteLine("             the output is wrapped as { PartialEvidence, DerivedExpected, Result }, and the same gate applies.");
         Console.WriteLine("--tree       A UiElementInfo JSON tree: a freshly captured snapshot of the live application.");
         Console.WriteLine("--profile    Threshold profile (default: balanced). See SimilarityWeights.FromProfile.");
         Console.WriteLine();
