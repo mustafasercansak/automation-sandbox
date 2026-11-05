@@ -18,6 +18,35 @@ Invoke-DotNet @('build', $projectPath, '--configuration', 'Debug')
 
 $builtExe = Join-Path $PSScriptRoot 'bin\Debug\net8.0-windows\DesktopAppExplorerQuickstart.exe'
 
+# One GitHub Releases download is one network call, and a 5xx or a timeout from it is not a defect in the sample (#630): retry a
+# few times with a growing pause. A 404 is deliberately not retried: it means the pinned release was pruned upstream, which has to
+# fail loudly so the version below gets bumped instead of being hidden by a retry.
+function Save-WithRetry {
+    param(
+        [Parameter(Mandatory)][string] $Uri,
+        [Parameter(Mandatory)][string] $OutFile,
+        [int] $Attempts = 4,
+        [int] $PauseSeconds = 5
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            Invoke-WebRequest -Uri $Uri -OutFile $OutFile
+            return
+        }
+        catch {
+            $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+            if ($status -eq 404 -or $attempt -eq $Attempts) {
+                throw
+            }
+
+            $wait = $PauseSeconds * $attempt
+            Write-Warning "Download of $Uri failed (attempt $attempt of $Attempts, HTTP $status): $($_.Exception.Message) Retrying in $wait s."
+            Start-Sleep -Seconds $wait
+        }
+    }
+}
+
 function Invoke-SampleAgainst {
     param([Parameter(Mandatory)][string] $Target)
 
@@ -55,14 +84,14 @@ New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
 $nppVersion = '8.9.8.1'
 $nppZip = Join-Path $downloadDir 'npp.zip'
 $nppDir = Join-Path $downloadDir 'npp'
-Invoke-WebRequest -Uri "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v$nppVersion/npp.$nppVersion.portable.x64.zip" -OutFile $nppZip
+Save-WithRetry -Uri "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v$nppVersion/npp.$nppVersion.portable.x64.zip" -OutFile $nppZip
 Expand-Archive -Path $nppZip -DestinationPath $nppDir -Force
 Invoke-SampleAgainst (Join-Path $nppDir 'notepad++.exe')
 
 $peazipVersion = '11.3.0'
 $peazipZip = Join-Path $downloadDir 'peazip.zip'
 $peazipDir = Join-Path $downloadDir 'peazip'
-Invoke-WebRequest -Uri "https://github.com/peazip/PeaZip/releases/download/$peazipVersion/peazip_portable-$peazipVersion.WIN64.zip" -OutFile $peazipZip
+Save-WithRetry -Uri "https://github.com/peazip/PeaZip/releases/download/$peazipVersion/peazip_portable-$peazipVersion.WIN64.zip" -OutFile $peazipZip
 Expand-Archive -Path $peazipZip -DestinationPath $peazipDir -Force
 Invoke-SampleAgainst (Join-Path $peazipDir "peazip_portable-$peazipVersion.WIN64\peazip.exe")
 
@@ -77,7 +106,7 @@ Invoke-SampleAgainst (Join-Path $peazipDir "peazip_portable-$peazipVersion.WIN64
 $keepassxcVersion = '2.7.12'
 $keepassxcZip = Join-Path $downloadDir 'keepassxc.zip'
 $keepassxcDir = Join-Path $downloadDir 'keepassxc'
-Invoke-WebRequest -Uri "https://github.com/keepassxreboot/keepassxc/releases/download/$keepassxcVersion/KeePassXC-$keepassxcVersion-Win64.zip" -OutFile $keepassxcZip
+Save-WithRetry -Uri "https://github.com/keepassxreboot/keepassxc/releases/download/$keepassxcVersion/KeePassXC-$keepassxcVersion-Win64.zip" -OutFile $keepassxcZip
 Expand-Archive -Path $keepassxcZip -DestinationPath $keepassxcDir -Force
 Invoke-SampleAgainst (Join-Path $keepassxcDir "KeePassXC-$keepassxcVersion-Win64\KeePassXC.exe")
 
