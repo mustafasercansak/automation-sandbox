@@ -67,15 +67,28 @@ namespace AutomationSandbox.UiModel
         /// <summary>Convenient readability property equivalent to this == Empty.</summary>
         public bool IsEmpty => X == 0.0 && Y == 0.0 && Width == 0.0 && Height == 0.0;
 
-        /// <summary>Captured position and dimensions; an empty rectangle represents missing geometry.</summary>
+        /// <summary>Captured position and dimensions; an empty rectangle represents missing geometry. A value that is not a finite number (NaN or an infinity, as WPF's <c>Rect.Empty</c> reports) means there is no geometry, so all four values become zero and the rectangle equals <see cref="Empty" />: it is then never scored, and it can always be written as JSON (an infinity cannot, which made the CLI lose a result it had already computed, #639).</summary>
         [System.Text.Json.Serialization.JsonConstructor]
         public BoundingRectangle(double x, double y, double width, double height)
         {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
+            if (IsFinite(x) && IsFinite(y) && IsFinite(width) && IsFinite(height))
+            {
+                X = x;
+                Y = y;
+                Width = width;
+                Height = height;
+            }
+            else
+            {
+                X = 0;
+                Y = 0;
+                Width = 0;
+                Height = 0;
+            }
         }
+
+        // double.IsFinite does not exist on netstandard2.0.
+        private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 
         // Performs exact double value comparisons across all coordinates and dimensions.
         /// <summary>Performs exact double value comparisons across all coordinates and dimensions.</summary>
