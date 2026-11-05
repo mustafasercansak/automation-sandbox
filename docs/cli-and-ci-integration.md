@@ -32,11 +32,12 @@ automation-sandbox-heal --expected stale-element.json --tree live-tree.json --pr
 - `--expected` - a single `UiElementInfo` JSON object: the stale/broken locator's last known snapshot.
 - `--selector` - instead of `--expected`, for a suite that is already broken and has no snapshot recorded while it was green (#616): a Playwright locator copied from the test, e.g. `"getByTestId('connect-button')"` or `"getByRole('button', { name: 'Settings' })"`. Supported forms: `getByTestId`, `getByRole` (with an optional `name`), `getByText`, `getByLabel`, `getByPlaceholder`, `getByTitle`, `getByAltText`; anything else (CSS, XPath, chained calls) exits with `2`. The test id becomes `AutomationId`, the role becomes `ControlType`, the name/text/label becomes `Name`; geometry, parent and sibling context stay empty. Exactly one of `--expected` or `--selector` is required.
 - `--tree` - a `UiElementInfo` JSON tree: a freshly captured snapshot of the live application.
+- `--compact` - print a smaller result (#620): every element without its child subtree, and only the best 5 candidates (`CandidateCount` still reports the full number). The decision, scores and exit code are identical. Without it the output grows with the tree: every scored node is a candidate and each carries its subtree, so a 300 KB tree produced about 3.4 MB of JSON. A host that spawns the CLI with a default 1 MB output buffer (Node `spawnSync`, `status: null` and an empty result) should pass `--compact` or raise its buffer.
 - `--profile` - `balanced` (default), `conservative`, or `aggressive`. See the healing-pipeline thresholds in `AGENTS.md` for what each trades off.
 
 With `--selector` the output is wrapped as `{ "PartialEvidence": true, "DerivedExpected": {...}, "Result": {...} }` so the partial evidence is stated in the result and the element the engine matched against is visible. The acceptance gate is unchanged: with so little evidence the best candidate is often correct but still `AMBIGUOUS` or `LOW CONFIDENCE` (exit `1`), so treat the output as a review aid for an already-broken suite, not as an auto-fix.
 
-Prints a `HealResult` as JSON to stdout - the same explainable `ScoreComponents` breakdown, `RunnerUpScore`, and `EvidenceCoverage` every other API surface in this project exposes. Diagnostic logging goes to stderr, so stdout is always pure, parseable JSON. Exit code `0` means `IsConfident` (safe to accept `Matched`); `1` means not confident (do not auto-accept); `2` means an error occurred before a decision could be made (bad input, missing file) - never a raw stack trace.
+Prints a `HealResult` as JSON to stdout - the same explainable `ScoreComponents` breakdown, `RunnerUpScore`, and `EvidenceCoverage` every other API surface in this project exposes. Diagnostic logging goes to stderr (always UTF-8 without a BOM, whatever the console code page, so a name such as `Bağlan` is not garbled on Windows - #621), so stdout is always pure, parseable JSON. Exit code `0` means `IsConfident` (safe to accept `Matched`); `1` means not confident (do not auto-accept); `2` means an error occurred before a decision could be made (bad input, missing file) - never a raw stack trace.
 
 ### The JSON Schema
 
@@ -172,6 +173,10 @@ What it will not do: no tool writes a label, a card, a file or an issue, and no 
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel` are the right choice for a .NET project that already captures its own `UiElementInfo` trees (via `Discovery`, `WebDiscovery`, or a hand-rolled adapter) and wants to call the resolver in-process. The CLI is for everything else: a non-.NET test suite, a shell script in a CI pipeline, or any tool that can produce a JSON tree but has no reason to take on a .NET dependency just to get a heal decision.
 
+### Does the CLI Call a Model?
+
+No (#619). `automation-sandbox-heal` is deterministic only: it scores candidates with the heuristic resolver and never contacts an LLM, so the LLM independent-agreement quorum (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) is available from the .NET API but not from the CLI. A non-.NET team gets the evidence gate, the per-component name/descendant gates and the margin rule, not the consensus layer. The CLI also reads no LLM environment variable, so an internal OpenAI-compatible gateway cannot be configured through it. For the scheme policy of custom endpoints in the .NET API, see [LLM Providers](llm-providers.md).
+
 ### Telling Apart Identical Rows (`RowContext`)
 
 A list whose rows each hold an identical button (`Connect` in every row) is `AMBIGUOUS` when only the row differs. A capture can record `RowContext` (#617): the text of the other elements in the row or list item the element sits in. `capture.mjs` and the .NET web capture (`WebElementMapper`) fill it; on a `--expected` snapshot it is compared with each candidate's `RowContext` as an extra scoring signal (word overlap, weight `RowContextWeight` 0.10). It counts only when the stale locator recorded one, so snapshots without it score exactly as before. For a tree built by hand or by another capture, call `UiRowContext.Annotate(root)` (.NET) before taking the snapshot. Row labels that differ only slightly (`demo-a` / `demo-b`) separate cleanly because the comparison is by word, not by edit distance.
@@ -206,11 +211,12 @@ automation-sandbox-heal --expected stale-element.json --tree live-tree.json --pr
 - `--expected` - tek bir `UiElementInfo` JSON nesnesi: eski/kırık locator'ın bilinen son hali.
 - `--selector` - `--expected` yerine, yeşilken kaydedilmiş anlık görüntüsü olmayan ve zaten bozuk bir test takımı için (#616): testten alınan bir Playwright locator'ı, ör. `"getByTestId('connect-button')"` veya `"getByRole('button', { name: 'Settings' })"`. Desteklenen biçimler: `getByTestId`, `getByRole` (isteğe bağlı `name` ile), `getByText`, `getByLabel`, `getByPlaceholder`, `getByTitle`, `getByAltText`; diğerleri (CSS, XPath, zincirleme çağrılar) `2` koduyla çıkar. Test id `AutomationId`, rol `ControlType`, ad/metin/etiket `Name` olur; geometri, ebeveyn ve kardeş bağlamı boş kalır. `--expected` veya `--selector`'dan tam olarak biri gereklidir.
 - `--tree` - bir `UiElementInfo` JSON ağacı: canlı uygulamanın taze bir anlık görüntüsü.
+- `--compact` - daha küçük bir sonuç basar (#620): her element alt ağacı olmadan ve yalnızca en iyi 5 aday (`CandidateCount` yine tam sayıyı bildirir). Karar, skorlar ve çıkış kodu aynıdır. Bu bayrak olmadan çıktı ağaçla birlikte büyür: puanlanan her düğüm bir adaydır ve her biri alt ağacını taşır; 300 KB'lık bir ağaç yaklaşık 3,4 MB JSON üretmişti. CLI'yı varsayılan 1 MB çıktı tamponuyla başlatan bir ana süreç (Node `spawnSync`, `status: null` ve boş sonuç) `--compact` vermeli veya tamponunu büyütmelidir.
 - `--profile` - `balanced` (varsayılan), `conservative`, veya `aggressive`. Her birinin neyi değiş tokuş ettiği için `AGENTS.md`'deki healing-pipeline eşiklerine bakın.
 
 `--selector` ile çıktı `{ "PartialEvidence": true, "DerivedExpected": {...}, "Result": {...} }` olarak sarılır; böylece kısmi kanıt sonuçta belirtilir ve motorun eşleştirdiği element görünür. Kabul eşiği değişmez: bu kadar az kanıtla en iyi aday çoğu zaman doğrudur ama yine de `AMBIGUOUS` veya `LOW CONFIDENCE` olur (çıkış `1`); çıktıyı otomatik düzeltme değil, zaten bozuk bir test takımı için inceleme yardımcısı olarak kullanın.
 
-Stdout'a bir `HealResult` JSON olarak basılır - bu projedeki her API yüzeyinin sergilediği aynı açıklanabilir `ScoreComponents` dökümü, `RunnerUpScore`, ve `EvidenceCoverage`. Tanılama günlükleri stderr'e gider, yani stdout her zaman saf, ayrıştırılabilir JSON'dur. Çıkış kodu `0` `IsConfident` anlamına gelir (`Matched`'i kabul etmek güvenlidir); `1` yeterince emin olunmadığını gösterir (otomatik kabul etmeyin); `2` bir karara varılmadan önce bir hata oluştuğu anlamına gelir (kötü girdi, eksik dosya) - asla ham bir stack trace değil.
+Stdout'a bir `HealResult` JSON olarak basılır - bu projedeki her API yüzeyinin sergilediği aynı açıklanabilir `ScoreComponents` dökümü, `RunnerUpScore`, ve `EvidenceCoverage`. Tanılama günlükleri stderr'e gider (konsol kod sayfası ne olursa olsun her zaman BOM'suz UTF-8, böylece `Bağlan` gibi bir ad Windows'ta bozulmaz - #621), yani stdout her zaman saf, ayrıştırılabilir JSON'dur. Çıkış kodu `0` `IsConfident` anlamına gelir (`Matched`'i kabul etmek güvenlidir); `1` yeterince emin olunmadığını gösterir (otomatik kabul etmeyin); `2` bir karara varılmadan önce bir hata oluştuğu anlamına gelir (kötü girdi, eksik dosya) - asla ham bir stack trace değil.
 
 ### JSON Şeması
 
@@ -345,6 +351,10 @@ Yapmadıkları: hiçbir araç etiket, kart, dosya ya da issue yazmaz; hiçbir ar
 ### Neden CLI, Sadece Kütüphane Değil
 
 `AutomationSandbox.SelfHealing`/`AutomationSandbox.UiModel`, kendi `UiElementInfo` ağaçlarını zaten yakalayan (`Discovery`, `WebDiscovery`, veya elle yazılmış bir adaptör ile) ve resolver'ı süreç içinde çağırmak isteyen bir .NET projesi için doğru seçimdir. CLI, geri kalan her şey içindir: .NET dışı bir test paketi, bir CI pipeline'ındaki bir shell script, veya bir JSON ağacı üretebilen ama sadece bir healing kararı almak için .NET bağımlılığı almasına gerek olmayan herhangi bir araç.
+
+### CLI Bir Model Çağırır mı?
+
+Hayır (#619). `automation-sandbox-heal` yalnızca deterministiktir: adayları sezgisel çözümleyici ile puanlar ve hiçbir LLM'e bağlanmaz; bu yüzden LLM bağımsız-uzlaşma kurulu (`LlmProviderFactory`, `LLM_CUSTOM_PROVIDERS`) .NET API'sinden kullanılabilir ama CLI'dan kullanılamaz. .NET dışı bir ekip kanıt eşiğini, bileşen başına ad/alt-eleman eşiklerini ve fark kuralını alır, uzlaşma katmanını almaz. CLI ayrıca hiçbir LLM ortam değişkenini okumaz; bu yüzden OpenAI uyumlu bir dahili geçit CLI üzerinden yapılandırılamaz. .NET API'sindeki özel uç noktaların şema politikası için [LLM Sağlayıcıları](llm-providers.md) sayfasına bakın.
 
 ### Özdeş Satırları Ayırmak (`RowContext`)
 
