@@ -1,13 +1,13 @@
 name: Lesson replay (manual)
 
-# Replays three real defects (#561): every configured model reviews the same diff twice, once with and once without the lessons
+# Replays ten real defects (#561, #615): every configured model reviews the same diff twice, once with and once without the lessons
 # retrieved from this repository's own closed issues and pull requests, and the report says which answers flagged the defect.
 #
 # Manual only (workflow_dispatch): it builds an index through the GitHub API (read only, about 600 requests) and asks real
-# models, so it spends API quota and model quota, and nothing an outsider can do may start it. The three cases are frozen
+# models, so it spends API quota and model quota, and nothing an outsider can do may start it. The ten cases are frozen
 # (TestAutomation/ScenarioRunner/Fixtures/lessons-replay/cases.json); do not edit or filter them after seeing a result.
 # The index is built once, before the latest case date, and each case is then given only the records closed before its own date.
-# Nothing here gates a release or a pull request. Three defects is a tiny sample: no figure without its count, no claim that
+# Nothing here gates a release or a pull request. Ten defects is a small sample: no figure without its count, no claim that
 # lessons help unless the with-column beats the without-column on far more cases than this.
 #
 # Keys are passed as secrets through env: only, never interpolated into a script. The workflow can read contents, issues and
