@@ -48,27 +48,48 @@ runs:
       with:
         dotnet-version: 8.0.x
 
+    # Every input reaches bash through env: and is used only as a quoted variable. Writing ${{ inputs.* }} into the script would let a
+    # value that contains a quote or $(...) run as shell on the caller's runner (the #636 hole); the site-audit action has always done
+    # it this way. Each value is also checked before use, so a malformed one stops here with exit code 2, the CLI's "could not run".
     - name: Install automation-sandbox-heal
       shell: bash
+      env:
+        INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_SOURCE: ${{ inputs.source }}
       run: |
         set -e
+        case "$INPUT_PROFILE" in balanced|conservative|aggressive) ;; *) echo "::error::profile must be balanced, conservative or aggressive."; exit 2 ;; esac
+        if [ -n "$INPUT_VERSION" ] && ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$ ]]; then
+          echo "::error::version must look like 0.2.0 or 0.2.0-beta.7."; exit 2
+        fi
+        if [ -n "$INPUT_SOURCE" ] && ! [[ "$INPUT_SOURCE" =~ ^[A-Za-z0-9._~:/@%+=,\\-]+$ ]]; then
+          echo "::error::source may only contain letters, digits and . _ ~ : / @ % + = , - and backslash."; exit 2
+        fi
         args=(tool install --global AutomationSandbox.Cli)
-        if [ -n "${{ inputs.version }}" ]; then
-          args+=(--version "${{ inputs.version }}")
+        if [ -n "$INPUT_VERSION" ]; then
+          args+=(--version "$INPUT_VERSION")
         else
           args+=(--prerelease)
         fi
-        if [ -n "${{ inputs.source }}" ]; then
-          args+=(--add-source "${{ inputs.source }}")
+        if [ -n "$INPUT_SOURCE" ]; then
+          args+=(--add-source "$INPUT_SOURCE")
         fi
         dotnet "${args[@]}"
 
     - name: Run heal check
       id: heal
       shell: bash
+      env:
+        INPUT_EXPECTED: ${{ inputs.expected }}
+        INPUT_TREE: ${{ inputs.tree }}
+        INPUT_PROFILE: ${{ inputs.profile }}
       run: |
+        for file in "$INPUT_EXPECTED" "$INPUT_TREE"; do
+          [ -f "$file" ] || { echo "::error::'$file' is not a file."; exit 2; }
+        done
         set +e
-        output=$(automation-sandbox-heal --expected "${{ inputs.expected }}" --tree "${{ inputs.tree }}" --profile "${{ inputs.profile }}")
+        output=$(automation-sandbox-heal --expected "$INPUT_EXPECTED" --tree "$INPUT_TREE" --profile "$INPUT_PROFILE")
         exit_code=$?
         set -e
 
