@@ -46,6 +46,10 @@ Then heal with the CLI / Sonra CLI ile healing yapın:
 automation-sandbox-heal --expected expected-button.json --tree tree.json --profile balanced
 ```
 
+## Heal from a failing `@playwright/test` test / Düşen bir `@playwright/test` testinden healing
+
+`heal-fixture.mjs` prints a heal suggestion when a test fails waiting for a locator; `heal-helper.mjs` is the same logic as a plain function; `npm run heal:demo` runs it against the bundled pages. See the "Wiring It Into a TypeScript Playwright Suite" section of [docs/cli-and-ci-integration.md](../../docs/cli-and-ci-integration.md) / `heal-fixture.mjs`, bir test locator beklerken düşerse healing önerisi yazdırır; `heal-helper.mjs` aynı mantığın düz fonksiyon halidir; `npm run heal:demo` onu birlikte gelen sayfalara karşı çalıştırır. Ayrıntılar için [docs/cli-and-ci-integration.md](../../docs/cli-and-ci-integration.md) içindeki "TypeScript Playwright Suite'ine Bağlamak" bölümüne bakın.
+
 ## Try it against the bundled fixture / Birlikte gelen fixture'a karşı deneyin
 
 Zero network dependency - two tiny HTML pages where a button's `id` changed, the classic broken-locator scenario / Sıfır ağ bağımlılığı - bir butonun `id`'sinin değiştiği, klasik kırık-locator senaryosunu temsil eden iki küçük HTML sayfası:
