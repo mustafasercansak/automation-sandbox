@@ -13,12 +13,17 @@ on:
         default: true
         type: boolean
       dry_run:
-        description: 'Validate and pack all 9 packages (and the CLI tool, if publish_cli is set) without publishing GitHub Release'
+        description: 'Validate and pack all 9 packages (and the dotnet tools, if publish_cli or publish_tools is set) without publishing GitHub Release'
         required: false
         default: false
         type: boolean
       publish_to_nuget:
         description: 'Also push the 9 library packages to nuget.org via Trusted Publishing (OIDC, no stored API key)'
+        required: false
+        default: false
+        type: boolean
+      publish_tools:
+        description: 'Also pack and push the agent, MCP server and site-audit dotnet tools (AutomationSandbox.Agent, .Mcp, .SiteAudit) to nuget.org - independent of publish_to_nuget and publish_cli (#658)'
         required: false
         default: false
         type: boolean
@@ -120,6 +125,20 @@ jobs:
         if: ${{ inputs.publish_cli }}
         run: dotnet pack TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Release --no-build --output ./cli-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      # The other three tools (#658) go to their own directory for the same reason as above. They are validated by installing
+      # and running the exact published version (eng/Verify-PublishedTools.ps1), not by a static layout check.
+      - name: Pack AgentCli
+        if: ${{ inputs.publish_tools }}
+        run: dotnet pack TestAutomation/AgentCli/AgentCli.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack McpServer
+        if: ${{ inputs.publish_tools }}
+        run: dotnet pack TestAutomation/McpServer/McpServer.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Pack SiteAuditCli
+        if: ${{ inputs.publish_tools }}
+        run: dotnet pack TestAutomation/SiteAuditCli/SiteAuditCli.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       # SBOM (#274): one CycloneDX JSON BOM per published package, generated from the
       # Release dependency graph so consumers can audit the full transitive closure
       # independent of nuget.org metadata. CycloneDX 6.x runs on the .NET 10 runtime,
@@ -177,6 +196,16 @@ jobs:
           path: |
             ./cli-nupkgs/*.nupkg
             ./cli-nupkgs/*.snupkg
+          if-no-files-found: ignore
+
+      - name: Upload tool packages
+        if: ${{ always() && inputs.publish_tools }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-tool-nupkgs
+          path: |
+            ./tool-nupkgs/*.nupkg
+            ./tool-nupkgs/*.snupkg
           if-no-files-found: ignore
 
       - name: Validate and write release notes
@@ -259,7 +288,7 @@ jobs:
       # publish flag needs it - publish_cli can be set without publish_to_nuget when only
       # the CLI tool, not the 9 libraries, needs a new version pushed.
       - name: NuGet login (OIDC -> temporary API key)
-        if: ${{ (inputs.publish_to_nuget || inputs.publish_cli) && !inputs.dry_run }}
+        if: ${{ (inputs.publish_to_nuget || inputs.publish_cli || inputs.publish_tools) && !inputs.dry_run }}
         uses: NuGet/login@v1
         id: nuget_login
         with:
@@ -286,6 +315,16 @@ jobs:
             dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
+      - name: Push tool packages to nuget.org
+        if: ${{ inputs.publish_tools && !inputs.dry_run }}
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
+        run: |
+          Get-ChildItem ./tool-nupkgs/*.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
       # Post-publish consumer verification (#336): restore the sample EXACTLY as an
       # external consumer would — clean package dir, nuget.org only, no cache — against
       # the version just pushed. This is the real "the published artifact works" gate;
@@ -302,6 +341,12 @@ jobs:
         if: ${{ inputs.publish_cli && !inputs.dry_run }}
         shell: pwsh
         run: ./TestAutomation/SelfHealingCli/verify-published.ps1 -Version $env:PACKAGE_VERSION
+
+      # Same philosophy for the three tools (#658): install the exact published versions and run what needs no key and no network.
+      - name: Verify the published tools for a consumer
+        if: ${{ inputs.publish_tools && !inputs.dry_run }}
+        shell: pwsh
+        run: ./eng/Verify-PublishedTools.ps1 -Version $env:PACKAGE_VERSION
 
       # Version bump is a workflow output, not a manual pre-req (#336): once the exact
       # version is confirmed live on nuget.org, bump the SSoT and the sample pin to it

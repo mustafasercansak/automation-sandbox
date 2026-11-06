@@ -100,9 +100,9 @@ namespace ScenarioRunner
 
             var pushes = lines.Where(l => l.Contains("dotnet nuget push", StringComparison.Ordinal)).ToList();
 
-            Assert.Equal(2, pushes.Count);
+            Assert.Equal(3, pushes.Count);
             Assert.All(pushes, p => Assert.Contains("--api-key $env:NUGET_API_KEY", p, StringComparison.Ordinal));
-            Assert.Equal(2, lines.Count(l => l.Trim() == "NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}"));
+            Assert.Equal(3, lines.Count(l => l.Trim() == "NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}"));
         }
 
         [Fact]

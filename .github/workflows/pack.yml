@@ -85,6 +85,14 @@ jobs:
       - name: Pack IntentExecution
         run: dotnet pack TestAutomation/IntentExecution/IntentExecution.csproj --configuration Release --no-build --output ./nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
 
+      # The dotnet tools (#658) are packed into their own directory: Validate-NuGetPackages.ps1 checks the nine library layouts only.
+      - name: Pack the dotnet tools
+        run: |
+          dotnet pack TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+          dotnet pack TestAutomation/AgentCli/AgentCli.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+          dotnet pack TestAutomation/McpServer/McpServer.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+          dotnet pack TestAutomation/SiteAuditCli/SiteAuditCli.csproj --configuration Release --no-build --output ./tool-nupkgs /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
       - name: Validate package contents
         shell: pwsh
         run: ./eng/Validate-NuGetPackages.ps1 -PackageDirectory ./nupkgs -Version $env:PACKAGE_VERSION
@@ -96,3 +104,9 @@ jobs:
           path: |
             ./nupkgs/*.nupkg
             ./nupkgs/*.snupkg
+
+      - name: Upload tool packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: tool-nupkgs
+          path: ./tool-nupkgs/*.nupkg
