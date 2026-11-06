@@ -27,7 +27,7 @@ per run via `publish_to_nuget` rather than automatic on every release.
 | `AutomationSandbox.UiModel` | Shared UI snapshot model, score DTOs, locator repository JSON. |
 | `AutomationSandbox.SelfHealing` | Heuristic resolver, engine SDK, healing reports, repository update helpers. |
 | `AutomationSandbox.LlmHealing` | Claude, Gemini, OpenAI, and Ollama healing providers. |
-| `AutomationSandbox.Discovery` | Windows UIA/FlaUI desktop tree capture (`net48;net8.0-windows`). |
+| `AutomationSandbox.Discovery` | Windows UIA/FlaUI desktop tree capture (`net48;net10.0-windows`). |
 | `AutomationSandbox.WebDiscovery` | Playwright DOM mapping and locator suggestions. |
 | `AutomationSandbox.IntentAutomation` | Intent contracts, deterministic + LLM-backed planning, web and desktop candidate matching, locator recording, Playwright C#/TypeScript and FlaUI test generation, intent flow reports, and pipeline orchestration. |
 | `AutomationSandbox.PlaywrightLiveExploration` | `PlaywrightLiveExplorer`/`PlaywrightWebSession`: live browser page capture and long-lived session automation (Microsoft.Playwright .NET SDK). |

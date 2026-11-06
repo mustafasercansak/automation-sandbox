@@ -284,7 +284,7 @@ namespace AutomationSandbox.SelfHealing
 
         // Exact type names that mark an exception as a locator/element-resolution failure.
         // Matching by name rather than by type identity is deliberate: this assembly is
-        // FlaUI-free (it multi-targets netstandard2.0/net8.0 and runs cross-platform), so it
+        // FlaUI-free (it multi-targets netstandard2.0/net10.0 and runs cross-platform), so it
         // cannot reference FlaUI's ElementNotAvailableException, and name matching also
         // covers Playwright/Selenium-style and hand-rolled locator exceptions without
         // depending on any of them. Matching is exact rather than substring - a substring

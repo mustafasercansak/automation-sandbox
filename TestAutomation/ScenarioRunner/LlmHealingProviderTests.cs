@@ -1026,7 +1026,7 @@ namespace ScenarioRunner
                 if (callCount == 1)
                 {
                     // .NET Framework's HttpResponseMessage.Content is null until assigned, unlike
-                    // .NET 8's non-null default - LlmHttpTransport reads Content unconditionally, so
+                    // modern .NET's non-null default - LlmHttpTransport reads Content unconditionally, so
                     // leaving this unset throws NullReferenceException only under net48.
                     var limited = new HttpResponseMessage((HttpStatusCode)429)
                     {

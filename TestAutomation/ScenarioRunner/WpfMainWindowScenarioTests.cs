@@ -16,7 +16,7 @@ namespace ScenarioRunner
     // framework-agnostic, not just a claim in a comment.
     public class WpfMainWindowScenarioTests : IDisposable
     {
-        private const string WpfAppRelativePath = @"..\..\..\..\..\WpfApp\bin\Debug\net8.0-windows\WpfApp.exe";
+        private const string WpfAppRelativePath = @"..\..\..\..\..\WpfApp\bin\Debug\net10.0-windows\WpfApp.exe";
         private readonly ApplicationConnector _connector;
 
         public WpfMainWindowScenarioTests()

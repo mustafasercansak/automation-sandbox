@@ -13,7 +13,7 @@
 | Metric | Value | Notes |
 | :--- | :---: | :--- |
 | **Heuristic Speed** | **Sub-50ms (Indicative)** | For 3,000+ UI controls ($O(N)$ complexity, 0 cost), measured on developer hardware (~23ms) — see `SyntheticTreeBenchmarkTests`. |
-| **Target Frameworks** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Cross-platform core + Windows UIA FlaUI connectors. |
+| **Target Frameworks** | `.NET Standard 2.0`, `.NET 10`, `.NET 4.8` | Cross-platform core + Windows UIA FlaUI connectors. |
 | **Healing Accuracy** | **73–84% precision, 71–77% recall** | Measured on two real applications (HandBrake, ShareX), 307 ablation scenarios total, default weights. False-heal rate on deleted elements is $40.5\%$–$57.1\%$ and does not improve with LLM consensus (0/34 unanimous verdicts on removed elements were correct across four live runs) — see [docs/benchmark-calibration.md](docs/benchmark-calibration.md) for the full range and why it varies by application. |
 | **LLM Guard Safety** | **Hallucination Guard** | Verifies candidate IDs against shortlist before applying match. |
 
@@ -231,7 +231,7 @@ graph LR
 | Metrik | Değer | Notlar |
 | :--- | :---: | :--- |
 | **Sezgisel Hız** | **50ms Altı (Gösterge)** | 3.000+ UI kontrolü için ($O(N)$ karmaşıklık, 0 maliyet); geliştirici donanımında ölçüldü (~23ms) — bkz. `SyntheticTreeBenchmarkTests`. |
-| **Hedef Platformlar** | `.NET Standard 2.0`, `.NET 8`, `.NET 10`, `.NET 4.8` | Çapraz platform çekirdek + Windows UIA FlaUI bağlayıcıları. |
+| **Hedef Platformlar** | `.NET Standard 2.0`, `.NET 10`, `.NET 4.8` | Çapraz platform çekirdek + Windows UIA FlaUI bağlayıcıları. |
 | **İyileştirme Doğruluğu** | **%73–84 kesinlik, %71–77 kapsam** | İki gerçek uygulamada (HandBrake, ShareX) ölçüldü, toplam 307 ablasyon senaryosu, varsayılan ağırlıklar. Silinmiş elemanlarda yanlış iyileştirme oranı %40.5–%57.1 ve LLM konsensüsüyle iyileşmiyor (dört canlı koşuda silinmiş elemanlardaki 34 oybirliği kararının 0'ı doğruydu) — tam aralık ve uygulamaya göre neden değiştiği için bkz. [docs/benchmark-calibration.md](docs/benchmark-calibration.md). |
 | **LLM Güvenlik Koruması** | **Hallucination Guard** | Eşleşmeyi uygulamadan önce aday kimliğini kısa listede doğrular. |
 

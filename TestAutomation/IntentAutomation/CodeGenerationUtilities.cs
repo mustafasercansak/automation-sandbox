@@ -8,7 +8,7 @@ namespace AutomationSandbox.IntentAutomation
     internal static class CodeGenerationUtilities
     {
         // Explicitly mirrors FlaUI.Core.Definitions.ControlType enum members to avoid a hard dependency
-        // on FlaUI.Core in IntentAutomation, keeping the library fully cross-platform (netstandard2.0;net8.0).
+        // on FlaUI.Core in IntentAutomation, keeping the library fully cross-platform (netstandard2.0;net10.0).
         // Validated against the real FlaUI.Core enum in ScenarioRunner's net48 test suite.
         //
         // ControlType.Unknown is deliberately NOT mirrored, which is why this holds 41 of the enum's 42

@@ -16,7 +16,7 @@ function Invoke-DotNet {
 Write-Host 'Building Desktop App Explorer Quickstart sample...'
 Invoke-DotNet @('build', $projectPath, '--configuration', 'Debug')
 
-$builtExe = Join-Path $PSScriptRoot 'bin\Debug\net8.0-windows\DesktopAppExplorerQuickstart.exe'
+$builtExe = Join-Path $PSScriptRoot 'bin\Debug\net10.0-windows\DesktopAppExplorerQuickstart.exe'
 
 # One GitHub Releases download is one network call, and a 5xx or a timeout from it is not a defect in the sample (#630): retry a
 # few times with a growing pause. A 404 is deliberately not retried: it means the pinned release was pruned upstream, which has to

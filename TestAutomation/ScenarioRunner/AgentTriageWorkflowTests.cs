@@ -128,9 +128,9 @@ namespace ScenarioRunner
         {
             var text = Script();
 
-            // The runner image carries SDK 10 too, so the tool project multi-targets and "dotnet run" needs --framework. The
-            // first real run of this workflow failed there and still looked like a finished run.
-            Assert.Contains("--framework net8.0", text);
+            // The framework is named explicitly so "dotnet run" never has to choose. The first real run of this workflow failed
+            // there (the tool then multi-targeted) and still looked like a finished run.
+            Assert.Contains("--framework net10.0", text);
             Assert.Contains("json.load(open(\"report.json\"))", text);
             Assert.Contains("code=2", text);
             Assert.True(text.IndexOf("json.load", StringComparison.Ordinal) < text.IndexOf("GITHUB_STEP_SUMMARY:-", StringComparison.Ordinal));

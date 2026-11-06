@@ -1,7 +1,7 @@
 using AutomationSandbox.Discovery;
 using AutomationSandbox.UiModel;
 
-// Windows/FlaUI-only - this project targets net8.0-windows and requires the real UIA COM APIs
+// Windows/FlaUI-only - this project targets net10.0-windows and requires the real UIA COM APIs
 // to actually run. It compiles (EnableWindowsTargeting) but cannot execute on Linux/macOS.
 internal static class Program
 {

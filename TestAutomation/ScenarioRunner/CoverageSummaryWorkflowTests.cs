@@ -13,7 +13,7 @@ namespace ScenarioRunner
             var workflow = File.ReadAllText(Path.Combine(RepositoryRoot(), ".github", "workflows", "ci.yml"));
 
             Assert.Contains("coverage-label: Windows net48", workflow, StringComparison.Ordinal);
-            Assert.Contains("coverage-label: Linux net8.0", workflow, StringComparison.Ordinal);
+            Assert.Contains("coverage-label: Linux net10.0", workflow, StringComparison.Ordinal);
             Assert.Contains("Discovery and FlaUI live UIA paths are absent by design", workflow, StringComparison.Ordinal);
             Assert.Contains("write-coverage-summary.ps1", workflow, StringComparison.Ordinal);
             Assert.Contains("if: always()", workflow, StringComparison.Ordinal);
@@ -26,7 +26,7 @@ namespace ScenarioRunner
         {
             // #289: coverlet.collector 8.0+ ships no .NET Framework-loadable collector, so the
             // net48 leg must collect via dotnet-coverage (static instrumentation, settings-
-            // filtered to repo assemblies) while the Linux net8.0 leg keeps XPlat/coverlet.
+            // filtered to repo assemblies) while the Linux net10.0 leg keeps XPlat/coverlet.
             var workflow = File.ReadAllText(Path.Combine(RepositoryRoot(), ".github", "workflows", "ci.yml"));
 
             Assert.Contains("Run tests with Code Coverage (Windows, dotnet-coverage)", workflow, StringComparison.Ordinal);
@@ -199,7 +199,7 @@ namespace ScenarioRunner
                 var result = RunPowerShell(
                     scriptPath,
                     Path.Combine(testDirectory, "missing-results"),
-                    "Linux net8.0",
+                    "Linux net10.0",
                     summaryPath,
                     "Discovery is absent by design.");
 
@@ -207,7 +207,7 @@ namespace ScenarioRunner
                     result.ExitCode == 0,
                     "Coverage summary script failed. stdout: " + result.StandardOutput + " stderr: " + result.StandardError);
                 var summary = File.ReadAllText(summaryPath);
-                Assert.Contains("## Code coverage — Linux net8.0", summary, StringComparison.Ordinal);
+                Assert.Contains("## Code coverage — Linux net10.0", summary, StringComparison.Ordinal);
                 Assert.Contains("Coverage report unavailable", summary, StringComparison.Ordinal);
             }
             finally

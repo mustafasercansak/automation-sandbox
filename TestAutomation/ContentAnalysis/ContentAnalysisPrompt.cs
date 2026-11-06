@@ -55,7 +55,7 @@ namespace AutomationSandbox.ContentAnalysis
             foreach (var passage in passages)
             {
                 // Dictionary<K,V>.TryAdd isn't available on netstandard2.0 (this project's target
-                // alongside net8.0), hence the explicit ContainsKey check rather than that helper.
+                // alongside net10.0), hence the explicit ContainsKey check rather than that helper.
                 if (!textBySelector.ContainsKey(passage.CssSelector))
                 {
                     textBySelector.Add(passage.CssSelector, passage.Text);
@@ -78,7 +78,7 @@ namespace AutomationSandbox.ContentAnalysis
                 // The null-forgiving operators below are safe given the IsNullOrEmpty checks just
                 // above - string.IsNullOrEmpty's [NotNullWhen] annotation isn't present on the
                 // netstandard2.0 reference assemblies this project also targets, so the compiler
-                // can't narrow it there the way it does on net8.0.
+                // can't narrow it there the way it does on net10.0.
                 if (string.IsNullOrEmpty(selector) || !textBySelector.TryGetValue(selector!, out var text) ||
                     string.IsNullOrEmpty(issueType) || string.IsNullOrEmpty(message))
                 {

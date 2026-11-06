@@ -98,7 +98,7 @@ The nine packages follow real dependency boundaries (cross-platform core vs. `ne
 | :--- | :--- | :--- |
 | Heal broken locators against a UI tree I capture myself | `AutomationSandbox.SelfHealing` | The heuristic scorer, `SelfHealingEngine`, locator repository, and JSON/HTML reports. Pulls `UiModel` + `LlmHealing` transitively. |
 | …and let an **LLM fallback** run when the heuristic isn't confident | *(nothing extra)* — register a provider from `AutomationSandbox.LlmHealing` | Ships transitively with `SelfHealing`; no network calls until you configure a provider ([opt-in, quorum-gated](docs/blog/llm-false-heal-study.md)). |
-| …and capture a live **Windows desktop** tree (FlaUI / UI Automation) | `+ AutomationSandbox.Discovery` | Windows-only, targets `net48;net8.0-windows` (+ `net10.0-windows` on a .NET 10 SDK). |
+| …and capture a live **Windows desktop** tree (FlaUI / UI Automation) | `+ AutomationSandbox.Discovery` | Windows-only, targets `net48;net10.0-windows`. |
 | Capture a **web DOM** snapshot / get Playwright locator suggestions | `AutomationSandbox.WebDiscovery` | Framework-agnostic DOM model and `PlaywrightLocatorEmitter`. |
 | …and **launch a browser** to capture a page with no hand-written Playwright test | `+ AutomationSandbox.PlaywrightLiveExploration` | Brings `Microsoft.Playwright`. |
 | Generate **Playwright / FlaUI test skeletons from an intent** | `AutomationSandbox.IntentAutomation` | Intent planning, DOM/desktop matching, locator recording, C#/TypeScript codegen. Pulls `WebDiscovery`. |
@@ -148,7 +148,7 @@ retroactively; only consumers upgrading past the freeze need to switch construct
 | **High-Level `SelfHealingEngine`** | ✅ Implemented | Configurable `HealingMode` (`Review` shipped default, `Observe`, `AutoHeal`, `FailClosed`). In `Review` (default), proposed candidates are routed to report telemetry without modifying locators or executing retries. In opt-in `AutoHeal`, repository auto-upsert and action retry only commit upon retry success. |
 | **Intent-Aware Healing** | ✅ Implemented | `TestIntent` metadata guiding LLM providers for refactoring-resilient healing. |
 | **Healing Reports & CI Artifacts** | ✅ Implemented | Schema-v8 JSON + HTML telemetry for every resolution attempt, including accepted, ambiguous, ownership-conflict, no-consensus, provider-error, and retry-failed outcomes. `AcceptedEvents` preserves an accepted-only compatibility view. |
-| **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees; core targets `netstandard2.0` / `net8.0` and runs cross-platform across Windows and Linux CI. |
+| **Synthetic Benchmarks** | ✅ Implemented | Pure logic benchmark tests on 3,000+ control trees; core targets `netstandard2.0` / `net10.0` and runs cross-platform across Windows and Linux CI. |
 | **WinForms & WPF Live Tests** | ✅ Implemented | Real UIA scenario tests against `WinFormsApp` and `WpfApp` on Windows CI. |
 | **Discovery Options & Telemetry** | ✅ Implemented | `DiscoveryOptions` (MaxDepth, MaxElements, Timeout, CancellationToken, IgnoredFilters). |
 | **Locator Repository JSON** | ✅ Implemented | Versioned repository DTOs/serializer, stable `LocatorKey`, healing history contract, and thread-safe file locking. |
@@ -173,7 +173,7 @@ retroactively; only consumers upgrading past the freeze need to switch construct
 
 **Platform breakdown:** Core heuristic engine: cross-platform. Desktop automation: Windows-only (FlaUI). Web automation: cross-platform (Playwright).
 
-The core logic (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`, `ContentAnalysis`, `IntentExecution`) targets `netstandard2.0`, `.NET 8`, and `.NET 10` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, intent planning, and cross-platform unit tests to execute on Linux, macOS, and Windows. CI runs on a matrix across both Windows (`windows-latest` for full suite including FlaUI) and Linux (`ubuntu-24.04` for cross-platform core and web suite).
+The core logic (`UiModel`, `SelfHealing`, `LlmHealing`, `WebDiscovery`, `IntentAutomation`, `PlaywrightLiveExploration`, `ContentAnalysis`, `IntentExecution`) targets `netstandard2.0` and `.NET 10` with **zero FlaUI/Windows dependency**, allowing the heuristic engine, scoring, intent planning, and cross-platform unit tests to execute on Linux, macOS, and Windows. CI runs on a matrix across both Windows (`windows-latest` for full suite including FlaUI) and Linux (`ubuntu-24.04` for cross-platform core and web suite).
 
 ```mermaid
 flowchart TB
@@ -185,7 +185,7 @@ flowchart TB
         BrokenLoc["Broken Locator (Stale AutomationId)"]
         App --> Walker --> Snapshot
     end
-    subgraph STAGE2 ["2. Heuristic Engine (netstandard2.0 / .NET 8 / .NET 10)"]
+    subgraph STAGE2 ["2. Heuristic Engine (netstandard2.0 / .NET 10)"]
         direction TB
         Resolver["SelfHealingResolver"]
         Pruner["Candidate Pruner (MinCandidateScore >= 0.05)"]
@@ -730,14 +730,14 @@ The test suite in `ScenarioRunner` covers all core layers with automated asserti
 | **Intent Automation (Web)** | Deterministic + LLM-backed planning (with guarded fallback), DOM candidate matching/exploration, locator recording, Playwright C#/TypeScript generation, and flow reports | [IntentAutomationPipelineTests](TestAutomation/ScenarioRunner/IntentAutomationPipelineTests.cs), [IntentPlannerTests](TestAutomation/ScenarioRunner/IntentPlannerTests.cs), [LlmIntentPlannerTests](TestAutomation/ScenarioRunner/LlmIntentPlannerTests.cs), [IntentExplorationBridgeTests](TestAutomation/ScenarioRunner/IntentExplorationBridgeTests.cs), [IntentLocatorRepositoryRecorderTests](TestAutomation/ScenarioRunner/IntentLocatorRepositoryRecorderTests.cs), [IntentFlowReportTests](TestAutomation/ScenarioRunner/IntentFlowReportTests.cs), [PlaywrightCSharpTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightCSharpTestGeneratorTests.cs), [PlaywrightTypeScriptTestGeneratorTests](TestAutomation/ScenarioRunner/PlaywrightTypeScriptTestGeneratorTests.cs) |
 | **Intent Automation (Desktop)** | `UiElementInfo` candidate matching/exploration, locator recording, xUnit + FlaUI test skeleton generation, and pipeline orchestration | [IntentDesktopExplorationBridgeTests](TestAutomation/ScenarioRunner/IntentDesktopExplorationBridgeTests.cs), [IntentDesktopLocatorRepositoryRecorderTests](TestAutomation/ScenarioRunner/IntentDesktopLocatorRepositoryRecorderTests.cs), [FlaUiCSharpTestGeneratorTests](TestAutomation/ScenarioRunner/FlaUiCSharpTestGeneratorTests.cs), [IntentDesktopAutomationPipelineTests](TestAutomation/ScenarioRunner/IntentDesktopAutomationPipelineTests.cs) |
 | **Synthetic Benchmarks** | 3,000+ control tree performance, $O(N)$ execution scaling | [SyntheticTreeBenchmarkTests](TestAutomation/ScenarioRunner/SyntheticTreeBenchmarkTests.cs) |
-| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net8`/`net10`) apps | [MainFormScenarioTests](TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
+| **Live UIA Scenarios** | End-to-end FlaUI testing against WinForms (`net48`) and WPF (`net10`) apps | [MainFormScenarioTests](TestAutomation/ScenarioRunner/MainFormScenarioTests.cs), [WpfMainWindowScenarioTests](TestAutomation/ScenarioRunner/WpfMainWindowScenarioTests.cs), [EndToEndDemoScenarioTests](TestAutomation/ScenarioRunner/EndToEndDemoScenarioTests.cs) |
 | **Live Page Exploration** | Real headless-Chromium browser launch, navigation, and DOM capture via `PlaywrightLiveExplorer` against a local HTML fixture | [PlaywrightLiveExplorerTests](TestAutomation/ScenarioRunner/PlaywrightLiveExplorerTests.cs) |
 | **Long-Lived Web Sessions** | Multi-navigation page reuse, console/network-response/request-failure/page-error capture, the full interaction/assertion vocabulary (select/check/uncheck/hover/upload/keypress/wait-for-visible, plus visibility/checked/text/value/URL reads), and storage-state persistence round-tripping across sessions via `PlaywrightWebSession` against real headless Chromium (including a real loopback HTTP server for the storage-state case) | [PlaywrightWebSessionTests](TestAutomation/ScenarioRunner/PlaywrightWebSessionTests.cs) |
 | **Content Quality Analysis** | Every heuristic's true-positive and true-negative case, ancestor/descendant text-duplication dedup, LLM-provider composition via a fake provider, hallucinated-selector rejection, and the Claude provider's no-API-key degrade path | [ContentAnalysisTests](TestAutomation/ScenarioRunner/ContentAnalysisTests.cs) |
 | **Dictionary Spell Check** | Misspelling detection with suggestions, affixed forms, any-dictionary-accepts for mixed-language pages, missing Turkish diacritics, every false-positive guard (URLs, acronyms, camelCase, identifier fragments, allowlist, typographic apostrophe), code-block skipping, and the HTML badge — against tiny committed fixture dictionaries; real Turkish/English dictionaries are verified by the follow-up site-audit Action | [SpellingCheckerTests](TestAutomation/ScenarioRunner/SpellingCheckerTests.cs) |
 | **Site Audit CLI** | Argument parsing and defaults, language-code and URL validation (a code that could name a path outside the dictionary directory is refused), allow-list files with comments, limits, pinned dictionary URLs; the end-to-end behavior against the real Turkish and English dictionaries runs in the `Site Audit CLI` CI job | [SiteAuditOptionsTests](TestAutomation/ScenarioRunner/SiteAuditOptionsTests.cs) |
 | **Live Intent Execution** | A full navigate/fill/click/assert flow and the remaining action vocabulary (select/check/uncheck/hover/upload/keypress/wait) executed end to end against real headless Chromium, abort-on-first-failure, the `NotVisible`/hidden-element limitation, and page-level URL assertions that need no element match | [IntentWebExecutorTests](TestAutomation/ScenarioRunner/IntentWebExecutorTests.cs) |
-| **CI Coverage Visibility** | Separate Windows `net48` and Linux `net8.0` step summaries, overall and per-assembly rows, missing-report handling, artifact retention | [CoverageSummaryWorkflowTests](TestAutomation/ScenarioRunner/CoverageSummaryWorkflowTests.cs) |
+| **CI Coverage Visibility** | Separate Windows `net48` and Linux `net10.0` step summaries, overall and per-assembly rows, missing-report handling, artifact retention | [CoverageSummaryWorkflowTests](TestAutomation/ScenarioRunner/CoverageSummaryWorkflowTests.cs) |
 | **Package Security Audit** | `NuGetAudit` build-break gate on High/Critical advisories, vulnerable/outdated-package step summaries on both matrix legs, missing/malformed-report handling | [SecurityAuditWorkflowTests](TestAutomation/ScenarioRunner/SecurityAuditWorkflowTests.cs) |
 
 ### Running Code Coverage Locally
@@ -749,7 +749,7 @@ dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --collect:"XPlat
 ```
 
 CI renders the collected Cobertura data into each matrix job's GitHub Step Summary. Windows
-`net48` and Linux `net8.0` are labelled and reported separately, with overall and per-assembly
+`net48` and Linux `net10.0` are labelled and reported separately, with overall and per-assembly
 line/branch coverage. The Linux leg collects with coverlet (`XPlat Code Coverage`); the Windows
 `net48` leg uses Microsoft's `dotnet-coverage` tool instead, because coverlet 8.0+ no longer
 ships a .NET Framework-loadable collector (#289). The figures are visibility aids only: they
@@ -783,7 +783,7 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 | Application | Problematic Control | Cause / Framework Behavior | How Self-Healing Solves It |
 | :--- | :--- | :--- | :--- |
 | **WinForms** (`net48`) | `panel1` | WinForms automatically surfaces `Control.Name` as UIA `AutomationId`. Auto-generated names (e.g. `panel1`) are frequently left unrenamed in legacy codebases. | `SelfHealingResolver` ignores `AutomationId` during scoring and matches the panel using parent context, child count, and screen bounding box. |
-| **WPF** (`net8.0-windows` / `net10.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF **never** infers `AutomationId` from `x:Name`. Unless `AutomationProperties.AutomationId` is set explicitly in XAML, `AutomationId` comes back empty. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
+| **WPF** (`net10.0-windows`) | `CompanyPanel` (`GroupBox`) | WPF **never** infers `AutomationId` from `x:Name`. Unless `AutomationProperties.AutomationId` is set explicitly in XAML, `AutomationId` comes back empty. | `SelfHealingResolver` matches `CompanyPanel` using `ControlType.Group`, parent/sibling position, and header label text. |
 
 ---
 
@@ -792,35 +792,35 @@ Both test applications (`WinFormsApp` and `WpfApp`) implement the same customer 
 ```
 AutomationSandbox.sln
 ├── WinFormsApp/            .NET Framework 4.8 WinForms application under test
-├── WpfApp/                 .NET 8 / .NET 10 WPF application under test
+├── WpfApp/                 .NET 10 WPF application under test
 ├── TestAutomation/
-│   ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net8.0, net10.0)
-│   ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48, net8.0-windows, net10.0-windows)
-│   ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net8.0, net10.0)
-│   ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net8.0, net10.0)
-│   ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net8.0, net10.0)
-│   ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net8.0, net10.0)
-│   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net8.0, net10.0)
-│   ├── ContentAnalysis/    Content-quality checks over a captured WebElementInfo tree: heuristics + keyless dictionary spell checker + optional single-provider LLM review (netstandard2.0, net8.0, net10.0)
-│   ├── IntentExecution/    IntentWebExecutor: plans and actually executes an intent scenario against a live PlaywrightWebSession (netstandard2.0, net8.0, net10.0)
+│   ├── UiModel/            Shared UiElementInfo, CandidateScore, ScoreComponents & UiElementSnapshot (netstandard2.0, net10.0)
+│   ├── Discovery/          Live UI tree walker via FlaUI.Core & FlaUI.UIA3 with DiscoveryOptions/Result (net48, net10.0-windows)
+│   ├── SelfHealing/        Heuristic/batch resolver, explainable scoring & shortlist logic (netstandard2.0, net10.0)
+│   ├── LlmHealing/         HttpLlmHealingProvider base, LlmProviderFactory, Claude, Gemini, OpenAI-compatible cloud providers (including Cloudflare) & offline Ollama (netstandard2.0, net10.0)
+│   ├── WebDiscovery/       Playwright DOM snapshot mapping, iframe/shadow DOM capture & locator suggestions (netstandard2.0, net10.0)
+│   ├── IntentAutomation/   Cross-platform intent pipeline & Playwright/FlaUI test generators (netstandard2.0, net10.0)
+│   ├── PlaywrightLiveExploration/  Live browser page capture via Microsoft.Playwright .NET SDK (netstandard2.0, net10.0)
+│   ├── ContentAnalysis/    Content-quality checks over a captured WebElementInfo tree: heuristics + keyless dictionary spell checker + optional single-provider LLM review (netstandard2.0, net10.0)
+│   ├── IntentExecution/    IntentWebExecutor: plans and actually executes an intent scenario against a live PlaywrightWebSession (netstandard2.0, net10.0)
 │   ├── SelfHealingCli/     AutomationSandbox.Cli: dotnet tool wrapping SelfHealingResolver for non-.NET callers — JSON in, JSON out, live on nuget.org (`dotnet tool install -g AutomationSandbox.Cli --prerelease`) — see AGENTS.md #507/#509/#511. JSON inputs/outputs follow a published schema (`docs/schemas/ui-element-info.schema.json`, #520). `.github/actions/heal/` wraps it as a composite GitHub Action (one `uses:` line) for any repo's CI.
 │   ├── SiteAuditCli/       AutomationSandbox.SiteAudit: dotnet tool (`automation-sandbox-audit`) that crawls a URL and reports typos with Hunspell dictionaries, no API key (#540) — packed from source, not on nuget.org yet
-│   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net8.0)
-│   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net8.0 on Windows, net8.0 on Linux)
+│   ├── NUnitFixtureTests/  NUnit test fixture helper & consumer test suite (net48, net10.0)
+│   └── ScenarioRunner/     xUnit test suite: live UIA, self-healing, web discovery, intent automation & live browser coverage (net48 + net10.0 on Windows, net10.0 on Linux)
 └── samples/
-    ├── CalibrationCli/     CLI calibration tool for evaluating dataset ablation benchmarks (.NET 8)
-    ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 8)
-    ├── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 8)
-    ├── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 8)
-    ├── SiteContentAuditQuickstart/  SiteCrawler + ContentAnalyzer + ContentAnalysisReportFileSink: URL in, JSON/HTML content-quality report out (.NET 8)
-    └── DesktopAppExplorerQuickstart/  ApplicationConnector + UiTreeWalker against any real Windows desktop app by exe path or process name (net8.0-windows, Windows-only)
+    ├── CalibrationCli/     CLI calibration tool for evaluating dataset ablation benchmarks (.NET 10)
+    ├── HeuristicHealingQuickstart/  Console quickstart validating the published NuGet package (.NET 10)
+    ├── PlaywrightEndToEndQuickstart/  End-to-end web test sample using Playwright (.NET 10)
+    ├── WebObservationQuickstart/  PlaywrightWebSession + ContentAnalysis quickstart against a real local HTTP server (.NET 10)
+    ├── SiteContentAuditQuickstart/  SiteCrawler + ContentAnalyzer + ContentAnalysisReportFileSink: URL in, JSON/HTML content-quality report out (.NET 10)
+    └── DesktopAppExplorerQuickstart/  ApplicationConnector + UiTreeWalker against any real Windows desktop app by exe path or process name (net10.0-windows, Windows-only)
 ```
 
 ---
 
 ## 🚀 Synthetic Benchmark Performance
 
-The core logic operates purely on `netstandard2.0` / `.NET 8` / `.NET 10` in-memory trees without requiring Windows UIA COM hooks.
+The core logic operates purely on `netstandard2.0` / `.NET 10` / `.NET 10` in-memory trees without requiring Windows UIA COM hooks.
 
 `SyntheticTreeBenchmarkTests` exercises the heuristic engine against a synthetic UI tree containing **3,000+ candidate controls**:
 
@@ -911,7 +911,7 @@ Work is now tracked through GitHub milestones rather than the original M1–M6 s
 
 ### Requirements
 - **Windows** (for FlaUI.UIA3 / WinForms live scenario execution).
-- **.NET SDK 8.0 / .NET SDK 10.0** and .NET Framework 4.8 Developer Pack.
+- **.NET SDK 10.0** and .NET Framework 4.8 Developer Pack.
 
 ### Execution Commands
 

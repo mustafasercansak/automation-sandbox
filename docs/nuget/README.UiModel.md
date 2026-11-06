@@ -11,7 +11,6 @@ dotnet add package AutomationSandbox.UiModel --prerelease
 ## Target frameworks
 
 - `netstandard2.0`
-- `net8.0`
 - `net10.0`
 
 ## Typical use

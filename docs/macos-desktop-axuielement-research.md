@@ -161,7 +161,7 @@ session is enough. It is the main reason this stays research-tier.
 
 Mirrors `AutomationSandbox.Discovery` (Windows) so the healing engine sees the same `UiElementInfo`:
 
-- **New package `AutomationSandbox.MacDiscovery`**, `net8.0` (macOS). `UiModel` stays dependency-free. The package
+- **New package `AutomationSandbox.MacDiscovery`**, `net10.0` (macOS). `UiModel` stays dependency-free. The package
   carries the compiled `axdump` Swift helper (universal binary) as content; no unsafe C# (Option B, §3).
 - **`AxApplicationConnector`** — resolves the target app's pid (`NSRunningApplication` by bundle id, or by
   process name), checks `AXIsProcessTrusted` and surfaces a clear "grant Accessibility permission" exception if

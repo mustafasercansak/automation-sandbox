@@ -1,8 +1,8 @@
 # Site Content Audit Quickstart / Site İçerik Denetimi Hızlı Başlangıç
 
-This .NET 8 console sample points `SiteCrawler` at a URL, runs `ContentAnalyzer` over every page it visits, and writes the accumulated findings through `ContentAnalysisReportFileSink` to a JSON Lines log plus an HTML dashboard — the full "give it a URL, find the writing mistakes, report them" flow end to end.
+This .NET 10 console sample points `SiteCrawler` at a URL, runs `ContentAnalyzer` over every page it visits, and writes the accumulated findings through `ContentAnalysisReportFileSink` to a JSON Lines log plus an HTML dashboard — the full "give it a URL, find the writing mistakes, report them" flow end to end.
 
-Bu .NET 8 console örneği, `SiteCrawler`'ı bir URL üzerinde çalıştırır, ziyaret ettiği her sayfada `ContentAnalyzer`'ı işletir ve biriken bulguları `ContentAnalysisReportFileSink` ile bir JSON Lines günlüğüne ve bir HTML panosuna yazar — "bir URL ver, yazım hatalarını bul, raporla" akışının uçtan uca hâli.
+Bu .NET 10 console örneği, `SiteCrawler`'ı bir URL üzerinde çalıştırır, ziyaret ettiği her sayfada `ContentAnalyzer`'ı işletir ve biriken bulguları `ContentAnalysisReportFileSink` ile bir JSON Lines günlüğüne ve bir HTML panosuna yazar — "bir URL ver, yazım hatalarını bul, raporla" akışının uçtan uca hâli.
 
 ---
 
@@ -21,10 +21,10 @@ With no arguments, the sample audits a tiny bundled 3-page fixture site (`wwwroo
 
 This sample launches a real headless Chromium via the `Microsoft.Playwright` .NET SDK.
 If browsers aren't already cached on your machine, do a one-time download first (after
-a Debug build): `pwsh samples/SiteContentAuditQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+a Debug build): `pwsh samples/SiteContentAuditQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium`.
 / Bu örnek, `Microsoft.Playwright` .NET SDK'sı üzerinden gerçek bir headless Chromium
 başlatır. Tarayıcılar makinenizde önbelleğe alınmamışsa, önce (bir Debug build sonrası)
-tek seferlik bir indirme yapın: `pwsh samples/SiteContentAuditQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+tek seferlik bir indirme yapın: `pwsh samples/SiteContentAuditQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium`.
 
 Audit the bundled fixture site (no arguments) / Ekli örnek siteyi denetler (argümansız):
 

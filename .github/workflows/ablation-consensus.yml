@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   evaluate:
-    name: Live consensus on ablated locators (Linux net8.0)
+    name: Live consensus on ablated locators (Linux net10.0)
     runs-on: ubuntu-24.04
     # Observed 10m58s-27m25s across recent runs: 67 scenarios x configured providers with
     # deliberate pacing and Groq rate-limit backoff (inputs can push this further via
@@ -36,13 +36,12 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
+          dotnet-version: 10.0.x
 
       - name: Build ScenarioRunner
         run: |
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
-          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-restore
 
       - name: Run live consensus evaluation
         env:
@@ -74,7 +73,7 @@ jobs:
           NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_MODEL: ${{ vars.CLOUDFLARE_MODEL }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LocatorAblationTests.HandBrakeFixture_LlmConsensus_LiveEvaluation" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~LocatorAblationTests.HandBrakeFixture_LlmConsensus_LiveEvaluation" --logger "console;verbosity=normal"
 
       # The run is not reproducible - providers are non-deterministic - so the raw per-provider votes
       # are the only auditable record of what was actually answered.

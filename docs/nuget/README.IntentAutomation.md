@@ -11,7 +11,6 @@ dotnet add package AutomationSandbox.IntentAutomation --prerelease
 ## Target frameworks
 
 - `netstandard2.0`
-- `net8.0`
 - `net10.0`
 
 ## Typical use
@@ -28,7 +27,7 @@ The pipeline consumes web snapshots (`WebElementInfo`, from `AutomationSandbox.P
 
 - `AutomationSandbox.WebDiscovery` — DOM model and capture script (transitive).
 - `AutomationSandbox.PlaywrightLiveExploration` — live web page capture for the web pipeline.
-- `AutomationSandbox.Discovery` — live desktop tree capture for the desktop pipeline (net48, net8.0-windows; Windows only).
+- `AutomationSandbox.Discovery` — live desktop tree capture for the desktop pipeline (net48, net10.0-windows; Windows only).
 
 ## Documentation
 

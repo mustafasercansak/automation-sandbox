@@ -6,7 +6,7 @@ namespace ScenarioRunner
     // A plain class rather than a positional record on purpose: ScenarioRunner also targets
     // net48, where a record's generated `init` accessors need
     // System.Runtime.CompilerServices.IsExternalInit - a type that only exists from .NET 5
-    // onwards. Using a record here compiles cleanly on net8.0 (so it passes on the Linux CI
+    // onwards. Using a record here compiles cleanly on net10.0 (so it passes on the Linux CI
     // leg) and fails the Windows leg with six CS0518 errors. Every other DTO in this codebase
     // is a plain class for the same cross-platform reason.
     public sealed class EvaluationScenario

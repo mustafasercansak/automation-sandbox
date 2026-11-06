@@ -1,12 +1,12 @@
 # Heuristic Healing Quickstart / Sezgisel Healing Hızlı Başlangıç
 
-This .NET 8 console app consumes `AutomationSandbox.SelfHealing` **from nuget.org**. It
+This .NET 10 console app consumes `AutomationSandbox.SelfHealing` **from nuget.org**. It
 contains no `ProjectReference` back to this repository. The scenario starts with a stale
 checkout-button locator, retries after an `ElementNotFoundException`, selects the renamed
 candidate with the deterministic heuristic resolver, and verifies that the successful
 retry was persisted.
 
-Bu .NET 8 console uygulaması `AutomationSandbox.SelfHealing` paketini **nuget.org'dan**
+Bu .NET 10 console uygulaması `AutomationSandbox.SelfHealing` paketini **nuget.org'dan**
 tüketir; repository içindeki projelere `ProjectReference` içermez. Senaryo eski bir ödeme
 butonu locator'ıyla başlar, `ElementNotFoundException` sonrasında yeniden dener, yeniden
 adlandırılmış adayı deterministik sezgisel resolver ile seçer ve başarılı retry'ın kalıcı

@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   consensus-evaluation:
-    name: Multi-Provider Consensus Evaluation (Linux net8.0)
+    name: Multi-Provider Consensus Evaluation (Linux net10.0)
     runs-on: ubuntu-24.04
     # Observed 1m26s-2m36s across the last 5 nightly runs: two live-call test steps
     # (gate + broader evaluation) against up to 11 configured providers in parallel, each
@@ -36,14 +36,12 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Build ScenarioRunner
         run: |
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
-          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-restore
 
       # Keys are secrets; model and endpoint overrides are repository variables. Both have to be
       # exported or LlmProviderFactory silently falls back to its compiled-in defaults - which is
@@ -88,7 +86,7 @@ jobs:
           MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
           NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
           OLLAMA_CLOUD_MODEL: ${{ vars.OLLAMA_CLOUD_MODEL }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~LiveConsensusGateTests.LiveConsensusGate_TwoOfConfiguredPoolAgreeOnCorrectCandidate" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~LiveConsensusGateTests.LiveConsensusGate_TwoOfConfiguredPoolAgreeOnCorrectCandidate" --logger "console;verbosity=normal"
 
       - name: Run multi-provider consensus evaluation
         env:
@@ -126,7 +124,7 @@ jobs:
           MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
           NVIDIA_MODEL: ${{ vars.NVIDIA_MODEL }}
           OLLAMA_CLOUD_MODEL: ${{ vars.OLLAMA_CLOUD_MODEL }}
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
 
       - name: Upload Consensus Evaluation Report
         if: always()

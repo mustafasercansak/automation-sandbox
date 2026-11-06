@@ -32,9 +32,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Build Solution
         run: |
@@ -72,9 +70,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Download windows-2022 Survey Artifact
         uses: actions/download-artifact@v8
@@ -88,10 +84,10 @@ jobs:
           name: survey-trees-windows-2025
           path: TestResults/survey-trees/windows-2025
 
-      - name: Build ScenarioRunner (Linux net8.0)
+      - name: Build ScenarioRunner (Linux net10.0)
         run: |
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
-          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-restore
 
       - name: Run Cross-Image Survey Comparison
         env:
@@ -100,4 +96,4 @@ jobs:
           SURVEY_REPORT_2025: ${{ github.workspace }}/TestResults/survey-trees/windows-2025/survey-report-windows-2025.json
           TREES_DIR_2022: ${{ github.workspace }}/TestResults/survey-trees/windows-2022
           TREES_DIR_2025: ${{ github.workspace }}/TestResults/survey-trees/windows-2025
-        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-build --filter "FullyQualifiedName~ApplicationSurveyTests.RunLiveSurveyComparison" --logger "console;verbosity=normal"
+        run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~ApplicationSurveyTests.RunLiveSurveyComparison" --logger "console;verbosity=normal"

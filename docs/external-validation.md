@@ -43,7 +43,7 @@ This is the short path for someone who maintains a FlaUI desktop or Playwright w
 
 **Path A: any language, no .NET project needed.** Use the `automation-sandbox-heal` CLI on two JSON snapshots of the same element, one from the old app version and one tree from the new version.
 
-1. Install the CLI (needs the .NET 8 runtime on the machine): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
+1. Install the CLI (needs the .NET 10 runtime on the machine): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
 2. Capture snapshots with a reference script, or produce the same JSON shape from your own tooling (see the [JSON Schema](schemas/ui-element-info.schema.json)):
    - Web: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), run `npm install` and `npx playwright install chromium` once in that folder, then `node capture.mjs <url> expected.json --selector "<css>"` on the old version and `node capture.mjs <url> tree.json` on the new one.
    - Windows desktop: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), run `pip install -r requirements.txt` once in that folder, then `python capture.py <app.exe> expected.json --name "<Name>"` on the old version and `python capture.py <app.exe> tree.json` on the new one. Add `--attach` to connect to an already running process by name instead of launching it.
@@ -98,7 +98,7 @@ Bu, bir FlaUI masaüstü veya Playwright web test paketi sürdüren, motoru dene
 
 **A Yolu: herhangi bir dil, .NET projesi gerekmez.** Aynı elemanın iki JSON anlık görüntüsü üzerinde `automation-sandbox-heal` CLI'sini kullanın: biri eski uygulama sürümünden, biri yeni sürümden alınan ağaç.
 
-1. CLI'yi kurun (makinede .NET 8 runtime gerekir): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
+1. CLI'yi kurun (makinede .NET 10 runtime gerekir): `dotnet tool install -g AutomationSandbox.Cli --prerelease`
 2. Bir referans betikle anlık görüntüleri yakalayın veya kendi araçlarınızla aynı JSON şeklini üretin ([JSON Schema](schemas/ui-element-info.schema.json)):
    - Web: [`examples/js-playwright-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/js-playwright-capture), o klasörde bir kez `npm install` ve `npx playwright install chromium` çalıştırın, sonra eski sürümde `node capture.mjs <url> expected.json --selector "<css>"`, yeni sürümde `node capture.mjs <url> tree.json`.
    - Windows masaüstü: [`examples/python-pywinauto-capture`](https://github.com/mustafasercansak/automation-sandbox/tree/main/examples/python-pywinauto-capture), o klasörde bir kez `pip install -r requirements.txt` çalıştırın, sonra eski sürümde `python capture.py <app.exe> expected.json --name "<Name>"`, yeni sürümde `python capture.py <app.exe> tree.json`. Uygulamayı başlatmak yerine zaten çalışan bir işleme ada göre bağlanmak için `--attach` ekleyin.

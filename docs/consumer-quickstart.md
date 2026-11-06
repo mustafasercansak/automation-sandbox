@@ -13,7 +13,7 @@ heuristic engine, so it needs no API key, browser, or Windows host.
 
 ### 1. Prerequisites
 
-Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later and
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later and
 confirm it is available:
 
 ```powershell
@@ -27,7 +27,7 @@ Create an empty console application and add the current prerelease explicitly:
 ```powershell
 mkdir automation-sandbox-first-run
 cd automation-sandbox-first-run
-dotnet new console --framework net8.0
+dotnet new console --framework net10.0
 dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 
@@ -183,7 +183,7 @@ sezgisel motoru kullandığından API anahtarı, tarayıcı veya Windows host ge
 
 ### 1. Gereksinimler
 
-[.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) veya daha yeni bir sürümü
+[.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) veya daha yeni bir sürümü
 kurun ve erişilebilir olduğunu doğrulayın:
 
 ```powershell
@@ -197,7 +197,7 @@ Boş bir console uygulaması oluşturun ve mevcut prerelease sürümünü açık
 ```powershell
 mkdir automation-sandbox-first-run
 cd automation-sandbox-first-run
-dotnet new console --framework net8.0
+dotnet new console --framework net10.0
 dotnet add package AutomationSandbox.SelfHealing --prerelease
 ```
 

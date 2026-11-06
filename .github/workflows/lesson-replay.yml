@@ -57,7 +57,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Validate the inputs
         shell: bash
@@ -80,7 +80,7 @@ jobs:
           # One index, closed before the latest case date; the test then cuts it again per case.
           asof=$(python3 -c 'import json; print(max(c["asOf"] for c in json.load(open("TestAutomation/ScenarioRunner/Fixtures/lessons-replay/cases.json"))["cases"]))')
           [[ "$asof" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "the latest case date is not a date"; exit 2; }
-          dotnet run --project TestAutomation/AgentCli -c Release --framework net8.0 -- \
+          dotnet run --project TestAutomation/AgentCli -c Release --framework net10.0 -- \
             lessons build --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/lessons-index.json" --before "$asof"
 
       - name: Run the replay
@@ -99,7 +99,7 @@ jobs:
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
           OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
         run: |
-          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net8.0 -c Debug \
+          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net10.0 -c Debug \
             --filter "FullyQualifiedName~LessonReplayTests.RunLessonReplay_LiveAgainstConfiguredModels" \
             --logger "console;verbosity=normal"
 

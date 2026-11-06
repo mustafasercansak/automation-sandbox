@@ -1,8 +1,8 @@
 # Playwright End-to-End Self-Healing & Safety Sample / Playwright Uçtan Uca Self-Healing ve Güvenlik Örneği
 
-This .NET 8 console sample launches real headless Chromium via the `Microsoft.Playwright` .NET SDK to demonstrate the full self-healing and false-heal avoidance pipeline across two versions of an actual web application (`v1.html` and `v2.html`).
+This .NET 10 console sample launches real headless Chromium via the `Microsoft.Playwright` .NET SDK to demonstrate the full self-healing and false-heal avoidance pipeline across two versions of an actual web application (`v1.html` and `v2.html`).
 
-Bu .NET 8 console örneği, `Microsoft.Playwright` .NET SDK kullanarak gerçek bir headless Chromium başlatır ve iki uygulama sürümü (`v1.html` ve `v2.html`) üzerinde uçtan uca self-healing ve false-heal önleme hattını gösterir.
+Bu .NET 10 console örneği, `Microsoft.Playwright` .NET SDK kullanarak gerçek bir headless Chromium başlatır ve iki uygulama sürümü (`v1.html` ve `v2.html`) üzerinde uçtan uca self-healing ve false-heal önleme hattını gösterir.
 
 ---
 
@@ -28,10 +28,10 @@ Bu .NET 8 console örneği, `Microsoft.Playwright` .NET SDK kullanarak gerçek b
 
 This sample launches a real headless Chromium via the `Microsoft.Playwright` .NET SDK.
 If browsers aren't already cached on your machine, do a one-time download first (after
-a Debug build): `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+a Debug build): `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium`.
 / Bu örnek, `Microsoft.Playwright` .NET SDK'sı üzerinden gerçek bir headless Chromium
 başlatır. Tarayıcılar makinenizde önbelleğe alınmamışsa, önce (bir Debug build sonrası)
-tek seferlik bir indirme yapın: `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium`.
+tek seferlik bir indirme yapın: `pwsh samples/PlaywrightEndToEndQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium`.
 
 Single command from repository root / Depo kökünden tek bir komutla:
 

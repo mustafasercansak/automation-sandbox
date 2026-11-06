@@ -28,9 +28,9 @@ jobs:
             # for a cold runner and retried LLM calls.
             timeout-minutes: 35
           - os: ubuntu-24.04
-            framework: net8.0
+            framework: net10.0
             name: Linux (Cross-Platform Core & Web Suite)
-            coverage-label: Linux net8.0
+            coverage-label: Linux net10.0
             coverage-note: Discovery and FlaUI live UIA paths are absent by design because they are net48/Windows-only.
             run-flaui: false
             audit-target: TestAutomation/ScenarioRunner/ScenarioRunner.csproj
@@ -74,9 +74,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       # On Windows, build the full solution (which produces WinFormsApp.exe needed by live FlaUI tests).
       - name: Build Solution (Windows)
@@ -90,7 +88,7 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           dotnet restore TestAutomation/ScenarioRunner/ScenarioRunner.csproj
-          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net8.0 --no-restore
+          dotnet build TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-restore
 
       # Package security audit (#223): reports every vulnerable and outdated package to
       # the step summary. This is visibility only - the actual merge gate is NuGetAudit
@@ -255,7 +253,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # Per-PR check: the sample's Program.cs still builds and runs against the
       # CURRENT engine source (PackageReference swapped for ProjectReference).
@@ -278,7 +276,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # Build once so the generated playwright.ps1 install script exists in the sample's
       # own build output before verify.ps1 runs it via `dotnet run`.
@@ -287,7 +285,7 @@ jobs:
 
       - name: Install Playwright Chromium (one-time browser download for the sample's live run)
         shell: pwsh
-        run: pwsh ./samples/PlaywrightEndToEndQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium
+        run: pwsh ./samples/PlaywrightEndToEndQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium
 
       - name: Run sample verification
         shell: pwsh
@@ -305,7 +303,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # Build once so the generated playwright.ps1 install script exists in the sample's
       # own build output before verify.ps1 runs it via `dotnet run`.
@@ -314,7 +312,7 @@ jobs:
 
       - name: Install Playwright Chromium (one-time browser download for the sample's live run)
         shell: pwsh
-        run: pwsh ./samples/WebObservationQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium
+        run: pwsh ./samples/WebObservationQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium
 
       - name: Run sample verification
         shell: pwsh
@@ -332,7 +330,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # Build once so the generated playwright.ps1 install script exists in the sample's
       # own build output before verify.ps1 runs it via `dotnet run`.
@@ -341,7 +339,7 @@ jobs:
 
       - name: Install Playwright Chromium (one-time browser download for the sample's live run)
         shell: pwsh
-        run: pwsh ./samples/SiteContentAuditQuickstart/bin/Debug/net8.0/playwright.ps1 install chromium
+        run: pwsh ./samples/SiteContentAuditQuickstart/bin/Debug/net10.0/playwright.ps1 install chromium
 
       # No arguments: audits the bundled fixture site, not a real URL, so this stays
       # network-independent and deterministic like every other required PR check.
@@ -368,7 +366,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Run sample verification against Character Map and Registry Editor
         shell: pwsh
@@ -386,7 +384,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Run SelfHealingTestBase under the real NUnit runner
         run: dotnet test TestAutomation/NUnitFixtureTests/NUnitFixtureTests.csproj --configuration Debug --logger "console;verbosity=normal"
@@ -403,7 +401,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # docs/public-api.json is a committed artifact, not derived at build time, so
       # nothing previously caught it drifting from source - it was only ever regenerated
@@ -430,7 +428,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Run calibration CLI verification
         shell: pwsh
@@ -450,7 +448,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Pack, install, and run the packed tool against a fixture
         shell: pwsh
@@ -461,8 +459,7 @@ jobs:
     runs-on: ubuntu-24.04
     # Packs and installs the real tool, installs Chromium through the tool itself, downloads the
     # pinned REAL Turkish and English dictionaries, and audits a local fixture site with planted
-    # typos (#540). SDK 10 is installed next to SDK 8 so the net10.0 build and a multi-targeted
-    # tool pack are exercised here, not assumed.
+    # typos (#540). SDK 10 builds and packs the tool here, so the net10.0 pack is exercised, not assumed.
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -471,9 +468,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Pack, install, and run the packed tool against a fixture site
         shell: pwsh
@@ -484,8 +479,7 @@ jobs:
     runs-on: ubuntu-24.04
     # Packs and installs the real tool and checks the exit codes that need no network, no key and no token (#585).
     # The path from an issue to a proposal is covered by the unit tests with a stub GitHub and fake models; a real
-    # run needs real keys and is not made here. SDK 10 is installed next to SDK 8 so a multi-targeted pack is
-    # exercised, as for the other tools.
+    # run needs real keys and is not made here. SDK 10 builds and packs the tool here, as for the other tools.
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -494,9 +488,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Pack, install, and run the packed tool
         shell: pwsh
@@ -600,7 +592,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Pack SelfHealingCli locally for the action to install from
         run: dotnet pack TestAutomation/SelfHealingCli/SelfHealingCli.csproj --configuration Release --output ./cli-nupkgs-for-action-test
@@ -649,7 +641,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Setup Python
         uses: actions/setup-python@v7
