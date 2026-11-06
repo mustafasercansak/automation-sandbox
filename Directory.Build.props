@@ -29,7 +29,7 @@
 
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>0.2.0-beta.8</Version>
+    <Version>0.2.0-beta.9</Version>
 
     <Deterministic>true</Deterministic>
 
