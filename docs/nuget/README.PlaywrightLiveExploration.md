@@ -11,13 +11,12 @@ dotnet add package AutomationSandbox.PlaywrightLiveExploration --prerelease
 Playwright browsers are downloaded once per machine after the first build:
 
 ```bash
-pwsh bin/Debug/net8.0/playwright.ps1 install chromium
+pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 ```
 
 ## Target frameworks
 
 - `netstandard2.0`
-- `net8.0`
 - `net10.0`
 
 ## Typical use

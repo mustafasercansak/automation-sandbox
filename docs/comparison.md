@@ -24,7 +24,7 @@ is the better fit, this page says so.
 
 | | **Automation Sandbox** | **Healenium** | **Testim / Mabl / Functionize** | **Ranorex** |
 | :--- | :--- | :--- | :--- | :--- |
-| Stack | .NET (net48 / netstandard2.0 / net8 / net10) | Java + Selenium (JS SDK community) | SaaS, language-agnostic recorder | Windows IDE, .NET scripting |
+| Stack | .NET (net48 / netstandard2.0 / net10) | Java + Selenium (JS SDK community) | SaaS, language-agnostic recorder | Windows IDE, .NET scripting |
 | License / cost | MIT, free, self-hosted | Apache-2.0, free; needs a backend service + DB | Commercial subscription | Commercial per-seat licence |
 | Healing approach | Deterministic structural heuristic **first**; LLM only as an opt-in, quorum-gated fallback | ML over historical DOM trees stored in a backend | Vendor ML model (black box) | Proprietary "RanoreXPath" weighting |
 | Explainability | Per-decision JSON + HTML: every signal's weight, providers' votes, outcome | Healing report of before/after selectors | Limited; heal shown in run history | Limited |
@@ -92,7 +92,7 @@ Aşağıda başka bir ürün hakkındaki her iddia, o ürünün kendi herkese a�
 
 | | **Automation Sandbox** | **Healenium** | **Testim / Mabl / Functionize** | **Ranorex** |
 | :--- | :--- | :--- | :--- | :--- |
-| Teknoloji | .NET (net48 / netstandard2.0 / net8 / net10) | Java + Selenium (topluluk JS SDK) | SaaS, dilden bağımsız kaydedici | Windows IDE, .NET betikleme |
+| Teknoloji | .NET (net48 / netstandard2.0 / net10) | Java + Selenium (topluluk JS SDK) | SaaS, dilden bağımsız kaydedici | Windows IDE, .NET betikleme |
 | Lisans / maliyet | MIT, ücretsiz, kendi sunucunuzda | Apache-2.0, ücretsiz; backend servisi + veritabanı gerekir | Ticari abonelik | Kullanıcı başı ticari lisans |
 | İyileştirme yaklaşımı | **Önce** deterministik yapısal sezgisel; LLM yalnızca isteğe bağlı, çoğunluk-onaylı bir yedek | Backend'de saklanan geçmiş DOM ağaçları üzerinde ML | Sağlayıcı ML modeli (kara kutu) | Tescilli "RanoreXPath" ağırlıklandırması |
 | Açıklanabilirlik | Karar başına JSON + HTML: her sinyalin ağırlığı, sağlayıcı oyları, sonuç | Öncesi/sonrası seçicilerin iyileştirme raporu | Sınırlı; iyileştirme çalışma geçmişinde gösterilir | Sınırlı |

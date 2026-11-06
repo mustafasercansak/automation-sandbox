@@ -48,7 +48,7 @@ namespace ScenarioRunner
                       "path": "/repo/TestAutomation/ScenarioRunner/ScenarioRunner.csproj",
                       "frameworks": [
                         {
-                          "framework": "net8.0",
+                          "framework": "net10.0",
                           "transitivePackages": [
                             {
                               "id": "System.Net.Http",
@@ -76,7 +76,7 @@ namespace ScenarioRunner
                       "path": "/repo/TestAutomation/ScenarioRunner/ScenarioRunner.csproj",
                       "frameworks": [
                         {
-                          "framework": "net8.0",
+                          "framework": "net10.0",
                           "topLevelPackages": [
                             { "id": "xunit", "requestedVersion": "2.9.3", "resolvedVersion": "2.9.3", "latestVersion": "2.9.4" }
                           ]
@@ -88,13 +88,13 @@ namespace ScenarioRunner
                 """);
 
                 var summaryPath = Path.Combine(testDirectory, "summary.md");
-                var result = RunSecurityAuditScript(vulnerablePath, outdatedPath, "Linux net8.0", summaryPath);
+                var result = RunSecurityAuditScript(vulnerablePath, outdatedPath, "Linux net10.0", summaryPath);
 
                 Assert.True(
                     result.ExitCode == 0,
                     "Security audit script failed. stdout: " + result.StandardOutput + " stderr: " + result.StandardError);
                 var summary = File.ReadAllText(summaryPath);
-                Assert.Contains("## Package security audit — Linux net8.0", summary, StringComparison.Ordinal);
+                Assert.Contains("## Package security audit — Linux net10.0", summary, StringComparison.Ordinal);
                 Assert.Contains("`System.Net.Http`", summary, StringComparison.Ordinal);
                 Assert.Contains("Transitive", summary, StringComparison.Ordinal);
                 Assert.Contains("High", summary, StringComparison.Ordinal);

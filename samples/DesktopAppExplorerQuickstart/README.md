@@ -1,8 +1,8 @@
 # Desktop App Explorer Quickstart / Masaüstü Uygulama Keşif Hızlı Başlangıcı
 
-This .NET 8 console sample points `Discovery`'s `ApplicationConnector` + `UiTreeWalker` at **any** real Windows desktop application - .NET Framework (WinForms) or modern .NET (WinForms/WPF), your choice, since FlaUI/UIA3 automates through Windows UI Automation regardless of the target app's runtime - and reports its UI tree structure and locator health.
+This .NET 10 console sample points `Discovery`'s `ApplicationConnector` + `UiTreeWalker` at **any** real Windows desktop application - .NET Framework (WinForms) or modern .NET (WinForms/WPF), your choice, since FlaUI/UIA3 automates through Windows UI Automation regardless of the target app's runtime - and reports its UI tree structure and locator health.
 
-Bu .NET 8 console örneği, `Discovery` paketinin `ApplicationConnector` + `UiTreeWalker`'ını **herhangi bir** gerçek Windows masaüstü uygulamasına yöneltir - .NET Framework (WinForms) veya modern .NET (WinForms/WPF), farketmez, çünkü FlaUI/UIA3 hedef uygulamanın çalışma zamanından bağımsız olarak Windows UI Automation üzerinden otomasyon yapar - ve UI ağacının yapısını ve locator sağlığını raporlar.
+Bu .NET 10 console örneği, `Discovery` paketinin `ApplicationConnector` + `UiTreeWalker`'ını **herhangi bir** gerçek Windows masaüstü uygulamasına yöneltir - .NET Framework (WinForms) veya modern .NET (WinForms/WPF), farketmez, çünkü FlaUI/UIA3 hedef uygulamanın çalışma zamanından bağımsız olarak Windows UI Automation üzerinden otomasyon yapar - ve UI ağacının yapısını ve locator sağlığını raporlar.
 
 ---
 

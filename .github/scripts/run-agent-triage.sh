@@ -19,9 +19,9 @@ set +e
 args=(triage --repo "$GITHUB_REPOSITORY" --issue "$ISSUE_NUMBER" --project-id "$PROJECT_ID" --docs-root "$PWD")
 if [ "${POST_COMMENT:-}" = "true" ]; then args+=(--comment); fi
 if [ "${LABEL_NEEDS_HUMAN:-}" = "true" ]; then args+=(--label-needs-human); fi
-# --framework: the runner image carries SDK 10 as well, so the tool project multi-targets net8.0 and net10.0 and
-# "dotnet run" cannot choose (the first real run of this workflow failed exactly there).
-dotnet run --project TestAutomation/AgentCli -c Release --framework net8.0 -- "${args[@]}" > report.json 2> summary.txt
+# --framework: kept explicit so "dotnet run" never has to choose if the tool project ever multi-targets again (the first real
+# run of this workflow failed exactly there, back when the project targeted net8.0 and net10.0).
+dotnet run --project TestAutomation/AgentCli -c Release --framework net10.0 -- "${args[@]}" > report.json 2> summary.txt
 code=$?
 set -e
 # An exit code of 0 or 1 is a finished run only if the agent printed its JSON report. A build or startup failure can

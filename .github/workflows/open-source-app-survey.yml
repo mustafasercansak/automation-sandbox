@@ -23,9 +23,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       # Older releases in a chain need runtimes that are out of support. The survey launches them with
       # DOTNET_ROLL_FORWARD=LatestMajor, which only works if a WindowsDesktop runtime is actually present.

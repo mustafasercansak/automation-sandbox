@@ -40,7 +40,7 @@ namespace ScenarioRunner
             Assert.Equal(0.25, rectangle.Height);
         }
 
-        // What a JSON reader does with 1e400 depends on the runtime: System.Text.Json on .NET 8 reads it as an infinity, the package on .NET
+        // What a JSON reader does with 1e400 depends on the runtime: System.Text.Json on modern .NET reads it as an infinity, the package on .NET
         // Framework 4.8 refuses it with a FormatException (wrapped in a JsonException). Either is fine; what must never happen is that a
         // non-finite number is stored and later cannot be written.
         [Fact]

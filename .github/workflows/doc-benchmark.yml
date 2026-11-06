@@ -48,7 +48,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Validate the inputs
         shell: bash
@@ -75,7 +75,7 @@ jobs:
           OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
           OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
         run: |
-          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net8.0 -c Debug \
+          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net10.0 -c Debug \
             --filter "FullyQualifiedName~DocBenchmarkTests.RunDocBenchmark_LiveAgainstConfiguredModels" \
             --logger "console;verbosity=normal"
 

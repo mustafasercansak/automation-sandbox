@@ -24,7 +24,7 @@ Generate the [reviewable API list](public-api.json) from the repository root:
 dotnet run --project eng/PublicApiAudit -- . docs/public-api.json
 ```
 
-The exporter uses Roslyn from the selected .NET SDK without adding a NuGet dependency. Use .NET 8 or 10; build the libraries with .NET 10 for the same analyzer/compiler combination as CI.
+The exporter uses Roslyn from the selected .NET SDK without adding a NuGet dependency. Use .NET 10 or 10; build the libraries with .NET 10 for the same analyzer/compiler combination as CI.
 
 ### Package boundaries
 

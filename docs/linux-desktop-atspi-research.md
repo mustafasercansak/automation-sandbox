@@ -148,7 +148,7 @@ appears.
 
 Mirrors `AutomationSandbox.Discovery` (Windows) so the healing engine sees the same `UiElementInfo`:
 
-- **New package `AutomationSandbox.LinuxDiscovery`**, `net8.0` (Linux). `UiModel` stays dependency-free; this
+- **New package `AutomationSandbox.LinuxDiscovery`**, `net10.0` (Linux). `UiModel` stays dependency-free; this
   package takes the `Tmds.DBus` dependency, `Discovery` keeps FlaUI.
 - **`AtSpiApplicationConnector`** — resolves the a11y bus (`org.a11y.Bus.GetAddress`), connects, finds the target
   app's root under the `Registry` (by `Application` PID or `Name`).

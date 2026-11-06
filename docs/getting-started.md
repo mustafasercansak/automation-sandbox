@@ -16,7 +16,7 @@ Welcome to the beginner-friendly setup guide for **Automation Sandbox**! / **Aut
 
 ### Step 1: Requirements
 Before writing code, make sure you have:
-1. **.NET SDK 8.0** or later installed ([Download .NET](https://dotnet.microsoft.com/download)).
+1. **.NET SDK 10.0** or later installed ([Download .NET](https://dotnet.microsoft.com/download)).
 2. An IDE such as Visual Studio 2022, VS Code, or Rider.
 
 ---
@@ -135,7 +135,7 @@ class Program
 
 ### Adım 1: Gereksinimler
 Koda başlamadan önce bilgisayarınızda şunların kurulu olduğundan emin olun:
-1. **.NET SDK 8.0** veya üstü ([.NET İndirme Bağlantısı](https://dotnet.microsoft.com/download)).
+1. **.NET SDK 10.0** veya üstü ([.NET İndirme Bağlantısı](https://dotnet.microsoft.com/download)).
 2. Visual Studio 2022, VS Code veya Rider geliştirme ortamı.
 
 ---

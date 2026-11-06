@@ -13,7 +13,6 @@ dotnet add package AutomationSandbox.WebDiscovery --prerelease
 ## Target frameworks
 
 - `netstandard2.0`
-- `net8.0`
 - `net10.0`
 
 ## Typical use

@@ -15,7 +15,7 @@ namespace ScenarioRunner
     // WpfMainWindowScenarioTests use for FlaUI/UIA3) against a local file:// HTML fixture, so
     // no network access is needed for the page under test itself - only the one-time
     // `playwright install` browser download is an external prerequisite. Runs cross-platform
-    // across both Windows (net48) and Linux (net8.0).
+    // across both Windows (net48) and Linux (net10.0).
     public class PlaywrightLiveExplorerTests : IDisposable
     {
         private readonly string _htmlPath;

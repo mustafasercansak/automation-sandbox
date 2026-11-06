@@ -104,7 +104,7 @@ if result.returncode == 0:
 
 ### Scanning a Website for Typos: `automation-sandbox-audit`
 
-A second tool, `AutomationSandbox.SiteAudit` (command `automation-sandbox-audit`), crawls a site from one URL and reports spelling mistakes, plus duplicated words and leftover placeholders. It needs no API key and sends no page text anywhere: spelling comes from [Hunspell](https://hunspell.github.io/) dictionaries, which handle inflected languages such as Turkish. It requires the .NET 8 runtime (or newer) and downloads Chromium for the crawl.
+A second tool, `AutomationSandbox.SiteAudit` (command `automation-sandbox-audit`), crawls a site from one URL and reports spelling mistakes, plus duplicated words and leftover placeholders. It needs no API key and sends no page text anywhere: spelling comes from [Hunspell](https://hunspell.github.io/) dictionaries, which handle inflected languages such as Turkish. It requires the .NET 10 runtime (or newer) and downloads Chromium for the crawl.
 
 ```bash
 automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
@@ -297,7 +297,7 @@ if result.returncode == 0:
 
 ### Web Sitesinde Yazım Hatası Taramak: `automation-sandbox-audit`
 
-İkinci bir araç, `AutomationSandbox.SiteAudit` (komut: `automation-sandbox-audit`), tek bir URL'den başlayarak siteyi gezer ve yazım hatalarını, tekrarlanan kelimeleri ve unutulmuş yer tutucu metinleri raporlar. API anahtarı gerektirmez ve sayfa metnini hiçbir yere göndermez: yazım denetimi, Türkçe gibi ek alan dilleri de işleyebilen [Hunspell](https://hunspell.github.io/) sözlüklerinden gelir. .NET 8 runtime'ı (veya daha yenisi) gerekir ve gezme için Chromium indirir.
+İkinci bir araç, `AutomationSandbox.SiteAudit` (komut: `automation-sandbox-audit`), tek bir URL'den başlayarak siteyi gezer ve yazım hatalarını, tekrarlanan kelimeleri ve unutulmuş yer tutucu metinleri raporlar. API anahtarı gerektirmez ve sayfa metnini hiçbir yere göndermez: yazım denetimi, Türkçe gibi ek alan dilleri de işleyebilen [Hunspell](https://hunspell.github.io/) sözlüklerinden gelir. .NET 10 runtime'ı (veya daha yenisi) gerekir ve gezme için Chromium indirir.
 
 ```bash
 automation-sandbox-audit --url https://example.com --lang tr,en --allow-word Playwright --install-browser
