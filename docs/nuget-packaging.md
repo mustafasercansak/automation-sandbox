@@ -134,6 +134,28 @@ project has declared whether it is packable. Missing public API comments fail th
 The package validator requires a non-empty XML IntelliSense document beside every library
 DLL for every packaged target framework, with the matching assembly name.
 
+## Dotnet Tools
+
+Four more packages are `dotnet tool`s, not libraries. They are packed in their own
+directories, are not counted in the nine library packages above, and are not part of
+`pack.yml` or `eng/Validate-NuGetPackages.ps1` (a tool package has a `tools/<tfm>/any/`
+layout, not the `lib/<tfm>/` layout that validator checks).
+
+| Package | Command | Release switch | On nuget.org |
+| :--- | :--- | :--- | :--- |
+| `AutomationSandbox.Cli` | `automation-sandbox-heal` | `publish_cli` (#507) | Yes (since `0.2.0-beta.7`) |
+| `AutomationSandbox.Agent` | `automation-sandbox-agent` | `publish_tools` (#658) | Not yet |
+| `AutomationSandbox.Mcp` | `automation-sandbox-mcp` | `publish_tools` (#658) | Not yet |
+| `AutomationSandbox.SiteAudit` | `automation-sandbox-audit` | `publish_tools` (#658) | Not yet |
+
+Both switches are off by default and independent of `publish_to_nuget` and of each
+other. With `dry_run` set, the tools are packed and uploaded as workflow artifacts
+(`release-tool-nupkgs` for the three `publish_tools` packages) but nothing is pushed and
+no consumer verification runs. After a real push, `eng/Verify-PublishedTools.ps1` installs
+the exact published version and runs what needs no API key. The three `publish_tools`
+packages have not been published yet, so that path is verified only up to packing; publishing
+them is a separate release decision.
+
 ## Publish Checklist
 
 - CI is green on `main`.
@@ -187,3 +209,23 @@ README'si kullanılır. Paket başına README'ler LaTeX ve mermaid içermez (nug
 de render etmez). Ortak `icon.png` tüm paketlere `<PackageIcon>` ile eklenir.
 `eng/Validate-NuGetPackages.ps1`, gömülü `README.md`'nin ilk başlığının `# <PaketKimliği>`
 olduğunu, LaTeX/mermaid içermediğini ve `icon.png`'nin bulunduğunu doğrular.
+
+## Dotnet Tool'lar
+
+Dört paket daha kütüphane değil, `dotnet tool`'dur. Kendi dizinlerinde paketlenir, yukarıdaki
+dokuz kütüphane paketine sayılmaz ve `pack.yml` ile `eng/Validate-NuGetPackages.ps1` kapsamında
+değildir (tool paketinin düzeni `tools/<tfm>/any/`'dir, doğrulayıcının baktığı `lib/<tfm>/`
+düzeni değil).
+
+- `AutomationSandbox.Cli` (`automation-sandbox-heal`): `publish_cli` anahtarıyla yayınlanır
+  (#507) ve `0.2.0-beta.7`'den beri nuget.org'dadır.
+- `AutomationSandbox.Agent` (`automation-sandbox-agent`), `AutomationSandbox.Mcp`
+  (`automation-sandbox-mcp`) ve `AutomationSandbox.SiteAudit` (`automation-sandbox-audit`):
+  `publish_tools` anahtarıyla yayınlanır (#658) ve henüz nuget.org'da yoktur.
+
+İki anahtar da varsayılan olarak kapalıdır; `publish_to_nuget`'ten ve birbirinden bağımsızdır.
+`dry_run` açıkken tool'lar paketlenip workflow artifact'i olarak yüklenir (`publish_tools`
+paketleri için `release-tool-nupkgs`), ancak hiçbir şey push edilmez ve tüketici doğrulaması
+çalışmaz. Gerçek bir push'tan sonra `eng/Verify-PublishedTools.ps1` yayınlanan sürümü kurar ve
+API anahtarı gerektirmeyen kısmı çalıştırır. `publish_tools` paketleri henüz yayınlanmadığı için
+o yol yalnızca paketlemeye kadar doğrulanmıştır; yayınlamak ayrı bir sürüm kararıdır.
