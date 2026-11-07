@@ -67,7 +67,7 @@ internal static class Program
             var isConfident = result.IsConfident;
             if (compact)
             {
-                CompactResult(result);
+                HealResultCompactor.Compact(result);
             }
 
             // The matched element can carry its subtree, so the result is written with the same depth bound the trees are read with.
@@ -97,50 +97,6 @@ internal static class Program
             return 2;
         }
     }
-
-    // Keeps the decision and its evidence, drops what makes the output many times larger than its
-    // input (#620): every element carries its whole subtree, and every scored node is a candidate.
-    // Elements are shallow-copied so the live tree handed to the resolver is not modified.
-    private const int CompactCandidateLimit = 5;
-
-    private static void CompactResult(HealResult result)
-    {
-        result.Matched = WithoutChildren(result.Matched);
-        result.HeuristicMatched = WithoutChildren(result.HeuristicMatched);
-        if (result.Candidates is not null)
-        {
-            result.Candidates = result.Candidates
-                .OrderByDescending(candidate => candidate.TotalScore)
-                .Take(CompactCandidateLimit)
-                .Select(candidate => new CandidateScore
-                {
-                    Candidate = WithoutChildren(candidate.Candidate)!,
-                    TotalScore = candidate.TotalScore,
-                    Components = candidate.Components,
-                    EvidenceCoverage = candidate.EvidenceCoverage,
-                    CandidateId = candidate.CandidateId,
-                })
-                .ToList();
-        }
-    }
-
-    private static UiElementInfo? WithoutChildren(UiElementInfo? element) =>
-        element is null
-            ? null
-            : new UiElementInfo
-            {
-                ControlType = element.ControlType,
-                Name = element.Name,
-                AutomationId = element.AutomationId,
-                ClassName = element.ClassName,
-                BoundingRectangle = element.BoundingRectangle,
-                ParentControlType = element.ParentControlType,
-                ParentAutomationId = element.ParentAutomationId,
-                SiblingIndex = element.SiblingIndex,
-                SiblingCount = element.SiblingCount,
-                TestIntent = element.TestIntent,
-                ChildControlTypeSignature = element.ChildControlTypeSignature,
-            };
 
     private static void PrintUsage(TextWriter output)
     {
