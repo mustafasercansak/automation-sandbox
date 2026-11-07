@@ -1,46 +1,86 @@
 ---
 layout: default
-title: Which Playwright Locators Survive a Release Upgrade? - Automation Sandbox
+title: How to Write Playwright Locators That Survive an Upgrade - Automation Sandbox
 ---
 
-# Which Playwright Locators Survive a Release Upgrade?
+# How to Write Playwright Locators That Survive an Upgrade
 
-*A measurement on two real releases of Swagger UI: how ten common locator styles behave when the page changes, and which ones fail without telling you.*
+*Five habits. Each one is backed by a measurement on two real releases of Swagger UI.*
 
 > 💡 **Select Language / Dil Seçin:**
 > - [🇬🇧 English](#-english)
-> - [🇹🇷 Türkçe Özet](#-türkçe-özet)
+> - [🇹🇷 Türkçe](#-türkçe)
 
 ---
 
 ## 🇬🇧 English
 
-### TL;DR
+### In short
 
-We aimed ten common locator styles at one control in Swagger UI 4.19.1: the button that expands the `GET /pets` operation. Seven found exactly that control. After upgrading the page to Swagger UI 5.17.14:
+A locator is the way your test finds an element on the page. When the page changes, a locator can stop working. Worse, it can keep working on the wrong element.
+
+We tried ten ways to find one button, before and after an upgrade. Seven worked before. After the upgrade, only **one** was really safe. The five habits below come from that result.
+
+### What we tested
+
+We took two real releases of Swagger UI: 4.19.1 and 5.17.14. They are the unchanged npm packages, pinned by hash. We wanted one button: the one that opens the `GET /pets` operation. We wrote ten locators for it.
+
+A locator is **valid** if, in the old release, it finds exactly that button and nothing else. Seven were valid. Here is what they did in the new release:
 
 | Result in 5.17.14 | Locators |
 | :--- | ---: |
-| Still right, for a reason that does not depend on luck | **1** |
-| Still right, only because the right element comes first in the DOM | **3** |
-| Fail visibly (Playwright's strict mode refuses to act on two matches) | **2** |
-| **Silently bound to a different element** | **1** |
+| Still right, and not by luck | **1** |
+| Still right, but only because the right button comes first on the page | **3** |
+| Failed with an error (Playwright refused to act on two matches) | **2** |
+| **Picked a different button, with no error** | **1** |
 
-The silent one kept working: clicking the wrong element still opened the operation, so a test that asserts "the operation is open" would have stayed green. Seven locators that worked, one that was robust.
+What changed in the page? In 4.19.1 the button had the name `get /pets`. In 5.17.14 that name moved to a **new** button next to it. The old button got a new name: "GET /pets List pets". So any search by name now finds two buttons.
 
-### 1. What changed in the page
+### Habit 1: Ask for exactly one match
 
-In 4.19.1 the button that expands an operation carries `aria-label="get /pets"`. In 5.17.14 that `aria-label` moved to a **new** button (class `opblock-control-arrow`, `tabindex="-1"`), and the original button now takes its accessible name from its content: "GET /pets List pets". Two buttons now answer to a name-based query, and the new one is a look-alike of the old one, not the same control.
+If your locator can match more than one element, it is not finished. Check the count. It should be 1, on the old page and on the new page.
 
-Nothing was edited to create this. The releases are the unmodified `swagger-ui-dist` npm packages, pinned by SHA-256 and npm integrity in the manifest of [the organic drift dataset](../external-validation.md), and the page that mounts them is a fixed probe with the OpenAPI document inline.
+*Evidence:* three locators looked fine after the upgrade. Without `.first()` or `.nth(0)` they matched 3, 6 and 3 elements. They only worked because the right element was first.
 
-### 2. Method
+### Habit 2: Treat `.first()` and `.nth()` as a warning
 
-The script [`locator-survival.mjs`](https://github.com/mustafasercansak/automation-sandbox/blob/main/examples/js-playwright-capture/locator-survival.mjs) downloads both releases, refuses them unless the hashes match, and runs ten locator styles against each. A locator is **valid** when, in the old release, it matches exactly one element and that element is the control. For each valid locator it then reports what it matches in the new release: the same control, no or several elements, or exactly one *different* element. For a locator that ends in `.first()` or `.nth(0)` it also reports how many elements the same selector matches without it, because such a locator never fails on "several matches".
+They turn "I found several" into "I picked one". Playwright's strict mode would have stopped you. These calls switch it off. Use them only when you can say why the first one is the right one, and write that reason in a comment.
 
-### 3. Results
+*Evidence:* one locator ended in `.first()`. After the upgrade it picked the new look-alike button. No error. The test kept running.
 
-The output of the script, with long lines wrapped for reading:
+### Habit 3: Narrow the search with something stable
+
+Look for a container that keeps the same id across versions. Then search inside it for the role of the element.
+
+*Evidence:* the one safe locator was `#operations-pets-get_pets .opblock-summary-control`. It found exactly one button in both releases, in any order.
+
+### Habit 4: Find elements the way a user sees them, and let it fail loudly
+
+Playwright's own guidance is to prefer role and name, or test ids that you add on purpose. When the name moves, these locators fail with an error. That is good. A red test is better than a quiet wrong click.
+
+*Evidence:* the two `getByRole` locators failed with a strict-mode error after the upgrade. Someone would have looked. We did not measure test ids, because this page has none. That advice is Playwright's, not ours.
+
+### Habit 5: Check that you touched the right element
+
+A green test does not prove you clicked the right thing. Add one check that only the right element can pass: its own name, its keyboard focus, or the state only it changes.
+
+*Evidence:* the wrong button also opened the operation. A test that only checks "the operation is open" cannot tell the two apart. The wrong button has `tabindex="-1"`, so it is not reachable by keyboard. A focus test would have caught it.
+
+### Before you merge an upgrade
+
+Count the matches of every locator on the old page and on the new page:
+
+```js
+for (const [name, make] of Object.entries(locators)) {
+  console.log(name, await make(page).count());   // should be 1 on both pages, without .first() or .nth()
+}
+```
+
+Anything that is not 1 will fail soon, or is already hiding behind `.first()`. Also search your tests for `.first()` and `.nth(`.
+
+### The full result
+
+This is the output of the script, with long lines wrapped for reading:
 
 ```text
 getByRole button, name "get /pets"          works in 4.19.1; in 5.17.14: fails visibly (strict mode: 2 matches)
@@ -63,35 +103,15 @@ CSS button[aria-label*="pets"]  (.first())  works in 4.19.1; in 5.17.14: SILENTL
 
 The script prints each of these on one line. Two runs in a row printed the same text.
 
-### 4. Three things to take from it
+### What we did *not* measure
 
-**1. Strict mode protects you; `.first()` and `.nth()` switch it off.** The two `getByRole` locators failed with a strict-mode error, which is the good outcome: the suite went red and someone looked. The same page change, seen through `button[aria-label*="pets"]` plus `.first()`, produced no error and a different element. Three more locators survived because the right element happens to come first, which is a fact about the DOM order of this release, not about the locator. Search your suite for `.first()` and `.nth(`, and for each ask why one match is not enough.
+- **One program, one upgrade.** Swagger UI 4.19.1 to 5.17.14. Other pages behave differently.
+- **Ten locators that we chose.** They are plausible, but they are not a sample of real test suites. We do not know how common each one is.
+- **"Valid" is our definition:** exactly one match, and it is the right button, found by its class inside the operation block.
+- **The click effect was checked on this page only.**
+- **Browser and tools:** Chrome 156 through Playwright (declared range `^1.64.0`) on Linux, the same machine and browser as the dataset's `capture-environment.json`. The script itself does not record its environment.
 
-**2. A green test does not prove it touched the same control.** Clicking the look-alike button opened the operation, so an assertion on "the operation is open" cannot tell the two apart. The look-alike has `tabindex="-1"`, so a test of keyboard focus would behave differently. What the test checks decides whether the substitution is visible.
-
-**3. The one robust locator combined a role-like class with a stable container.** `#operations-pets-get_pets .opblock-summary-control` matched exactly one element in both releases, whatever the order. The other locators were either too loose or leaned on position. Playwright's own guidance prefers user-facing locators such as role and name; here they failed loudly rather than silently, which is the property you want from a locator you cannot make unique.
-
-### 5. Check your own suite
-
-Compare how many elements each locator matches on the old and the new version of the page before you merge an upgrade:
-
-```js
-for (const [name, make] of Object.entries(locators)) {
-  console.log(name, await make(page).count());   // 1 on both versions, without .first() or .nth()
-}
-```
-
-Anything that is not 1 is either about to fail loudly or already hiding behind `.first()`. [`automation-sandbox-heal`](../cli-and-ci-integration.md), the engine this site documents, can propose a replacement for a broken locator and declines when two candidates are too close. That tool is ours, and this measurement is not an independent evaluation of it.
-
-### 6. What this does *not* establish
-
-- **One application pair.** Swagger UI 4.19.1 and 5.17.14, a major version apart. Other pages and other upgrades behave differently.
-- **Ten locator styles chosen by the author.** They are plausible, not a sample of real suites. Nothing here says how common each style is, or how often a real upgrade moves a name the way this one did.
-- **"Valid" is our definition:** exactly one match, and it is the control as identified by its class inside the operation block.
-- **The click effect was checked on this page only.** That the look-alike opens the operation is a fact about this page, not a rule.
-- **Browser and tools:** Chrome 156 through Playwright (declared range `^1.64.0`) on Linux, the same machine and browser as the dataset's `capture-environment.json`; the script itself does not record its environment.
-
-### 7. Reproduce this yourself
+### Run it yourself
 
 ```bash
 cd examples/js-playwright-capture
@@ -99,42 +119,70 @@ npm install
 node locator-survival.mjs ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/manifest.json --channel chrome
 ```
 
-A release whose hash does not match the manifest is refused. `--channel chrome` uses an installed Chrome; without it, run `npx playwright install chromium` first.
+A release whose hash does not match the manifest is refused. `--channel chrome` uses an installed Chrome. Without it, run `npx playwright install chromium` first.
 
 ---
 
-## 🇹🇷 Türkçe Özet
+## 🇹🇷 Türkçe
 
 ### Kısaca
 
-Swagger UI 4.19.1'de tek bir kontrole (`GET /pets` operasyonunu açan düğme) on yaygın locator stilini yönelttik. Yedisi tam olarak o kontrolü buldu. Sayfa Swagger UI 5.17.14'e geçince:
+Locator, testin sayfada bir elemanı bulma yöntemidir. Sayfa değişince bir locator çalışmayı bırakabilir. Daha kötüsü, yanlış elemanda çalışmaya devam edebilir.
+
+Bir butonu bulmak için on yöntemi, yükseltmeden önce ve sonra denedik. Yedisi önce çalıştı. Yükseltmeden sonra yalnızca **biri** gerçekten sağlamdı. Aşağıdaki beş alışkanlık bu sonuçtan çıkıyor.
+
+### Ne denedik
+
+Swagger UI'nin iki gerçek sürümünü aldık: 4.19.1 ve 5.17.14. Değiştirilmemiş npm paketleri, hash ile sabitlenmiş. `GET /pets` operasyonunu açan butonu istedik ve bunun için on locator yazdık.
+
+Eski sürümde **tam o butonu** bulan locator "geçerli" sayıldı. Yedisi geçerliydi. Yeni sürümde şunları yaptılar:
 
 | 5.17.14'teki sonuç | Locator |
 | :--- | ---: |
-| Hâlâ doğru, şansa bağlı olmayan bir nedenle | **1** |
-| Hâlâ doğru, ama yalnızca doğru eleman DOM'da önce geldiği için | **3** |
-| Açık hata verdi (Playwright'ın strict modu iki eşleşmede işlem yapmayı reddeder) | **2** |
-| **Sessizce başka bir elemana bağlandı** | **1** |
+| Hâlâ doğru, şansa bağlı değil | **1** |
+| Hâlâ doğru, ama yalnızca doğru buton sayfada önce geldiği için | **3** |
+| Hata verdi (Playwright iki eşleşmede işlem yapmayı reddetti) | **2** |
+| **Hata vermeden başka bir buton seçti** | **1** |
 
-Sessiz olan çalışmaya devam etti: yanlış elemana tıklamak yine operasyonu açtı, yani "operasyon açık" diye doğrulayan bir test yeşil kalırdı. Çalışan yedi locator, sağlam olan bir tane.
+Sayfada ne değişti? 4.19.1'de butonun adı `get /pets` idi. 5.17.14'te bu ad, yanındaki **yeni** bir butona taşındı. Eski butonun adı "GET /pets List pets" oldu. Yani isimle arayan herkes artık iki buton buluyor.
 
-### Ne değişti
+### Alışkanlık 1: Tam bir eşleşme isteyin
 
-4.19.1'de operasyonu açan düğmede `aria-label="get /pets"` var. 5.17.14'te bu etiket **yeni** bir düğmeye (`opblock-control-arrow`, `tabindex="-1"`) taşınmış, asıl düğme adını artık içeriğinden alıyor: "GET /pets List pets". İsimle sorgulayınca iki düğme eşleşiyor ve yenisi eskisinin aynısı değil, ona benzeyen başka bir kontrol. Hiçbir şey düzenlenmedi: sürümler değiştirilmemiş `swagger-ui-dist` npm paketleri, SHA-256 ile sabitlenmiş.
+Locator'ınız birden fazla elemana uyabiliyorsa bitmemiştir. Sayıyı kontrol edin. Eski sayfada da yeni sayfada da 1 olmalı.
 
-### Üç ders
+*Kanıt:* üç locator yükseltmeden sonra iyi görünüyordu. `.first()` ya da `.nth(0)` olmadan 3, 6 ve 3 elemanla eşleşiyorlardı. Yalnızca doğru eleman ilk sırada olduğu için çalıştılar.
 
-1. **Strict mode sizi korur, `.first()` ve `.nth()` onu kapatır.** İki `getByRole` locator strict-mode hatasıyla düştü, bu iyi sonuç: test kırmızı oldu ve biri baktı. Aynı değişiklik `button[aria-label*="pets"]` ile `.first()` üzerinden hata vermeden başka bir eleman üretti. Üç locator daha, doğru eleman önce geldiği için hayatta kaldı, bu bir locator özelliği değil, bu sürümün DOM sırası. Testlerinizde `.first()` ve `.nth(` arayın ve her biri için "tek eşleşme neden yetmiyor" diye sorun.
-2. **Yeşil test, aynı kontrole dokunduğunuzu kanıtlamaz.** Benzer düğmeye tıklamak operasyonu açtı, "operasyon açık" doğrulaması ikisini ayıramaz. Benzer düğmede `tabindex="-1"` var, klavye odağını test eden bir senaryo farklı davranırdı.
-3. **Tek sağlam locator, rol gibi bir sınıfı sabit bir kapsayıcıyla birleştiriyordu:** `#operations-pets-get_pets .opblock-summary-control`, sıradan bağımsız olarak iki sürümde de tam bir eleman buldu.
+### Alışkanlık 2: `.first()` ve `.nth()` bir uyarıdır
 
-### Kendi paketinizde kontrol edin
+"Birkaç tane buldum" cümlesini "birini seçtim" yapar. Playwright'ın strict modu sizi durdururdu. Bu çağrılar onu kapatır. Yalnızca ilkinin neden doğru olduğunu söyleyebiliyorsanız kullanın ve nedenini yoruma yazın.
 
-Bir yükseltmeyi birleştirmeden önce, her locator'ın eski ve yeni sayfada kaç eleman eşleştirdiğini karşılaştırın (`.first()` ya da `.nth()` olmadan). 1 olmayan her şey ya açık hata verecek ya da zaten `.first()` arkasına saklanıyor. Bu ölçüm bizim aracımızın bağımsız bir değerlendirmesi değil.
+*Kanıt:* bir locator `.first()` ile bitiyordu. Yükseltmeden sonra yeni benzer butonu seçti. Hata yok. Test çalışmaya devam etti.
 
-### Sınırlar
+### Alışkanlık 3: Aramayı sabit bir şeyle daraltın
 
-Tek uygulama çifti (bir ana sürüm arayla), yazarın seçtiği on stil (gerçek paketlerin örneği değil, hangisinin ne kadar yaygın olduğunu söylemez), "geçerli" tanımı bizim, tıklama etkisi yalnızca bu sayfada denendi. Yeniden üretmek için: `examples/js-playwright-capture/locator-survival.mjs`.
+Sürümler arasında aynı kalan bir kapsayıcı id'si bulun. Sonra elemanın rolünü onun içinde arayın.
+
+*Kanıt:* tek sağlam locator `#operations-pets-get_pets .opblock-summary-control` idi. İki sürümde de, sıradan bağımsız, tam bir buton buldu.
+
+### Alışkanlık 4: Elemanı kullanıcının gördüğü gibi bulun ve gürültüyle başarısız olmasına izin verin
+
+Playwright'ın kendi tavsiyesi rol ve ad, ya da bilerek eklediğiniz test id'leridir. Ad taşınınca bu locator'lar hata verir. Bu iyidir. Kırmızı bir test, sessiz bir yanlış tıklamadan iyidir.
+
+*Kanıt:* iki `getByRole` locator yükseltmeden sonra strict-mode hatası verdi. Biri bakardı. Test id'lerini ölçmedik, çünkü bu sayfada yok. Bu tavsiye Playwright'ın, bizim değil.
+
+### Alışkanlık 5: Doğru elemana dokunduğunuzu kontrol edin
+
+Yeşil test, doğru şeye tıkladığınızı kanıtlamaz. Yalnızca doğru elemanın geçebileceği bir kontrol ekleyin: kendi adı, klavye odağı ya da yalnızca onun değiştirdiği durum.
+
+*Kanıt:* yanlış buton da operasyonu açtı. Yalnızca "operasyon açık" diye bakan bir test ikisini ayıramaz. Yanlış butonda `tabindex="-1"` var, klavyeyle ulaşılamıyor. Bir odak testi bunu yakalardı.
+
+### Bir yükseltmeyi birleştirmeden önce
+
+Her locator'ın eşleşme sayısını eski sayfada ve yeni sayfada sayın (yukarıdaki kod). 1 olmayan her şey yakında hata verecek ya da zaten `.first()` arkasına saklanıyor. Testlerinizde `.first()` ve `.nth(` de arayın.
+
+### Ölçmediklerimiz
+
+Tek program, tek yükseltme (Swagger UI 4.19.1'den 5.17.14'e). On locator'ı biz seçtik, gerçek test paketlerinin örneği değil, hangisinin ne kadar yaygın olduğunu bilmiyoruz. "Geçerli" tanımı bizim. Tıklama etkisi yalnızca bu sayfada denendi. Yeniden üretmek için İngilizce bölümdeki komutu çalıştırın.
 
 ---
 
@@ -142,5 +190,5 @@ Tek uygulama çifti (bir ana sürüm arayla), yazarın seçtiği on stil (gerçe
 
 - [External Validation](../external-validation.md) · the organic drift dataset behind the two releases
 - [Can You Trust an LLM to Fix a Broken Locator?](llm-false-heal-study.md) · the measured limits of LLM-based healing
-- [CLI & CI Integration](../cli-and-ci-integration.md) · `automation-sandbox-heal`
+- [CLI & CI Integration](../cli-and-ci-integration.md) · `automation-sandbox-heal`, which can propose a replacement for a broken locator and declines when two candidates are too close. It is our tool, and this measurement is not an independent evaluation of it.
 - [Documentation Hub](../index.md)
