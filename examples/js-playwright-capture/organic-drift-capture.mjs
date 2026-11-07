@@ -30,7 +30,9 @@ async function download(url, expectedSha256, expectedIntegrity, directory) {
   return file;
 }
 
-async function captureRelease(browser, manifest, manifestDir, releaseInfo, outputDir) {
+// Downloads one pinned release, refuses it unless both hashes match, unpacks it next to the manifest's probe page and returns the directory.
+// Shared with locator-survival.mjs (#670) so the two scripts cannot disagree about what "the pinned release" is.
+export async function prepareRelease(manifest, manifestDir, releaseInfo) {
   const work = await mkdtemp(join(tmpdir(), `drift-${releaseInfo.version}-`));
   const archive = await download(releaseInfo.tarball, releaseInfo.sha256, releaseInfo.integrity, work);
   const appDir = join(work, 'app');
@@ -38,6 +40,11 @@ async function captureRelease(browser, manifest, manifestDir, releaseInfo, outpu
   // The archive's top directory is "package"; its contents are served as-is next to the probe page.
   execFileSync('tar', ['-xzf', archive, '-C', appDir, '--strip-components=1']);
   await copyFile(join(manifestDir, manifest.page), join(appDir, manifest.page));
+  return appDir;
+}
+
+async function captureRelease(browser, manifest, manifestDir, releaseInfo, outputDir) {
+  const appDir = await prepareRelease(manifest, manifestDir, releaseInfo);
 
   const context = await browser.newContext({ viewport: manifest.viewport });
   const page = await context.newPage();

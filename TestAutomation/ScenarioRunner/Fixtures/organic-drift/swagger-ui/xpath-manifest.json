@@ -1,0 +1,39 @@
+{
+  "description": "Four consecutive Swagger UI releases, pinned by hash, for xpath-survival.mjs (#670): it compares each release with the next one. The dataset's own manifest.json keeps only the 4.19.1 and 5.17.14 pair.",
+  "application": "Swagger UI",
+  "project": "https://github.com/swagger-api/swagger-ui",
+  "licence": "Apache-2.0",
+  "package": "swagger-ui-dist",
+  "releases": [
+    {
+      "version": "3.52.5",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-3.52.5.tgz",
+      "sha256": "ef132c44d25028453e9a410ffa1425324ce6f3285efbb24e5ccce467bd4e24f2",
+      "integrity": "sha512-8z18eX8G/jbTXYzyNIaobrnD7PSN7yU/YkSasMmajrXtw0FGS64XjrKn5v37d36qmU3o1xLeuYnktshRr7uIFw=="
+    },
+    {
+      "version": "4.19.1",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-4.19.1.tgz",
+      "sha256": "5cea0c6a3a0a4f7a4e3d47711ba99714f0b713c517728a5bd17d6f6923312e10",
+      "integrity": "sha512-n/gFn+R7G/BXWwl5UZLw6F1YgWOlf3zkwGlsPhTMhNtAAolBGKg0JS5b2RKt5NI6/hSopVaSrki2wTIMUDDy2w=="
+    },
+    {
+      "version": "5.17.14",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.17.14.tgz",
+      "sha256": "c57badf459aa6e65cc036b3862d0502a63f9a22546407ffcb0e64f85f816bb28",
+      "integrity": "sha512-CVbSfaLpstV65OnSjbXfVd6Sta3q3F7Cj/yYuvHMp1P90LztOLs6PfUnKEVAeiIVQt9u2SaPwv0LiH/OyMjHRw=="
+    },
+    {
+      "version": "5.34.1",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.34.1.tgz",
+      "sha256": "8e7286de0230e431fc8a5a75490d28117af3d0c306413b6f9e17f7bb55045fb6",
+      "integrity": "sha512-VSr8fXfI93obYaQicLJbLUKGRxDojj/SfRJDDLCioGTUBj4BK/Nj4eE9jCeCAnJxVLi7iS+08PbiZLyrQKBkJQ=="
+    }
+  ],
+  "page": "probe.html",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "settleMs": 500
+}
