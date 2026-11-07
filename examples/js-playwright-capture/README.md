@@ -73,6 +73,15 @@ This exact flow was run live (real headless Chromium, real `automation-sandbox-h
 
 Bu tam akış, bu örnek commit edilmeden önce canlı olarak çalıştırıldı (gerçek headless Chromium, gerçek `automation-sandbox-heal`): `IsConfident: true`, healed `AutomationId: btn-submit-new`. Her iki yakalanan dosya da yayınlanmış [JSON Schema](https://mustafasercansak.github.io/automation-sandbox/schemas/ui-element-info.schema.json)'ya karşı sıfır hatayla doğrulanıyor.
 
+## Reproduce the organic drift dataset / Doğal değişim veri setini yeniden üretin
+
+`organic-drift-capture.mjs` (#663) downloads the pinned releases listed in a manifest (Swagger UI 4.19.1 and 5.17.14 for the committed dataset), refuses them unless their SHA-256 and npm integrity match, replays the manifest's click steps on a probe page and writes one tree per state. Nothing is renamed or removed; the output is what the browser reported. From the repository root, after `npm install` here / Manifest'te listelenen sabitlenmiş sürümleri (commit edilen veri seti için Swagger UI 4.19.1 ve 5.17.14) indirir, SHA-256 ve npm bütünlüğü eşleşmezse reddeder, probe sayfasında manifest'teki tıklama adımlarını uygular ve her durum için bir ağaç yazar. Hiçbir şey yeniden adlandırılmaz veya silinmez; çıktı tarayıcının bildirdiğidir. Depo kökünden, burada `npm install` yaptıktan sonra:
+
+```bash
+node organic-drift-capture.mjs ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/manifest.json ./out --channel chrome
+diff -r ./out/trees ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/trees   # no output = identical
+```
+
 ## Why this one `package.json` exists / Bu tek `package.json` neden var
 
 The main repository is deliberately all-C#, with no JavaScript/Python/Rust tooling (see `AGENTS.md`) - `PlaywrightLiveExploration` wraps the `Microsoft.Playwright` .NET SDK precisely so the product itself never needs Node.js at runtime. This example is the one narrow, explicit exception: it exists specifically to serve callers who are *not* using .NET, so it necessarily needs its own Node.js tooling. It does not change anything about the product's own runtime dependencies.

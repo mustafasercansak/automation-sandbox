@@ -1,0 +1,465 @@
+{
+  "description": "Ground truth for the Swagger UI 4.19.1 -> 5.17.14 pair. For every interactive element of the old version in each state, the element of the new version that plays the same role (same operation block, same function), or null when the new version has no counterpart. Assigned by reading both versions' DOM side by side; elements that did not move (same Y position) agree with the order-preserving mapping. This is reviewer judgement, not independent confirmation.",
+  "interactiveControlTypes": [
+    "Button",
+    "CheckBox",
+    "ComboBox",
+    "Edit",
+    "Hyperlink",
+    "ListItem",
+    "MenuItem",
+    "RadioButton",
+    "TabItem"
+  ],
+  "pair": {
+    "old": "4.19.1",
+    "new": "5.17.14"
+  },
+  "states": [
+    {
+      "name": "initial",
+      "entries": [
+        {
+          "old": 0,
+          "oldName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "oldClass": "select",
+          "new": 0,
+          "newName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "newClass": "select"
+        },
+        {
+          "old": 1,
+          "oldName": "Authorize",
+          "oldClass": "btn authorize unlocked",
+          "new": 1,
+          "newName": "Authorize",
+          "newClass": "btn authorize unlocked"
+        },
+        {
+          "old": 2,
+          "oldName": "pets",
+          "oldClass": "nostyle",
+          "new": 2,
+          "newName": "pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 3,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 3,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 4,
+          "oldName": "get ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 4,
+          "newName": "GET /pets List pets",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 5,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 5,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 6,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 6,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 7,
+          "oldName": "post ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 8,
+          "newName": "POST /pets Create a pet",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 8,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 9,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 9,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 10,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 10,
+          "oldName": "owners",
+          "oldClass": "nostyle",
+          "new": 12,
+          "newName": "owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 11,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 13,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 12,
+          "oldName": "get ​/owners",
+          "oldClass": "opblock-summary-control",
+          "new": 14,
+          "newName": "GET /owners List owners",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 13,
+          "oldName": "/owners",
+          "oldClass": "nostyle",
+          "new": 15,
+          "newName": "/owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 14,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 16,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        }
+      ],
+      "newOnly": [
+        7,
+        11,
+        17
+      ],
+      "newOnlyNames": [
+        "get ​/pets",
+        "post ​/pets",
+        "get ​/owners"
+      ]
+    },
+    {
+      "name": "operation-open",
+      "entries": [
+        {
+          "old": 0,
+          "oldName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "oldClass": "select",
+          "new": 0,
+          "newName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "newClass": "select"
+        },
+        {
+          "old": 1,
+          "oldName": "Authorize",
+          "oldClass": "btn authorize unlocked",
+          "new": 1,
+          "newName": "Authorize",
+          "newClass": "btn authorize unlocked"
+        },
+        {
+          "old": 2,
+          "oldName": "pets",
+          "oldClass": "nostyle",
+          "new": 2,
+          "newName": "pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 3,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 3,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 4,
+          "oldName": "get ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 4,
+          "newName": "GET /pets List pets",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 5,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 5,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 6,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 6,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 7,
+          "oldName": "Try it out",
+          "oldClass": "btn try-out__btn",
+          "new": 8,
+          "newName": "Try it out",
+          "newClass": "btn try-out__btn"
+        },
+        {
+          "old": 8,
+          "oldName": "limit",
+          "oldClass": "input",
+          "new": 9,
+          "newName": "limit",
+          "newClass": "input"
+        },
+        {
+          "old": 9,
+          "oldName": "post ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 10,
+          "newName": "POST /pets Create a pet",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 10,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 11,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 11,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 12,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 12,
+          "oldName": "owners",
+          "oldClass": "nostyle",
+          "new": 14,
+          "newName": "owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 13,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 15,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 14,
+          "oldName": "get ​/owners",
+          "oldClass": "opblock-summary-control",
+          "new": 16,
+          "newName": "GET /owners List owners",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 15,
+          "oldName": "/owners",
+          "oldClass": "nostyle",
+          "new": 17,
+          "newName": "/owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 16,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 18,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        }
+      ],
+      "newOnly": [
+        7,
+        13,
+        19
+      ],
+      "newOnlyNames": [
+        "get ​/pets",
+        "post ​/pets",
+        "get ​/owners"
+      ]
+    },
+    {
+      "name": "try-it-out",
+      "entries": [
+        {
+          "old": 0,
+          "oldName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "oldClass": "select",
+          "new": 0,
+          "newName": "https://api.example.test/v1 https://staging.example.test/v1",
+          "newClass": "select"
+        },
+        {
+          "old": 1,
+          "oldName": "Authorize",
+          "oldClass": "btn authorize unlocked",
+          "new": 1,
+          "newName": "Authorize",
+          "newClass": "btn authorize unlocked"
+        },
+        {
+          "old": 2,
+          "oldName": "pets",
+          "oldClass": "nostyle",
+          "new": 2,
+          "newName": "pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 3,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 3,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 4,
+          "oldName": "get ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 4,
+          "newName": "GET /pets List pets",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 5,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 5,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 6,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 6,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 7,
+          "oldName": "Cancel",
+          "oldClass": "btn try-out__btn cancel",
+          "new": 8,
+          "newName": "Cancel",
+          "newClass": "btn try-out__btn cancel"
+        },
+        {
+          "old": 8,
+          "oldName": "limit",
+          "oldClass": "input",
+          "new": 9,
+          "newName": "limit",
+          "newClass": "input"
+        },
+        {
+          "old": 9,
+          "oldName": "Execute",
+          "oldClass": "btn execute opblock-control__btn",
+          "new": 10,
+          "newName": "Execute",
+          "newClass": "btn execute opblock-control__btn"
+        },
+        {
+          "old": 10,
+          "oldName": "post ​/pets",
+          "oldClass": "opblock-summary-control",
+          "new": 11,
+          "newName": "POST /pets Create a pet",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 11,
+          "oldName": "/pets",
+          "oldClass": "nostyle",
+          "new": 12,
+          "newName": "/pets",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 12,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 13,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        },
+        {
+          "old": 13,
+          "oldName": "owners",
+          "oldClass": "nostyle",
+          "new": 15,
+          "newName": "owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 14,
+          "oldName": "Collapse operation",
+          "oldClass": "expand-operation",
+          "new": 16,
+          "newName": "Collapse operation",
+          "newClass": "expand-operation"
+        },
+        {
+          "old": 15,
+          "oldName": "get ​/owners",
+          "oldClass": "opblock-summary-control",
+          "new": 17,
+          "newName": "GET /owners List owners",
+          "newClass": "opblock-summary-control"
+        },
+        {
+          "old": 16,
+          "oldName": "/owners",
+          "oldClass": "nostyle",
+          "new": 18,
+          "newName": "/owners",
+          "newClass": "nostyle"
+        },
+        {
+          "old": 17,
+          "oldName": "authorization button unlocked",
+          "oldClass": "authorization__btn unlocked",
+          "new": 19,
+          "newName": "authorization button unlocked",
+          "newClass": "authorization__btn"
+        }
+      ],
+      "newOnly": [
+        7,
+        14,
+        20
+      ],
+      "newOnlyNames": [
+        "get ​/pets",
+        "post ​/pets",
+        "get ​/owners"
+      ]
+    }
+  ]
+}
