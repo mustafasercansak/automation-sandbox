@@ -1,0 +1,28 @@
+{
+  "application": "Swagger UI",
+  "project": "https://github.com/swagger-api/swagger-ui",
+  "licence": "Apache-2.0",
+  "package": "swagger-ui-dist",
+  "releases": [
+    {
+      "version": "4.19.1",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-4.19.1.tgz",
+      "sha256": "5cea0c6a3a0a4f7a4e3d47711ba99714f0b713c517728a5bd17d6f6923312e10",
+      "integrity": "sha512-n/gFn+R7G/BXWwl5UZLw6F1YgWOlf3zkwGlsPhTMhNtAAolBGKg0JS5b2RKt5NI6/hSopVaSrki2wTIMUDDy2w=="
+    },
+    {
+      "version": "5.17.14",
+      "tarball": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.17.14.tgz",
+      "sha256": "c57badf459aa6e65cc036b3862d0502a63f9a22546407ffcb0e64f85f816bb28",
+      "integrity": "sha512-CVbSfaLpstV65OnSjbXfVd6Sta3q3F7Cj/yYuvHMp1P90LztOLs6PfUnKEVAeiIVQt9u2SaPwv0LiH/OyMjHRw=="
+    }
+  ],
+  "page": "probe.html",
+  "viewport": { "width": 1280, "height": 800 },
+  "settleMs": 500,
+  "states": [
+    { "name": "initial", "steps": [], "waitFor": "#operations-pets-get_pets" },
+    { "name": "operation-open", "steps": [ { "click": "#operations-pets-get_pets .opblock-summary-control" } ], "waitFor": "#operations-pets-get_pets .try-out__btn" },
+    { "name": "try-it-out", "steps": [ { "click": "#operations-pets-get_pets .try-out__btn" } ], "waitFor": "#operations-pets-get_pets .execute" }
+  ]
+}

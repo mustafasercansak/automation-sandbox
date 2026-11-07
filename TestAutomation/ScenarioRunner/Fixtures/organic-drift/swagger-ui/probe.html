@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Swagger UI drift probe</title>
+<link rel="stylesheet" href="./swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="./swagger-ui-bundle.js"></script>
+<script>
+// The OpenAPI document is inline so the page works from a file:// URL with no server. It is an input of the probe, not part of the
+// application under test: the application is the unmodified swagger-ui-dist release loaded above.
+window.onload = function () {
+  window.ui = SwaggerUIBundle({
+    dom_id: '#swagger-ui',
+    deepLinking: false,
+    spec: {
+      openapi: '3.0.0',
+      info: { title: 'Drift Probe API', version: '1.0.0' },
+      servers: [{ url: 'https://api.example.test/v1' }, { url: 'https://staging.example.test/v1' }],
+      components: { securitySchemes: { ApiKey: { type: 'apiKey', in: 'header', name: 'X-Api-Key' } } },
+      security: [{ ApiKey: [] }],
+      paths: {
+        '/pets': {
+          get: {
+            tags: ['pets'], summary: 'List pets',
+            parameters: [{ name: 'limit', in: 'query', description: 'Maximum number of pets', schema: { type: 'integer' } }],
+            responses: { '200': { description: 'ok' } }
+          },
+          post: {
+            tags: ['pets'], summary: 'Create a pet',
+            requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' } } } } } },
+            responses: { '201': { description: 'created' } }
+          }
+        },
+        '/owners': { get: { tags: ['owners'], summary: 'List owners', responses: { '200': { description: 'ok' } } } }
+      }
+    }
+  });
+};
+</script>
+</body>
+</html>
