@@ -22,6 +22,8 @@
     <!-- The agent command's report shape is reused for the triage tool, as in the ScenarioRunner build. -->
     <Compile Include="..\AgentCli\AgentOptions.cs" Link="AgentCli\AgentOptions.cs" />
     <Compile Include="..\AgentCli\AgentCommand.cs" Link="AgentCli\AgentCommand.cs" />
+    <!-- The same compact result shape as the heal CLI's compact option (#668). -->
+    <Compile Include="..\SelfHealingCli\HealResultCompactor.cs" Link="SelfHealingCli\HealResultCompactor.cs" />
   </ItemGroup>
 
   <ItemGroup>

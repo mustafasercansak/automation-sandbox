@@ -16,6 +16,7 @@
     <Compile Include="..\SiteAuditCli\DictionaryLocation.cs" Link="SiteAuditCli\DictionaryLocation.cs" />
     <Compile Include="..\SiteAuditCli\AuditOptions.cs" Link="SiteAuditCli\AuditOptions.cs" />
     <Compile Include="..\SelfHealingCli\HealCliOptions.cs" Link="SelfHealingCli\HealCliOptions.cs" />
+    <Compile Include="..\SelfHealingCli\HealResultCompactor.cs" Link="SelfHealingCli\HealResultCompactor.cs" />
     <Compile Include="..\AgentCli\AgentOptions.cs" Link="AgentCli\AgentOptions.cs" />
     <Compile Include="..\AgentCli\AgentCommand.cs" Link="AgentCli\AgentCommand.cs" />
     <!-- The MCP server (#586) is a net10.0-only tool too; its protocol loop and tools are compiled in for the same reason. -->

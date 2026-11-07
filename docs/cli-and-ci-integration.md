@@ -176,7 +176,7 @@ It offers four tools, all read-only:
 
 | Tool | What it does | Needs |
 | :--- | :--- | :--- |
-| `heal_locator` | Takes the stale element and a live UI tree as JSON and returns the heal decision with its score breakdown; `isConfident` is the engine's own acceptance gate. | nothing |
+| `heal_locator` | Takes the stale element and a live UI tree as JSON and returns the heal decision with its score breakdown; `IsConfident` is the engine's own acceptance gate and is the first property of the answer (#668). The answer has the same compact shape as `automation-sandbox-heal --compact`: elements without their subtree and only the best 5 candidates, with `CandidateCount` giving the full number, so it stays small whatever the size of the tree. | nothing |
 | `classify_ci_log` | Sorts a failed CI log into a category with deterministic rules, no model; credential shapes are masked in the answer. | nothing |
 | `check_issue_eligibility` | Reads an issue and its board card and reports the agent label gate's decision. | `PROJECT_TOKEN` on the server |
 | `triage_issue_dry_run` | Runs the triage agent on an eligible issue and returns the proposal; nothing is posted, labelled or moved. It asks the configured models, so it costs quota. | `PROJECT_TOKEN` and a model key on the server |
@@ -369,7 +369,7 @@ Dört araç sunar, hepsi salt okunurdur:
 
 | Araç | Ne yapar | Gerektirir |
 | :--- | :--- | :--- |
-| `heal_locator` | Eski öğeyi ve canlı bir UI ağacını JSON olarak alır, skor dökümüyle iyileştirme kararını döner; `isConfident` motorun kendi kabul kapısıdır. | hiçbir şey |
+| `heal_locator` | Eski öğeyi ve canlı bir UI ağacını JSON olarak alır, skor dökümüyle iyileştirme kararını döner; `IsConfident` motorun kendi kabul kapısıdır ve yanıtın ilk özelliğidir (#668). Yanıt, `automation-sandbox-heal --compact` ile aynı sıkıştırılmış biçimdedir: alt ağacı olmayan öğeler ve yalnızca en iyi 5 aday, tam sayıyı `CandidateCount` verir; böylece ağaç ne kadar büyük olursa olsun yanıt küçük kalır. | hiçbir şey |
 | `classify_ci_log` | Başarısız bir CI logunu model kullanmadan, deterministik kurallarla bir kategoriye ayırır; yanıtta kimlik bilgisi biçimleri maskelenir. | hiçbir şey |
 | `check_issue_eligibility` | Bir issue'yu ve pano kartını okur, ajanın etiket kapısının kararını bildirir. | sunucuda `PROJECT_TOKEN` |
 | `triage_issue_dry_run` | Uygun bir issue üzerinde triyaj ajanını çalıştırır ve öneriyi döner; hiçbir şey yazılmaz, etiketlenmez ya da taşınmaz. Yapılandırılmış modelleri çağırdığı için kota harcar. | sunucuda `PROJECT_TOKEN` ve bir model anahtarı |
