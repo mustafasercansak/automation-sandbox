@@ -63,6 +63,41 @@ namespace ScenarioRunner
             Assert.DoesNotContain("OLLAMA_ENABLED", text, StringComparison.Ordinal);
         }
 
+        // #666: the gate is what proves quorum when model code lands, so it must run on every trigger; the broader evaluation is
+        // non-gating data collection that cost 5 scenario calls for each 1 of the gate on every push, so a push must skip it.
+        [Fact]
+        public void NightlyConsensus_PushRunsTheGateOnly_NotTheBroadEvaluation()
+        {
+            var text = File.ReadAllText(WorkflowPath());
+
+            var gate = StepBlock(text, "Gate live multi-provider consensus (2-of-N pool)");
+            var evaluation = StepBlock(text, "Run multi-provider consensus evaluation");
+            var upload = StepBlock(text, "Upload Consensus Evaluation Report");
+
+            Assert.True(gate.IndexOf("        if:", StringComparison.Ordinal) < 0, "The gate must run on every trigger, push included.");
+            Assert.True(evaluation.IndexOf("github.event_name != 'push'", StringComparison.Ordinal) >= 0, "A push must not run the broader evaluation.");
+            Assert.True(upload.IndexOf("github.event_name != 'push'", StringComparison.Ordinal) >= 0, "A push produces no evaluation report to upload.");
+        }
+
+        [Fact]
+        public void NightlyConsensus_ABurstOfPushesCancelsSupersededRuns_ButNeverAScheduledOrManualRun()
+        {
+            var text = File.ReadAllText(WorkflowPath());
+
+            Assert.True(text.IndexOf("cancel-in-progress: ${{ github.event_name == 'push' }}", StringComparison.Ordinal) >= 0);
+            // The event name is part of the group, so a push can never cancel the weekly run or a manual dispatch.
+            Assert.True(text.IndexOf("group: consensus-${{ github.event_name }}-${{ github.ref }}", StringComparison.Ordinal) >= 0);
+        }
+
+        // The text of one step: from its "- name:" line to the next step or the end of the file.
+        private static string StepBlock(string text, string stepName)
+        {
+            var start = text.IndexOf("- name: " + stepName, StringComparison.Ordinal);
+            Assert.True(start >= 0, $"Step '{stepName}' not found in nightly-consensus.yml.");
+            var next = text.IndexOf("\n      - name:", start + 1, StringComparison.Ordinal);
+            return next < 0 ? text.Substring(start) : text.Substring(start, next - start);
+        }
+
         private static string WorkflowPath()
         {
             var path = Path.Combine(FindRepositoryRoot(), ".github", "workflows", "nightly-consensus.yml");

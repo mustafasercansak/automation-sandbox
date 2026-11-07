@@ -3,6 +3,10 @@ name: Nightly Multi-Provider Consensus Evaluation
 # Live calls to up to 11 providers cost quota (#565), so this no longer runs every night. It runs weekly,
 # because a provider can change its behaviour without any change here, and it runs when model-related
 # code lands on main. The file keeps its "nightly" name so existing references stay valid.
+#
+# #666: a push to main runs only the gate. The broader evaluation is non-gating data collection (5 scenarios against the
+# gate's 1), and 21 push runs in two weeks each paid for it; it now runs on the weekly schedule and on a manual dispatch.
+# A burst of pushes also cancels the superseded runs, because the newest commit contains the earlier ones.
 on:
   schedule:
     - cron: '0 2 * * 1'
@@ -19,6 +23,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: consensus-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   consensus-evaluation:
@@ -89,6 +97,7 @@ jobs:
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~LiveConsensusGateTests.LiveConsensusGate_TwoOfConfiguredPoolAgreeOnCorrectCandidate" --logger "console;verbosity=normal"
 
       - name: Run multi-provider consensus evaluation
+        if: ${{ github.event_name != 'push' }}
         env:
           CONSENSUS_EVALUATION: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -127,7 +136,7 @@ jobs:
         run: dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj --configuration Debug --framework net10.0 --no-build --filter "FullyQualifiedName~ConsensusEvaluationTests.RunConsensusEvaluation_LiveNightlyRun" --logger "console;verbosity=normal"
 
       - name: Upload Consensus Evaluation Report
-        if: always()
+        if: ${{ always() && github.event_name != 'push' }}
         uses: actions/upload-artifact@v7
         with:
           name: consensus-evaluation-report
