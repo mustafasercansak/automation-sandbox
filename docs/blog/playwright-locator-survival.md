@@ -66,6 +66,28 @@ A green test does not prove you clicked the right thing. Add one check that only
 
 *Evidence:* the wrong button also opened the operation. A test that only checks "the operation is open" cannot tell the two apart. The wrong button has `tabindex="-1"`, so it is not reachable by keyboard. A focus test would have caught it.
 
+### If you write XPath
+
+Many suites use XPath, so we measured it too. Seven XPath styles aimed at the same button, on four consecutive Swagger UI releases, each release compared with the next one (three upgrades). A style is valid when, in the older release, it finds exactly that button.
+
+| XPath style | 3.52.5 → 4.19.1 | 4.19.1 → 5.17.14 | 5.17.14 → 5.34.1 |
+| :--- | :--- | :--- | :--- |
+| Absolute path ("Copy full XPath") | still right | still right | **fails visibly** |
+| Global index `(//button[...])[1]` | still right, only because the right button comes first | same | same |
+| Id plus class | still right | still right | still right |
+| Content (`//button[.//span[...] and ...]`) | still right | still right | still right |
+| Per-parent index `//button[...][1]` | not valid (matches 3) | not valid | not valid |
+| `contains(@aria-label, "pets")` | not valid (matches 2) | not valid | not valid |
+| Position `//div[3]//button` | not valid (matches 0) | not valid | not valid |
+
+Three rules follow from it:
+
+1. **Do not use the path.** "Copy full XPath" writes an index at every level. It survived two upgrades and failed in the third, where the structure above the button changed. It failed loudly here, not silently.
+2. **Write `[1]` with care.** `//button[...][1]` means "the first one inside each parent", so it matched three buttons. `(//button[...])[1]` means "the first one on the page". They are different, and the second one only worked because the right button comes first.
+3. **Use an id or the content.** The two styles that depended on neither a path nor an order survived all three upgrades.
+
+The last three rows were written to include common mistakes. How often real suites make them was not measured.
+
 ### Before you merge an upgrade
 
 Count the matches of every locator on the old page and on the new page:
@@ -105,7 +127,7 @@ The script prints each of these on one line. Two runs in a row printed the same 
 
 ### What we did *not* measure
 
-- **One program, one upgrade.** Swagger UI 4.19.1 to 5.17.14. Other pages behave differently.
+- **One program.** Swagger UI. The locator measurement is one upgrade (4.19.1 to 5.17.14); the XPath measurement is three (3.52.5, 4.19.1, 5.17.14, 5.34.1). Other pages behave differently.
 - **Ten locators that we chose.** They are plausible, but they are not a sample of real test suites. We do not know how common each one is.
 - **"Valid" is our definition:** exactly one match, and it is the right button, found by its class inside the operation block.
 - **The click effect was checked on this page only.**
@@ -117,6 +139,7 @@ The script prints each of these on one line. Two runs in a row printed the same 
 cd examples/js-playwright-capture
 npm install
 node locator-survival.mjs ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/manifest.json --channel chrome
+node xpath-survival.mjs ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/xpath-manifest.json --channel chrome
 ```
 
 A release whose hash does not match the manifest is refused. `--channel chrome` uses an installed Chrome. Without it, run `npx playwright install chromium` first.
@@ -176,13 +199,35 @@ Yeşil test, doğru şeye tıkladığınızı kanıtlamaz. Yalnızca doğru elem
 
 *Kanıt:* yanlış buton da operasyonu açtı. Yalnızca "operasyon açık" diye bakan bir test ikisini ayıramaz. Yanlış butonda `tabindex="-1"` var, klavyeyle ulaşılamıyor. Bir odak testi bunu yakalardı.
 
+### XPath yazıyorsanız
+
+Birçok pakette XPath kullanılıyor, o yüzden onu da ölçtük. Aynı butona yönelen yedi XPath stili, art arda dört Swagger UI sürümünde, her sürüm bir sonrakiyle karşılaştırıldı (üç yükseltme). Eski sürümde tam o butonu bulan stil "geçerli" sayıldı.
+
+| XPath stili | 3.52.5 → 4.19.1 | 4.19.1 → 5.17.14 | 5.17.14 → 5.34.1 |
+| :--- | :--- | :--- | :--- |
+| Mutlak yol ("Copy full XPath") | hâlâ doğru | hâlâ doğru | **açık hata verdi** |
+| Genel sıra `(//button[...])[1]` | hâlâ doğru, yalnızca doğru buton önce geldiği için | aynı | aynı |
+| Kimlik ve sınıf | hâlâ doğru | hâlâ doğru | hâlâ doğru |
+| İçerik (`//button[.//span[...] and ...]`) | hâlâ doğru | hâlâ doğru | hâlâ doğru |
+| Ebeveyn başına sıra `//button[...][1]` | geçerli değil (3 eşleşme) | geçerli değil | geçerli değil |
+| `contains(@aria-label, "pets")` | geçerli değil (2 eşleşme) | geçerli değil | geçerli değil |
+| Konum `//div[3]//button` | geçerli değil (0 eşleşme) | geçerli değil | geçerli değil |
+
+Bundan üç kural çıkıyor:
+
+1. **Yolu kullanmayın.** "Copy full XPath" her seviyede bir sıra numarası yazar. İki yükseltmede ayakta kaldı, üçüncüde düştü: butonun üstündeki yapı değişmişti. Burada sessizce değil, açık hatayla düştü.
+2. **`[1]` yazarken dikkat edin.** `//button[...][1]` "her ebeveynin içindeki ilk" demek, bu yüzden üç butonla eşleşti. `(//button[...])[1]` ise "sayfadaki ilk" demek. İkisi farklı ve ikincisi yalnızca doğru buton önce geldiği için çalıştı.
+3. **Kimlik ya da içerik kullanın.** Ne yola ne de sıraya bağlı olan iki stil, üç yükseltmenin üçünde de ayakta kaldı.
+
+Son üç satır yaygın hataları içerecek şekilde yazıldı. Gerçek paketlerde ne sıklıkla yapıldıklarını ölçmedik.
+
 ### Bir yükseltmeyi birleştirmeden önce
 
 Her locator'ın eşleşme sayısını eski sayfada ve yeni sayfada sayın (yukarıdaki kod). 1 olmayan her şey yakında hata verecek ya da zaten `.first()` arkasına saklanıyor. Testlerinizde `.first()` ve `.nth(` de arayın.
 
 ### Ölçmediklerimiz
 
-Tek program, tek yükseltme (Swagger UI 4.19.1'den 5.17.14'e). On locator'ı biz seçtik, gerçek test paketlerinin örneği değil, hangisinin ne kadar yaygın olduğunu bilmiyoruz. "Geçerli" tanımı bizim. Tıklama etkisi yalnızca bu sayfada denendi. Yeniden üretmek için İngilizce bölümdeki komutu çalıştırın.
+Tek program (Swagger UI). Locator ölçümü tek yükseltme (4.19.1'den 5.17.14'e), XPath ölçümü üç yükseltme (3.52.5, 4.19.1, 5.17.14, 5.34.1). On locator'ı biz seçtik, gerçek test paketlerinin örneği değil, hangisinin ne kadar yaygın olduğunu bilmiyoruz. "Geçerli" tanımı bizim. Tıklama etkisi yalnızca bu sayfada denendi. Yeniden üretmek için İngilizce bölümdeki komutu çalıştırın.
 
 ---
 
