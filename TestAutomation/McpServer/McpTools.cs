@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AutomationSandbox.AgentCli;
 using AutomationSandbox.LlmHealing;
 using AutomationSandbox.SelfHealing;
+using AutomationSandbox.SelfHealingCli;
 using AutomationSandbox.UiModel;
 
 namespace AutomationSandbox.Mcp
@@ -30,7 +32,7 @@ namespace AutomationSandbox.Mcp
             {
                 new McpTool(
                     "heal_locator",
-                    "Find the live UI element that a stale locator now refers to. Takes the stale element and a freshly captured UI tree as JSON (the shape of UiTreeSerializer.ToJson) and returns the heal decision with its score breakdown. isConfident is the engine's own acceptance gate: do not treat a match as safe when it is false. Nothing is changed.",
+                    "Find the live UI element that a stale locator now refers to. Takes the stale element and a freshly captured UI tree as JSON (the shape of UiTreeSerializer.ToJson) and returns the heal decision with its score breakdown. IsConfident is the engine's own acceptance gate and is the first property of the answer: do not treat a match as safe when it is false. Elements come without their child subtree and only the best 5 candidates are listed (CandidateCount is the full number), so the answer stays small whatever the size of the tree. Nothing is changed.",
                     "{\"type\":\"object\",\"properties\":{\"expected\":{\"type\":\"string\",\"description\":\"The stale element as one UiElementInfo JSON object.\"},\"tree\":{\"type\":\"string\",\"description\":\"The live UI tree as UiElementInfo JSON.\"},\"profile\":{\"type\":\"string\",\"enum\":[\"balanced\",\"conservative\",\"aggressive\"],\"description\":\"Threshold profile; default balanced.\"}},\"required\":[\"expected\",\"tree\"],\"additionalProperties\":false}",
                     (args, ct) => Task.FromResult(HealLocator(args))),
                 new McpTool(
@@ -88,7 +90,28 @@ namespace AutomationSandbox.Mcp
 
             // The resolver's log callback is dropped: only the result goes back, never a side channel.
             var result = SelfHealingResolver.Resolve(expected, tree, SimilarityWeights.FromProfile(profile), log: _ => { });
-            return McpToolResult.Ok(JsonSerializer.Serialize(result, Indented));
+
+            // #668: the answer is cut at McpProtocol.MaxToolOutputLength. The full result is as large as the tree (every node is a candidate), and
+            // IsConfident is its last property, so on a real page the cut removed the one field the tool description tells the model to check.
+            // Decide on the full result, shrink it like the CLI's --compact, and put the gate first so it can never be what a cut removes.
+            var isConfident = result.IsConfident;
+            HealResultCompactor.Compact(result);
+            return McpToolResult.Ok(SerializeDecision(result, isConfident));
+        }
+
+        private static string SerializeDecision(HealResult compactResult, bool isConfident)
+        {
+            var fields = JsonSerializer.SerializeToNode(compactResult)!.AsObject();
+            var ordered = new JsonObject { ["IsConfident"] = isConfident };
+            foreach (var field in fields)
+            {
+                if (field.Key != "IsConfident")
+                {
+                    ordered[field.Key] = field.Value?.DeepClone();
+                }
+            }
+
+            return ordered.ToJsonString(Indented);
         }
 
         private static McpToolResult ClassifyCiLog(JsonElement args)

@@ -142,6 +142,44 @@ namespace ScenarioRunner
             Assert.Contains("textBox1", ToolText(responses[0]));
         }
 
+        // #668: on a page-sized tree the full result is far longer than the answer limit, and IsConfident, its last property, was the part the cut
+        // removed. The answer must stay valid JSON with the acceptance gate first, and the gate must be the full result's, not a recomputed one.
+        [Fact]
+        public async Task HealLocator_OnAPageSizedTree_ReturnsValidJsonWithTheGateFirst_AndTheFullResultsDecision()
+        {
+            var tree = HealResultCompactorTests.BuildLargeTree(300);
+            var treeJson = AutomationSandbox.UiModel.UiTreeSerializer.ToJson(tree);
+            var expectedJson = AutomationSandbox.UiModel.UiTreeSerializer.ToJson(HealResultCompactorTests.StaleEdit());
+
+            var full = AutomationSandbox.SelfHealing.SelfHealingResolver.Resolve(
+                AutomationSandbox.UiModel.UiTreeSerializer.FromJson(expectedJson),
+                AutomationSandbox.UiModel.UiTreeSerializer.FromJson(treeJson),
+                AutomationSandbox.SelfHealing.SimilarityWeights.Balanced,
+                log: _ => { });
+            Assert.True(JsonSerializer.Serialize(full).Length > McpProtocol.MaxToolOutputLength, "The precondition: the uncompacted answer would have been cut.");
+
+            var responses = await Talk(Call(1, "heal_locator", new { expected = expectedJson, tree = treeJson }));
+
+            Assert.False(IsToolError(responses[0]));
+            var text = ToolText(responses[0]);
+            Assert.True(text.Length < McpProtocol.MaxToolOutputLength);
+            Assert.True(text.IndexOf("[output cut", StringComparison.Ordinal) < 0);
+            using var decision = JsonDocument.Parse(text);
+            Assert.Equal("IsConfident", decision.RootElement.EnumerateObject().First().Name);
+            Assert.Equal(full.IsConfident, decision.RootElement.GetProperty("IsConfident").GetBoolean());
+            Assert.True(decision.RootElement.GetProperty("CandidateCount").GetInt32() > 5);
+            Assert.Equal(5, decision.RootElement.GetProperty("Candidates").GetArrayLength());
+        }
+
+        [Fact]
+        public async Task HealLocator_PutsTheGateFirst_EvenOnASmallTree()
+        {
+            var responses = await Talk(Call(1, "heal_locator", new { expected = Expected, tree = Tree }));
+
+            using var decision = JsonDocument.Parse(ToolText(responses[0]));
+            Assert.Equal("IsConfident", decision.RootElement.EnumerateObject().First().Name);
+        }
+
         [Theory]
         [InlineData("{\"expected\":\"not json\",\"tree\":\"{}\"}")]
         [InlineData("{\"expected\":5,\"tree\":\"{}\"}")]
