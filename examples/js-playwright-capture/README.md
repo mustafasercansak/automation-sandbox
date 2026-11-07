@@ -82,6 +82,12 @@ node organic-drift-capture.mjs ../../TestAutomation/ScenarioRunner/Fixtures/orga
 diff -r ./out/trees ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/trees   # no output = identical
 ```
 
+`locator-survival.mjs` (#670) uses the same manifest and the same hash check to measure which of ten common Playwright locator styles survive the upgrade between the two releases: which still find the control, which fail loudly, and which silently bind to a different element. The write-up is [docs/blog/playwright-locator-survival.md](../../docs/blog/playwright-locator-survival.md) / Aynı manifesti ve aynı hash kontrolünü kullanarak, on yaygın Playwright locator stilinden hangilerinin iki sürüm arasındaki yükseltmede hayatta kaldığını ölçer: hangileri kontrolü hâlâ bulur, hangileri açık hata verir, hangileri sessizce başka bir elemana bağlanır. Yazı: [docs/blog/playwright-locator-survival.md](../../docs/blog/playwright-locator-survival.md):
+
+```bash
+node locator-survival.mjs ../../TestAutomation/ScenarioRunner/Fixtures/organic-drift/swagger-ui/manifest.json --channel chrome
+```
+
 ## Why this one `package.json` exists / Bu tek `package.json` neden var
 
 The main repository is deliberately all-C#, with no JavaScript/Python/Rust tooling (see `AGENTS.md`) - `PlaywrightLiveExploration` wraps the `Microsoft.Playwright` .NET SDK precisely so the product itself never needs Node.js at runtime. This example is the one narrow, explicit exception: it exists specifically to serve callers who are *not* using .NET, so it necessarily needs its own Node.js tooling. It does not change anything about the product's own runtime dependencies.
