@@ -161,6 +161,60 @@ namespace ScenarioRunner
         }
     }
 
+    /// <summary>Spaces the calls to a model at least <c>minInterval</c> apart (measured from one call's start to the next one's), so a live
+    /// run does not hit a provider's requests-per-minute limit (#676: the first live run, Gemini, got HTTP 429 on 42 of 50 runs after about
+    /// two minutes). It changes nothing the agent sees, only when a call is made; a failed call passes through untouched.</summary>
+    internal sealed class PacedTextModel : ITextModel
+    {
+        private readonly ITextModel _inner;
+        private readonly TimeSpan _minInterval;
+        private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
+        private readonly Func<TimeSpan> _clock;
+        private readonly SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
+        private TimeSpan? _lastStart;
+
+        public PacedTextModel(ITextModel inner, TimeSpan minInterval, Func<TimeSpan, CancellationToken, Task>? delayAsync = null, Func<TimeSpan>? clock = null)
+        {
+            if (minInterval < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minInterval), "minInterval must not be negative.");
+            }
+
+            _inner = inner;
+            _minInterval = minInterval;
+            _delayAsync = delayAsync ?? ((delay, token) => Task.Delay(delay, token));
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            _clock = clock ?? (() => stopwatch.Elapsed);
+        }
+
+        public string Name => _inner.Name;
+
+        public bool IsAvailable => _inner.IsAvailable;
+
+        public async Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)
+        {
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (_lastStart.HasValue)
+                {
+                    var wait = _lastStart.Value + _minInterval - _clock();
+                    if (wait > TimeSpan.Zero)
+                    {
+                        await _delayAsync(wait, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+
+                _lastStart = _clock();
+                return await _inner.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+    }
+
     internal static class HealAgentEvaluation
     {
         public const int MaxRunsPerCase = 5;

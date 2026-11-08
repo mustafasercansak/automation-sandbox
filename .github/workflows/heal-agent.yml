@@ -24,6 +24,11 @@ on:
         required: false
         default: ''
         type: string
+      pace_seconds:
+        description: Seconds between two calls to a model (0 to 60), so a provider's requests-per-minute limit is not hit. 0 means no spacing. The first live run, Gemini with no spacing, got HTTP 429 on 42 of 50 runs.
+        required: false
+        default: '0'
+        type: string
       nvidia_model:
         description: NVIDIA model id (only needed to include the NVIDIA model)
         required: false
@@ -66,11 +71,13 @@ jobs:
         env:
           RUNS_INPUT: ${{ inputs.runs }}
           ONLY_MODEL_INPUT: ${{ inputs.only_model }}
+          PACE_INPUT: ${{ inputs.pace_seconds }}
           NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
           OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
           MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}
         run: |
           [[ "$RUNS_INPUT" =~ ^[1-5]$ ]] || { echo "runs must be a whole number from 1 to 5"; exit 2; }
+          [[ "$PACE_INPUT" =~ ^([0-9]|[1-5][0-9]|60)$ ]] || { echo "pace_seconds must be a whole number from 0 to 60"; exit 2; }
           [[ "$ONLY_MODEL_INPUT" =~ ^[A-Za-z0-9,\ ]{0,60}$ ]] || { echo "only_model may hold only letters, digits, commas and spaces"; exit 2; }
           for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT" "$MISTRAL_MODEL_INPUT"; do
             [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
@@ -82,6 +89,7 @@ jobs:
           HEAL_AGENT: '1'
           HEAL_AGENT_RUNS: ${{ inputs.runs }}
           HEAL_AGENT_ONLY: ${{ inputs.only_model }}
+          HEAL_AGENT_PACE_SECONDS: ${{ inputs.pace_seconds }}
           HEAL_AGENT_OUT: ${{ github.workspace }}/heal-agent-out
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}

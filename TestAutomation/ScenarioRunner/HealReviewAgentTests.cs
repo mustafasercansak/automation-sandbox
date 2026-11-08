@@ -461,6 +461,84 @@ namespace ScenarioRunner
             Assert.Throws<InvalidOperationException>(() => HealAgentModelFilter.Select(models, "Mistral"));
         }
 
+        private sealed class CountingModel : ITextModel
+        {
+            public string Name => "counting";
+
+            public bool IsAvailable => true;
+
+            public int Calls { get; private set; }
+
+            public Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default)
+            {
+                Calls++;
+                return Task.FromResult(new TextCompletionResult { Success = false, ErrorMessage = "HTTP 429 (rate limited)", ModelName = "counting" });
+            }
+        }
+
+        private static TextCompletionRequest AnyRequest() => new TextCompletionRequest("hello");
+
+        [Fact]
+        public async Task ThePacedModel_DoesNotWaitBeforeTheFirstCall_AndWaitsOutTheRestOfTheIntervalBeforeEachNext()
+        {
+            var now = TimeSpan.Zero;
+            var waits = new List<TimeSpan>();
+            var inner = new CountingModel();
+            var paced = new PacedTextModel(inner, TimeSpan.FromSeconds(6), (delay, token) => { waits.Add(delay); now += delay; return Task.CompletedTask; }, () => now);
+
+            await paced.CompleteAsync(AnyRequest());
+            now += TimeSpan.FromSeconds(2);
+            await paced.CompleteAsync(AnyRequest());
+            await paced.CompleteAsync(AnyRequest());
+
+            Assert.Equal(3, inner.Calls);
+            Assert.Equal(new[] { TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6) }, waits);
+        }
+
+        [Fact]
+        public async Task ThePacedModel_DoesNotWaitWhenTheIntervalHasAlreadyPassed()
+        {
+            var now = TimeSpan.Zero;
+            var waits = new List<TimeSpan>();
+            var paced = new PacedTextModel(new CountingModel(), TimeSpan.FromSeconds(6), (delay, token) => { waits.Add(delay); return Task.CompletedTask; }, () => now);
+
+            await paced.CompleteAsync(AnyRequest());
+            now += TimeSpan.FromSeconds(30);
+            await paced.CompleteAsync(AnyRequest());
+
+            Assert.Empty(waits);
+        }
+
+        [Fact]
+        public async Task ThePacedModel_PassesTheNameTheAvailabilityAndAFailedResultThroughUntouched()
+        {
+            var paced = new PacedTextModel(new CountingModel(), TimeSpan.Zero);
+
+            var result = await paced.CompleteAsync(AnyRequest());
+
+            Assert.Equal("counting", paced.Name);
+            Assert.True(paced.IsAvailable);
+            Assert.False(result.Success);
+            Assert.Equal("HTTP 429 (rate limited)", result.ErrorMessage);
+        }
+
+        [Fact]
+        public void ThePacedModel_RejectsANegativeInterval()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PacedTextModel(new CountingModel(), TimeSpan.FromSeconds(-1)));
+        }
+
+        [Fact]
+        public async Task ThePacedModel_StopsWaitingWhenTheRunIsCancelled()
+        {
+            using var cancellation = new CancellationTokenSource();
+            var now = TimeSpan.Zero;
+            var paced = new PacedTextModel(new CountingModel(), TimeSpan.FromSeconds(6), (delay, token) => { cancellation.Cancel(); token.ThrowIfCancellationRequested(); return Task.CompletedTask; }, () => now);
+            await paced.CompleteAsync(AnyRequest());
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => paced.CompleteAsync(AnyRequest(), cancellation.Token));
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(6)]
@@ -472,7 +550,8 @@ namespace ScenarioRunner
 
     // The live run (#676): every configured model runs the agent over all 50 stored locators. HEAL_AGENT=1 turns it on, HEAL_AGENT_RUNS (1 to
     // 5) says how often each locator is asked, HEAL_AGENT_ONLY (model names, comma separated) limits the run to those models so they can be
-    // run one at a time, and the reports go to HEAL_AGENT_OUT. A no-op without the switch or a model, like the other
+    // run one at a time, HEAL_AGENT_PACE_SECONDS (0 to 60) spaces the calls to each model so a provider's requests-per-minute limit is not hit,
+    // and the reports go to HEAL_AGENT_OUT. A no-op without the switch or a model, like the other
     // live harnesses. It spends quota and gates nothing.
     public class HealReviewAgentLiveTests
     {
@@ -492,6 +571,13 @@ namespace ScenarioRunner
                 throw new InvalidOperationException("HEAL_AGENT_RUNS must be a whole number from 1 to " + HealAgentEvaluation.MaxRunsPerCase + ".");
             }
 
+            var pace = 0;
+            var paceText = Environment.GetEnvironmentVariable("HEAL_AGENT_PACE_SECONDS");
+            if (!string.IsNullOrWhiteSpace(paceText) && (!int.TryParse(paceText, NumberStyles.None, CultureInfo.InvariantCulture, out pace) || pace > 60))
+            {
+                throw new InvalidOperationException("HEAL_AGENT_PACE_SECONDS must be a whole number from 0 to 60.");
+            }
+
             var directory = Environment.GetEnvironmentVariable("HEAL_AGENT_OUT");
             if (string.IsNullOrWhiteSpace(directory))
             {
@@ -502,7 +588,8 @@ namespace ScenarioRunner
             var cases = HealAgentCases.OrganicDrift();
             foreach (var model in HealAgentModelFilter.Select(registry.Models, Environment.GetEnvironmentVariable("HEAL_AGENT_ONLY")))
             {
-                var report = await HealAgentEvaluation.RunAsync(model, cases, live: true, runsPerCase: runs);
+                var paced = pace > 0 ? new PacedTextModel(model, TimeSpan.FromSeconds(pace)) : model;
+                var report = await HealAgentEvaluation.RunAsync(paced, cases, live: true, runsPerCase: runs);
                 File.WriteAllText(Path.Combine(directory, "heal-agent-" + model.Name + ".md"), report.ToMarkdown());
                 File.WriteAllText(Path.Combine(directory, "heal-agent-" + model.Name + ".json"), report.ToJson());
                 Console.WriteLine("[HealAgent] " + model.Name + ": " + report.Runs.Count + " run(s), failed " + report.Runs.Count(r => r.Outcome == HealAgentOutcome.Failed) + ". Written to " + directory);
