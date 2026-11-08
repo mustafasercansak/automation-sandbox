@@ -78,6 +78,8 @@ namespace ScenarioRunner
             var b = new StringBuilder();
             b.AppendLine("# Heal-review agent: " + ModelName + (Live ? "" : " (OFFLINE, scripted answers)"));
             b.AppendLine();
+            b.AppendLine("Prompt version: " + HealReviewAgent.PromptVersion + ". Figures from runs of different prompt versions are not mixed.");
+            b.AppendLine();
             b.AppendLine("Cases: " + Cases + " stored locators of the organic drift dataset (Swagger UI 4.19.1 to 5.17.14), each run " + RunsPerCase + " time(s), " + Runs.Count + " run(s) in all. Outcomes are counted per run, split by what the engine (Balanced) did on the same locator.");
             b.AppendLine();
             b.AppendLine("| Engine (Balanced) | Runs | Agreed | Overrode, correct | Overrode, wrong | Escalated | Failed |");
@@ -108,6 +110,7 @@ namespace ScenarioRunner
             return JsonSerializer.Serialize(new
             {
                 model = ModelName,
+                promptVersion = HealReviewAgent.PromptVersion,
                 live = Live,
                 runsPerCase = RunsPerCase,
                 cases = Cases,

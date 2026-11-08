@@ -539,6 +539,26 @@ namespace ScenarioRunner
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => paced.CompleteAsync(AnyRequest(), cancellation.Token));
         }
 
+        [Fact]
+        public void ThePrompt_AsksForAShortReason_WhileTheLimitStaysThreeHundred()
+        {
+            var prompt = HealReviewAgent.BuildPrompt(Declined().Expected, new string[0], 6);
+
+            Assert.Contains("Keep the reason to one short sentence, under 200 characters.", prompt);
+            Assert.Equal(300, HealAgentProtocol.MaxReasonLength);
+            Assert.Equal("v2", HealReviewAgent.PromptVersion);
+        }
+
+        [Fact]
+        public async Task TheReport_NamesThePromptVersion_InMarkdownAndJson_SoRunsOfDifferentPromptsAreNotMixed()
+        {
+            var report = await HealAgentEvaluation.RunAsync(new ScriptedModel(Human), new[] { Declined() }, live: true, runsPerCase: 1);
+
+            Assert.Contains("Prompt version: v2.", report.ToMarkdown());
+            using var json = JsonDocument.Parse(report.ToJson());
+            Assert.Equal("v2", json.RootElement.GetProperty("promptVersion").GetString());
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(6)]
