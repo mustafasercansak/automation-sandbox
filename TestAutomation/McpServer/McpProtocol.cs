@@ -51,7 +51,12 @@ namespace AutomationSandbox.Mcp
 
     /// <summary>A minimal Model Context Protocol server over a pair of text streams: one JSON-RPC message per line (the stdio
     /// transport), tools only. It never writes anything but protocol messages to the output, bounds every incoming message and
-    /// every tool answer, and answers a malformed or unknown request with a JSON-RPC error instead of stopping.</summary>
+    /// every tool answer, and answers a malformed or unknown request with a JSON-RPC error instead of stopping.
+    /// It serves two protocol eras, which the revision allows a server to do (#674). A request that carries the per-request
+    /// <c>io.modelcontextprotocol/protocolVersion</c> in <c>_meta</c> is served statelessly under 2026-07-28: no handshake, a
+    /// <c>resultType</c> on every result. A process that was opened with <c>initialize</c> is served under the older revisions
+    /// (2025-06-18 and before) exactly as before, so a client that has not moved yet keeps working. A request that is neither
+    /// is malformed.</summary>
     internal static class McpProtocol
     {
         /// <summary>Largest accepted message, in characters. A longer line is discarded and answered with an error.</summary>
@@ -60,14 +65,35 @@ namespace AutomationSandbox.Mcp
         /// <summary>Longest tool answer, in characters; a longer one is cut and says so.</summary>
         public const int MaxToolOutputLength = 60000;
 
-        /// <summary>The protocol revision this server speaks.</summary>
-        public const string ProtocolVersion = "2025-06-18";
+        /// <summary>The newest protocol revision this server speaks: no handshake, every request carries its own version.</summary>
+        public const string ProtocolVersion = "2026-07-28";
 
-        private static readonly string[] SupportedVersions = { "2025-06-18", "2025-03-26", "2024-11-05" };
+        /// <summary>The newest older revision, spoken to a client that opens with <c>initialize</c>.</summary>
+        public const string LegacyProtocolVersion = "2025-06-18";
+
+        private const string VersionKey = "io.modelcontextprotocol/protocolVersion";
+        private const string CapabilitiesKey = "io.modelcontextprotocol/clientCapabilities";
+        private const string ServerInfoKey = "io.modelcontextprotocol/serverInfo";
+
+        // How long a client may keep the tool list and the discover answer. Both are fixed for the life of the process.
+        private const int CacheMilliseconds = 3600000;
+
+        private static readonly string[] LegacyVersions = { "2025-06-18", "2025-03-26", "2024-11-05" };
+
+        private static readonly string[] AllVersions = { "2026-07-28", "2025-06-18", "2025-03-26", "2024-11-05" };
+
+        // Which era a stdio process is in is decided by its first message, and only an initialize request moves it to the older one.
+        private sealed class Session
+        {
+            public bool Legacy { get; set; }
+        }
+
+        private const string Instructions = "Read-only tools of the Automation Sandbox engine. No tool writes a label, card, file or issue, and none takes a credential as an argument.";
 
         public static async Task RunAsync(TextReader input, TextWriter output, IReadOnlyList<McpTool> tools, string serverVersion, CancellationToken cancellationToken)
         {
             var reader = new BoundedLineReader(input, MaxMessageLength);
+            var session = new Session();
             while (!cancellationToken.IsCancellationRequested)
             {
                 var line = await reader.ReadLineAsync().ConfigureAwait(false);
@@ -87,7 +113,7 @@ namespace AutomationSandbox.Mcp
                 }
                 else
                 {
-                    response = await HandleAsync(line.Text, tools, serverVersion, cancellationToken).ConfigureAwait(false);
+                    response = await HandleAsync(line.Text, tools, serverVersion, session, cancellationToken).ConfigureAwait(false);
                 }
 
                 if (response != null)
@@ -99,7 +125,7 @@ namespace AutomationSandbox.Mcp
         }
 
         /// <summary>Handles one message and returns the response line, or null for a notification (which never gets one).</summary>
-        internal static async Task<string?> HandleAsync(string message, IReadOnlyList<McpTool> tools, string serverVersion, CancellationToken cancellationToken)
+        private static async Task<string?> HandleAsync(string message, IReadOnlyList<McpTool> tools, string serverVersion, Session session, CancellationToken cancellationToken)
         {
             JsonDocument document;
             try
@@ -144,29 +170,105 @@ namespace AutomationSandbox.Mcp
                 }
 
                 var parameters = root.TryGetProperty("params", out var p) ? p : default;
-                switch (method)
+
+                // The older handshake: kept so a client that has not moved to 2026-07-28 still works.
+                if (method == "initialize")
                 {
-                    case "initialize":
-                        return ResultResponse(id, Initialize(parameters, serverVersion));
-                    case "ping":
-                        return ResultResponse(id, "{}");
-                    case "tools/list":
-                        return ResultResponse(id, ListTools(tools));
-                    case "tools/call":
-                        return await CallToolAsync(id, parameters, tools, cancellationToken).ConfigureAwait(false);
-                    default:
-                        return ErrorResponse(id, -32601, "Method not found.");
+                    session.Legacy = true;
+                    return ResultResponse(id, Initialize(parameters, serverVersion));
                 }
+
+                if (HasModernVersion(parameters))
+                {
+                    return await HandleModernAsync(id, method, parameters, tools, serverVersion, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (session.Legacy)
+                {
+                    switch (method)
+                    {
+                        case "ping":
+                            return ResultResponse(id, "{}");
+                        case "tools/list":
+                            return ResultResponse(id, ListTools(tools, false));
+                        case "tools/call":
+                            return await CallToolAsync(id, parameters, tools, false, cancellationToken).ConfigureAwait(false);
+                        default:
+                            return ErrorResponse(id, -32601, "Method not found.");
+                    }
+                }
+
+                // Neither a handshake nor a per-request version: the request is malformed under the current revision.
+                return ErrorResponse(id, -32602, "The request is missing params._meta[\"" + VersionKey + "\"] and params._meta[\"" + CapabilitiesKey + "\"], which every request needs.");
             }
         }
 
+        private static bool HasModernVersion(JsonElement parameters) =>
+            parameters.ValueKind == JsonValueKind.Object
+            && parameters.TryGetProperty("_meta", out var meta)
+            && meta.ValueKind == JsonValueKind.Object
+            && meta.TryGetProperty(VersionKey, out _);
+
+        // 2026-07-28: every request carries its version and capabilities, and nothing is remembered between requests.
+        private static async Task<string> HandleModernAsync(string id, string method, JsonElement parameters, IReadOnlyList<McpTool> tools, string serverVersion, CancellationToken cancellationToken)
+        {
+            var meta = parameters.GetProperty("_meta");
+            var requested = meta.GetProperty(VersionKey);
+            if (requested.ValueKind != JsonValueKind.String)
+            {
+                return ErrorResponse(id, -32602, "_meta[\"" + VersionKey + "\"] must be a string.");
+            }
+
+            if (!meta.TryGetProperty(CapabilitiesKey, out var capabilities) || capabilities.ValueKind != JsonValueKind.Object)
+            {
+                return ErrorResponse(id, -32602, "The request is missing params._meta[\"" + CapabilitiesKey + "\"], which every request needs.");
+            }
+
+            var version = requested.GetString()!;
+            if (version != ProtocolVersion)
+            {
+                // The versions this server speaks, newest first, so the client can pick one and retry.
+                return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"error\":" + JsonSerializer.Serialize(new
+                {
+                    code = -32022,
+                    message = "Unsupported protocol version",
+                    data = new { supported = AllVersions, requested = version },
+                }) + "}";
+            }
+
+            switch (method)
+            {
+                case "server/discover":
+                    return ResultResponse(id, Discover(serverVersion));
+                case "tools/list":
+                    return ResultResponse(id, ListTools(tools, true));
+                case "tools/call":
+                    return await CallToolAsync(id, parameters, tools, true, cancellationToken).ConfigureAwait(false);
+                default:
+                    // ping and the initialize notification are not part of this revision.
+                    return ErrorResponse(id, -32601, "Method not found.");
+            }
+        }
+
+        private static string Discover(string serverVersion) =>
+            JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["resultType"] = "complete",
+                ["supportedVersions"] = AllVersions,
+                ["capabilities"] = new { tools = new { } },
+                ["_meta"] = new Dictionary<string, object> { [ServerInfoKey] = new { name = "automation-sandbox-mcp", version = serverVersion } },
+                ["instructions"] = Instructions,
+                ["ttlMs"] = CacheMilliseconds,
+                ["cacheScope"] = "public",
+            });
+
         private static string Initialize(JsonElement parameters, string serverVersion)
         {
-            var version = ProtocolVersion;
+            var version = LegacyProtocolVersion;
             if (parameters.ValueKind == JsonValueKind.Object && parameters.TryGetProperty("protocolVersion", out var requested) && requested.ValueKind == JsonValueKind.String)
             {
                 var asked = requested.GetString();
-                if (SupportedVersions.Contains(asked))
+                if (LegacyVersions.Contains(asked))
                 {
                     version = asked!;
                 }
@@ -177,11 +279,11 @@ namespace AutomationSandbox.Mcp
                 protocolVersion = version,
                 capabilities = new { tools = new { } },
                 serverInfo = new { name = "automation-sandbox-mcp", version = serverVersion },
-                instructions = "Read-only tools of the Automation Sandbox engine. No tool writes a label, card, file or issue, and none takes a credential as an argument.",
+                instructions = Instructions,
             });
         }
 
-        private static string ListTools(IReadOnlyList<McpTool> tools)
+        private static string ListTools(IReadOnlyList<McpTool> tools, bool modern)
         {
             var items = tools.Select(t => new Dictionary<string, object>
             {
@@ -189,10 +291,21 @@ namespace AutomationSandbox.Mcp
                 ["description"] = t.Description,
                 ["inputSchema"] = JsonDocument.Parse(t.InputSchema).RootElement.Clone(),
             }).ToList();
-            return JsonSerializer.Serialize(new { tools = items });
+            if (!modern)
+            {
+                return JsonSerializer.Serialize(new { tools = items });
+            }
+
+            return JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["resultType"] = "complete",
+                ["tools"] = items,
+                ["ttlMs"] = CacheMilliseconds,
+                ["cacheScope"] = "public",
+            });
         }
 
-        private static async Task<string> CallToolAsync(string id, JsonElement parameters, IReadOnlyList<McpTool> tools, CancellationToken cancellationToken)
+        private static async Task<string> CallToolAsync(string id, JsonElement parameters, IReadOnlyList<McpTool> tools, bool modern, CancellationToken cancellationToken)
         {
             if (parameters.ValueKind != JsonValueKind.Object || !parameters.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String)
             {
@@ -236,11 +349,10 @@ namespace AutomationSandbox.Mcp
                 result = McpToolResult.Error("The tool failed unexpectedly (" + ex.GetType().Name + ").");
             }
 
-            return ResultResponse(id, JsonSerializer.Serialize(new
-            {
-                content = new[] { new { type = "text", text = Cut(result.Text) } },
-                isError = result.IsError,
-            }));
+            var content = new[] { new { type = "text", text = Cut(result.Text) } };
+            return ResultResponse(id, modern
+                ? JsonSerializer.Serialize(new { resultType = "complete", content, isError = result.IsError })
+                : JsonSerializer.Serialize(new { content, isError = result.IsError }));
         }
 
         private static string Cut(string text)
