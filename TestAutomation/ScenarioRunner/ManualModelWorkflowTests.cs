@@ -199,5 +199,17 @@ namespace ScenarioRunner
             Assert.True(text.IndexOf("ONLY_MODEL_INPUT", StringComparison.Ordinal) < text.IndexOf("dotnet test", StringComparison.Ordinal),
                 "The model filter must be validated before any model is asked.");
         }
+
+        [Fact]
+        public void TheHealAgentPacing_IsCheckedAsZeroToSixtyInTheShell_BeforeAnythingIsSpent_AndReachesTheTestOnlyThroughEnv()
+        {
+            var text = Text("heal-agent.yml");
+
+            Assert.Contains("PACE_INPUT: ${{ inputs.pace_seconds }}", text);
+            Assert.Contains("[[ \"$PACE_INPUT\" =~ ^([0-9]|[1-5][0-9]|60)$ ]]", text);
+            Assert.Contains("HEAL_AGENT_PACE_SECONDS: ${{ inputs.pace_seconds }}", text);
+            Assert.True(text.IndexOf("PACE_INPUT", StringComparison.Ordinal) < text.IndexOf("dotnet test", StringComparison.Ordinal),
+                "The pacing must be validated before any model is asked.");
+        }
     }
 }
