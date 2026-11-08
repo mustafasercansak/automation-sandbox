@@ -47,7 +47,14 @@ namespace ScenarioRunner
             return output.ToString().Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(l => JsonDocument.Parse(l)).ToList();
         }
 
+        private const string ModernMeta = "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}";
+
+        // A request as a 2026-07-28 client sends it: the version and capabilities ride in params._meta of every request.
         private static string Request(int id, string method, string? parameters = null) =>
+            Bare(id, method, parameters == null || parameters.Trim() == "{}" ? "{" + ModernMeta + "}" : "{" + ModernMeta + "," + parameters.TrimStart().Substring(1));
+
+        // A request with exactly the params given, no _meta added: the older revisions' form, and the malformed cases.
+        private static string Bare(int id, string method, string? parameters = null) =>
             "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"" + method + "\"" + (parameters == null ? "" : ",\"params\":" + parameters) + "}\n";
 
         private static string Call(int id, string tool, object arguments) =>
@@ -69,7 +76,7 @@ namespace ScenarioRunner
         [Fact]
         public async Task Initialize_AnswersWithTheRequestedVersion_AndOnlyToolCapabilities()
         {
-            var responses = await Talk(Request(1, "initialize", "{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}"));
+            var responses = await Talk(Bare(1, "initialize", "{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}"));
 
             var result = Assert.Single(responses).RootElement.GetProperty("result");
             Assert.Equal("2024-11-05", result.GetProperty("protocolVersion").GetString());
@@ -82,20 +89,20 @@ namespace ScenarioRunner
         [Fact]
         public async Task AnUnknownProtocolVersion_FallsBackToTheOneTheServerSpeaks()
         {
-            var responses = await Talk(Request(1, "initialize", "{\"protocolVersion\":\"1999-01-01\"}"));
+            var responses = await Talk(Bare(1, "initialize", "{\"protocolVersion\":\"1999-01-01\"}"));
 
-            Assert.Equal(McpProtocol.ProtocolVersion, responses[0].RootElement.GetProperty("result").GetProperty("protocolVersion").GetString());
+            Assert.Equal(McpProtocol.LegacyProtocolVersion, responses[0].RootElement.GetProperty("result").GetProperty("protocolVersion").GetString());
         }
 
         [Fact]
-        public async Task ANotification_GetsNoResponse_AndPingIsAnswered()
+        public async Task ANotification_GetsNoResponse_AndPingIsAnswered_AfterTheOlderHandshake()
         {
-            var input = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n" + Request(2, "ping");
+            var input = Bare(1, "initialize", "{\"protocolVersion\":\"2025-06-18\"}") + "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n" + Bare(2, "ping");
 
             var responses = await Talk(input);
 
-            var only = Assert.Single(responses);
-            Assert.Equal(2, only.RootElement.GetProperty("id").GetInt32());
+            Assert.Equal(2, responses.Count);
+            Assert.Equal(2, responses[1].RootElement.GetProperty("id").GetInt32());
         }
 
         [Fact]
@@ -345,7 +352,7 @@ namespace ScenarioRunner
         [Fact]
         public async Task MalformedJson_GetsAParseError_AndTheServerKeepsServing()
         {
-            var responses = await Talk("{not json\n" + Request(2, "ping"));
+            var responses = await Talk("{not json\n" + Request(2, "tools/list"));
 
             Assert.Equal(2, responses.Count);
             Assert.Equal(-32700, responses[0].RootElement.GetProperty("error").GetProperty("code").GetInt32());
@@ -381,7 +388,7 @@ namespace ScenarioRunner
         {
             var huge = new string('a', McpProtocol.MaxMessageLength + 10);
 
-            var responses = await Talk(huge + "\n" + Request(2, "ping"));
+            var responses = await Talk(huge + "\n" + Request(2, "tools/list"));
 
             Assert.Equal(2, responses.Count);
             Assert.Equal(-32600, responses[0].RootElement.GetProperty("error").GetProperty("code").GetInt32());
@@ -413,6 +420,114 @@ namespace ScenarioRunner
             var text = output.ToString();
             Assert.Contains("InvalidOperationException", text);
             Assert.DoesNotContain("secret detail", text);
+        }
+
+        [Fact]
+        public async Task ModernToolsList_CarriesResultTypeAndCacheFields()
+        {
+            var responses = await Talk(Request(1, "tools/list"));
+
+            var result = responses[0].RootElement.GetProperty("result");
+            Assert.Equal("complete", result.GetProperty("resultType").GetString());
+            Assert.Equal(JsonValueKind.Number, result.GetProperty("ttlMs").ValueKind);
+            Assert.Equal("public", result.GetProperty("cacheScope").GetString());
+            Assert.Equal(4, result.GetProperty("tools").GetArrayLength());
+        }
+
+        [Fact]
+        public async Task ModernToolsCall_CarriesResultType_AndIsStatelessWithoutAHandshake()
+        {
+            var responses = await Talk(Call(1, "classify_ci_log", new { log = "error CS1002" }));
+
+            var result = responses[0].RootElement.GetProperty("result");
+            Assert.Equal("complete", result.GetProperty("resultType").GetString());
+            Assert.False(result.GetProperty("isError").GetBoolean());
+        }
+
+        [Fact]
+        public async Task ServerDiscover_AnswersWithEveryRequiredField()
+        {
+            var responses = await Talk(Request(1, "server/discover"));
+
+            var result = responses[0].RootElement.GetProperty("result");
+            Assert.Equal("complete", result.GetProperty("resultType").GetString());
+            var versions = result.GetProperty("supportedVersions").EnumerateArray().Select(v => v.GetString()).ToList();
+            Assert.Equal("2026-07-28", versions[0]);
+            Assert.Contains("2025-06-18", versions);
+            Assert.True(result.GetProperty("capabilities").TryGetProperty("tools", out _));
+            Assert.Equal(JsonValueKind.Number, result.GetProperty("ttlMs").ValueKind);
+            Assert.Equal("public", result.GetProperty("cacheScope").GetString());
+            var info = result.GetProperty("_meta").GetProperty("io.modelcontextprotocol/serverInfo");
+            Assert.Equal("automation-sandbox-mcp", info.GetProperty("name").GetString());
+            Assert.Equal("1.2.3", info.GetProperty("version").GetString());
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("{}")]
+        [InlineData("{\"_meta\":{}}")]
+        [InlineData("{\"_meta\":{\"io.modelcontextprotocol/clientCapabilities\":{}}}")]
+        public async Task ARequestWithoutAVersion_AndNoHandshake_IsInvalidParams(string? parameters)
+        {
+            var responses = await Talk(Bare(1, "tools/list", parameters));
+
+            Assert.Equal(-32602, responses[0].RootElement.GetProperty("error").GetProperty("code").GetInt32());
+        }
+
+        [Theory]
+        [InlineData("{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\"}}")]
+        [InlineData("{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":\"none\"}}")]
+        [InlineData("{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":5,\"io.modelcontextprotocol/clientCapabilities\":{}}}")]
+        public async Task AModernRequest_MissingOrBadRequiredFields_IsInvalidParams(string parameters)
+        {
+            var responses = await Talk(Bare(1, "tools/list", parameters));
+
+            Assert.Equal(-32602, responses[0].RootElement.GetProperty("error").GetProperty("code").GetInt32());
+        }
+
+        [Fact]
+        public async Task AnUnsupportedVersion_GetsTheVersionErrorWithTheSupportedList()
+        {
+            var responses = await Talk(Bare(1, "tools/list", "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"1900-01-01\",\"io.modelcontextprotocol/clientCapabilities\":{}}}"));
+
+            var error = responses[0].RootElement.GetProperty("error");
+            Assert.Equal(-32022, error.GetProperty("code").GetInt32());
+            Assert.Equal("1900-01-01", error.GetProperty("data").GetProperty("requested").GetString());
+            var supported = error.GetProperty("data").GetProperty("supported").EnumerateArray().Select(v => v.GetString()).ToList();
+            Assert.Equal("2026-07-28", supported[0]);
+            Assert.DoesNotContain("1900-01-01", supported);
+        }
+
+        [Fact]
+        public async Task Ping_IsNotPartOfTheNewRevision_ButWorksOnceTheOlderHandshakeStarted()
+        {
+            var modern = await Talk(Request(1, "ping"));
+            Assert.Equal(-32601, modern[0].RootElement.GetProperty("error").GetProperty("code").GetInt32());
+
+            var legacy = await Talk(Bare(1, "initialize", "{\"protocolVersion\":\"2025-06-18\"}") + Bare(2, "ping"));
+            Assert.Equal(JsonValueKind.Object, legacy[1].RootElement.GetProperty("result").ValueKind);
+        }
+
+        [Fact]
+        public async Task AfterInitialize_TheOlderBehaviourIsUnchanged_NoMetaNeeded_NoResultType()
+        {
+            var responses = await Talk(Bare(1, "initialize", "{\"protocolVersion\":\"2025-06-18\"}") + Bare(2, "tools/list") + Bare(3, "tools/call", JsonSerializer.Serialize(new { name = "classify_ci_log", arguments = new { log = "error CS1002" } })));
+
+            Assert.Equal(3, responses.Count);
+            var list = responses[1].RootElement.GetProperty("result");
+            Assert.Equal(4, list.GetProperty("tools").GetArrayLength());
+            Assert.False(list.TryGetProperty("resultType", out _));
+            var call = responses[2].RootElement.GetProperty("result");
+            Assert.False(call.TryGetProperty("resultType", out _));
+            Assert.False(call.GetProperty("isError").GetBoolean());
+        }
+
+        [Fact]
+        public async Task AModernRequest_IsStillServedAsModern_EvenAfterTheOlderHandshake()
+        {
+            var responses = await Talk(Bare(1, "initialize", "{\"protocolVersion\":\"2025-06-18\"}") + Request(2, "tools/list"));
+
+            Assert.Equal("complete", responses[1].RootElement.GetProperty("result").GetProperty("resultType").GetString());
         }
 
         [Fact]
