@@ -407,6 +407,60 @@ namespace ScenarioRunner
             Assert.DoesNotContain("OFFLINE", report.ToMarkdown());
         }
 
+        private sealed class NamedModel : ITextModel
+        {
+            public NamedModel(string name, bool available = true)
+            {
+                Name = name;
+                IsAvailable = available;
+            }
+
+            public string Name { get; }
+
+            public bool IsAvailable { get; }
+
+            public Task<TextCompletionResult> CompleteAsync(TextCompletionRequest request, CancellationToken cancellationToken = default) =>
+                Task.FromResult(new TextCompletionResult { Success = false, ErrorMessage = "not used" });
+        }
+
+        [Fact]
+        public void WithoutAFilter_EveryAvailableModelRuns_AndAnUnavailableOneDoesNot()
+        {
+            var models = new ITextModel[] { new NamedModel("Gemini"), new NamedModel("Mistral", available: false), new NamedModel("Nvidia") };
+
+            Assert.Equal(new[] { "Gemini", "Nvidia" }, HealAgentModelFilter.Select(models, null).Select(m => m.Name));
+            Assert.Equal(new[] { "Gemini", "Nvidia" }, HealAgentModelFilter.Select(models, "  ").Select(m => m.Name));
+        }
+
+        [Fact]
+        public void AFilter_RunsOnlyTheNamedModels_IgnoringCase_InTheOrderGiven_OnceEach()
+        {
+            var models = new ITextModel[] { new NamedModel("Gemini"), new NamedModel("Mistral"), new NamedModel("Nvidia") };
+
+            Assert.Equal(new[] { "Nvidia", "Gemini" }, HealAgentModelFilter.Select(models, "nvidia, GEMINI,gemini,").Select(m => m.Name));
+            Assert.Equal(new[] { "Mistral" }, HealAgentModelFilter.Select(models, "mistral").Select(m => m.Name));
+        }
+
+        [Theory]
+        [InlineData("Gemni")]
+        [InlineData("Gemini,Claude")]
+        public void ANameThatMatchesNoConfiguredModel_IsAnError_NotASilentSkip(string only)
+        {
+            var models = new ITextModel[] { new NamedModel("Gemini"), new NamedModel("Mistral") };
+
+            var error = Assert.Throws<InvalidOperationException>(() => HealAgentModelFilter.Select(models, only));
+
+            Assert.Contains("Configured: Gemini, Mistral.", error.Message);
+        }
+
+        [Fact]
+        public void ANamedModelThatIsNotAvailable_IsAnError_BecauseItHasNoKey()
+        {
+            var models = new ITextModel[] { new NamedModel("Gemini"), new NamedModel("Mistral", available: false) };
+
+            Assert.Throws<InvalidOperationException>(() => HealAgentModelFilter.Select(models, "Mistral"));
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(6)]
@@ -417,7 +471,8 @@ namespace ScenarioRunner
     }
 
     // The live run (#676): every configured model runs the agent over all 50 stored locators. HEAL_AGENT=1 turns it on, HEAL_AGENT_RUNS (1 to
-    // 5) says how often each locator is asked, and the reports go to HEAL_AGENT_OUT. A no-op without the switch or a model, like the other
+    // 5) says how often each locator is asked, HEAL_AGENT_ONLY (model names, comma separated) limits the run to those models so they can be
+    // run one at a time, and the reports go to HEAL_AGENT_OUT. A no-op without the switch or a model, like the other
     // live harnesses. It spends quota and gates nothing.
     public class HealReviewAgentLiveTests
     {
@@ -445,7 +500,7 @@ namespace ScenarioRunner
 
             Directory.CreateDirectory(directory);
             var cases = HealAgentCases.OrganicDrift();
-            foreach (var model in registry.Models.Where(m => m.IsAvailable))
+            foreach (var model in HealAgentModelFilter.Select(registry.Models, Environment.GetEnvironmentVariable("HEAL_AGENT_ONLY")))
             {
                 var report = await HealAgentEvaluation.RunAsync(model, cases, live: true, runsPerCase: runs);
                 File.WriteAllText(Path.Combine(directory, "heal-agent-" + model.Name + ".md"), report.ToMarkdown());
