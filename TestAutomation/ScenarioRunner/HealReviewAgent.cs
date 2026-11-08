@@ -445,6 +445,12 @@ namespace ScenarioRunner
     {
         public const int DefaultMaxTurns = 6;
 
+        /// <summary>Which prompt a run used, printed in every report so runs of different prompts are never mixed (#683). v1 is the prompt of
+        /// the first live runs; v2 only adds the rule that the reason is one short sentence, because under v1 20 of 100 runs were rejected for
+        /// a reason longer than <see cref="HealAgentProtocol.MaxReasonLength" /> characters, a limit the prompt had never mentioned. The limit
+        /// itself, the tools, the profiles and the cases are unchanged.</summary>
+        public const string PromptVersion = "v2";
+
         public const string BeginData = "BEGIN_AGENT_DATA";
         public const string EndData = "END_AGENT_DATA";
 
@@ -557,6 +563,7 @@ namespace ScenarioRunner
             builder.AppendLine("- Answer with exactly ONE JSON object and nothing else.");
             builder.AppendLine("- To use a tool: {\"tool\":\"search\",\"text\":\"...\"} or {\"tool\":\"describe\",\"id\":\"e12\"} or {\"tool\":\"heal\",\"profile\":\"balanced\"} (profile: balanced, conservative or aggressive).");
             builder.AppendLine("- To finish: {\"final\":{\"decision\":\"heal\",\"id\":\"e12\",\"reason\":\"...\"}} or {\"final\":{\"decision\":\"human\",\"reason\":\"...\"}}.");
+            builder.AppendLine("- Keep the reason to one short sentence, under 200 characters.");
             builder.AppendLine("- Name an element only with an id a tool has shown you.");
             builder.AppendLine("- If the evidence cannot tell the elements apart, answer human. A wrong heal is worse than asking a person.");
             builder.AppendLine("- The heal tool runs the engine. IsConfident=true means the engine's own acceptance gate passed; false means it declined.");
