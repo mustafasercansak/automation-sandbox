@@ -5,11 +5,11 @@ using System.Text.RegularExpressions;
 
 namespace ScenarioRunner
 {
-    // Guards the manual workflows that hold model keys and spend quota: doc-benchmark.yml (#560) and lesson-replay.yml (#561).
+    // Guards the manual workflows that hold model keys and spend quota: doc-benchmark.yml (#560), lesson-replay.yml (#561) and heal-agent.yml (#676).
     // Like agent-triage.yml, each must be started only by a person and must pass nothing a person supplies into a script text.
     public class ManualModelWorkflowTests
     {
-        public static IEnumerable<object[]> Workflows() => new[] { new object[] { "doc-benchmark.yml" }, new object[] { "lesson-replay.yml" } };
+        public static IEnumerable<object[]> Workflows() => new[] { new object[] { "doc-benchmark.yml" }, new object[] { "lesson-replay.yml" }, new object[] { "heal-agent.yml" } };
 
         private static string[] Lines(string file) => AgentTriageWorkflowTests.ReadRepoFile(".github", "workflows", file);
 
@@ -163,6 +163,29 @@ namespace ScenarioRunner
             Assert.Contains("LESSON_REPLAY_RUNS: ${{ inputs.runs }}", text);
             Assert.True(text.IndexOf("RUNS_INPUT", StringComparison.Ordinal) < text.IndexOf("lessons build", StringComparison.Ordinal),
                 "The run count must be validated before the index is built or any model is asked.");
+        }
+
+        [Fact]
+        public void TheHealAgent_RunsOnlyTheLiveAgentTest_WithTheOptInSwitchAndAnOutputDirectory_AndNeedsNoMoreThanContents()
+        {
+            var text = Text("heal-agent.yml");
+
+            Assert.Contains("FullyQualifiedName~HealReviewAgentLiveTests.RunHealAgent_LiveAgainstConfiguredModels", text);
+            Assert.Contains("HEAL_AGENT: '1'", text);
+            Assert.Contains("HEAL_AGENT_OUT:", text);
+            Assert.Matches(@"(?m)^permissions:\n  contents: read\n\nconcurrency:", text);
+        }
+
+        [Fact]
+        public void TheHealAgentRunCount_IsCheckedAsOneToFiveInTheShell_BeforeAnythingIsSpent_AndReachesTheTestOnlyThroughEnv()
+        {
+            var text = Text("heal-agent.yml");
+
+            Assert.Contains("RUNS_INPUT: ${{ inputs.runs }}", text);
+            Assert.Contains("[[ \"$RUNS_INPUT\" =~ ^[1-5]$ ]]", text);
+            Assert.Contains("HEAL_AGENT_RUNS: ${{ inputs.runs }}", text);
+            Assert.True(text.IndexOf("RUNS_INPUT", StringComparison.Ordinal) < text.IndexOf("dotnet test", StringComparison.Ordinal),
+                "The run count must be validated before any model is asked.");
         }
     }
 }

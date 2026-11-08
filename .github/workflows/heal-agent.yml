@@ -1,0 +1,116 @@
+name: Heal-review agent (manual)
+
+# Runs the heal-review agent (#676) against every model the repository's secrets configure and publishes the per-model report
+# (Markdown and raw per-run JSON) as an artifact and in the job summary.
+#
+# Manual only (workflow_dispatch): the agent asks real models up to six times per locator, so a run spends a lot of quota, and
+# nothing an outsider can do may start it. The cases are frozen (all 50 stored locators of the organic drift dataset); do not edit
+# or filter them after seeing a result. The agent only suggests: it applies nothing and writes nothing. Nothing here gates a
+# release or a pull request. One application pair with no removed element is a small sample: read every figure with the sample
+# size printed beside it, and do not call a result a ranking.
+#
+# Keys are passed as secrets through env: only, never interpolated into a script. The workflow has read access to the contents
+# and nothing else.
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: How often each locator is asked (1 to 5). Each run is up to six model calls, so 1 is already 300 calls per model.
+        required: false
+        default: '1'
+        type: string
+      nvidia_model:
+        description: NVIDIA model id (only needed to include the NVIDIA model)
+        required: false
+        default: ''
+        type: string
+      ollama_cloud_model:
+        description: Ollama Cloud model name (only needed to include the Ollama Cloud model)
+        required: false
+        default: ''
+        type: string
+      mistral_model:
+        description: Mistral model name; overrides the MISTRAL_MODEL variable (a free plan may allow only some models, see the provider diagnostics)
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: heal-agent
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    name: Run the heal-review agent
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Validate the inputs
+        shell: bash
+        env:
+          RUNS_INPUT: ${{ inputs.runs }}
+          NVIDIA_MODEL_INPUT: ${{ inputs.nvidia_model }}
+          OLLAMA_CLOUD_MODEL_INPUT: ${{ inputs.ollama_cloud_model }}
+          MISTRAL_MODEL_INPUT: ${{ inputs.mistral_model }}
+        run: |
+          [[ "$RUNS_INPUT" =~ ^[1-5]$ ]] || { echo "runs must be a whole number from 1 to 5"; exit 2; }
+          for value in "$NVIDIA_MODEL_INPUT" "$OLLAMA_CLOUD_MODEL_INPUT" "$MISTRAL_MODEL_INPUT"; do
+            [[ "$value" =~ ^[A-Za-z0-9._:/@-]{0,100}$ ]] || { echo "a model name contains characters that are not allowed"; exit 2; }
+          done
+
+      - name: Run the agent
+        shell: bash
+        env:
+          HEAL_AGENT: '1'
+          HEAL_AGENT_RUNS: ${{ inputs.runs }}
+          HEAL_AGENT_OUT: ${{ github.workspace }}/heal-agent-out
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          MISTRAL_MODEL: ${{ inputs.mistral_model || vars.MISTRAL_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_MODEL: ${{ inputs.nvidia_model || vars.NVIDIA_MODEL }}
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+          OLLAMA_CLOUD_MODEL: ${{ inputs.ollama_cloud_model || vars.OLLAMA_CLOUD_MODEL }}
+        run: |
+          dotnet test TestAutomation/ScenarioRunner/ScenarioRunner.csproj -f net10.0 -c Debug \
+            --filter "FullyQualifiedName~HealReviewAgentLiveTests.RunHealAgent_LiveAgainstConfiguredModels" \
+            --logger "console;verbosity=normal"
+
+      - name: Write the reports to the job summary
+        if: always()
+        shell: bash
+        run: |
+          # A report holds text a model wrote. Backticks are replaced so that text cannot close the code fences around it.
+          safe() { sed "s/\`/'/g" "$1"; }
+          {
+            echo "## Heal-review agent"
+            echo
+            if compgen -G "heal-agent-out/*.md" > /dev/null; then
+              for report in heal-agent-out/*.md; do
+                safe "$report"
+                echo
+              done
+            else
+              echo "No report was written: no model was configured, or the run failed before writing one."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: heal-agent-reports
+          path: heal-agent-out/
+          if-no-files-found: warn

@@ -7,6 +7,7 @@ using AutomationSandbox.SelfHealing;
 using AutomationSandbox.UiModel;
 using Xunit;
 using Xunit.Abstractions;
+using static ScenarioRunner.OrganicDriftData;
 
 namespace ScenarioRunner
 {
@@ -22,70 +23,6 @@ namespace ScenarioRunner
         public OrganicDriftDatasetTests(ITestOutputHelper output)
         {
             _output = output;
-        }
-
-        private static string DatasetPath(params string[] parts)
-        {
-            var all = new List<string> { AppContext.BaseDirectory, "Fixtures", "organic-drift", "swagger-ui" };
-            all.AddRange(parts);
-            return Path.Combine(all.ToArray());
-        }
-
-        private static JsonDocument LoadGroundTruth()
-        {
-            var path = DatasetPath("ground-truth.json");
-            Assert.True(File.Exists(path), $"Organic drift ground truth not found at '{path}'.");
-            return JsonDocument.Parse(File.ReadAllText(path));
-        }
-
-        private static UiElementInfo LoadTree(string version, string state)
-        {
-            var path = DatasetPath("trees", version, state + ".json");
-            Assert.True(File.Exists(path), $"Captured tree not found at '{path}'.");
-            return UiTreeSerializer.FromJson(File.ReadAllText(path));
-        }
-
-        private static List<UiElementInfo> PreOrder(UiElementInfo root)
-        {
-            var result = new List<UiElementInfo>();
-            var stack = new Stack<UiElementInfo>();
-            stack.Push(root);
-            while (stack.Count > 0)
-            {
-                var node = stack.Pop();
-                result.Add(node);
-                for (var i = node.Children.Count - 1; i >= 0; i--)
-                {
-                    stack.Push(node.Children[i]);
-                }
-            }
-
-            return result;
-        }
-
-        private static List<UiElementInfo> Interactive(UiElementInfo root, HashSet<string> controlTypes)
-        {
-            return PreOrder(root).Where(node => controlTypes.Contains(node.ControlType)).ToList();
-        }
-
-        private static HashSet<string> InteractiveTypes(JsonDocument truth)
-        {
-            var set = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var type in truth.RootElement.GetProperty("interactiveControlTypes").EnumerateArray())
-            {
-                set.Add(type.GetString()!);
-            }
-
-            return set;
-        }
-
-        // The stored locator is the old element as the capture reported it, without its subtree: what a suite records once and
-        // keeps, like the --expected file of the heal CLI.
-        private static UiElementInfo StoredLocator(UiElementInfo node)
-        {
-            var copy = UiTreeSerializer.FromJson(UiTreeSerializer.ToJson(node));
-            copy.Children = new List<UiElementInfo>();
-            return copy;
         }
 
         private sealed class Measurement
