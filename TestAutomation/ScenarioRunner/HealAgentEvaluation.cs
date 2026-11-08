@@ -130,6 +130,37 @@ namespace ScenarioRunner
         }
     }
 
+    /// <summary>Picks which configured models a live run uses (#676): all of them, or only the named ones, so models can be run one at a
+    /// time. A name that matches no configured model is an error and is never skipped quietly: a typo must not look like a run.</summary>
+    internal static class HealAgentModelFilter
+    {
+        public static List<ITextModel> Select(IEnumerable<ITextModel> models, string? only)
+        {
+            var available = models.Where(m => m.IsAvailable).ToList();
+            if (string.IsNullOrWhiteSpace(only))
+            {
+                return available;
+            }
+
+            var picked = new List<ITextModel>();
+            foreach (var name in only!.Split(',').Select(n => n.Trim()).Where(n => n.Length > 0))
+            {
+                var model = available.FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (model == null)
+                {
+                    throw new InvalidOperationException("No configured model is named '" + name + "'. Configured: " + string.Join(", ", available.Select(m => m.Name)) + ".");
+                }
+
+                if (!picked.Contains(model))
+                {
+                    picked.Add(model);
+                }
+            }
+
+            return picked;
+        }
+    }
+
     internal static class HealAgentEvaluation
     {
         public const int MaxRunsPerCase = 5;
